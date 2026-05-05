@@ -36,14 +36,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Intermediate artifacts from any step are inspectable as files on the shared volume
   4. A new container step can be added to docker-compose.yml and the pipeline sequence without modifying existing step container configurations
   5. FFmpeg --version returns the same pinned version across all containers in the pipeline
-**Plans**: 5 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 01-01: Docker Compose project scaffolding with shared named volumes
-- [ ] 01-02: Step contract schema (INPUT_PATH/OUTPUT_PATH env vars, exit codes, artifact directory structure)
-- [ ] 01-03: Base Docker images with pinned FFmpeg (Python + Node base images)
-- [ ] 01-04: Pipeline directory convention and artifact naming conventions
-- [ ] 01-05: Smoke test — validate step contract with a no-op container that copies input to output
+- [ ] 01-01: Docker Compose project scaffolding with shared volumes, env vars, and directory conventions
+- [ ] 01-02: Step contract schema — env vars, exit codes, manifest.json artifact, and documentation
+- [ ] 01-03: Base Docker images with pinned FFmpeg + pipeline service chain in Compose
+- [ ] 01-04: Smoke test — validate full step contract end-to-end with no-op container
 
 ### Phase 2: Whisper Transcription
 **Goal**: Audio is extracted from MP4 and transcribed with word-level Spanish timestamps — the data foundation for all downstream steps
@@ -223,7 +222,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Pipeline Infrastructure | 0/5 | Not started | - |
+| 1. Pipeline Infrastructure | 0/4 | Planned | - |
 | 2. Whisper Transcription | 0/5 | Not started | - |
 | 3. Silence Detection & Removal | 0/5 | Not started | - |
 | 4. 9:16 Vertical Output | 0/5 | Not started | - |

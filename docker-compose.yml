@@ -1,0 +1,21 @@
+services:
+  # Base images (not run directly — used as build targets by step containers)
+  # Step services will be added here
+
+x-pipeline-common: &pipeline-common
+  volumes:
+    - pipeline-data:/data/pipeline
+  networks:
+    - pipeline-net
+  environment:
+    - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+    - INPUT_PATH=${INPUT_PATH}
+    - OUTPUT_PATH=${OUTPUT_PATH}
+
+networks:
+  pipeline-net:
+    driver: bridge
+
+volumes:
+  pipeline-data:
+    driver: local

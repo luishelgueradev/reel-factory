@@ -13,6 +13,18 @@ services:
         FFMPEG_VERSION: ${FFMPEG_VERSION:-7.1.1}
     image: video-pipeline-base-node:latest
 
+  smoke-test:
+    <<: *pipeline-common
+    build:
+      context: ./services/smoke-test
+    depends_on:
+      - base-python
+    environment:
+      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
+      - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/smoke-test/output/video.mp4
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+      - FFMPEG_VERSION=${FFMPEG_VERSION:-7.1.1}
+
   # ═════════════════════════════════════════════════════
   # Pipeline Step Services
   # Each step uses the x-pipeline-common extension for shared volume/network config.

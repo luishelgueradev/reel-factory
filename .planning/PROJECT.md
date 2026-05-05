@@ -1,0 +1,88 @@
+# Video Pipeline Docker
+
+## What This Is
+
+Un pipeline de procesamiento de video containerizado en Docker que toma un MP4 como entrada, lo procesa automáticamente (transcripción con Whisper, corte de silencios, subtítulos dinámicos con Remotion) y genera videos optimizados para redes sociales en formato vertical 9:16. Sirve todo via API REST con capacidad de procesamiento individual y por lotes. Cada paso del pipeline es independiente e inspeccionable, permitiendo revisar salidas intermedias antes de continuar.
+
+## Core Value
+
+Transformar un video crudo de una persona hablando en un video dinámico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automáticamente.
+
+## Requirements
+
+### Validated
+
+(None yet — ship to validate)
+
+### Active
+
+- [ ] Pipeline Docker que recibe un MP4 y genera video procesado en 9:16
+- [ ] Transcripción automática con Whisper (texto con timestamps)
+- [ ] Detección y corte de silencios (eliminar y juntar, sin transiciones)
+- [ ] Subtítulos dinámicos estilo word-by-word con Remotion
+- [ ] API REST para procesamiento individual (synchronous)
+- [ ] API REST para procesamiento por lotes (async queue)
+- [ ] Cada paso del pipeline genera salida intermedia inspeccionable
+- [ ] Salida en formato 9:16 vertical para redes sociales (Reels, TikTok, Shorts)
+- [ ] Arquitectura extensible: nuevos pasos se agregan como containers Docker en la secuencia
+- [ ] Intro/outro animados con plantillas Remotion
+- [ ] Zooms automáticos y jump cuts visuales en momentos clave
+- [ ] B-roll automático con placeholders (infraestructura lista, clips reales después)
+
+### Out of Scope
+
+- B-roll con biblioteca propia o APIs externas (Pexels/Pixabay) — v1 usa placeholders
+- Transiciones suaves en cortes de silencio — se elimina y junta directo
+- Formatos 16:9 horizontal y 1:1 cuadrado — se agrega después
+- Interfaz gráfica / UI web — solo API en v1
+- Procesamiento en tiempo real — batch y on-demand son suficientes
+- Edición manual interactiva — pipeline automático, inspección de salidas intermedias
+
+## Context
+
+- Los videos de entrada son de una persona hablando (talking head)
+- Target: creadores de contenido para redes sociales que necesitan reciclar contenido largo en clips cortos verticales
+- Whisper se usa para transcripción con timestamps precisos (alineación texto-video)
+- Remotion permite generar overlays programáticamente (subtítulos, intros, zooms) renders de video
+- Docker permite encapsular cada paso como un servicio independiente, facilitando extensibilidad
+- La secuencia del pipeline: input → Whisper → silence detection → Remotion render → output
+- Los pasos son independientes: cada uno lee una entrada y produce una salida, permitiendo inspección manual entre pasos
+
+## Constraints
+
+- **Tech Stack**: Docker + Node.js (Remotion) + Python (Whisper) — lenguajes fijos por las herramientas
+- **Architecture**: Pipeline basado en steps independientes, no monolito
+- **Output Format**: 9:16 vertical como mínimo en v1
+- **Video Input**: MP4, talking head, una persona hablando
+- **Extensibility**: Cualquier nuevo paso debe poder incorporarse como container Docker en la secuencia sin refactorizar el pipeline
+
+## Key Decisions
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Pasos independientes con salidas intermedias | Permite inspección manual y debugging, cada paso es autónomo | — Pending |
+| Whisper para transcripción | Estado del arte en ASR, timestamps precisos, corre localmente | — Pending |
+| Remotion para overlays programáticos | Control total sobre subtítulos, intros, zooms via código React | — Pending |
+| Docker para cada paso del pipeline | Aislamiento de dependencias, extensibilidad natural | — Pending |
+| Placeholders para B-roll | Infraestructura de overlays lista, clips reales se agregan después | — Pending |
+| Solo 9:16 en v1 | Es el formato más demandado para redes sociales actuales | — Pending |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
+---
+*Last updated: 2026-05-05 after initialization*

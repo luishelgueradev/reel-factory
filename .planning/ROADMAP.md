@@ -53,14 +53,12 @@ Plans:
   2. Timestamps correctly map each spoken word to its time position in the audio
   3. Phantom text from Whisper hallucinations is filtered out — no spurious words appear during silent sections
   4. Transcription is configured for Spanish language explicitly (language="es", non-.en model used)
-**Plans**: 5 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] 02-01: Whisper container setup with faster-whisper and Python base image
-- [ ] 02-02: Audio extraction from MP4 using FFmpeg (pre-processing step)
-- [ ] 02-03: Transcription with word-level timestamps (evaluate whisperx for alignment accuracy)
-- [ ] 02-04: Hallucination filter implementation (hallucination_silence_threshold configuration)
-- [ ] 02-05: Spanish language configuration and validation with test audio
+- [ ] 02-01-PLAN.md — Whisper container infrastructure + audio extraction (TRAN-01)
+- [ ] 02-02-PLAN.md — Transcription engine + hallucination filter + transcript.json schema (TRAN-02, TRAN-03)
+- [ ] 02-03-PLAN.md — Spanish language config + validation + E2E Docker test (TRAN-04)
 
 ### Phase 3: Silence Detection & Removal
 **Goal**: Silent sections are detected and removed with hard cuts — A/V sync is preserved after every cut

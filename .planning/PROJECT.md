@@ -12,19 +12,15 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Pipeline Docker que recibe un MP4 y genera video procesado en 9:16 (Validated in Phase 1)
+- [x] Cada paso del pipeline genera salida intermedia inspeccionable (Validated in Phase 1)
+- [x] Arquitectura extensible: nuevos pasos se agregan como containers Docker en la secuencia (Validated in Phase 1)
 
 ### Active
 
-- [ ] Pipeline Docker que recibe un MP4 y genera video procesado en 9:16
 - [ ] Transcripción automática con Whisper (texto con timestamps)
 - [ ] Detección y corte de silencios (eliminar y juntar, sin transiciones)
 - [ ] Subtítulos dinámicos estilo word-by-word con Remotion
-- [ ] API REST para procesamiento individual (synchronous)
-- [ ] API REST para procesamiento por lotes (async queue)
-- [ ] Cada paso del pipeline genera salida intermedia inspeccionable
-- [ ] Salida en formato 9:16 vertical para redes sociales (Reels, TikTok, Shorts)
-- [ ] Arquitectura extensible: nuevos pasos se agregan como containers Docker en la secuencia
 - [ ] Intro/outro animados con plantillas Remotion
 - [ ] Zooms automáticos y jump cuts visuales en momentos clave
 - [ ] B-roll automático con placeholders (infraestructura lista, clips reales después)

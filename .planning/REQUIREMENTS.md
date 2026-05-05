@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Pipeline Infrastructure
 
-- [ ] **PIPE-01**: Pipeline accepts MP4 video as input via shared Docker volume
-- [ ] **PIPE-02**: Each processing step runs in isolated Docker container with INPUT_PATH/OUTPUT_PATH contract
-- [ ] **PIPE-03**: Each step produces inspectable intermediate artifacts on shared named volume
-- [ ] **PIPE-04**: New processing steps can be added as Docker containers without refactoring existing pipeline
-- [ ] **PIPE-05**: FFmpeg version is pinned consistently across all containers
+- [x] **PIPE-01**: Pipeline accepts MP4 video as input via shared Docker volume
+- [x] **PIPE-02**: Each processing step runs in isolated Docker container with INPUT_PATH/OUTPUT_PATH contract
+- [x] **PIPE-03**: Each step produces inspectable intermediate artifacts on shared named volume
+- [x] **PIPE-04**: New processing steps can be added as Docker containers without refactoring existing pipeline
+- [x] **PIPE-05**: FFmpeg version is pinned consistently across all containers
 
 ### Transcription
 
@@ -106,11 +106,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 1 | Pending |
-| PIPE-02 | Phase 1 | Pending |
-| PIPE-03 | Phase 1 | Pending |
-| PIPE-04 | Phase 1 | Pending |
-| PIPE-05 | Phase 1 | Pending |
+| PIPE-01 | Phase 1 | Complete |
+| PIPE-02 | Phase 1 | Complete |
+| PIPE-03 | Phase 1 | Complete |
+| PIPE-04 | Phase 1 | Complete |
+| PIPE-05 | Phase 1 | Complete |
 | TRAN-01 | Phase 2 | Pending |
 | TRAN-02 | Phase 2 | Pending |
 | TRAN-03 | Phase 2 | Pending |

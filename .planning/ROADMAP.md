@@ -12,7 +12,7 @@ Build a self-hosted Docker pipeline that transforms talking-head MP4 videos into
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Pipeline Infrastructure** - Docker Compose foundation with shared volumes and step contracts
+- [x] **Phase 1: Pipeline Infrastructure** - Docker Compose foundation with shared volumes and step contracts (completed 2026-05-05)
 - [ ] **Phase 2: Whisper Transcription** - Audio extraction and Spanish transcription with word-level timestamps
 - [ ] **Phase 3: Silence Detection & Removal** - Cross-referenced silence detection and hard-cut removal preserving A/V sync
 - [ ] **Phase 4: 9:16 Vertical Output** - FFmpeg finalizer that crops and encodes vertical social video
@@ -39,10 +39,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 
 Plans:
-- [ ] 01-01: Docker Compose project scaffolding with shared volumes, env vars, and directory conventions
-- [ ] 01-02: Step contract schema — env vars, exit codes, manifest.json artifact, and documentation
-- [ ] 01-03: Base Docker images with pinned FFmpeg + pipeline service chain in Compose
-- [ ] 01-04: Smoke test — validate full step contract end-to-end with no-op container
+- [x] 01-01: Docker Compose project scaffolding with shared volumes, env vars, and directory conventions
+- [x] 01-02: Step contract schema — env vars, exit codes, manifest.json artifact, and documentation
+- [x] 01-03: Base Docker images with pinned FFmpeg + pipeline service chain in Compose
+- [x] 01-04: Smoke test — validate full step contract end-to-end with no-op container
 
 ### Phase 2: Whisper Transcription
 **Goal**: Audio is extracted from MP4 and transcribed with word-level Spanish timestamps — the data foundation for all downstream steps
@@ -222,7 +222,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Pipeline Infrastructure | 0/4 | Planned | - |
+| 1. Pipeline Infrastructure | 4/4 | Complete   | 2026-05-05 |
 | 2. Whisper Transcription | 0/5 | Not started | - |
 | 3. Silence Detection & Removal | 0/5 | Not started | - |
 | 4. 9:16 Vertical Output | 0/5 | Not started | - |

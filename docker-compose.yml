@@ -1,6 +1,53 @@
 services:
-  # Base images (not run directly — used as build targets by step containers)
-  # Step services will be added here
+  base-python:
+    build:
+      context: ./services/base-python
+      args:
+        FFMPEG_VERSION: ${FFMPEG_VERSION:-7.1.1}
+    image: video-pipeline-base-python:latest
+
+  base-node:
+    build:
+      context: ./services/base-node
+      args:
+        FFMPEG_VERSION: ${FFMPEG_VERSION:-7.1.1}
+    image: video-pipeline-base-node:latest
+
+  # ═════════════════════════════════════════════════════
+  # Pipeline Step Services
+  # Each step uses the x-pipeline-common extension for shared volume/network config.
+  # Steps are chained with depends_on + healthcheck (D-08, D-09).
+  # To add a new step: insert a service in the chain with depends_on the previous step.
+  # Existing step configurations do NOT need modification (PIPE-04).
+  # ═════════════════════════════════════════════════════
+
+  # Step 1: Whisper Transcription (Phase 2)
+  # whisper:
+  #   <<: *pipeline-common
+  #   build:
+  #     context: ./services/whisper
+  #     dockerfile: Dockerfile
+  #   depends_on:
+  #     - base-python
+  #   environment:
+  #     - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
+  #     - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
+  #     - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+  #   healthcheck:
+  #     test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/whisper/manifest.json"]
+  #     interval: 5s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s
+
+  # Step 2: Silence Cutter (Phase 3)
+  # ... similar pattern, depends_on: whisper
+
+  # Step 3: Remotion Renderer (Phase 5)
+  # ... similar pattern, depends_on: silence-cutter
+
+  # Step 4: FFmpeg Finalizer (Phase 4)
+  # ... similar pattern, depends_on: remotion-renderer
 
 x-pipeline-common: &pipeline-common
   volumes:

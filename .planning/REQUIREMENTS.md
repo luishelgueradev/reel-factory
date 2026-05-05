@@ -106,44 +106,44 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| PIPE-04 | — | Pending |
-| PIPE-05 | — | Pending |
-| TRAN-01 | — | Pending |
-| TRAN-02 | — | Pending |
-| TRAN-03 | — | Pending |
-| TRAN-04 | — | Pending |
-| SILC-01 | — | Pending |
-| SILC-02 | — | Pending |
-| SILC-03 | — | Pending |
-| SILC-04 | — | Pending |
-| VERT-01 | — | Pending |
-| VERT-02 | — | Pending |
-| VERT-03 | — | Pending |
-| SUBT-01 | — | Pending |
-| SUBT-02 | — | Pending |
-| SUBT-03 | — | Pending |
-| VISU-01 | — | Pending |
-| VISU-02 | — | Pending |
-| VISU-03 | — | Pending |
-| VISU-04 | — | Pending |
-| SRTE-01 | — | Pending |
-| APIS-01 | — | Pending |
-| APIS-02 | — | Pending |
-| APIS-03 | — | Pending |
-| APIA-01 | — | Pending |
-| APIA-02 | — | Pending |
-| APIA-03 | — | Pending |
-| PROG-01 | — | Pending |
-| PROG-02 | — | Pending |
+| PIPE-01 | Phase 1 | Pending |
+| PIPE-02 | Phase 1 | Pending |
+| PIPE-03 | Phase 1 | Pending |
+| PIPE-04 | Phase 1 | Pending |
+| PIPE-05 | Phase 1 | Pending |
+| TRAN-01 | Phase 2 | Pending |
+| TRAN-02 | Phase 2 | Pending |
+| TRAN-03 | Phase 2 | Pending |
+| TRAN-04 | Phase 2 | Pending |
+| SILC-01 | Phase 3 | Pending |
+| SILC-02 | Phase 3 | Pending |
+| SILC-03 | Phase 3 | Pending |
+| SILC-04 | Phase 3 | Pending |
+| VERT-01 | Phase 4 | Pending |
+| VERT-02 | Phase 4 | Pending |
+| VERT-03 | Phase 4 | Pending |
+| SUBT-01 | Phase 5 | Pending |
+| SUBT-02 | Phase 5 | Pending |
+| SUBT-03 | Phase 5 | Pending |
+| VISU-01 | Phase 6 | Pending |
+| VISU-02 | Phase 6 | Pending |
+| VISU-03 | Phase 7 | Pending |
+| VISU-04 | Phase 7 | Pending |
+| SRTE-01 | Phase 8 | Pending |
+| APIS-01 | Phase 9 | Pending |
+| APIS-02 | Phase 9 | Pending |
+| APIS-03 | Phase 9 | Pending |
+| APIA-01 | Phase 10 | Pending |
+| APIA-02 | Phase 10 | Pending |
+| APIA-03 | Phase 10 | Pending |
+| PROG-01 | Phase 11 | Pending |
+| PROG-02 | Phase 11 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 ⚠️
+- Mapped to phases: 31
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 after initial definition*
+*Last updated: 2026-05-05 after roadmap creation (traceability mapped)*

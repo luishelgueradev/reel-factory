@@ -56,9 +56,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Whisper container infrastructure + audio extraction (TRAN-01)
-- [ ] 02-02-PLAN.md — Transcription engine + hallucination filter + transcript.json schema (TRAN-02, TRAN-03)
-- [ ] 02-03-PLAN.md — Spanish language config + validation + E2E Docker test (TRAN-04)
+- [x] 02-01-PLAN.md — Whisper container infrastructure + audio extraction (TRAN-01)
+- [x] 02-02-PLAN.md — Transcription engine + hallucination filter + transcript.json schema (TRAN-02, TRAN-03)
+- [x] 02-03-PLAN.md — Spanish language config + validation + E2E Docker test (TRAN-04)
 
 ### Phase 3: Silence Detection & Removal
 **Goal**: Silent sections are detected and removed with hard cuts — A/V sync is preserved after every cut

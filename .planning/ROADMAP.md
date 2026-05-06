@@ -72,7 +72,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Container infrastructure + silencedetect module + cross-reference engine + silence-cuts schema (SILC-01, SILC-04)
+- [x] 03-01-PLAN.md — Container infrastructure + silencedetect module + cross-reference engine + silence-cuts schema (SILC-01, SILC-04)
 - [ ] 03-02-PLAN.md — Hard-cut video assembly with A/V sync + main.py pipeline entry point (SILC-02, SILC-03)
 - [ ] 03-03-PLAN.md — Validation module + unit tests + E2E Docker test (SILC-01, SILC-02, SILC-03, SILC-04)
 

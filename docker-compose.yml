@@ -34,23 +34,31 @@ services:
   # ═════════════════════════════════════════════════════
 
   # Step 1: Whisper Transcription (Phase 2)
-  # whisper:
-  #   <<: *pipeline-common
-  #   build:
-  #     context: ./services/whisper
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - base-python
-  #   environment:
-  #     - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
-  #     - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
-  #     - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
-  #   healthcheck:
-  #     test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/whisper/manifest.json"]
-  #     interval: 5s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 10s
+  whisper:
+    <<: *pipeline-common
+    build:
+      context: ./services/whisper
+      dockerfile: Dockerfile
+    depends_on:
+      base-python:
+        condition: service_completed_successfully
+    environment:
+      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
+      - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/whisper/manifest.json"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Step 2: Silence Cutter (Phase 3)
   # ... similar pattern, depends_on: whisper

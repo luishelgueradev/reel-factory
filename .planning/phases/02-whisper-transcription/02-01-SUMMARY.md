@@ -112,6 +112,13 @@ None
 - Docker Compose whisper service can be built with `docker compose build whisper`
 - GPU passthrough configured — container will auto-detect and use CUDA
 
+## Self-Check: PASSED
+
+- All 7 key files exist on disk: Dockerfile, requirements.txt, __init__.py, config.py, audio_extraction.py, main.py, docker-compose.yml
+- 2 feature commits found in git log: 8c33357, a9efe4f
+- 1 docs commit: 72d00a6
+- All verification criteria from plan verified: FROM base-python, pinned deps, D-XX constants, 16kHz mono extraction, GPU reservation, healthcheck
+
 ---
 *Phase: 02-whisper-transcription*
 *Completed: 2026-05-06*

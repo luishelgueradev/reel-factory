@@ -69,14 +69,12 @@ Plans:
   2. Silent sections are removed with hard cuts (no transition effects between remaining segments)
   3. Audio and video remain perfectly synchronized after all silence cuts — no visible or audible drift
   4. A JSON cut list artifact is produced documenting every silence removal with timestamps and durations
-**Plans**: 5 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: FFmpeg silencedetect container implementation
-- [ ] 03-02: Cross-reference logic — merge FFmpeg silence data with Whisper no_speech segments
-- [ ] 03-03: Hard-cut video assembly with A/V sync preservation (reset_timestamps + setpts=PTS-STARTPTS)
-- [ ] 03-04: Cut list JSON artifact generation
-- [ ] 03-05: End-to-end validation — input MP4 → silence-removed MP4 with sync verification
+- [ ] 03-01-PLAN.md — Container infrastructure + silencedetect module + cross-reference engine + silence-cuts schema (SILC-01, SILC-04)
+- [ ] 03-02-PLAN.md — Hard-cut video assembly with A/V sync + main.py pipeline entry point (SILC-02, SILC-03)
+- [ ] 03-03-PLAN.md — Validation module + unit tests + E2E Docker test (SILC-01, SILC-02, SILC-03, SILC-04)
 
 ### Phase 4: 9:16 Vertical Output
 **Goal**: Video output is rendered in 9:16 vertical format with center-crop reframing optimized for social media

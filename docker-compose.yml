@@ -61,7 +61,25 @@ services:
       start_period: 30s
 
   # Step 2: Silence Cutter (Phase 3)
-  # ... similar pattern, depends_on: whisper
+  silence-cutter:
+    <<: *pipeline-common
+    build:
+      context: ./services/silence-cutter
+    depends_on:
+      whisper:
+        condition: service_completed_successfully
+    environment:
+      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
+      - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/output.mp4
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+      - TRANSCRIPT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
+      - SILENCE_MIN_DURATION=${SILENCE_MIN_DURATION:-0.5}
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/manifest.json"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   # Step 3: Remotion Renderer (Phase 5)
   # ... similar pattern, depends_on: silence-cutter

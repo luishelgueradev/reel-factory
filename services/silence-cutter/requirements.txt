@@ -1,0 +1,4 @@
+# Silence cutter container Python dependencies
+# Lightweight — only needs Pydantic for schema validation.
+# No whisper/torch — this container reads transcript.json, it does NOT run Whisper.
+pydantic>=2.0.0

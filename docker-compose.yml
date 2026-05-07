@@ -121,6 +121,12 @@ services:
       - VERTICAL_WIDTH=${VERTICAL_WIDTH:-1080}
       - VERTICAL_HEIGHT=${VERTICAL_HEIGHT:-1920}
       - CROP_STRATEGY=${CROP_STRATEGY:-center}
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/ffmpeg-finalizer/manifest.json"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
 networks:
   pipeline-net:

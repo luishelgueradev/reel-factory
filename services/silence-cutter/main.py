@@ -24,7 +24,7 @@ from src.silencedetect import detect_silence
 from src.cross_reference import cross_reference_silence
 from src.cut_video import cut_silences, get_video_duration
 from src.remap_transcript import remap_transcript
-from src.schema import SilenceCutList
+from src.schema import SilenceCut, SilenceCutList, SilenceSource
 
 
 def main():
@@ -123,7 +123,6 @@ def main():
             )
         else:
             print(f"[{config.STEP_NAME}] Step 3: No transcript — confirming all FFmpeg candidates")
-            from .schema import SilenceSource
             confirmed_cuts = []
             cumulative_shift = 0.0
             for candidate in silence_candidates:

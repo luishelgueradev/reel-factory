@@ -23,6 +23,7 @@ from src import config
 from src.silencedetect import detect_silence
 from src.cross_reference import cross_reference_silence
 from src.cut_video import cut_silences, get_video_duration
+from src.remap_transcript import remap_transcript
 from src.schema import SilenceCutList
 
 
@@ -43,6 +44,15 @@ def main():
             print(f"[{config.STEP_NAME}] Overriding SILENCE_MIN_DURATION to {config.SILENCE_MIN_DURATION}")
         except ValueError:
             print(f"[{config.STEP_NAME}] WARNING: Invalid SILENCE_MIN_DURATION value '{min_duration}', using default {config.SILENCE_MIN_DURATION}")
+
+    # Allow SILENCE_CUT_SHRINK override
+    shrink = os.environ.get(config.SILENCE_CUT_SHRINK_ENV)
+    if shrink is not None:
+        try:
+            config.SILENCE_CUT_SHRINK = float(shrink)
+            print(f"[{config.STEP_NAME}] Overriding SILENCE_CUT_SHRINK to {config.SILENCE_CUT_SHRINK}")
+        except ValueError:
+            print(f"[{config.STEP_NAME}] WARNING: Invalid SILENCE_CUT_SHRINK value '{shrink}', using default {config.SILENCE_CUT_SHRINK}")
 
     # Validate required env vars
     if not input_path:
@@ -126,8 +136,14 @@ def main():
         cut_silences(input_path, cut_list, output_path)
         print(f"  Output written to: {output_path}")
 
-        # Step 5: Write silence-cuts.json artifact (D-07, D-08)
-        print(f"[{config.STEP_NAME}] Step 5: Writing silence-cuts.json")
+        # Step 5: Remap transcript timestamps to match new video timeline
+        print(f"[{config.STEP_NAME}] Step 5: Remapping transcript timestamps")
+        remapped_transcript_path = os.path.join(output_dir, "transcript.json")
+        remap_transcript(transcript_path, cut_list, remapped_transcript_path)
+        print(f"  Remapped transcript: {remapped_transcript_path}")
+
+        # Step 6: Write silence-cuts.json artifact (D-07, D-08)
+        print(f"[{config.STEP_NAME}] Step 6: Writing silence-cuts.json")
         cuts_path = os.path.join(output_dir, "silence-cuts.json")
         cuts_json = cut_list.model_dump_json(indent=2)
         with open(cuts_path, "w") as f:
@@ -135,11 +151,11 @@ def main():
         print(f"  Wrote silence-cuts.json: {len(cuts_json)} bytes "
               f"({cut_list.total_segments_removed} cuts)")
 
-        # Step 6: Write manifest.json (following whisper/main.py pattern)
+        # Step 7: Write manifest.json (following whisper/main.py pattern)
         duration = time.time() - start_time
         _write_manifest(
             input_file=input_path,
-            output_files=[output_path, cuts_path],
+            output_files=[output_path, cuts_path, remapped_transcript_path],
             duration_seconds=duration,
             status="success",
             exit_code=0,
@@ -183,7 +199,7 @@ def _write_manifest(
     if output_files:
         manifest_dir = os.path.dirname(output_files[0])
     else:
-        manifest_dir = os.path.dirname(output_path) if os.path.isfile(output_path) else output_path
+        manifest_dir = os.path.dirname(output_path)
 
     manifest_path = os.path.join(manifest_dir, "manifest.json")
 

@@ -13,7 +13,6 @@ def main():
     input_path = os.environ.get("INPUT_PATH")
     output_path = os.environ.get("OUTPUT_PATH")
     job_id = os.environ.get("PIPELINE_JOB_ID")
-    expected_ffmpeg_version = os.environ.get("FFMPEG_VERSION", "7.1.1")
 
     if not input_path:
         print("ERROR: INPUT_PATH environment variable is not set", file=sys.stderr)
@@ -40,9 +39,6 @@ def main():
         )
         first_line = ffmpeg_version_output.stdout.split("\n")[0]
         print(f"  FFmpeg version: {first_line}")
-
-        if expected_ffmpeg_version not in first_line:
-            print(f"WARNING: FFmpeg version mismatch. Expected {expected_ffmpeg_version} in output: {first_line}")
     except Exception as e:
         print(f"WARNING: Could not verify FFmpeg version: {e}")
 
@@ -94,12 +90,14 @@ def main():
 def write_manifest(step_name, input_file, output_files, duration_seconds,
                    status, exit_code, error_message=None):
     output_dir = os.environ.get("OUTPUT_PATH", "/tmp")
-    manifest_dir = os.path.dirname(output_dir) if os.path.isfile(output_dir) else output_dir
+    manifest_dir = os.path.dirname(output_dir)
 
     if output_files:
         manifest_dir = os.path.dirname(output_files[0])
 
     manifest_path = os.path.join(manifest_dir, "manifest.json")
+
+    os.makedirs(manifest_dir, exist_ok=True)
 
     manifest = {
         "step_name": step_name,

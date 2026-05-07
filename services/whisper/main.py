@@ -74,7 +74,33 @@ def main():
     try:
         # Step 1: Extract audio from MP4 (D-06: audio extraction inside container)
         print(f"[{config.STEP_NAME}] Step 1: Extracting audio from {input_path}")
-        extract_audio(input_path, wav_path)
+        try:
+            extract_audio(input_path, wav_path)
+        except FileNotFoundError as e:
+            if "No audio stream" in str(e):
+                print(f"[{config.STEP_NAME}] No audio stream found — writing empty transcript")
+                empty_transcript = Transcript(
+                    language=config.WHISPER_LANGUAGE,
+                    model=config.WHISPER_MODEL,
+                    segments=[],
+                    words=[],
+                    duration=0.0,
+                )
+                transcript_json = empty_transcript.model_dump_json(indent=2)
+                with open(output_path, "w") as f:
+                    f.write(transcript_json)
+                print(f"  Wrote empty transcript.json: {len(transcript_json)} bytes")
+                duration = time.time() - start_time
+                _write_manifest(
+                    input_file=input_path,
+                    output_files=[output_path],
+                    duration_seconds=duration,
+                    status="success",
+                    exit_code=0,
+                )
+                print(f"[{config.STEP_NAME}] Completed (no audio) in {duration:.2f}s")
+                sys.exit(0)
+            raise
 
         # Step 2: Transcribe with whisperx/faster-whisper (D-01: primary + fallback)
         print(f"[{config.STEP_NAME}] Step 2: Transcribing {wav_path}")
@@ -163,7 +189,7 @@ def _write_manifest(
     if output_files:
         manifest_dir = os.path.dirname(output_files[0])
     else:
-        manifest_dir = os.path.dirname(output_path) if os.path.isfile(output_path) else output_path
+        manifest_dir = os.path.dirname(output_path)
 
     manifest_path = os.path.join(manifest_dir, "manifest.json")
 

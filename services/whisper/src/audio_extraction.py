@@ -31,6 +31,24 @@ def extract_audio(input_path: str, output_path: str) -> str:
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
+    # Check if input has an audio stream before attempting extraction
+    probe_cmd = [
+        "ffprobe",
+        "-v", "quiet",
+        "-select_streams", "a",
+        "-show_entries", "stream=codec_type",
+        "-of", "csv=p=0",
+        input_path
+    ]
+
+    probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+
+    if not probe_result.stdout.strip():
+        raise FileNotFoundError(
+            f"No audio stream found in {input_path}. "
+            f"The video file has no audio track."
+        )
+
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

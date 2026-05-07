@@ -1,34 +1,29 @@
 """Cross-reference engine — confirms FFmpeg silence candidates against Whisper data.
 
-Per D-01: Intersection approach — a silence segment is confirmed as real only
-when BOTH FFmpeg silencedetect AND Whisper no_speech_prob agree.
+FFmpeg defines the silence BOUNDARIES (where volume drops below threshold).
+Whisper confirms whether the silence is REAL (no speech content vs just low volume).
 
-Per D-02: FFmpeg drives the cross-reference. FFmpeg produces candidate segments,
-then Whisper no_speech_prob confirms each candidate.
+Confirmation logic:
+1. No Whisper words in the region → pure silence → confirmed as BOTH.
+2. Whisper no_speech_prob high for overlapping words → Whisper agrees it's silence.
+3. Words at edges with low no_speech_prob → FFmpeg boundaries still win.
+   Whisper timestamps are imprecise (words get stretched into silence).
+   If FFmpeg detected silence here, we trust it — but mark source as FFMPEG.
+4. The majority of the silence region is covered by dense speech → not silence,
+   reject. This prevents cutting mid-sentence pauses where someone is speaking.
 
-Per D-03: Whisper confirmation uses an ANY-word threshold. If ANY word overlapping
-a candidate FFmpeg silence segment has no_speech_prob > NO_SPEECH_THRESHOLD (0.6),
-the silence is confirmed.
+The key principle: FFmpeg's volume-based detection is more reliable for CUT BOUNDARIES.
+Whisper is used to REJECT false positives (e.g., quiet speech that isn't silence),
+not to trim the cut region.
 """
 
 import json
 import os
-from typing import List, Optional
+from typing import List, Tuple
 
 from . import config
 from .silencedetect import SilenceSegment
 from .schema import SilenceCut, SilenceCutList, SilenceSource
-
-
-# Import Whisper transcript types for cross-referencing.
-# We import the schema definition — the transcript.json file is read at runtime.
-try:
-    # Import from the installed package if available (same container)
-    from services.whisper.src.schema import Transcript, TranscriptWord
-except ImportError:
-    # Fall back: define types inline for standalone parsing
-    # In Docker, transcript.json is read from TRANSCRIPT_PATH env var
-    pass
 
 
 def cross_reference_silence(
@@ -36,11 +31,7 @@ def cross_reference_silence(
     transcript_path: str,
     original_duration: float,
 ) -> SilenceCutList:
-    """Cross-reference FFmpeg silence candidates with Whisper no_speech data.
-
-    Per D-01: Only segments confirmed by BOTH sources are kept.
-    Per D-02: FFmpeg candidates are checked against Whisper data.
-    Per D-03: ANY word overlapping a candidate with no_speech_prob > threshold confirms.
+    """Cross-reference FFmpeg silence candidates with Whisper data.
 
     Args:
         silence_candidates: FFmpeg silencedetect candidates.
@@ -50,48 +41,60 @@ def cross_reference_silence(
     Returns:
         SilenceCutList with confirmed cuts and cumulative_shift values.
     """
-    # Load transcript.json
     transcript_data = _load_transcript(transcript_path)
-
-    # Extract words with no_speech_prob
     words = _extract_words(transcript_data)
 
     confirmed_cuts = []
     cumulative_shift = 0.0
 
-    for candidate in silence_candidates:
-        # Apply padding per D-06: expand cut region by 50ms each side
+    for i, candidate in enumerate(silence_candidates):
         padded_start = max(0, candidate.start - config.SILENCE_CUT_PADDING)
         padded_end = candidate.end + config.SILENCE_CUT_PADDING if candidate.end > 0 else candidate.end
 
-        # Check if any word overlaps this candidate with high no_speech_prob
-        source = _check_whisper_confirmation(
-            padded_start, padded_end, words
-        )
+        result = _check_silence(padded_start, padded_end, words, original_duration)
 
-        if source == SilenceSource.BOTH:
-            # Confirmed silence — compute cut positions with padding
-            new_start = padded_start - cumulative_shift
-            new_end = padded_end - cumulative_shift
+        if result is None:
+            continue
 
-            # Handle edge case: silence extends to end of file
-            actual_end = padded_end if padded_end > 0 else original_duration
-            actual_duration = actual_end - padded_start
+        cut_start, cut_end, source = result
 
-            confirmed_cuts.append(SilenceCut(
-                original_start=padded_start,
-                original_end=actual_end,
-                new_start=max(0, new_start),
-                new_end=max(0, new_end),
-                duration=actual_duration,
-                source=source,
-                cumulative_shift=cumulative_shift,
-            ))
+        shrink = config.SILENCE_CUT_SHRINK
+        actual_start = max(0, cut_start + shrink)
+        actual_end = min(cut_end - shrink, original_duration)
+        actual_duration = actual_end - actual_start
 
-            # Update cumulative shift
-            cumulative_shift += actual_duration
+        if actual_duration < 0.01:
+            continue
 
-    # Build cut list
+        confirmed_cuts.append(SilenceCut(
+            original_start=actual_start,
+            original_end=actual_end,
+            new_start=max(0, actual_start - cumulative_shift),
+            new_end=max(0, min(actual_end - cumulative_shift, actual_end - cumulative_shift)),
+            duration=actual_duration,
+            source=source,
+            cumulative_shift=cumulative_shift,
+        ))
+
+        cumulative_shift += actual_duration
+
+    # If the tail after the last cut is shorter than SILENCE_MIN_DURATION,
+    # extend the last cut to eat it — avoids a dangling fragment.
+    if confirmed_cuts:
+        last_cut = confirmed_cuts[-1]
+        tail = original_duration - last_cut.original_end
+        if 0 < tail < config.SILENCE_MIN_DURATION:
+            extra = tail
+            confirmed_cuts[-1] = SilenceCut(
+                original_start=last_cut.original_start,
+                original_end=last_cut.original_end + extra,
+                new_start=last_cut.new_start,
+                new_end=last_cut.new_end + extra,
+                duration=last_cut.duration + extra,
+                source=last_cut.source,
+                cumulative_shift=last_cut.cumulative_shift,
+            )
+
     total_silence_removed = sum(cut.duration for cut in confirmed_cuts)
     new_duration = original_duration - total_silence_removed
 
@@ -104,97 +107,68 @@ def cross_reference_silence(
     )
 
 
-def _check_whisper_confirmation(
+def _check_silence(
     silence_start: float,
     silence_end: float,
     words: List[dict],
-) -> SilenceSource:
-    """Check if Whisper confirms a silence candidate per D-03.
+    original_duration: float,
+) -> tuple or None:
+    """Check if a silence candidate is confirmed.
 
-    Per D-03: If ANY word overlapping the candidate silence segment has
-    no_speech_prob > NO_SPEECH_THRESHOLD, the silence is confirmed.
-
-    Args:
-        silence_start: Start time of candidate silence.
-        silence_end: End time of candidate silence (0 if unknown).
-        words: List of word dicts with start, end, no_speech_prob fields.
-
-    Returns:
-        SilenceSource.BOTH if Whisper confirms, SilenceSource.FFMPEG otherwise.
+    Returns (cut_start, cut_end, source) or None if rejected.
     """
+    overlapping = []
     for word in words:
-        word_start = word.get("start", 0)
-        word_end = word.get("end", 0)
-        no_speech_prob = word.get("no_speech_prob", 0)
+        w_start = word.get("start", 0)
+        w_end = word.get("end", 0)
+        if w_end > silence_start and w_start < silence_end:
+            overlapping.append((w_start, w_end, word.get("no_speech_prob", 0)))
 
-        # Check if this word overlaps with the silence candidate
-        overlap = _times_overlap(
-            word_start, word_end,
-            silence_start, silence_end
-        )
+    # Case 1: No words at all → pure silence, fully confirmed
+    if not overlapping:
+        return (silence_start, silence_end, SilenceSource.BOTH)
 
-        if overlap and no_speech_prob > config.NO_SPEECH_THRESHOLD:
-            return SilenceSource.BOTH
+    # Case 2: High no_speech_prob → Whisper agrees it's silence
+    for w_start, w_end, nsp in overlapping:
+        if nsp > config.NO_SPEECH_THRESHOLD:
+            return (silence_start, silence_end, SilenceSource.BOTH)
 
-    # No Whisper confirmation — FFmpeg-only detection
-    return SilenceSource.FFMPEG
+    # Case 3: Words overlap — check if this is real speech or just
+    # Whisper timestamp inaccuracy.
+    # Whisper often stretches the last word of a segment into the silence.
+    # We check: does the speech DENSITY justify rejecting the silence?
+    # If words cover less than 50% of the silence region, it's mostly silent.
+    speech_duration = sum(
+        min(w_end, silence_end) - max(w_start, silence_start)
+        for w_start, w_end, nsp in overlapping
+        if w_end > silence_start and w_start < silence_end
+    )
+    silence_duration = silence_end - silence_start
+    speech_ratio = speech_duration / silence_duration if silence_duration > 0 else 1.0
 
+    if speech_ratio > 0.5:
+        # More than half the region is covered by speech → likely a
+        # mid-sentence pause, not silence. Reject.
+        return None
 
-def _times_overlap(
-    start1: float, end1: float,
-    start2: float, end2: float
-) -> bool:
-    """Check if two time ranges overlap.
-
-    Handles edge case where end1 or end2 is 0 (unknown end time).
-    """
-    if end1 <= 0 or end2 <= 0:
-        # If one range has unknown end, check if starts overlap
-        return start1 <= start2 if end2 <= 0 else start2 <= start1
-    return start1 < end2 and start2 < end1
+    # Less than half is speech → the speech is just edge overlap.
+    # FFmpeg's boundary is more reliable → trust it.
+    return (silence_start, silence_end, SilenceSource.FFMPEG)
 
 
 def _load_transcript(transcript_path: str) -> dict:
-    """Load and parse transcript.json from Whisper step.
-
-    Args:
-        transcript_path: Path to the transcript.json file.
-
-    Returns:
-        Parsed JSON as a dict.
-
-    Raises:
-        FileNotFoundError: If transcript.json does not exist.
-    """
+    """Load and parse transcript.json from Whisper step."""
     if not os.path.exists(transcript_path):
-        raise FileNotFoundError(
-            f"Transcript file not found: {transcript_path}"
-        )
-
+        raise FileNotFoundError(f"Transcript file not found: {transcript_path}")
     with open(transcript_path, "r") as f:
         return json.load(f)
 
 
 def _extract_words(transcript_data: dict) -> List[dict]:
-    """Extract the flat word list from transcript.json.
-
-    The Whisper transcript.json has both segments[*].words and a flat
-    words array (per D-07 in Phase 2 context). We prefer the flat words
-    list for simpler iteration.
-
-    Args:
-        transcript_data: Parsed transcript.json dict.
-
-    Returns:
-        List of word dicts with start, end, no_speech_prob fields.
-    """
-    # Prefer flat words list (top-level "words" key)
+    """Extract the flat word list from transcript.json."""
     if "words" in transcript_data and transcript_data["words"]:
         return transcript_data["words"]
-
-    # Fall back to extracting from segments
     words = []
     for segment in transcript_data.get("segments", []):
         words.extend(segment.get("words", []))
-
     return words

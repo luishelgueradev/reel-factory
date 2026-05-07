@@ -21,10 +21,12 @@ SILENCE_NOISE_TOLERANCE_DB = -30
 # Matches NO_SPEECH_THRESHOLD from whisper/src/config.py (0.6 per D-11 in Phase 2).
 NO_SPEECH_THRESHOLD = 0.6
 
-# D-06: 50ms padding before and after speech at cut boundaries.
-# Prevents clipping word starts/ends due to timestamp imprecision.
-# Fixed constant — NOT configurable via env var.
+# D-06: Padding expands cuts into adjacent silence.
+# SILENCE_CUT_SHRINK shrinks cuts to preserve speech at boundaries.
+# Both are configurable via env vars for different content types.
 SILENCE_CUT_PADDING = 0.05
+SILENCE_CUT_SHRINK = 0.4
+SILENCE_CUT_SHRINK_ENV = "SILENCE_CUT_SHRINK"
 
 # Step name matching shared/constants.ts STEP_NAMES.silenceCutter
 STEP_NAME = "silence-cutter"

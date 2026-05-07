@@ -62,6 +62,11 @@ def cut_silences(
     keep_segments = _compute_keep_segments(cut_list)
     print(f"[{config.STEP_NAME}] Extracting {len(keep_segments)} segments to keep")
 
+    if not keep_segments:
+        print(f"[{config.STEP_NAME}] All audio removed — copying input with no audio segments")
+        shutil.copy2(input_path, output_path)
+        return output_path
+
     # Extract keep segments as temporary files
     with tempfile.TemporaryDirectory(prefix="silence-cutter-") as temp_dir:
         segment_files = _extract_segments(input_path, keep_segments, temp_dir)
@@ -108,9 +113,10 @@ def _compute_keep_segments(cut_list: SilenceCutList) -> List[Tuple[float, float]
         current_time = cut.original_end
 
     # Final keep segment: from last cut end to video end
+    # If the tail is shorter than SILENCE_MIN_DURATION, it's silence residue — drop it
     if current_time < cut_list.original_duration:
         keep_duration = cut_list.original_duration - current_time
-        if keep_duration > 0.01:
+        if keep_duration >= config.SILENCE_MIN_DURATION:
             keep_segments.append((current_time, keep_duration))
 
     return keep_segments
@@ -141,12 +147,13 @@ def _extract_segments(
 
         cmd = [
             "ffmpeg",
-            "-y",                     # Overwrite output
-            "-ss", str(start),        # Seek to start time
-            "-i", input_path,          # Input file
-            "-t", str(duration),      # Duration to extract
-            "-c", "copy",             # Stream copy (no re-encoding)
-            "-avoid_negative_ts", "1", # Avoid negative timestamps
+            "-y",
+            "-ss", str(start),
+            "-i", input_path,
+            "-t", str(duration),
+            "-c:v", "libx264",
+            "-c:a", "aac",
+            "-af", "apad",
             segment_path
         ]
 
@@ -206,10 +213,11 @@ def _concatenate_segments(concat_list_path: str, output_path: str) -> None:
         "-f", "concat",                          # Concat demuxer
         "-safe", "0",                             # Allow absolute paths in concat list
         "-i", concat_list_path,                   # Input from concat list
-        "-c", "copy",                             # Stream copy (no re-encoding)
+        "-map", "0:v:0",
+        "-map", "0:a:0?",
+        "-c:v", "libx264",                        # Re-encode video for clean timestamps
+        "-c:a", "aac",                            # Re-encode audio for clean timestamps
         "-reset_timestamps", "1",                 # Reset timestamps at each segment (SILC-03)
-        "-map", "0:v:0",                          # Map first video stream
-        "-map", "0:a:0",                          # Map first audio stream
         output_path
     ]
 

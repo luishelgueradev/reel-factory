@@ -19,6 +19,8 @@ to faster-whisper's transcribe() method for built-in VAD filtering.
 """
 
 import time
+import os
+import subprocess
 from typing import Optional
 
 from . import config
@@ -123,8 +125,10 @@ def _transcribe_whisperx(
         result["segments"], model_a, metadata, audio_path, device=device
     )
 
+    audio_duration = _get_audio_duration(audio_path)
+
     # Convert to Transcript schema
-    return _convert_whisperx_result(result, model_name, language)
+    return _convert_whisperx_result(result, model_name, language, audio_duration)
 
 
 def _transcribe_faster_whisper(
@@ -167,6 +171,7 @@ def _convert_whisperx_result(
     result: dict,
     model_name: str,
     language: str,
+    audio_duration: float = 0.0,
 ) -> Transcript:
     """Convert whisperx aligned result to Transcript schema.
 
@@ -233,11 +238,11 @@ def _convert_whisperx_result(
         transcript_segments.append(ts)
         all_words.extend(seg_words)
 
-    # Total duration from segments (last segment end time)
+    # Total duration: use segments if available, otherwise fall back to audio_duration
     duration = (
         max((s.end for s in transcript_segments), default=0.0)
         if transcript_segments
-        else 0.0
+        else audio_duration
     )
 
     return Transcript(
@@ -247,6 +252,27 @@ def _convert_whisperx_result(
         words=all_words,
         duration=duration,
     )
+
+
+def _get_audio_duration(audio_path: str) -> float:
+    """Get audio file duration in seconds using ffprobe.
+
+    Falls back to 0.0 if ffprobe fails.
+    """
+    try:
+        cmd = [
+            "ffprobe",
+            "-v", "quiet",
+            "-show_entries", "format=duration",
+            "-of", "csv=p=0",
+            audio_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and result.stdout.strip():
+            return float(result.stdout.strip())
+    except Exception:
+        pass
+    return 0.0
 
 
 def _convert_faster_whisper_result(

@@ -1,16 +1,21 @@
+x-pipeline-common: &pipeline-common
+  volumes:
+    - ./pipeline:/data/pipeline
+  networks:
+    - pipeline-net
+  user: "${UID:-1000}:${GID:-1000}"
+  environment:
+    - HOME=/data/pipeline/.cache
+
 services:
   base-python:
     build:
       context: ./services/base-python
-      args:
-        FFMPEG_VERSION: ${FFMPEG_VERSION:-7.1.1}
     image: video-pipeline-base-python:latest
 
   base-node:
     build:
       context: ./services/base-node
-      args:
-        FFMPEG_VERSION: ${FFMPEG_VERSION:-7.1.1}
     image: video-pipeline-base-node:latest
 
   smoke-test:
@@ -18,12 +23,12 @@ services:
     build:
       context: ./services/smoke-test
     depends_on:
-      - base-python
+      base-python:
+        condition: service_completed_successfully
     environment:
       - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
       - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/smoke-test/output/video.mp4
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
-      - FFMPEG_VERSION=${FFMPEG_VERSION:-7.1.1}
 
   # ═════════════════════════════════════════════════════
   # Pipeline Step Services
@@ -46,6 +51,7 @@ services:
       - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
       - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+      - HF_HOME=/data/pipeline/.cache/huggingface
     deploy:
       resources:
         reservations:
@@ -66,6 +72,8 @@ services:
     build:
       context: ./services/silence-cutter
     depends_on:
+      base-python:
+        condition: service_completed_successfully
       whisper:
         condition: service_completed_successfully
     environment:
@@ -87,20 +95,6 @@ services:
   # Step 4: FFmpeg Finalizer (Phase 4)
   # ... similar pattern, depends_on: remotion-renderer
 
-x-pipeline-common: &pipeline-common
-  volumes:
-    - pipeline-data:/data/pipeline
-  networks:
-    - pipeline-net
-  environment:
-    - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
-    - INPUT_PATH=${INPUT_PATH}
-    - OUTPUT_PATH=${OUTPUT_PATH}
-
 networks:
   pipeline-net:
     driver: bridge
-
-volumes:
-  pipeline-data:
-    driver: local

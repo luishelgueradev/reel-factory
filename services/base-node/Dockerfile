@@ -1,8 +1,4 @@
-ARG FFMPEG_VERSION=7.1.1
-
 FROM node:22-bookworm-slim AS base
-
-ARG FFMPEG_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
@@ -24,8 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libcups2 \
       && curl -L "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" -o /tmp/ffmpeg.tar.xz \
       && tar -xf /tmp/ffmpeg.tar.xz -C /tmp \
-      && cp /tmp/ffmpeg-${FFMPEG_VERSION}-amd64-static/ffmpeg /usr/local/bin/ \
-      && cp /tmp/ffmpeg-${FFMPEG_VERSION}-amd64-static/ffprobe /usr/local/bin/ \
+      && FFDIR=$(ls -d /tmp/ffmpeg-*-amd64-static | head -1) \
+      && cp "${FFDIR}/ffmpeg" /usr/local/bin/ \
+      && cp "${FFDIR}/ffprobe" /usr/local/bin/ \
       && chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe \
       && rm -rf /tmp/ffmpeg* \
       && apt-get purge -y curl xz-utils \
@@ -39,4 +36,4 @@ RUN mkdir -p /data/pipeline
 
 WORKDIR /app
 
-CMD ["node", "dist/index.js"]
+CMD ["true"]

@@ -84,14 +84,12 @@ Plans:
   1. Final output video file is 1080x1920 pixels (9:16 aspect ratio)
   2. Center-crop strategy is applied by default — the speaker's face remains centered in frame
   3. The 9:16 frame preserves safe zone boundaries — no critical content is clipped at edges where subtitles/overlays will be placed
-**Plans**: 5 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: FFmpeg finalizer container setup
-- [ ] 04-02: Center-crop video filter (scale + crop to 1080x1920)
-- [ ] 04-03: 9:16 safe zone calculation and validation
-- [ ] 04-04: H.264 encoding and audio normalization for social media
-- [ ] 04-05: End-to-end pipeline validation — MP4 in → 9:16 MP4 out (without subtitles yet)
+- [ ] 04-01-PLAN.md — Conditional crop logic + config refactor + schema update (VERT-01, VERT-02)
+- [ ] 04-02-PLAN.md — Validation module + unit tests (VERT-01, VERT-02, VERT-03)
+- [ ] 04-03-PLAN.md — E2E Docker test + health check + human verification (VERT-01, VERT-02, VERT-03)
 
 ### Phase 5: Remotion + Animated Subtitles
 **Goal**: Word-by-word animated subtitles are burned into the 9:16 video — the killer feature for short-form content
@@ -219,9 +217,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Pipeline Infrastructure | 4/4 | Complete    | 2026-05-05 |
-| 2. Whisper Transcription | 0/5 | Not started | - |
-| 3. Silence Detection & Removal | 0/5 | Not started | - |
-| 4. 9:16 Vertical Output | 0/5 | Not started | - |
+| 2. Whisper Transcription | 0/3 | Not started | - |
+| 3. Silence Detection & Removal | 0/3 | Not started | - |
+| 4. 9:16 Vertical Output | 0/3 | Planned | - |
 | 5. Remotion + Animated Subtitles | 0/6 | Not started | - |
 | 6. Animated Intros & Outros | 0/5 | Not started | - |
 | 7. Visual Cuts & Zooms | 0/5 | Not started | - |

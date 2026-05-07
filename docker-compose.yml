@@ -89,8 +89,22 @@ services:
       retries: 3
       start_period: 15s
 
-  # Step 3: Remotion Renderer (Phase 5)
-  # ... similar pattern, depends_on: silence-cutter
+  # Remotion Renderer: adds TikTok-style animated subtitles to video
+  remotion-renderer:
+    <<: *pipeline-common
+    build:
+      context: ./services/remotion-renderer
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+    environment:
+      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/output.mp4
+      - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/output.mp4
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+      - TRANSCRIPT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
+      - ACTIVE_COLOR=${ACTIVE_COLOR:-#FFFF00}
+      - INACTIVE_COLOR=${ACTIVE_COLOR:-#FFFFFF}
+      - FONT_SIZE=${FONT_SIZE:-58}
 
   # FFmpeg Finalizer: converts to 9:16 vertical (1080x1920) with center-crop
   ffmpeg-finalizer:

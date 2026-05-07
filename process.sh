@@ -4,7 +4,8 @@ set -euo pipefail
 # Process a video through the pipeline
 # 1. Silence cutter (FFmpeg-only)
 # 2. Whisper (on cut video)
-# 3. FFmpeg finalizer (9:16 vertical output)
+# 3. Remotion renderer (animated subtitles on cut video)
+# 4. FFmpeg finalizer (9:16 vertical output)
 # Usage: ./process.sh video.mp4 [video2.mp4 ...]
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -30,7 +31,7 @@ for VIDEO in "$@"; do
     export PIPELINE_JOB_ID="$NAME"
 
     echo ""
-    echo "  Step 1/3: Silence cutter..."
+    echo "  Step 1/4: Silence cutter..."
     export INPUT_PATH="/data/pipeline/$NAME/input/video.mp4"
     export OUTPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
 
@@ -39,7 +40,7 @@ for VIDEO in "$@"; do
         silence-cutter 2>&1 | grep -E '\[silence-cutter\]|Confirmed|Completed|ERROR' || true
 
     echo ""
-    echo "  Step 2/3: Whisper (on cut video)..."
+    echo "  Step 2/4: Whisper (on cut video)..."
     export INPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
     export OUTPUT_PATH="/data/pipeline/$NAME/whisper/transcript.json"
 
@@ -47,10 +48,20 @@ for VIDEO in "$@"; do
         whisper 2>&1 | grep -E '\[whisper\]|Completed|ERROR' || true
 
     echo ""
-    echo "  Step 3/3: FFmpeg finalizer (9:16 vertical)..."
+    echo "  Step 3/4: Remotion renderer (animated subtitles)..."
     export INPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
+    export OUTPUT_PATH="/data/pipeline/$NAME/remotion-renderer/output.mp4"
+    export TRANSCRIPT_PATH="/data/pipeline/$NAME/whisper/transcript.json"
+
+    docker compose run --rm \
+        -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH -e TRANSCRIPT_PATH \
+        remotion-renderer 2>&1 | grep -E '\[remotion-renderer\]|Completed|ERROR|Render:' || true
+
+    echo ""
+    echo "  Step 4/4: FFmpeg finalizer (9:16 vertical)..."
+    export INPUT_PATH="/data/pipeline/$NAME/remotion-renderer/output.mp4"
     export OUTPUT_PATH="/data/pipeline/$NAME/ffmpeg-finalizer/output.mp4"
-    export FINALIZER_INPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
+    export FINALIZER_INPUT_PATH="/data/pipeline/$NAME/remotion-renderer/output.mp4"
 
     docker compose run --rm \
         -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH \
@@ -58,18 +69,23 @@ for VIDEO in "$@"; do
 
     # Copy output
     mkdir -p "$OUTPUT_DIR"
-    cp "$JOB_DIR/silence-cutter/output.mp4" "$OUTPUT_DIR/reel.mp4" 2>/dev/null || true
+    cp "$JOB_DIR/silence-cutter/output.mp4" "$OUTPUT_DIR/reel_no_subs.mp4" 2>/dev/null || true
+    cp "$JOB_DIR/remotion-renderer/output.mp4" "$OUTPUT_DIR/reel_with_subs.mp4" 2>/dev/null || true
     cp "$JOB_DIR/ffmpeg-finalizer/output.mp4" "$OUTPUT_DIR/reel_9x16.mp4" 2>/dev/null || true
     cp "$JOB_DIR/whisper/transcript.json" "$OUTPUT_DIR/transcript.json" 2>/dev/null || true
     cp "$JOB_DIR/silence-cutter/silence-cuts.json" "$OUTPUT_DIR/cuts.json" 2>/dev/null || true
+    cp "$JOB_DIR/remotion-renderer/caption-pages.json" "$OUTPUT_DIR/caption-pages.json" 2>/dev/null || true
+    cp "$JOB_DIR/remotion-renderer/remotion-info.json" "$OUTPUT_DIR/remotion-info.json" 2>/dev/null || true
     cp "$JOB_DIR/ffmpeg-finalizer/finalizer-info.json" "$OUTPUT_DIR/finalizer-info.json" 2>/dev/null || true
 
     echo ""
     echo "  Output: $OUTPUT_DIR/"
-    echo "    reel.mp4            - video sin silencios (original aspect)"
-    echo "    reel_9x16.mp4       - video vertical 9:16 (1080x1920)"
+    echo "    reel_no_subs.mp4    - video sin silencios (original aspect)"
+    echo "    reel_with_subs.mp4  - video con subtitulos animados (original aspect)"
+    echo "    reel_9x16.mp4       - video vertical 9:16 con subtitulos (1080x1920)"
     echo "    transcript.json      - transcripcion"
     echo "    cuts.json            - detalle de cortes de silencio"
+    echo "    caption-pages.json   - paginas de subtitulos generadas"
     echo "    finalizer-info.json  - info del crop vertical"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 done

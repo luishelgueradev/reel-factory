@@ -69,11 +69,11 @@ def compute_crop(input_width: int, input_height: int, target_width: int, target_
 
     # D-03: If already 9:16 (within 0.5% tolerance), no crop needed
     if abs(input_ratio - target_ratio) / target_ratio <= ASPECT_RATIO_TOLERANCE:
-        return 0, 0, input_width, input_height
+        return 0, 0, input_width - (input_width % 2), input_height - (input_height % 2)
 
     if input_ratio > target_ratio:
         # Input is wider than target — crop sides
-        crop_height = input_height
+        crop_height = input_height - (input_height % 2)  # Ensure even (FFmpeg requirement)
         crop_width = round(input_height * target_ratio)
         crop_width = crop_width - (crop_width % 2)
     else:

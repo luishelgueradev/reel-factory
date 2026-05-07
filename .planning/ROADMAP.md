@@ -89,7 +89,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Conditional crop logic + config refactor + schema update (VERT-01, VERT-02)
 - [x] 04-02-PLAN.md — Validation module + unit tests (VERT-01, VERT-02, VERT-03)
-- [ ] 04-03-PLAN.md — E2E Docker test + health check + human verification (VERT-01, VERT-02, VERT-03)
+- [x] 04-03-PLAN.md — E2E Docker test + health check + human verification (VERT-01, VERT-02, VERT-03)
 
 ### Phase 5: Remotion + Animated Subtitles
 **Goal**: Word-by-word animated subtitles are burned into the 9:16 video — the killer feature for short-form content

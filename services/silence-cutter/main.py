@@ -64,8 +64,9 @@ def main():
         sys.exit(1)
 
     if not transcript_path:
-        print("ERROR: TRANSCRIPT_PATH environment variable is not set", file=sys.stderr)
-        sys.exit(1)
+        print(f"[{config.STEP_NAME}] No TRANSCRIPT_PATH set — using FFmpeg-only mode (no Whisper cross-reference)")
+    elif not os.path.exists(transcript_path):
+        print(f"[{config.STEP_NAME}] WARNING: Transcript not found at {transcript_path} — using FFmpeg-only mode")
 
     if not job_id:
         print("ERROR: PIPELINE_JOB_ID environment variable is not set", file=sys.stderr)
@@ -90,19 +91,12 @@ def main():
         )
         sys.exit(1)
 
-    # Validate transcript file exists
-    if not os.path.exists(transcript_path):
-        error_msg = f"Transcript file not found at {transcript_path}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        _write_manifest(
-            input_file=input_path,
-            output_files=[],
-            duration_seconds=time.time() - start_time,
-            status="error",
-            exit_code=1,
-            error_message=error_msg,
-        )
-        sys.exit(1)
+    # Validate transcript if provided
+    has_transcript = False
+    if transcript_path and os.path.exists(transcript_path):
+        has_transcript = True
+    elif transcript_path:
+        print(f"[{config.STEP_NAME}] WARNING: Transcript not found at {transcript_path} — using FFmpeg-only mode")
 
     # Create output directory
     output_dir = os.path.dirname(output_path)
@@ -119,13 +113,45 @@ def main():
         silence_candidates = detect_silence(input_path)
         print(f"  Found {len(silence_candidates)} candidate silence segments")
 
-        # Step 3: Cross-reference with Whisper no_speech_prob (D-01, D-02, D-03)
-        print(f"[{config.STEP_NAME}] Step 3: Cross-referencing with Whisper transcript")
-        cut_list = cross_reference_silence(
-            silence_candidates,
-            transcript_path,
-            original_duration,
-        )
+        # Step 3: Cross-reference with Whisper transcript (if available)
+        if has_transcript:
+            print(f"[{config.STEP_NAME}] Step 3: Cross-referencing with Whisper transcript")
+            cut_list = cross_reference_silence(
+                silence_candidates,
+                transcript_path,
+                original_duration,
+            )
+        else:
+            print(f"[{config.STEP_NAME}] Step 3: No transcript — confirming all FFmpeg candidates")
+            from .schema import SilenceSource
+            confirmed_cuts = []
+            cumulative_shift = 0.0
+            for candidate in silence_candidates:
+                padded_start = max(0, candidate.start - config.SILENCE_CUT_PADDING)
+                padded_end = candidate.end + config.SILENCE_CUT_PADDING if candidate.end > 0 else candidate.end
+                shrink = config.SILENCE_CUT_SHRINK
+                actual_start = max(0, padded_start + shrink)
+                actual_end = min(padded_end - shrink, original_duration)
+                actual_duration = actual_end - actual_start
+                if actual_duration < 0.01:
+                    continue
+                confirmed_cuts.append(SilenceCut(
+                    original_start=actual_start,
+                    original_end=actual_end,
+                    new_start=max(0, actual_start - cumulative_shift),
+                    new_end=max(0, min(actual_end - cumulative_shift, actual_end - cumulative_shift)),
+                    duration=actual_duration,
+                    source=SilenceSource.FFMPEG,
+                    cumulative_shift=cumulative_shift,
+                ))
+                cumulative_shift += actual_duration
+            cut_list = SilenceCutList(
+                total_segments_removed=len(confirmed_cuts),
+                total_silence_removed=round(sum(c.duration for c in confirmed_cuts), 4),
+                original_duration=original_duration,
+                new_duration=round(original_duration - sum(c.duration for c in confirmed_cuts), 4),
+                cuts=confirmed_cuts,
+            )
         print(f"  Confirmed {cut_list.total_segments_removed} silence segments "
               f"({cut_list.total_silence_removed:.2f}s total silence)")
         print(f"  New duration: {cut_list.new_duration:.2f}s "
@@ -136,11 +162,12 @@ def main():
         cut_silences(input_path, cut_list, output_path)
         print(f"  Output written to: {output_path}")
 
-        # Step 5: Remap transcript timestamps to match new video timeline
-        print(f"[{config.STEP_NAME}] Step 5: Remapping transcript timestamps")
-        remapped_transcript_path = os.path.join(output_dir, "transcript.json")
-        remap_transcript(transcript_path, cut_list, remapped_transcript_path)
-        print(f"  Remapped transcript: {remapped_transcript_path}")
+        # Step 5: Remap transcript timestamps (only if transcript was provided)
+        if has_transcript:
+            print(f"[{config.STEP_NAME}] Step 5: Remapping transcript timestamps")
+            remapped_transcript_path = os.path.join(output_dir, "transcript.json")
+            remap_transcript(transcript_path, cut_list, remapped_transcript_path)
+            print(f"  Remapped transcript: {remapped_transcript_path}")
 
         # Step 6: Write silence-cuts.json artifact (D-07, D-08)
         print(f"[{config.STEP_NAME}] Step 6: Writing silence-cuts.json")
@@ -151,11 +178,14 @@ def main():
         print(f"  Wrote silence-cuts.json: {len(cuts_json)} bytes "
               f"({cut_list.total_segments_removed} cuts)")
 
-        # Step 7: Write manifest.json (following whisper/main.py pattern)
+        # Step 7: Write manifest.json
         duration = time.time() - start_time
+        out_files = [output_path, cuts_path]
+        if has_transcript:
+            out_files.append(remapped_transcript_path)
         _write_manifest(
             input_file=input_path,
-            output_files=[output_path, cuts_path, remapped_transcript_path],
+            output_files=out_files,
             duration_seconds=duration,
             status="success",
             exit_code=0,

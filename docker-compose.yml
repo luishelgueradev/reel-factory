@@ -66,7 +66,8 @@ services:
       retries: 3
       start_period: 30s
 
-  # Step 2: Silence Cutter (Phase 3)
+  # Silence Cutter: runs BEFORE whisper in the new pipeline order.
+  # TRANSCRIPT_PATH is optional — if not set, uses FFmpeg-only mode.
   silence-cutter:
     <<: *pipeline-common
     build:
@@ -74,14 +75,13 @@ services:
     depends_on:
       base-python:
         condition: service_completed_successfully
-      whisper:
-        condition: service_completed_successfully
     environment:
       - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
       - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/output.mp4
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
-      - TRANSCRIPT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
+      - TRANSCRIPT_PATH=${TRANSCRIPT_PATH:-}
       - SILENCE_MIN_DURATION=${SILENCE_MIN_DURATION:-0.5}
+      - SILENCE_CUT_SHRINK=${SILENCE_CUT_SHRINK:-0.4}
     healthcheck:
       test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/manifest.json"]
       interval: 5s

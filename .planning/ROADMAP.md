@@ -99,15 +99,12 @@ Plans:
   1. Output video has subtitles that animate word-by-word, appearing in sync with the speaker's voice
   2. The currently spoken word is visually highlighted TikTok-style (stands out from surrounding words)
   3. Subtitle timing matches audio with no visible lag — words highlight precisely when spoken
-**Plans**: 6 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Remotion container setup (Node 22 bookworm-slim, Chrome headless, all dependencies)
-- [ ] 05-02: Remotion project scaffolding with 9:16 composition configuration
-- [ ] 05-03: Faster Whisper JSON → Remotion @remotion/captions TikTokPage token format mapping
-- [ ] 05-04: Word-by-word animated subtitle composition with @remotion/captions
-- [ ] 05-05: Active word highlight styling (TikTok-style current word emphasis)
-- [ ] 05-06: End-to-end render — cut video + transcript → 9:16 video with burned-in animated subtitles
+- [ ] 05-01-PLAN.md — Docker infrastructure + pipeline reordering (D-05, D-07, D-12, SUBT-01, SUBT-03)
+- [ ] 05-02-PLAN.md — Timestamp remapping + safe zone positioning + render integration (D-01-D-04, D-08, D-10, D-11, SUBT-01, SUBT-02, SUBT-03)
+- [ ] 05-03-PLAN.md — Validation module + E2E Docker test (SUBT-01, SUBT-02, SUBT-03)
 
 ### Phase 6: Animated Intros & Outros
 **Goal**: Videos open and close with branded animated templates rendered via Remotion
@@ -220,7 +217,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Whisper Transcription | 0/3 | Not started | - |
 | 3. Silence Detection & Removal | 0/3 | Not started | - |
 | 4. 9:16 Vertical Output | 0/3 | Planned | - |
-| 5. Remotion + Animated Subtitles | 0/6 | Not started | - |
+| 5. Remotion + Animated Subtitles | 0/3 | Planned | - |
 | 6. Animated Intros & Outros | 0/5 | Not started | - |
 | 7. Visual Cuts & Zooms | 0/5 | Not started | - |
 | 8. SRT/VTT Subtitle Export | 0/3 | Not started | - |

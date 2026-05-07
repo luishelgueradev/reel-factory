@@ -19,6 +19,7 @@ class FinalizerInfo(BaseModel):
     output_height: int
     output_aspect_ratio: str
     crop_strategy: str
+    crop_applied: bool
     crop_x: int
     crop_y: int
     crop_width: int

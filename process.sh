@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Process a video through the pipeline (silence-cutter → whisper)
-# Silence is cut first so Whisper timestamps match the output video directly.
+# Process a video through the pipeline
+# 1. Silence cutter (FFmpeg-only)
+# 2. Whisper (on cut video)
+# 3. FFmpeg finalizer (9:16 vertical output)
 # Usage: ./process.sh video.mp4 [video2.mp4 ...]
-# Output goes to pipeline/<name>/output/
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -17,11 +18,10 @@ for VIDEO in "$@"; do
 
     NAME="$(basename "${VIDEO%.*}")"
     JOB_DIR="pipeline/$NAME"
-    INPUT_DIR="$JOB_DIR/input"
     OUTPUT_DIR="$JOB_DIR/output"
 
-    mkdir -p "$INPUT_DIR"
-    cp "$VIDEO" "$INPUT_DIR/video.mp4"
+    mkdir -p "$JOB_DIR/input"
+    cp "$VIDEO" "$JOB_DIR/input/video.mp4"
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo " Processing: $NAME"
@@ -30,33 +30,46 @@ for VIDEO in "$@"; do
     export PIPELINE_JOB_ID="$NAME"
 
     echo ""
-    echo "  Step 1/2: Silence cutter (FFmpeg-only, no transcript needed)..."
+    echo "  Step 1/3: Silence cutter..."
     export INPUT_PATH="/data/pipeline/$NAME/input/video.mp4"
     export OUTPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
 
     docker compose run --rm \
         -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH \
-        silence-cutter 2>&1 | grep -E '\[silence-cutter\]|Completed|ERROR' || true
+        silence-cutter 2>&1 | grep -E '\[silence-cutter\]|Confirmed|Completed|ERROR' || true
 
     echo ""
-    echo "  Step 2/2: Whisper (on silence-cut video)..."
-    # Transcribe the silence-cut video, not the original
+    echo "  Step 2/3: Whisper (on cut video)..."
     export INPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
     export OUTPUT_PATH="/data/pipeline/$NAME/whisper/transcript.json"
 
     docker compose run --rm -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH \
         whisper 2>&1 | grep -E '\[whisper\]|Completed|ERROR' || true
 
-    # Copy output to a convenient location
+    echo ""
+    echo "  Step 3/3: FFmpeg finalizer (9:16 vertical)..."
+    export INPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
+    export OUTPUT_PATH="/data/pipeline/$NAME/ffmpeg-finalizer/output.mp4"
+    export FINALIZER_INPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
+
+    docker compose run --rm \
+        -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH \
+        ffmpeg-finalizer 2>&1 | grep -E '\[ffmpeg-finalizer\]|Completed|ERROR|Output:' || true
+
+    # Copy output
     mkdir -p "$OUTPUT_DIR"
     cp "$JOB_DIR/silence-cutter/output.mp4" "$OUTPUT_DIR/reel.mp4" 2>/dev/null || true
+    cp "$JOB_DIR/ffmpeg-finalizer/output.mp4" "$OUTPUT_DIR/reel_9x16.mp4" 2>/dev/null || true
     cp "$JOB_DIR/whisper/transcript.json" "$OUTPUT_DIR/transcript.json" 2>/dev/null || true
     cp "$JOB_DIR/silence-cutter/silence-cuts.json" "$OUTPUT_DIR/cuts.json" 2>/dev/null || true
+    cp "$JOB_DIR/ffmpeg-finalizer/finalizer-info.json" "$OUTPUT_DIR/finalizer-info.json" 2>/dev/null || true
 
     echo ""
     echo "  Output: $OUTPUT_DIR/"
-    echo "    reel.mp4          - video sin silencios"
-    echo "    transcript.json    - transcripcion (timestamps del video final)"
-    echo "    cuts.json          - detalle de cortes"
+    echo "    reel.mp4            - video sin silencios (original aspect)"
+    echo "    reel_9x16.mp4       - video vertical 9:16 (1080x1920)"
+    echo "    transcript.json      - transcripcion"
+    echo "    cuts.json            - detalle de cortes de silencio"
+    echo "    finalizer-info.json  - info del crop vertical"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 done

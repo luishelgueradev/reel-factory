@@ -92,8 +92,21 @@ services:
   # Step 3: Remotion Renderer (Phase 5)
   # ... similar pattern, depends_on: silence-cutter
 
-  # Step 4: FFmpeg Finalizer (Phase 4)
-  # ... similar pattern, depends_on: remotion-renderer
+  # FFmpeg Finalizer: converts to 9:16 vertical (1080x1920) with center-crop
+  ffmpeg-finalizer:
+    <<: *pipeline-common
+    build:
+      context: ./services/ffmpeg-finalizer
+    depends_on:
+      base-python:
+        condition: service_completed_successfully
+    environment:
+      - INPUT_PATH=${FINALIZER_INPUT_PATH:-/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/output.mp4}
+      - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/ffmpeg-finalizer/output.mp4
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+      - VERTICAL_WIDTH=${VERTICAL_WIDTH:-1080}
+      - VERTICAL_HEIGHT=${VERTICAL_HEIGHT:-1920}
+      - CROP_STRATEGY=${CROP_STRATEGY:-center}
 
 networks:
   pipeline-net:

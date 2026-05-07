@@ -87,7 +87,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Conditional crop logic + config refactor + schema update (VERT-01, VERT-02)
+- [x] 04-01-PLAN.md — Conditional crop logic + config refactor + schema update (VERT-01, VERT-02)
 - [ ] 04-02-PLAN.md — Validation module + unit tests (VERT-01, VERT-02, VERT-03)
 - [ ] 04-03-PLAN.md — E2E Docker test + health check + human verification (VERT-01, VERT-02, VERT-03)
 

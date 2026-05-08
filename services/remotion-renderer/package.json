@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "render": "node --no-warnings=ESOCKETIO src/render.ts",
-    "studio": "npx remotion studio"
+    "studio": "npx remotion studio",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.457",
@@ -15,8 +17,9 @@
     "remotion": "4.0.457"
   },
   "devDependencies": {
-    "tsx": "^4.19.0",
     "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.5"
   }
 }

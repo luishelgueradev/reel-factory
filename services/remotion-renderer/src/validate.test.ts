@@ -306,3 +306,69 @@ describe("validateSafeZone (Test 6)", () => {
     expect(errors).toEqual([]);
   });
 });
+
+// ─── validateCaptionPages: impossible timestamps (fromMs > toMs) ───────
+
+describe("validateCaptionPages: impossible timestamps (fromMs > toMs)", () => {
+  it("Test 7: returns error when a token has fromMs > toMs (SUBT-03)", () => {
+    const pages = [
+      {
+        startMs: 0,
+        durationMs: 3000,
+        text: "Hola mundo",
+        tokens: [
+          { text: "Hola", fromMs: 5000, toMs: 2000 },
+          { text: "mundo", fromMs: 600, toMs: 1200 },
+        ],
+      },
+    ];
+    const errors = validateCaptionPages(pages);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.some(e => e.includes("SUBT-03"))).toBe(true);
+    expect(errors.some(e => e.includes("fromMs"))).toBe(true);
+    expect(errors.some(e => e.includes("toMs"))).toBe(true);
+  });
+
+  it("Test 7: passes when all tokens have fromMs <= toMs", () => {
+    const pages = [
+      {
+        startMs: 0,
+        durationMs: 3000,
+        text: "Hola mundo",
+        tokens: [
+          { text: "Hola", fromMs: 0, toMs: 500 },
+          { text: "mundo", fromMs: 600, toMs: 1200 },
+        ],
+      },
+    ];
+    const errors = validateCaptionPages(pages);
+    expect(errors).toEqual([]);
+  });
+
+  it("Test 7: identifies multiple tokens with fromMs > toMs across pages", () => {
+    const pages = [
+      {
+        startMs: 0,
+        durationMs: 3000,
+        text: "Hola mundo",
+        tokens: [
+          { text: "Hola", fromMs: 0, toMs: 500 },
+        ],
+      },
+      {
+        startMs: 3000,
+        durationMs: 2000,
+        text: "esto es",
+        tokens: [
+          { text: "esto", fromMs: 8000, toMs: 7000 },
+        ],
+      },
+    ] as Array<Record<string, unknown>>;
+    const errors = validateCaptionPages(pages);
+    expect(errors.length).toBeGreaterThan(0);
+    // Should identify page[1].token[0] specifically
+    expect(errors.some(e => e.includes("page[1].tokens[0]"))).toBe(true);
+    expect(errors.some(e => e.includes("8000"))).toBe(true);
+    expect(errors.some(e => e.includes("7000"))).toBe(true);
+  });
+});

@@ -18,12 +18,15 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 ### Active
 
-- [ ] Transcripción automática con Whisper (texto con timestamps)
-- [ ] Detección y corte de silencios (eliminar y juntar, sin transiciones)
-- [ ] Subtítulos dinámicos estilo word-by-word con Remotion
 - [ ] Intro/outro animados con plantillas Remotion
 - [ ] Zooms automáticos y jump cuts visuales en momentos clave
 - [ ] B-roll automático con placeholders (infraestructura lista, clips reales después)
+
+### Validated (continued)
+
+- [x] Transcripción automática con Whisper (texto con timestamps) (Validated in Phase 02)
+- [x] Detección y corte de silencios (eliminar y juntar, sin transiciones) (Validated in Phase 03)
+- [x] Subtítulos dinámicos estilo word-by-word con Remotion (Validated in Phase 05)
 
 ### Out of Scope
 
@@ -81,4 +84,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-05 after initialization*
+*Last updated: 2026-05-08 after Phase 05 completion*

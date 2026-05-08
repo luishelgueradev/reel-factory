@@ -1,5 +1,54 @@
 import { createTikTokStyleCaptions, type TikTokPage, type Caption } from "@remotion/captions";
 
+// ─── TypeScript interfaces mirroring Python schemas ──────────────────────
+
+// Mirror of services/silence-cutter/src/schema.py SilenceCut / SilenceCutList
+interface SilenceCut {
+  original_start: number;
+  original_end: number;
+  new_start: number;
+  new_end: number;
+  duration: number;
+  source: "both" | "ffmpeg" | "whisper";
+  cumulative_shift: number;
+}
+
+interface SilenceCutList {
+  total_segments_removed: number;
+  total_silence_removed: number;
+  original_duration: number;
+  new_duration: number;
+  cuts: SilenceCut[];
+}
+
+// Mirror of services/ffmpeg-finalizer/src/schema.py SafeZone / FinalizerInfo
+interface SafeZone {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+interface FinalizerInfo {
+  input_width: number;
+  input_height: number;
+  input_aspect_ratio?: string;
+  output_width: number;
+  output_height: number;
+  output_aspect_ratio?: string;
+  crop_strategy?: string;
+  crop_applied?: boolean;
+  crop_x?: number;
+  crop_y?: number;
+  crop_width?: number;
+  crop_height?: number;
+  h264_crf?: number;
+  h264_preset?: string;
+  audio_normalization?: boolean;
+  safe_zone: SafeZone;
+  [key: string]: unknown;
+}
+
 interface WhisperWord {
   word: string;
   start: number;
@@ -22,16 +71,84 @@ interface WhisperTranscript {
   duration: number;
 }
 
+// ─── Timestamp remapping ────────────────────────────────────────────────
+
+/**
+ * Remap a single timestamp from original video timeline to silence-removed timeline.
+ *
+ * Uses binary search through silence cuts (sorted by original_start) to find
+ * the applicable cumulative_shift. The algorithm finds the last cut where
+ * original_start <= originalTimeMs / 1000 and subtracts its cumulative_shift.
+ *
+ * If no cuts apply (time is before the first cut), returns the original time unchanged.
+ *
+ * Per D-02: This is a FULL TIMELINE REMAP, not per-word subtraction.
+ */
+export function remapTimestamps(originalTimeMs: number, silenceCuts: SilenceCutList | null): number {
+  if (!silenceCuts) {
+    return originalTimeMs; // D-03: graceful handling — no cuts data, return original
+  }
+  const originalTimeSec = originalTimeMs / 1000;
+  const cuts = silenceCuts.cuts;
+
+  // Binary search: find the last cut where original_start <= originalTimeSec
+  let left = 0;
+  let right = cuts.length;
+  while (left < right) {
+    const mid = Math.floor((left + right) / 2);
+    if (cuts[mid].original_start <= originalTimeSec) {
+      left = mid + 1;
+    } else {
+      right = mid;
+    }
+  }
+
+  // left - 1 is the index of the last cut that starts before originalTimeSec
+  const applicableCutIndex = left - 1;
+  if (applicableCutIndex < 0) {
+    return originalTimeMs; // Before any silence cut
+  }
+
+  return originalTimeMs - Math.round(cuts[applicableCutIndex].cumulative_shift * 1000);
+}
+
+/**
+ * Remap all word timestamps using silence cuts information.
+ *
+ * Per D-03: If silenceCuts is null (file missing) or empty (no cuts),
+ * returns words unchanged for graceful fallback.
+ *
+ * Per D-04: Remapping happens BEFORE createTikTokStyleCaptions.
+ */
+export function remapWordTimestamps(
+  words: WhisperWord[],
+  silenceCuts: SilenceCutList | null
+): WhisperWord[] {
+  if (!silenceCuts || silenceCuts.cuts.length === 0) {
+    return words; // D-03: graceful handling — use original timestamps
+  }
+  return words.map((w) => ({
+    ...w,
+    start: remapTimestamps(w.start * 1000, silenceCuts) / 1000,
+    end: remapTimestamps(w.end * 1000, silenceCuts) / 1000,
+  }));
+}
+
+// ─── Caption page generation ────────────────────────────────────────────
+
 export function transcriptToCaptionPages(
   transcript: WhisperTranscript,
   options: {
     combineTokensWithinMilliseconds?: number;
-    silenceCuts?: any;
+    silenceCuts?: SilenceCutList | null;
   } = {}
 ): TikTokPage[] {
-  const { combineTokensWithinMilliseconds = 1500, silenceCuts } = options;
+  const { combineTokensWithinMilliseconds = 1500, silenceCuts = null } = options;
 
-  const captions: Caption[] = transcript.words.map((w, i) => ({
+  // D-04: Remap timestamps BEFORE createTikTokStyleCaptions
+  const words = remapWordTimestamps(transcript.words, silenceCuts);
+
+  const captions: Caption[] = words.map((w, i) => ({
     text: i === 0 ? w.word : ` ${w.word}`,
     startMs: Math.round(w.start * 1000),
     endMs: Math.round(w.end * 1000),
@@ -50,3 +167,7 @@ export function transcriptToCaptionPages(
 
   return pages;
 }
+
+// ─── Type exports ────────────────────────────────────────────────────────
+
+export type { SilenceCut, SilenceCutList, SafeZone, FinalizerInfo, WhisperWord, WhisperTranscript };

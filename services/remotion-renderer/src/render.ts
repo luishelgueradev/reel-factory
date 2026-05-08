@@ -1,6 +1,7 @@
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { transcriptToCaptionPages } from "./captions.js";
+import type { SilenceCutList, FinalizerInfo } from "./captions.js";
 import type { TikTokPage } from "@remotion/captions";
 import type { RemotionProps } from "./Root.js";
 import { execSync } from "child_process";
@@ -103,20 +104,38 @@ async function main() {
     process.exit(1);
   }
 
-  // Load silence-cuts.json if provided (D-01, D-03)
-  let silenceCuts: any = null;
+  // Load silence-cuts.json if provided (D-01, D-03, T-05-04: try/catch for malformed JSON)
+  let silenceCuts: SilenceCutList | null = null;
   if (silenceCutsPath && fs.existsSync(silenceCutsPath)) {
-    silenceCuts = JSON.parse(fs.readFileSync(silenceCutsPath, "utf-8"));
-    console.log(`  Loaded ${silenceCuts.cuts?.length ?? 0} silence cuts`);
+    try {
+      const parsed = JSON.parse(fs.readFileSync(silenceCutsPath, "utf-8"));
+      if (parsed && Array.isArray(parsed.cuts)) {
+        silenceCuts = parsed as SilenceCutList;
+        console.log(`  Loaded ${silenceCuts.cuts.length} silence cuts`);
+      } else {
+        console.warn("WARN: silence-cuts.json missing or has invalid 'cuts' array, using original timestamps");
+      }
+    } catch (e) {
+      console.warn("WARN: Failed to parse silence-cuts.json, using original timestamps:", (e as Error).message);
+    }
   } else if (silenceCutsPath) {
     console.warn("WARN: SILENCE_CUTS_PATH set but file not found:", silenceCutsPath);
   }
 
-  // Load finalizer-info.json if provided (D-08)
-  let finalizerInfo: any = null;
+  // Load finalizer-info.json if provided (D-08, T-05-04: try/catch for malformed JSON)
+  let finalizerInfo: FinalizerInfo | null = null;
   if (finalizerInfoPath && fs.existsSync(finalizerInfoPath)) {
-    finalizerInfo = JSON.parse(fs.readFileSync(finalizerInfoPath, "utf-8"));
-    console.log("  Loaded finalizer-info.json, safe_zone:", finalizerInfo.safe_zone);
+    try {
+      const parsed = JSON.parse(fs.readFileSync(finalizerInfoPath, "utf-8"));
+      if (parsed && parsed.safe_zone) {
+        finalizerInfo = parsed as FinalizerInfo;
+        console.log("  Loaded finalizer-info.json, safe_zone:", finalizerInfo.safe_zone);
+      } else {
+        console.warn("WARN: finalizer-info.json missing safe_zone, using default bottom offset");
+      }
+    } catch (e) {
+      console.warn("WARN: Failed to parse finalizer-info.json, using defaults:", (e as Error).message);
+    }
   } else if (finalizerInfoPath) {
     console.warn("WARN: FINALIZER_INFO_PATH set but file not found:", finalizerInfoPath);
   }
@@ -158,8 +177,11 @@ async function main() {
 
     console.log("[remotion-renderer] Step 5: Selecting composition");
     console.log(`  inputProps: totalDurationMs=${totalDurationMs}, videoSrc=${videoFileName}, captionPages=${captionPages.length} pages`);
+    // T-05-06: Validate safe_zone.bottom is a positive integer, fall back to 250
     const safeZone = finalizerInfo?.safe_zone;
-    const bottomOffset = safeZone ? safeZone.bottom : 250;
+    const bottomOffset = (safeZone && typeof safeZone.bottom === 'number' && safeZone.bottom > 0)
+      ? Math.round(safeZone.bottom)
+      : 250;
 
     const inputProps: RemotionProps = {
       videoSrc: videoFileName,
@@ -203,7 +225,9 @@ async function main() {
       input_height: videoHeight,
       total_words: transcript.words.length,
       caption_pages: captionPages.length,
-      silence_cuts_loaded: silenceCuts ? `${silenceCuts.cuts?.length ?? 0} cuts` : "no silence cuts",
+      silence_cuts_applied: silenceCuts ? silenceCuts.cuts.length : 0,
+      safe_zone_used: safeZone || null,
+      bottom_offset: bottomOffset,
       codec: "h264",
       fps: 30,
       remotion_info: {

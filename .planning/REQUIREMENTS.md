@@ -38,7 +38,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Animated Subtitles
 
 - [x] **SUBT-01**: Word-by-word animated subtitles are burned into output video using Remotion @remotion/captions
-- [ ] **SUBT-02**: Active word is highlighted TikTok-style (current word stands out visually)
+- [x] **SUBT-02**: Active word is highlighted TikTok-style (current word stands out visually)
 - [x] **SUBT-03**: Subtitle timing is synchronized with audio (word-level timestamp alignment)
 
 ### Visual Enhancements
@@ -123,7 +123,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VERT-02 | Phase 4 | Pending |
 | VERT-03 | Phase 4 | Pending |
 | SUBT-01 | Phase 5 | Complete |
-| SUBT-02 | Phase 5 | Pending |
+| SUBT-02 | Phase 5 | Complete |
 | SUBT-03 | Phase 5 | Complete |
 | VISU-01 | Phase 6 | Pending |
 | VISU-02 | Phase 6 | Pending |

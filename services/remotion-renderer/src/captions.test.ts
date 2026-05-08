@@ -12,9 +12,10 @@ import type { SilenceCutList, WhisperWord } from "./captions";
 
 describe("remapTimestamps", () => {
   // Test 1: Correctly shifts timestamps when silence cuts exist
-  // A word at original time 10s after a 2s silence cut starting at 3s
-  // gets remapped to ~8s (original 10s - cumulative_shift of the applicable cut)
-  it("remaps a timestamp using cumulative_shift from silence cuts", () => {
+  // A word at original time 10s after a 2s silence cut (3-5s) gets remapped to 8s.
+  // cumulative_shift=0 for the first cut (shift from PREVIOUS cuts only).
+  // Full shift = cumulative_shift + duration = 0 + 2 = 2.
+  it("remaps a timestamp using cumulative_shift + duration from silence cuts", () => {
     const silenceCuts: SilenceCutList = {
       total_segments_removed: 1,
       total_silence_removed: 2,
@@ -28,11 +29,11 @@ describe("remapTimestamps", () => {
           new_end: 3,
           duration: 2,
           source: "both",
-          cumulative_shift: 2,
+          cumulative_shift: 0,
         },
       ],
     };
-    // A word starting at 10s (original) should be remapped to 8s (10 - 2)
+    // A word starting at 10s (original) should be remapped to 8s (10 - (0 + 2))
     const result = remapTimestamps(10000, silenceCuts); // 10s in ms
     expect(result).toBe(8000); // 8s in ms
   });
@@ -44,7 +45,9 @@ describe("remapTimestamps", () => {
   });
 
   // Test 3: Handles edge case where silence was removed from beginning of video
-  // First word's timestamp shifts to near-zero
+  // First word's timestamp shifts to near-zero.
+  // cumulative_shift=0 for the first cut (shift from PREVIOUS cuts only).
+  // Full shift = cumulative_shift + duration = 0 + 3 = 3.
   it("remaps timestamp when silence cut is at the beginning of the video", () => {
     const silenceCuts: SilenceCutList = {
       total_segments_removed: 1,
@@ -59,17 +62,19 @@ describe("remapTimestamps", () => {
           new_end: 0,
           duration: 3,
           source: "both",
-          cumulative_shift: 3,
+          cumulative_shift: 0,
         },
       ],
     };
     // Word starting at 4s original, after 3s silence removed from beginning
-    // cumulative_shift = 3, so remapped time = 4 - 3 = 1s
+    // Full shift = 0 + 3 = 3, so remapped time = 4 - 3 = 1s
     const result = remapTimestamps(4000, silenceCuts);
     expect(result).toBe(1000);
   });
 
   // Test 4: Uses binary search through silence cuts sorted by original_start
+  // cumulative_shift values follow the Python schema convention:
+  // cumulative_shift = shift from PREVIOUS cuts only (excludes current cut's duration)
   it("uses binary search for efficient lookup across multiple cuts", () => {
     const silenceCuts: SilenceCutList = {
       total_segments_removed: 3,
@@ -84,7 +89,7 @@ describe("remapTimestamps", () => {
           new_end: 2,
           duration: 2,
           source: "both",
-          cumulative_shift: 2,
+          cumulative_shift: 0,
         },
         {
           original_start: 8,
@@ -93,7 +98,7 @@ describe("remapTimestamps", () => {
           new_end: 6,
           duration: 2,
           source: "both",
-          cumulative_shift: 4,
+          cumulative_shift: 2,
         },
         {
           original_start: 15,
@@ -102,21 +107,24 @@ describe("remapTimestamps", () => {
           new_end: 11,
           duration: 2,
           source: "both",
-          cumulative_shift: 6,
+          cumulative_shift: 4,
         },
       ],
     };
-    // Word at 20s (original), after all 3 cuts with total shift 6s
+    // Word at 20s (original), after all 3 cuts. Applicable cut = cut 3.
+    // Full shift = cumulative_shift(4) + duration(2) = 6. 20 - 6 = 14s
     const result = remapTimestamps(20000, silenceCuts);
-    expect(result).toBe(14000); // 20 - 6 = 14s
+    expect(result).toBe(14000);
 
-    // Word at 12s (original), after first 2 cuts with total shift 4s
+    // Word at 12s (original), after first 2 cuts. Applicable cut = cut 2.
+    // Full shift = cumulative_shift(2) + duration(2) = 4. 12 - 4 = 8s
     const result2 = remapTimestamps(12000, silenceCuts);
-    expect(result2).toBe(8000); // 12 - 4 = 8s
+    expect(result2).toBe(8000);
 
-    // Word at 5s (original), after only first cut with shift 2s
+    // Word at 5s (original), after only first cut. Applicable cut = cut 1.
+    // Full shift = cumulative_shift(0) + duration(2) = 2. 5 - 2 = 3s
     const result3 = remapTimestamps(5000, silenceCuts);
-    expect(result3).toBe(3000); // 5 - 2 = 3s
+    expect(result3).toBe(3000);
 
     // Word at 1s (original), before any cut — unchanged
     const result4 = remapTimestamps(1000, silenceCuts);
@@ -124,6 +132,9 @@ describe("remapTimestamps", () => {
   });
 
   // Edge case: timestamp exactly at original_start of a cut
+  // Word at exactly 5s — it's at the start of a silence cut (5-7s).
+  // Since 5 >= original_start but 5 < original_end (inside the cut),
+  // partial shift: cumulative_shift(0) + (5 - 5) = 0. Time stays at 5s.
   it("remaps correctly when timestamp equals original_start of a cut", () => {
     const silenceCuts: SilenceCutList = {
       total_segments_removed: 1,
@@ -138,14 +149,91 @@ describe("remapTimestamps", () => {
           new_end: 5,
           duration: 2,
           source: "both",
+          cumulative_shift: 0,
+        },
+      ],
+    };
+    const result = remapTimestamps(5000, silenceCuts);
+    // At original_start of cut — partial shift = 0 + (5 - 5) = 0
+    expect(result).toBe(5000);
+  });
+
+  // Regression test: multi-cut progressive drift (bug where cumulative_shift was
+  // used without adding the current cut's duration for timestamps after original_end).
+  //
+  // The cumulative_shift field represents the shift from all PREVIOUS cuts only.
+  // When a timestamp falls AFTER a cut's original_end, the full shift must include
+  // that cut's own duration: total_shift = cumulative_shift + cut.duration.
+  //
+  // Without this fix, timestamps between cuts drift progressively further off:
+  // - Word at 7s (between cut 1 and cut 2) would be 7-0=7 instead of 7-2=5
+  // - Word at 15s (after cut 2) would be 15-2=13 instead of 15-5=10
+  it("remaps correctly across multiple cuts without progressive drift (regression)", () => {
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 2,
+      total_silence_removed: 5,
+      original_duration: 30,
+      new_duration: 25,
+      cuts: [
+        // Cut 1: 3-5s removed (2s). cumulative_shift=0 (no previous cuts)
+        {
+          original_start: 3,
+          original_end: 5,
+          new_start: 3,
+          new_end: 3,
+          duration: 2,
+          source: "both",
+          cumulative_shift: 0,
+        },
+        // Cut 2: 10-13s removed (3s). cumulative_shift=2 (cut 1's duration)
+        {
+          original_start: 10,
+          original_end: 13,
+          new_start: 8,
+          new_end: 8,
+          duration: 3,
+          source: "both",
           cumulative_shift: 2,
         },
       ],
     };
-    // Word at exactly 5s — it's at the start of a silence cut
-    // Should apply the shift since original_start <= time
-    const result = remapTimestamps(5000, silenceCuts);
-    expect(result).toBe(3000); // 5 - 2 = 3s
+
+    // Word at 2s — before any cut: unchanged
+    expect(remapTimestamps(2000, silenceCuts)).toBe(2000);
+
+    // Word at 7s — after cut 1 (original_end=5), before cut 2
+    // Applicable cut = cut 1. Full shift = cumulative_shift(0) + duration(2) = 2.
+    // Remapped: 7 - 2 = 5s
+    expect(remapTimestamps(7000, silenceCuts)).toBe(5000);
+
+    // Word at 9s — after cut 1, before cut 2 starts (but before cut 2's original_start)
+    // Applicable cut = cut 1. Full shift = 0 + 2 = 2. Remapped: 9 - 2 = 7s
+    expect(remapTimestamps(9000, silenceCuts)).toBe(7000);
+
+    // Word at 15s — after both cuts. Applicable cut = cut 2.
+    // Full shift = cumulative_shift(2) + duration(3) = 5. Remapped: 15 - 5 = 10s
+    expect(remapTimestamps(15000, silenceCuts)).toBe(10000);
+
+    // Word at 20s — after both cuts. Same applicable cut = cut 2.
+    // Full shift = 2 + 3 = 5. Remapped: 20 - 5 = 15s
+    expect(remapTimestamps(20000, silenceCuts)).toBe(15000);
+
+    // Also test via remapWordTimestamps for end-to-end correctness
+    const words: WhisperWord[] = [
+      { word: "before", start: 2, end: 2.5, confidence: 0.9, no_speech_prob: 0.01 },
+      { word: "between", start: 7, end: 7.5, confidence: 0.9, no_speech_prob: 0.01 },
+      { word: "after", start: 15, end: 15.5, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    const remapped = remapWordTimestamps(words, silenceCuts);
+    // "before" — no shift
+    expect(remapped[0].start).toBeCloseTo(2, 2);
+    expect(remapped[0].end).toBeCloseTo(2.5, 2);
+    // "between" at 7s → 7-2=5s
+    expect(remapped[1].start).toBeCloseTo(5, 2);
+    expect(remapped[1].end).toBeCloseTo(5.5, 2);
+    // "after" at 15s → 15-5=10s
+    expect(remapped[2].start).toBeCloseTo(10, 2);
+    expect(remapped[2].end).toBeCloseTo(10.5, 2);
   });
 });
 
@@ -193,13 +281,15 @@ describe("remapWordTimestamps", () => {
           new_end: 3,
           duration: 2,
           source: "both",
-          cumulative_shift: 2,
+          cumulative_shift: 0,
         },
       ],
     };
     const result = remapWordTimestamps(words, silenceCuts);
-    expect(result[0].start).toBeCloseTo(3, 2); // 5 - 2 = 3
-    expect(result[0].end).toBeCloseTo(3.5, 2); // 5.5 - 2 = 3.5
+    // Word at 5s is at original_end of the cut — remapped: 5 - (0 + 2) = 3
+    expect(result[0].start).toBeCloseTo(3, 2);
+    // 5.5 is after the cut: 5.5 - (0 + 2) = 3.5
+    expect(result[0].end).toBeCloseTo(3.5, 2);
     expect(result[0].word).toBe("hello");
     expect(result[0].confidence).toBe(0.9);
   });
@@ -250,7 +340,7 @@ describe("transcriptToCaptionPages", () => {
           new_end: 0,
           duration: 3,
           source: "both",
-          cumulative_shift: 3,
+          cumulative_shift: 0,
         },
         {
           original_start: 5.5,
@@ -259,12 +349,13 @@ describe("transcriptToCaptionPages", () => {
           new_end: 2.5,
           duration: 3,
           source: "both",
-          cumulative_shift: 6,
+          cumulative_shift: 3,
         },
       ],
     };
     const pages = transcriptToCaptionPages(transcript, { silenceCuts });
-    // The word at original 5s should be remapped to 2s (5 - 3, first cut's cumulative_shift)
+    // The word at original 5s is after first cut (0-3s).
+    // Full shift = cumulative_shift(0) + duration(3) = 3. Remapped: 5 - 3 = 2s
     // So caption tokens should start around 2000ms
     expect(pages.length).toBeGreaterThan(0);
     const firstPage = pages[0];
@@ -296,7 +387,7 @@ describe("transcriptToCaptionPages", () => {
           new_end: 2,
           duration: 3,
           source: "both",
-          cumulative_shift: 3,
+          cumulative_shift: 0,
         },
       ],
     };
@@ -334,13 +425,14 @@ describe("transcriptToCaptionPages", () => {
           new_end: 0,
           duration: 3,
           source: "both",
-          cumulative_shift: 3,
+          cumulative_shift: 0,
         },
       ],
     };
     const pages = transcriptToCaptionPages(transcript, { silenceCuts });
     expect(pages.length).toBeGreaterThan(0);
-    // The word at original 5s should be remapped to 2s (5 - 3)
+    // The word at original 5s is after first cut (0-3s).
+    // Full shift = cumulative_shift(0) + duration(3) = 3. Remapped: 5 - 3 = 2s
     // First token fromMs ≈ 2000
     const firstToken = pages[0].tokens[0];
     expect(firstToken.fromMs).toBeCloseTo(2000, -1);
@@ -368,7 +460,7 @@ describe("areTimestampsAlreadyRemapped", () => {
           new_end: 2,
           duration: 3,
           source: "both",
-          cumulative_shift: 3,
+          cumulative_shift: 0,
         },
       ],
     };
@@ -394,7 +486,7 @@ describe("areTimestampsAlreadyRemapped", () => {
           new_end: 2,
           duration: 3,
           source: "both",
-          cumulative_shift: 3,
+          cumulative_shift: 0,
         },
       ],
     };
@@ -437,7 +529,7 @@ describe("areTimestampsAlreadyRemapped", () => {
           new_end: 2,
           duration: 3,
           source: "both",
-          cumulative_shift: 3,
+          cumulative_shift: 0,
         },
       ],
     };

@@ -77,8 +77,16 @@ interface WhisperTranscript {
  * Remap a single timestamp from original video timeline to silence-removed timeline.
  *
  * Uses binary search through silence cuts (sorted by original_start) to find
- * the applicable cumulative_shift. The algorithm finds the last cut where
- * original_start <= originalTimeMs / 1000 and subtracts its cumulative_shift.
+ * the applicable shift. The algorithm distinguishes three cases:
+ *
+ * 1. Timestamp BEFORE a cut's original_start → shift from prior cuts only.
+ * 2. Timestamp INSIDE a cut (original_start <= time < original_end) → partial
+ *    shift: cumulative_shift + (time - original_start). This handles words
+ *    that overlap with the edge of a silence region.
+ * 3. Timestamp AFTER a cut's original_end → full shift:
+ *    cumulative_shift + cut.duration. The cumulative_shift field represents
+ *    the shift from all PREVIOUS cuts only — it does NOT include the current
+ *    cut's own duration.
  *
  * If no cuts apply (time is before the first cut), returns the original time unchanged.
  *
@@ -109,7 +117,17 @@ export function remapTimestamps(originalTimeMs: number, silenceCuts: SilenceCutL
     return originalTimeMs; // Before any silence cut
   }
 
-  return originalTimeMs - Math.round(cuts[applicableCutIndex].cumulative_shift * 1000);
+  const applicableCut = cuts[applicableCutIndex];
+
+  // If timestamp falls AFTER the cut's original_end, add the cut's own duration
+  // to the shift. cumulative_shift only includes shifts from PREVIOUS cuts.
+  if (originalTimeSec >= applicableCut.original_end) {
+    return originalTimeMs - Math.round((applicableCut.cumulative_shift + applicableCut.duration) * 1000);
+  }
+
+  // Timestamp is INSIDE the cut (original_start <= time < original_end).
+  // Partial shift: shift by the elapsed portion of the silence so far.
+  return originalTimeMs - Math.round((applicableCut.cumulative_shift + (originalTimeSec - applicableCut.original_start)) * 1000);
 }
 
 /**

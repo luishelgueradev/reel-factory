@@ -107,6 +107,13 @@ export function validateCaptionPages(pages: unknown): string[] {
           `SUBT-03: page[${i}].tokens[${j}].toMs must be a number`
         );
       }
+
+      // SUBT-03: Impossible timestamp — fromMs must not exceed toMs
+      if (typeof token.fromMs === "number" && typeof token.toMs === "number" && token.fromMs > token.toMs) {
+        errors.push(
+          `SUBT-03: page[${i}].tokens[${j}].fromMs (${token.fromMs}) > toMs (${token.toMs}) — impossible timestamp, double-remap likely`
+        );
+      }
     }
   }
 

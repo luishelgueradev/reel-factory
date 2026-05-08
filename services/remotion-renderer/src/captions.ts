@@ -134,6 +134,39 @@ export function remapWordTimestamps(
   }));
 }
 
+// ─── Double-remap detection ──────────────────────────────────────────────
+
+/**
+ * Tolerance in seconds for detecting whether timestamps are already on the
+ * silence-removed timeline. If the maximum word end timestamp falls within
+ * new_duration + TOLERANCE, timestamps are assumed to come from a Whisper
+ * run on the already-cut video (so remapWordTimestamps must be skipped).
+ */
+export const DETECTION_TOLERANCE_SEC = 2.0;
+
+/**
+ * Detect whether word timestamps are already on the silence-removed timeline.
+ *
+ * When Whisper runs on the already-cut video (process.sh: silence-cutter → whisper),
+ * timestamps are relative to the cut video's duration, NOT the original. If we
+ * remap them again, we get progressive drift and tokens with fromMs > toMs.
+ *
+ * Detection heuristic: if the max word.end <= new_duration + tolerance,
+ * timestamps are from the cut video → return true (skip remap).
+ * If max word.end > new_duration + tolerance, they're on the original timeline
+ * → return false (apply remap).
+ */
+export function areTimestampsAlreadyRemapped(
+  words: WhisperWord[],
+  silenceCuts: SilenceCutList | null
+): boolean {
+  if (!silenceCuts || silenceCuts.cuts.length === 0 || words.length === 0) {
+    return false;
+  }
+  const maxWordEnd = Math.max(...words.map((w) => w.end));
+  return maxWordEnd <= silenceCuts.new_duration + DETECTION_TOLERANCE_SEC;
+}
+
 // ─── Caption page generation ────────────────────────────────────────────
 
 export function transcriptToCaptionPages(
@@ -145,8 +178,16 @@ export function transcriptToCaptionPages(
 ): TikTokPage[] {
   const { combineTokensWithinMilliseconds = 1500, silenceCuts = null } = options;
 
+  // Double-remap detection: if timestamps are already on the silence-removed
+  // timeline (Whisper ran on the cut video), skip remapping to avoid drift.
+  const alreadyRemapped = areTimestampsAlreadyRemapped(transcript.words, silenceCuts);
+  const effectiveSilenceCuts = alreadyRemapped ? null : silenceCuts;
+  if (alreadyRemapped) {
+    console.log("Detected timestamps already on silence-removed timeline — skipping remap");
+  }
+
   // D-04: Remap timestamps BEFORE createTikTokStyleCaptions
-  const words = remapWordTimestamps(transcript.words, silenceCuts);
+  const words = remapWordTimestamps(transcript.words, effectiveSilenceCuts);
 
   const captions: Caption[] = words.map((w, i) => ({
     text: i === 0 ? w.word : ` ${w.word}`,

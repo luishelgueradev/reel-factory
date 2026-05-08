@@ -230,32 +230,43 @@ describe("transcriptToCaptionPages", () => {
       model: "large-v3",
       segments: [],
       words: [
+        // Word at 5s original, with large silence removed so new_duration is small
+        // This ensures max word end (5.5s) > new_duration (2s) + tolerance (2s) = 4s
+        // so detection correctly identifies timestamps as original timeline
         { word: "Hola", start: 5, end: 5.5, confidence: 0.9, no_speech_prob: 0.01 },
       ],
-      duration: 20,
+      duration: 10,
     };
     const silenceCuts: SilenceCutList = {
-      total_segments_removed: 1,
-      total_silence_removed: 2,
-      original_duration: 20,
-      new_duration: 18,
+      total_segments_removed: 2,
+      total_silence_removed: 8,
+      original_duration: 10,
+      new_duration: 2,
       cuts: [
         {
-          original_start: 3,
-          original_end: 5,
-          new_start: 3,
-          new_end: 3,
-          duration: 2,
+          original_start: 0,
+          original_end: 3,
+          new_start: 0,
+          new_end: 0,
+          duration: 3,
           source: "both",
-          cumulative_shift: 2,
+          cumulative_shift: 3,
+        },
+        {
+          original_start: 5.5,
+          original_end: 8.5,
+          new_start: 2.5,
+          new_end: 2.5,
+          duration: 3,
+          source: "both",
+          cumulative_shift: 6,
         },
       ],
     };
     const pages = transcriptToCaptionPages(transcript, { silenceCuts });
-    // The word at original 5s should be remapped to 3s (5 - 2)
-    // So caption tokens should start around 3000ms
+    // The word at original 5s should be remapped to 2s (5 - 3, first cut's cumulative_shift)
+    // So caption tokens should start around 2000ms
     expect(pages.length).toBeGreaterThan(0);
-    // Check that the first page contains tokens that are remapped
     const firstPage = pages[0];
     expect(firstPage.startMs).toBeLessThanOrEqual(3000);
   });
@@ -299,10 +310,8 @@ describe("transcriptToCaptionPages", () => {
   });
 
   it("still remaps when timestamps are on original timeline", () => {
-    // Words on the original timeline: max word end (5.5s) > new_duration (7.0s) + tolerance? No, 5.5 < 7+2=9
-    // Need words with timestamps beyond new_duration + tolerance
-    // Word at 9.0s, original_duration=10, new_duration=7.0 → 9.0 > 7+2=9? No, exactly at boundary
-    // Use word at 9.5s → 9.5 > 9.0 → false (original timeline)
+    // Words on the original timeline: max word end (5.5s) > new_duration (2.0s) + tolerance (2.0s) = 4.0s
+    // Detection correctly identifies these as original-timeline → remap is applied
     const transcript = {
       language: "es",
       model: "large-v3",
@@ -313,16 +322,16 @@ describe("transcriptToCaptionPages", () => {
       duration: 20,
     };
     const silenceCuts: SilenceCutList = {
-      total_segments_removed: 1,
-      total_silence_removed: 3,
+      total_segments_removed: 2,
+      total_silence_removed: 8,
       original_duration: 10.0,
-      new_duration: 7.0,
+      new_duration: 2.0,
       cuts: [
         {
-          original_start: 2,
-          original_end: 5,
-          new_start: 2,
-          new_end: 2,
+          original_start: 0,
+          original_end: 3,
+          new_start: 0,
+          new_end: 0,
           duration: 3,
           source: "both",
           cumulative_shift: 3,
@@ -370,7 +379,7 @@ describe("areTimestampsAlreadyRemapped", () => {
   it("returns false when max word end > new_duration + tolerance (timestamps from original video)", () => {
     // Words at timestamps > new_duration + tolerance → timestamps are on original timeline
     const words: WhisperWord[] = [
-      { word: "hello", start: 1, end: 9.0, confidence: 0.9, no_speech_prob: 0.01 },
+      { word: "hello", start: 1, end: 9.5, confidence: 0.9, no_speech_prob: 0.01 },
     ];
     const silenceCuts: SilenceCutList = {
       total_segments_removed: 1,
@@ -389,7 +398,7 @@ describe("areTimestampsAlreadyRemapped", () => {
         },
       ],
     };
-    // max end = 9.0, new_duration + tolerance = 7.0 + 2.0 = 9.0 → 9.0 > 9.0 → false (strict >)
+    // max end = 9.5, new_duration + tolerance = 7.0 + 2.0 = 9.0 → 9.5 > 9.0 → false
     expect(areTimestampsAlreadyRemapped(words, silenceCuts)).toBe(false);
   });
 

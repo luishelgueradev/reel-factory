@@ -52,6 +52,9 @@ for VIDEO in "$@"; do
     export INPUT_PATH="/data/pipeline/$NAME/silence-cutter/output.mp4"
     export OUTPUT_PATH="/data/pipeline/$NAME/remotion-renderer/output.mp4"
     export TRANSCRIPT_PATH="/data/pipeline/$NAME/whisper/transcript.json"
+    # NOTE: SILENCE_CUTS_PATH intentionally not passed — Whisper runs on the cut video
+    # so transcript timestamps are already on the silence-removed timeline.
+    # FINALIZER_INFO_PATH not available yet (ffmpeg-finalizer runs after this step).
 
     docker compose run --rm \
         -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH -e TRANSCRIPT_PATH \

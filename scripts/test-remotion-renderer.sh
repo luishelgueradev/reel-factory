@@ -123,65 +123,44 @@ cat > "${WHISPER_DIR}/transcript.json" << 'TRANSCRIPT_EOF'
   "segments": [
     {
       "id": 0,
-      "start": 3.5,
-      "end": 5.0,
+      "start": 0.5,
+      "end": 1.4,
       "text": "Hola mundo",
       "words": [
-        {"word": "Hola", "start": 3.5, "end": 3.8, "confidence": 0.95, "no_speech_prob": 0.01},
-        {"word": "mundo", "start": 3.9, "end": 4.2, "confidence": 0.90, "no_speech_prob": 0.02}
+        {"word": "Hola", "start": 0.5, "end": 0.8, "confidence": 0.95, "no_speech_prob": 0.01},
+        {"word": "mundo", "start": 0.9, "end": 1.2, "confidence": 0.90, "no_speech_prob": 0.02}
       ]
     },
     {
       "id": 1,
-      "start": 5.5,
-      "end": 7.0,
+      "start": 2.5,
+      "end": 3.8,
       "text": "esto es una prueba",
       "words": [
-        {"word": "esto", "start": 5.5, "end": 5.8, "confidence": 0.88, "no_speech_prob": 0.03},
-        {"word": "es", "start": 5.9, "end": 6.0, "confidence": 0.92, "no_speech_prob": 0.01},
-        {"word": "una", "start": 6.1, "end": 6.3, "confidence": 0.90, "no_speech_prob": 0.02},
-        {"word": "prueba", "start": 6.4, "end": 6.8, "confidence": 0.87, "no_speech_prob": 0.04}
+        {"word": "esto", "start": 2.5, "end": 2.8, "confidence": 0.88, "no_speech_prob": 0.03},
+        {"word": "es", "start": 2.9, "end": 3.0, "confidence": 0.92, "no_speech_prob": 0.01},
+        {"word": "una", "start": 3.1, "end": 3.3, "confidence": 0.90, "no_speech_prob": 0.02},
+        {"word": "prueba", "start": 3.4, "end": 3.8, "confidence": 0.87, "no_speech_prob": 0.04}
       ]
     }
   ],
   "words": [
-    {"word": "Hola", "start": 3.5, "end": 3.8, "confidence": 0.95, "no_speech_prob": 0.01},
-    {"word": "mundo", "start": 3.9, "end": 4.2, "confidence": 0.90, "no_speech_prob": 0.02},
-    {"word": "esto", "start": 5.5, "end": 5.8, "confidence": 0.88, "no_speech_prob": 0.03},
-    {"word": "es", "start": 5.9, "end": 6.0, "confidence": 0.92, "no_speech_prob": 0.01},
-    {"word": "una", "start": 6.1, "end": 6.3, "confidence": 0.90, "no_speech_prob": 0.02},
-    {"word": "prueba", "start": 6.4, "end": 6.8, "confidence": 0.87, "no_speech_prob": 0.04}
+    {"word": "Hola", "start": 0.5, "end": 0.8, "confidence": 0.95, "no_speech_prob": 0.01},
+    {"word": "mundo", "start": 0.9, "end": 1.2, "confidence": 0.90, "no_speech_prob": 0.02},
+    {"word": "esto", "start": 2.5, "end": 2.8, "confidence": 0.88, "no_speech_prob": 0.03},
+    {"word": "es", "start": 2.9, "end": 3.0, "confidence": 0.92, "no_speech_prob": 0.01},
+    {"word": "una", "start": 3.1, "end": 3.3, "confidence": 0.90, "no_speech_prob": 0.02},
+    {"word": "prueba", "start": 3.4, "end": 3.8, "confidence": 0.87, "no_speech_prob": 0.04}
   ],
-  "duration": 10.0
+  "duration": 7.0
 }
 TRANSCRIPT_EOF
 echo "  Created: ${WHISPER_DIR}/transcript.json"
 
-# ── Step 4: Create synthetic silence-cuts.json ────────────────
-echo "Step 4: Creating synthetic silence-cuts.json..."
-cat > "${SILENCE_DIR}/silence-cuts.json" << 'SILENCE_CUTS_EOF'
-{
-  "total_segments_removed": 1,
-  "total_silence_removed": 3.0,
-  "original_duration": 10.0,
-  "new_duration": 7.0,
-  "cuts": [
-    {
-      "original_start": 0.0,
-      "original_end": 3.0,
-      "new_start": 0.0,
-      "new_end": 0.0,
-      "duration": 3.0,
-      "source": "both",
-      "cumulative_shift": 3.0
-    }
-  ]
-}
-SILENCE_CUTS_EOF
-echo "  Created: ${SILENCE_DIR}/silence-cuts.json"
-
-# ── Step 5: Create synthetic finalizer-info.json ─────────────
-echo "Step 5: Creating synthetic finalizer-info.json..."
+# ── Step 4: Create synthetic finalizer-info.json ─────────────
+# NOTE: No silence-cuts.json — Whisper runs on the cut video, so timestamps
+# are already on the silence-removed timeline. SILENCE_CUTS_PATH is not passed.
+echo "Step 4: Creating synthetic finalizer-info.json..."
 cat > "${INPUT_DIR}/finalizer-info.json" << 'FINALIZER_INFO_EOF'
 {
   "input_width": 1920,
@@ -194,35 +173,36 @@ cat > "${INPUT_DIR}/finalizer-info.json" << 'FINALIZER_INFO_EOF'
 FINALIZER_INFO_EOF
 echo "  Created: ${INPUT_DIR}/finalizer-info.json"
 
-# ── Step 6: Build Docker container ──────────────────────────
+# ── Step 5: Build Docker container ───────────────────────────
 echo ""
-echo "Step 6: Building remotion-renderer Docker container..."
+echo "Step 5: Building remotion-renderer Docker container..."
 echo "  (This may take a few minutes if the image doesn't exist)"
 docker compose build remotion-renderer 2>&1 | tail -1
 
-# ── Step 7: Run remotion-renderer via Docker Compose ──────────
+# ── Step 6: Run remotion-renderer via Docker Compose ──────────
 echo ""
-echo "Step 7: Running remotion-renderer container..."
+echo "Step 6: Running remotion-renderer container..."
 echo "  (Rendering may take several minutes — timeout is 300 seconds)"
 
 # Set env vars matching docker-compose.yml patterns
+# NOTE: SILENCE_CUTS_PATH intentionally not set — Whisper runs on the cut video
+# so timestamps are already on the silence-removed timeline (matches real pipeline)
 export PIPELINE_JOB_ID="${PIPELINE_JOB_ID}"
 export INPUT_PATH="/data/pipeline/${PIPELINE_JOB_ID}/ffmpeg-finalizer/output.mp4"
 export OUTPUT_PATH="/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/output.mp4"
 export TRANSCRIPT_PATH="/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json"
-export SILENCE_CUTS_PATH="/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/silence-cuts.json"
 export FINALIZER_INFO_PATH="/data/pipeline/${PIPELINE_JOB_ID}/ffmpeg-finalizer/finalizer-info.json"
 export ACTIVE_COLOR="#FFFF00"
 export INACTIVE_COLOR="#FFFFFF"
 export FONT_SIZE="58"
 
-# Use timeout to prevent indefinite hangs
-timeout 300 docker compose run --rm \
+# Use --no-deps to avoid triggering ffmpeg-finalizer dependency chain
+# which fails with synthetic test data
+timeout 300 docker compose run --rm --no-deps \
     -e PIPELINE_JOB_ID="${PIPELINE_JOB_ID}" \
     -e INPUT_PATH="${INPUT_PATH}" \
     -e OUTPUT_PATH="${OUTPUT_PATH}" \
     -e TRANSCRIPT_PATH="${TRANSCRIPT_PATH}" \
-    -e SILENCE_CUTS_PATH="${SILENCE_CUTS_PATH}" \
     -e FINALIZER_INFO_PATH="${FINALIZER_INFO_PATH}" \
     -e ACTIVE_COLOR="${ACTIVE_COLOR}" \
     -e INACTIVE_COLOR="${INACTIVE_COLOR}" \
@@ -238,7 +218,7 @@ if [ $RENDER_EXIT -ne 0 ]; then
     TEST_FAILED=$((TEST_FAILED + 1))
 fi
 
-# ── Step 8: Validate output artifacts ────────────────────────
+# ── Step 7: Validate output artifacts ────────────────────────
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo " Validating Output Artifacts"
@@ -305,17 +285,14 @@ if [ -f "${OUTPUT_DIR}/caption-pages.json" ]; then
     assert_eq "Token has fromMs as number (SUBT-03)" "int" "${FIRST_TOKEN_FROMMS}"
 fi
 
-# ── Step 9: Validate timestamp remapping (D-01) ───────────────
+# ── Step 8: Validate timestamp consistency (D-01) ───────────────
 echo ""
-echo "── D-01: Timestamp remapping validation ──"
+echo "── D-01: Timestamp validation ──"
 
-# Our synthetic transcript has words starting at 3.5s and 5.5s (original)
-# Our synthetic silence-cuts has: cuts[0].original_start=0, original_end=3.0, cumulative_shift=3.0
-# After remapping:
-#   "Hola" at original 3.5s → remapped 3.5 - 3.0 = 0.5s = 500ms
-#   "mundo" at original 3.9s → remapped 3.9 - 3.0 = 0.9s = 900ms
-#   "esto" at original 5.5s → remapped 5.5 - 3.0 = 2.5s = 2500ms
-# The first token's fromMs should be close to 500ms (within tolerance)
+# Our synthetic transcript has words on the cut timeline (Whisper ran on cut video).
+# "Hola" starts at 0.5s on the cut timeline → fromMs should be ~500ms.
+# No remapping is needed since timestamps are already on the silence-removed timeline.
+# Detection logic in captions.ts skips remap when max word.end <= new_duration + tolerance.
 
 if [ -f "${OUTPUT_DIR}/caption-pages.json" ]; then
     # Get the fromMs of the first token of the first page
@@ -328,9 +305,8 @@ else:
     print('MISSING')
 " 2>/dev/null || echo "MISSING")
 
-    # The first word "Hola" starts at 3.5s original, shifted by 3.0s cumulative_shift
-    # Expected remapped: 3.5 - 3.0 = 0.5s = 500ms
-    # Allow tolerance of ±200ms for grouping/combinng effects
+    # The first word "Hola" starts at 0.5s on the cut timeline
+    # Expected: ~500ms, allow tolerance 200-800ms for grouping/combining effects
     if [ "${FIRST_TOKEN_FROMMS_VALUE}" != "MISSING" ]; then
         WITHIN_RANGE=$(python3 -c "
 v = ${FIRST_TOKEN_FROMMS_VALUE}
@@ -340,14 +316,30 @@ if 200 <= v <= 800:
 else:
     print('FAIL')
 " 2>/dev/null || echo "FAIL")
-        assert_eq "D-01: First word timestamp remapped (~500ms, got ${FIRST_TOKEN_FROMMS_VALUE}ms)" "ok" "${WITHIN_RANGE}"
+        assert_eq "D-01: First word timestamp on cut timeline (~500ms, got ${FIRST_TOKEN_FROMMS_VALUE}ms)" "ok" "${WITHIN_RANGE}"
     else
         echo "  FAIL: D-01: Could not read first token fromMs"
         TEST_FAILED=$((TEST_FAILED + 1))
     fi
+
+    # D-01 (defensive): No token should have fromMs > toMs (impossible timestamps)
+    IMPOSSIBLE_TOKENS=$(python3 -c "
+import json
+pages = json.load(open('${OUTPUT_DIR}/caption-pages.json'))
+impossible = []
+for i, p in enumerate(pages):
+    for j, t in enumerate(p.get('tokens', [])):
+        if t.get('fromMs', 0) > t.get('toMs', 0):
+            impossible.append(f'page[{i}].token[{j}]: fromMs={t[\"fromMs\"]} > toMs={t[\"toMs\"]}')
+if impossible:
+    print('FAIL: ' + '; '.join(impossible))
+else:
+    print('ok')
+" 2>/dev/null || echo "FAIL")
+    assert_eq "D-01: No impossible timestamps (fromMs <= toMs)" "ok" "${IMPOSSIBLE_TOKENS}"
 fi
 
-# ── Step 10: Validate safe zone positioning (D-11) ────────────
+# ── Step 9: Validate safe zone positioning (D-11) ────────────
 echo ""
 echo "── D-11: Safe zone positioning ──"
 
@@ -358,7 +350,7 @@ if [ -f "${INPUT_DIR}/finalizer-info.json" ] && [ -f "${OUTPUT_DIR}/remotion-inf
     assert_eq "bottom_offset matches safe_zone.bottom (D-11)" "${SAFE_ZONE_BOTTOM}" "${BOTTOM_OFFSET}"
 fi
 
-# ── Step 11: Validate pipeline order (D-05) ──────────────────
+# ── Step 10: Validate pipeline order (D-05) ─────────────────
 echo ""
 echo "── D-05: Pipeline order validation ──"
 

@@ -105,8 +105,8 @@ Plans:
 - [x] 05-01-PLAN.md — Docker infrastructure + pipeline reordering (D-05, D-07, D-12, SUBT-01, SUBT-03)
 - [x] 05-02-PLAN.md — Timestamp remapping + safe zone positioning + render integration (D-01-D-04, D-08, D-10, D-11, SUBT-01, SUBT-02, SUBT-03)
 - [x] 05-03-PLAN.md — Validation module + E2E Docker test (SUBT-01, SUBT-02, SUBT-03)
-- [ ] 05-04-PLAN.md — [GAP CLOSURE] Fix double-remap bug: detection logic + auto-skip in transcriptToCaptionPages (SUBT-02, SUBT-03)
-- [ ] 05-05-PLAN.md — [GAP CLOSURE] Pipeline config fix + E2E test standalone + defensive validation (SUBT-02, SUBT-03)
+- [x] 05-04-PLAN.md — [GAP CLOSURE] Fix double-remap bug: detection logic + auto-skip in transcriptToCaptionPages (SUBT-02, SUBT-03)
+- [x] 05-05-PLAN.md — [GAP CLOSURE] Pipeline config fix + E2E test standalone + defensive validation (SUBT-02, SUBT-03)
 
 ### Phase 6: Animated Intros & Outros
 **Goal**: Videos open and close with branded animated templates rendered via Remotion

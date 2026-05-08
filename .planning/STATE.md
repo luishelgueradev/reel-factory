@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-05-07T23:28:27.128Z"
-last_activity: 2026-05-07
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-05-08T01:58:29.281Z"
+last_activity: 2026-05-08
 progress:
   total_phases: 11
   completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_plans: 16
+  completed_plans: 14
+  percent: 88
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinámico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automáticamente.
-**Current focus:** Phase 04 — 9-16-vertical-output
+**Current focus:** Phase 05 — remotion-animated-subtitles
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-07
+Phase: 05 (remotion-animated-subtitles) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-05-08
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██████████] 100%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 05 P01 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -62,7 +63,10 @@ Progress: [██████████] 100%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- (none yet — project just initialized)
+- (— project just initialized)
+- [Phase ?]: silenceCuts wired to captions.ts but remapping logic deferred to Plan 02 — Wiring decision for timestamp remapping
+- [Phase ?]: bottomOffset uses safe_zone.bottom from finalizer-info.json with 250px fallback — Safe zone offset for subtitle placement
+- [Phase ?]: --disable-gpu added alongside --gl=angle-egl per STACK.md Docker rendering guidance — Docker rendering stability flags
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T23:28:27.053Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-remotion-animated-subtitles/05-CONTEXT.md
+Last session: 2026-05-08T01:58:29.270Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

@@ -102,7 +102,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Docker infrastructure + pipeline reordering (D-05, D-07, D-12, SUBT-01, SUBT-03)
+- [x] 05-01-PLAN.md — Docker infrastructure + pipeline reordering (D-05, D-07, D-12, SUBT-01, SUBT-03)
 - [ ] 05-02-PLAN.md — Timestamp remapping + safe zone positioning + render integration (D-01-D-04, D-08, D-10, D-11, SUBT-01, SUBT-02, SUBT-03)
 - [ ] 05-03-PLAN.md — Validation module + E2E Docker test (SUBT-01, SUBT-02, SUBT-03)
 

@@ -1,6 +1,6 @@
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { transcriptToCaptionPages } from "./captions.js";
+import { transcriptToCaptionPages, areTimestampsAlreadyRemapped } from "./captions.js";
 import type { SilenceCutList, FinalizerInfo } from "./captions.js";
 import type { TikTokPage } from "@remotion/captions";
 import type { RemotionProps } from "./Root.js";
@@ -153,6 +153,13 @@ async function main() {
     const captionPages = transcriptToCaptionPages(transcript, { silenceCuts, combineTokensWithinMilliseconds: 1500 });
     console.log(`  ${transcript.words.length} words -> ${captionPages.length} caption pages`);
 
+    if (silenceCuts) {
+      const alreadyRemapped = areTimestampsAlreadyRemapped(transcript.words, silenceCuts);
+      console.log(`  Timestamp timeline: ${alreadyRemapped ? 'already on silence-removed timeline (skipping remap)' : 'original timeline (applying remap)'}`);
+    } else {
+      console.log('  Timestamp timeline: no silence cuts data (using original timestamps)');
+    }
+
     const totalDurationMs = Math.round(durationSec * 1000);
 
     writeCaptionPages(outputDir, captionPages);
@@ -226,6 +233,7 @@ async function main() {
       total_words: transcript.words.length,
       caption_pages: captionPages.length,
       silence_cuts_applied: silenceCuts ? silenceCuts.cuts.length : 0,
+      timestamps_already_remapped: silenceCuts ? areTimestampsAlreadyRemapped(transcript.words, silenceCuts) : false,
       safe_zone_used: safeZone || null,
       bottom_offset: bottomOffset,
       codec: "h264",

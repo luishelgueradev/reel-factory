@@ -26,9 +26,10 @@ export function transcriptToCaptionPages(
   transcript: WhisperTranscript,
   options: {
     combineTokensWithinMilliseconds?: number;
+    silenceCuts?: any;
   } = {}
 ): TikTokPage[] {
-  const { combineTokensWithinMilliseconds = 1500 } = options;
+  const { combineTokensWithinMilliseconds = 1500, silenceCuts } = options;
 
   const captions: Caption[] = transcript.words.map((w, i) => ({
     text: i === 0 ? w.word : ` ${w.word}`,

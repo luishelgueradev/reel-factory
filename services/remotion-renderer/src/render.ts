@@ -65,6 +65,8 @@ async function main() {
   const inputPath = process.env.INPUT_PATH;
   const outputPath = process.env.OUTPUT_PATH;
   const transcriptPath = process.env.TRANSCRIPT_PATH;
+  const silenceCutsPath = process.env.SILENCE_CUTS_PATH;
+  const finalizerInfoPath = process.env.FINALIZER_INFO_PATH;
   const jobId = process.env.PIPELINE_JOB_ID;
 
   if (!inputPath || !outputPath || !jobId) {
@@ -80,6 +82,8 @@ async function main() {
   console.log("  INPUT_PATH:", inputPath);
   console.log("  TRANSCRIPT:", transcriptPath);
   console.log("  OUTPUT:", outputPath);
+  console.log("  SILENCE_CUTS:", silenceCutsPath || "(not provided, using original timestamps)");
+  console.log("  FINALIZER_INFO:", finalizerInfoPath || "(not provided, using defaults)");
 
   if (!fs.existsSync(inputPath)) {
     const msg = `Input video not found: ${inputPath}`;
@@ -99,6 +103,24 @@ async function main() {
     process.exit(1);
   }
 
+  // Load silence-cuts.json if provided (D-01, D-03)
+  let silenceCuts: any = null;
+  if (silenceCutsPath && fs.existsSync(silenceCutsPath)) {
+    silenceCuts = JSON.parse(fs.readFileSync(silenceCutsPath, "utf-8"));
+    console.log(`  Loaded ${silenceCuts.cuts?.length ?? 0} silence cuts`);
+  } else if (silenceCutsPath) {
+    console.warn("WARN: SILENCE_CUTS_PATH set but file not found:", silenceCutsPath);
+  }
+
+  // Load finalizer-info.json if provided (D-08)
+  let finalizerInfo: any = null;
+  if (finalizerInfoPath && fs.existsSync(finalizerInfoPath)) {
+    finalizerInfo = JSON.parse(fs.readFileSync(finalizerInfoPath, "utf-8"));
+    console.log("  Loaded finalizer-info.json, safe_zone:", finalizerInfo.safe_zone);
+  } else if (finalizerInfoPath) {
+    console.warn("WARN: FINALIZER_INFO_PATH set but file not found:", finalizerInfoPath);
+  }
+
   const outputDir = path.dirname(outputPath);
   fs.mkdirSync(outputDir, { recursive: true });
 
@@ -109,7 +131,7 @@ async function main() {
 
     console.log("[remotion-renderer] Step 2: Loading transcript and creating caption pages");
     const transcript = JSON.parse(fs.readFileSync(transcriptPath, "utf-8"));
-    const captionPages = transcriptToCaptionPages(transcript);
+    const captionPages = transcriptToCaptionPages(transcript, { silenceCuts, combineTokensWithinMilliseconds: 1500 });
     console.log(`  ${transcript.words.length} words -> ${captionPages.length} caption pages`);
 
     const totalDurationMs = Math.round(durationSec * 1000);
@@ -136,6 +158,9 @@ async function main() {
 
     console.log("[remotion-renderer] Step 5: Selecting composition");
     console.log(`  inputProps: totalDurationMs=${totalDurationMs}, videoSrc=${videoFileName}, captionPages=${captionPages.length} pages`);
+    const safeZone = finalizerInfo?.safe_zone;
+    const bottomOffset = safeZone ? safeZone.bottom : 250;
+
     const inputProps: RemotionProps = {
       videoSrc: videoFileName,
       captionPages,
@@ -145,6 +170,7 @@ async function main() {
       activeColor: process.env.ACTIVE_COLOR || "#FFFF00",
       inactiveColor: process.env.INACTIVE_COLOR || "#FFFFFF",
       fontSize: parseInt(process.env.FONT_SIZE || "58", 10),
+      bottomOffset,
     };
     const composition = await selectComposition({
       serveUrl: bundleLocation,
@@ -167,6 +193,7 @@ async function main() {
       },
       chromiumOptions: {
         enableMultiProcessOnLinux: true,
+        args: ['--gl=angle-egl', '--disable-gpu'],
       },
     });
     console.log("  Render complete:", outputPath);
@@ -176,8 +203,12 @@ async function main() {
       input_height: videoHeight,
       total_words: transcript.words.length,
       caption_pages: captionPages.length,
+      silence_cuts_loaded: silenceCuts ? `${silenceCuts.cuts?.length ?? 0} cuts` : "no silence cuts",
       codec: "h264",
       fps: 30,
+      remotion_info: {
+        use_angle_egl: true,
+      },
     };
     fs.writeFileSync(
       path.join(outputDir, "remotion-info.json"),

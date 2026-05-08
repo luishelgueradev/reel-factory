@@ -97,14 +97,24 @@ services:
     depends_on:
       base-node:
         condition: service_completed_successfully
+      ffmpeg-finalizer:
+        condition: service_completed_successfully
     environment:
-      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/output.mp4
+      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/ffmpeg-finalizer/output.mp4
       - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/output.mp4
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
       - TRANSCRIPT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
+      - SILENCE_CUTS_PATH=/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/silence-cuts.json
+      - FINALIZER_INFO_PATH=/data/pipeline/${PIPELINE_JOB_ID}/ffmpeg-finalizer/finalizer-info.json
       - ACTIVE_COLOR=${ACTIVE_COLOR:-#FFFF00}
-      - INACTIVE_COLOR=${ACTIVE_COLOR:-#FFFFFF}
+      - INACTIVE_COLOR=${INACTIVE_COLOR:-#FFFFFF}
       - FONT_SIZE=${FONT_SIZE:-58}
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/manifest.json"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   # FFmpeg Finalizer: converts to 9:16 vertical (1080x1920) with center-crop
   ffmpeg-finalizer:

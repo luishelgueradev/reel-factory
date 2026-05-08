@@ -3,6 +3,8 @@ import {
   remapTimestamps,
   remapWordTimestamps,
   transcriptToCaptionPages,
+  areTimestampsAlreadyRemapped,
+  DETECTION_TOLERANCE_SEC,
 } from "./captions";
 import type { SilenceCutList, WhisperWord } from "./captions";
 
@@ -256,5 +258,180 @@ describe("transcriptToCaptionPages", () => {
     // Check that the first page contains tokens that are remapped
     const firstPage = pages[0];
     expect(firstPage.startMs).toBeLessThanOrEqual(3000);
+  });
+
+  it("skips remapping when timestamps are already on cut timeline", () => {
+    // Words on the cut timeline: max word end (1.0s) <= new_duration (7.0s) + tolerance
+    // These timestamps should NOT be remapped again
+    const transcript = {
+      language: "es",
+      model: "large-v3",
+      segments: [],
+      words: [
+        { word: "Hola", start: 0.5, end: 1.0, confidence: 0.9, no_speech_prob: 0.01 },
+      ],
+      duration: 10,
+    };
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 3,
+      original_duration: 10.0,
+      new_duration: 7.0,
+      cuts: [
+        {
+          original_start: 2,
+          original_end: 5,
+          new_start: 2,
+          new_end: 2,
+          duration: 3,
+          source: "both",
+          cumulative_shift: 3,
+        },
+      ],
+    };
+    const pages = transcriptToCaptionPages(transcript, { silenceCuts });
+    expect(pages.length).toBeGreaterThan(0);
+    // The first token should have fromMs ≈ 500 (the original start time)
+    // NOT remapped to 500 - 3000 = -2500 (which would be broken)
+    const firstToken = pages[0].tokens[0];
+    expect(firstToken.fromMs).toBeGreaterThanOrEqual(0);
+    expect(firstToken.fromMs).toBeCloseTo(500, -1);
+  });
+
+  it("still remaps when timestamps are on original timeline", () => {
+    // Words on the original timeline: max word end (5.5s) > new_duration (7.0s) + tolerance? No, 5.5 < 7+2=9
+    // Need words with timestamps beyond new_duration + tolerance
+    // Word at 9.0s, original_duration=10, new_duration=7.0 → 9.0 > 7+2=9? No, exactly at boundary
+    // Use word at 9.5s → 9.5 > 9.0 → false (original timeline)
+    const transcript = {
+      language: "es",
+      model: "large-v3",
+      segments: [],
+      words: [
+        { word: "test", start: 5.0, end: 5.5, confidence: 0.9, no_speech_prob: 0.01 },
+      ],
+      duration: 20,
+    };
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 3,
+      original_duration: 10.0,
+      new_duration: 7.0,
+      cuts: [
+        {
+          original_start: 2,
+          original_end: 5,
+          new_start: 2,
+          new_end: 2,
+          duration: 3,
+          source: "both",
+          cumulative_shift: 3,
+        },
+      ],
+    };
+    const pages = transcriptToCaptionPages(transcript, { silenceCuts });
+    expect(pages.length).toBeGreaterThan(0);
+    // The word at original 5s should be remapped to 2s (5 - 3)
+    // First token fromMs ≈ 2000
+    const firstToken = pages[0].tokens[0];
+    expect(firstToken.fromMs).toBeCloseTo(2000, -1);
+  });
+});
+
+// ─── areTimestampsAlreadyRemapped ──────────────────────────────────────────
+
+describe("areTimestampsAlreadyRemapped", () => {
+  it("returns true when max word end <= new_duration + tolerance (timestamps from cut video)", () => {
+    // Words at timestamps ≤ new_duration + tolerance → timestamps are from the cut video
+    const words: WhisperWord[] = [
+      { word: "hello", start: 1, end: 5.0, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 3,
+      original_duration: 10.0,
+      new_duration: 7.0,
+      cuts: [
+        {
+          original_start: 2,
+          original_end: 5,
+          new_start: 2,
+          new_end: 2,
+          duration: 3,
+          source: "both",
+          cumulative_shift: 3,
+        },
+      ],
+    };
+    // max end = 5.0, new_duration + tolerance = 7.0 + 2.0 = 9.0 → 5.0 <= 9.0 → true
+    expect(areTimestampsAlreadyRemapped(words, silenceCuts)).toBe(true);
+  });
+
+  it("returns false when max word end > new_duration + tolerance (timestamps from original video)", () => {
+    // Words at timestamps > new_duration + tolerance → timestamps are on original timeline
+    const words: WhisperWord[] = [
+      { word: "hello", start: 1, end: 9.0, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 3,
+      original_duration: 10.0,
+      new_duration: 7.0,
+      cuts: [
+        {
+          original_start: 2,
+          original_end: 5,
+          new_start: 2,
+          new_end: 2,
+          duration: 3,
+          source: "both",
+          cumulative_shift: 3,
+        },
+      ],
+    };
+    // max end = 9.0, new_duration + tolerance = 7.0 + 2.0 = 9.0 → 9.0 > 9.0 → false (strict >)
+    expect(areTimestampsAlreadyRemapped(words, silenceCuts)).toBe(false);
+  });
+
+  it("returns false when silenceCuts is null", () => {
+    const words: WhisperWord[] = [
+      { word: "hello", start: 1, end: 5, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    expect(areTimestampsAlreadyRemapped(words, null)).toBe(false);
+  });
+
+  it("returns false when silenceCuts has empty cuts array", () => {
+    const words: WhisperWord[] = [
+      { word: "hello", start: 1, end: 5, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 0,
+      total_silence_removed: 0,
+      original_duration: 10,
+      new_duration: 10,
+      cuts: [],
+    };
+    expect(areTimestampsAlreadyRemapped(words, silenceCuts)).toBe(false);
+  });
+
+  it("returns false when words array is empty", () => {
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 3,
+      original_duration: 10,
+      new_duration: 7,
+      cuts: [
+        {
+          original_start: 2,
+          original_end: 5,
+          new_start: 2,
+          new_end: 2,
+          duration: 3,
+          source: "both",
+          cumulative_shift: 3,
+        },
+      ],
+    };
+    expect(areTimestampsAlreadyRemapped([], silenceCuts)).toBe(false);
   });
 });

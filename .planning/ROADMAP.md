@@ -108,22 +108,24 @@ Plans:
 - [x] 05-04-PLAN.md — [GAP CLOSURE] Fix double-remap bug: detection logic + auto-skip in transcriptToCaptionPages (SUBT-02, SUBT-03)
 - [x] 05-05-PLAN.md — [GAP CLOSURE] Pipeline config fix + E2E test standalone + defensive validation (SUBT-02, SUBT-03)
 
-### Phase 6: Animated Intros & Outros
-**Goal**: Videos open and close with branded animated templates rendered via Remotion
+### Phase 6: Subtitle Enhancements, Titles & Web Config
+**Goal**: Configurable subtitle styles (4 layout modes), timed title overlays, and a web-based Remotion Studio for live preview and configuration — all driven by pipeline-config.json
 **Depends on**: Phase 5 (Remotion container and rendering pipeline working)
 **Requirements**: VISU-01, VISU-02
 **Success Criteria** (what must be TRUE):
-  1. Video starts with an animated intro sequence rendered via Remotion template
-  2. Video ends with an animated outro sequence rendered via Remotion template
-  3. Intro and outro templates accept configurable brand parameters (text, colors, logo placement)
+  1. Video starts with an animated intro title card when pipeline-config has titles with startTimeMs=0 (VISU-01)
+  2. Video ends with an animated outro title card when pipeline-config has titles near video end (VISU-02)
+  3. Intro and outro templates accept configurable brand parameters (text, colors, entrance animation)
+  4. Users can select subtitle layout mode (TikTok, Sentence, Bar, Karaoke) via pipeline-config.json
+  5. Config editor web UI allows live preview and configuration of subtitles and titles
 **Plans**: 5 plans
 
 Plans:
-- [ ] 06-01: Intro Remotion composition with parameterized template props
-- [ ] 06-02: Outro Remotion composition with parameterized template props
-- [ ] 06-03: Brand props schema (title, subtitle, colors, logo source)
-- [ ] 06-04: Concatenation pipeline — intro + content + outro merged into single output
-- [ ] 06-05: End-to-end validation with custom brand parameters
+- [ ] 06-01-PLAN.md — Pipeline config schema & config-driven composition architecture (D-01, D-02, D-03, D-05, D-12, D-17)
+- [ ] 06-02-PLAN.md — Subtitle layout modes: TikTok, Sentence, Bar, Karaoke + LayoutDispatcher (D-04, D-06, D-08, D-09)
+- [ ] 06-03-PLAN.md — Title overlays with entrance animations & curated font infrastructure (D-07, D-10, D-11, D-13, VISU-01, VISU-02)
+- [ ] 06-04-PLAN.md — Remotion Studio Docker container + Docker Compose integration (D-14, D-15, D-18, D-19)
+- [ ] 06-05-PLAN.md — Config editor SPA + validation module + E2E test (D-16, D-20, VISU-01, VISU-02)
 
 ### Phase 7: Visual Cuts & Zooms
 **Goal**: Jump cuts feel intentional and emphasis moments get visual zoom treatment — cuts are visually polished

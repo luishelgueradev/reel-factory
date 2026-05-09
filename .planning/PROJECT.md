@@ -65,6 +65,17 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 | Docker para cada paso del pipeline | Aislamiento de dependencias, extensibilidad natural | — Pending |
 | Placeholders para B-roll | Infraestructura de overlays lista, clips reales se agregan después | — Pending |
 | Solo 9:16 en v1 | Es el formato más demandado para redes sociales actuales | — Pending |
+| Subtítulos en minúsculas (salvo inicio de frase) | Estilo TikTok/Reels consistente, evita mayúsculas incorrectas de Whisper | Validated in Phase 5 |
+| Pipeline orden: Whisper→Silence→Finalizer→Remotion | Whisper en video original para timestamps correctos, remotion-renderer recibe 9:16 final | Validated in Phase 5 |
+
+## Deferred Items for Phase 6
+
+| Category | Item | Notes |
+|----------|------|-------|
+| Config | Subtitle position via .env (bottomOffset y más) | bottomOffset ya existe, exponer más params |
+| Config | Fuente, tamaño, espaciado configurable via .env | fontFamily, letterSpacing, lineHeight |
+| Config | Título de video con parámetros .env | Video title overlay with configurable text, position, font |
+| Visual | Subtitle safe area margins | Left/right padding tuning (currently 40px) |
 
 ## Evolution
 

@@ -536,3 +536,98 @@ describe("areTimestampsAlreadyRemapped", () => {
     expect(areTimestampsAlreadyRemapped([], silenceCuts)).toBe(false);
   });
 });
+
+// ─── remapWordTimestamps: silence cut filtering ────────────────────────────
+
+describe("remapWordTimestamps: words inside silence cuts", () => {
+  it("drops words entirely inside a silence cut", () => {
+    const words: WhisperWord[] = [
+      { word: "before", start: 1, end: 2, confidence: 0.9, no_speech_prob: 0.01 },
+      { word: "hallucinated", start: 4, end: 4.5, confidence: 0.3, no_speech_prob: 0.6 },
+      { word: "after", start: 7, end: 8, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 3,
+      original_duration: 10,
+      new_duration: 7,
+      cuts: [
+        {
+          original_start: 3,
+          original_end: 6,
+          new_start: 3,
+          new_end: 3,
+          duration: 3,
+          source: "both",
+          cumulative_shift: 0,
+        },
+      ],
+    };
+    const result = remapWordTimestamps(words, silenceCuts);
+    // "hallucinated" (4-4.5s) is entirely inside cut (3-6s) → dropped
+    expect(result.length).toBe(2);
+    expect(result[0].word).toBe("before");
+    expect(result[1].word).toBe("after");
+    // "after" at 7s → 7 - (0+3) = 4s
+    expect(result[1].start).toBeCloseTo(4, 2);
+  });
+
+  it("clips boundary words that start inside cut but extend past it (≥30% after)", () => {
+    const words: WhisperWord[] = [
+      { word: "real", start: 3.5, end: 5.0, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 3,
+      original_duration: 10,
+      new_duration: 7,
+      cuts: [
+        {
+          original_start: 3,
+          original_end: 4,
+          new_start: 3,
+          new_end: 3,
+          duration: 1,
+          source: "both",
+          cumulative_shift: 0,
+        },
+      ],
+    };
+    const result = remapWordTimestamps(words, silenceCuts);
+    // "real" starts at 3.5 (inside cut 3-4) but ends at 5.0 (after cut).
+    // After-cut portion = 5.0 - 4.0 = 1.0s out of 1.5s total = 67% → KEEP, clip start
+    expect(result.length).toBe(1);
+    expect(result[0].word).toBe("real");
+    // Start clipped to cut's original_end (4.0), then remapped: 4.0 - (0+1) = 3.0
+    expect(result[0].start).toBeCloseTo(3, 2);
+    // End remapped normally: 5.0 - (0+1) = 4.0
+    expect(result[0].end).toBeCloseTo(4, 2);
+  });
+
+  it("drops boundary words with <30% extending past cut", () => {
+    const words: WhisperWord[] = [
+      { word: "barely", start: 3.1, end: 3.5, confidence: 0.9, no_speech_prob: 0.01 },
+    ];
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 2,
+      original_duration: 10,
+      new_duration: 8,
+      cuts: [
+        {
+          original_start: 3,
+          original_end: 5,
+          new_start: 3,
+          new_end: 3,
+          duration: 2,
+          source: "both",
+          cumulative_shift: 0,
+        },
+      ],
+    };
+    const result = remapWordTimestamps(words, silenceCuts);
+    // "barely" starts at 3.1 (inside cut 3-5), ends at 3.5 (still inside, before 5.0)
+    // After-cut portion = 0 → dropped
+    expect(result.length).toBe(0);
+  });
+});

@@ -137,6 +137,11 @@ export function remapTimestamps(originalTimeMs: number, silenceCuts: SilenceCutL
  * returns words unchanged for graceful fallback.
  *
  * Per D-04: Remapping happens BEFORE createTikTokStyleCaptions.
+ *
+ * Words that start inside a silence cut region are filtered/clipped:
+ * - If word is entirely inside a cut → dropped (hallucination during silence)
+ * - If word crosses cut boundary (start inside, end after) → start clipped to cut end
+ *   Only kept if ≥30% of word duration extends past the cut boundary.
  */
 export function remapWordTimestamps(
   words: WhisperWord[],
@@ -145,11 +150,39 @@ export function remapWordTimestamps(
   if (!silenceCuts || silenceCuts.cuts.length === 0) {
     return words; // D-03: graceful handling — use original timestamps
   }
-  return words.map((w) => ({
-    ...w,
-    start: remapTimestamps(w.start * 1000, silenceCuts) / 1000,
-    end: remapTimestamps(w.end * 1000, silenceCuts) / 1000,
-  }));
+
+  const cuts = silenceCuts.cuts;
+  const result: WhisperWord[] = [];
+
+  for (const w of words) {
+    const insideCut = cuts.find(
+      (c) => w.start >= c.original_start && w.start < c.original_end
+    );
+
+    if (insideCut) {
+      const afterCutPortion = w.end > insideCut.original_end ? w.end - insideCut.original_end : 0;
+      const totalDuration = w.end - w.start;
+      const afterPct = totalDuration > 0 ? (afterCutPortion / totalDuration) * 100 : 0;
+
+      if (afterPct < 30) {
+        continue;
+      }
+
+      result.push({
+        ...w,
+        start: remapTimestamps(insideCut.original_end * 1000, silenceCuts) / 1000,
+        end: remapTimestamps(w.end * 1000, silenceCuts) / 1000,
+      });
+    } else {
+      result.push({
+        ...w,
+        start: remapTimestamps(w.start * 1000, silenceCuts) / 1000,
+        end: remapTimestamps(w.end * 1000, silenceCuts) / 1000,
+      });
+    }
+  }
+
+  return result;
 }
 
 // ─── Double-remap detection ──────────────────────────────────────────────
@@ -223,6 +256,22 @@ export function transcriptToCaptionPages(
     captions,
     combineTokensWithinMilliseconds,
   });
+
+  const PROPER_NOUNS = new Set([]);
+
+  for (const page of pages) {
+    for (let i = 0; i < page.tokens.length; i++) {
+      const token = page.tokens[i];
+      const isSentenceStart = i === 0;
+      const isProperNoun = PROPER_NOUNS.has(token.text.trim());
+      if (isProperNoun) continue;
+      if (isSentenceStart) {
+        token.text = token.text.charAt(0).toUpperCase() + token.text.slice(1).toLowerCase();
+      } else {
+        token.text = token.text.toLowerCase();
+      }
+    }
+  }
 
   return pages;
 }

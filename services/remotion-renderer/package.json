@@ -13,6 +13,7 @@
     "@remotion/bundler": "4.0.457",
     "@remotion/captions": "4.0.457",
     "@remotion/cli": "4.0.457",
+    "@remotion/google-fonts": "4.0.457",
     "@remotion/renderer": "4.0.457",
     "remotion": "4.0.457"
   },

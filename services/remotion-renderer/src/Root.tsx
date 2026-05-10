@@ -65,6 +65,7 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
               subtitle={title.subtitle}
               style={title.style}
               durationMs={title.durationMs}
+              fontFamily={config.fontFamily}
             />
           </Sequence>
         );

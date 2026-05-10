@@ -4,8 +4,11 @@ import {
   useCurrentFrame,
   useVideoConfig,
   interpolate,
+  delayRender,
+  continueRender,
 } from "remotion";
 import type { TitleStyleProps } from "../pipeline-config.js";
+import { loadFont } from "../fonts.js";
 
 // ─── TitleOverlay: Animated title card with entrance/exit animations ───────
 // Per D-10 (intro/outro title types), D-11 (visual style), D-13 (title/subtitle coexistence)
@@ -42,6 +45,26 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+
+  // Load Google Font — delay render until font is available (D-07, T-06-07)
+  const [fontLoaded, setFontLoaded] = React.useState(false);
+  React.useEffect(() => {
+    if (fontFamily === "monospace" || fontFamily === "") {
+      setFontLoaded(true);
+      return;
+    }
+    const handle = delayRender(`Loading font: ${fontFamily}`);
+    loadFont(fontFamily)
+      .then(() => {
+        setFontLoaded(true);
+        continueRender(handle);
+      })
+      .catch(() => {
+        // Falls back to system font — continue rendering
+        setFontLoaded(true);
+        continueRender(handle);
+      });
+  }, [fontFamily]);
 
   // Merge style with defaults
   const entranceAnimation = style?.entranceAnimation ?? DEFAULT_TITLE_STYLE.entranceAnimation;

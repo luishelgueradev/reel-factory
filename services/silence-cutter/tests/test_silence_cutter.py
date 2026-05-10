@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.schema import SilenceCut, SilenceCutList, SilenceSource
 from src.silencedetect import _parse_silencedetect_output, SilenceSegment
-from src.cross_reference import _check_whisper_confirmation, _times_overlap
+from src.cross_reference import _check_silence
 from src.cut_video import _compute_keep_segments
 from src.validate import validate_silence_cuts, validate_cross_reference_logic
 from src import config
@@ -190,21 +190,37 @@ class TestSilencedetectParser:
 class TestCrossReference:
     """Test cross-reference logic per D-01, D-03."""
 
-    def test_whisper_confirms_silence(self):
-        """D-03: ANY word with no_speech_prob > threshold confirms."""
+    def test_no_words_confirms_both(self):
+        """No words in silence region → pure silence → BOTH."""
+        result = _check_silence(1.0, 3.0, [], 30.0)
+        assert result is not None
+        assert result[2] == SilenceSource.BOTH
+
+    def test_high_no_speech_prob_confirms_both(self):
+        """D-03: ANY word with no_speech_prob > threshold confirms → BOTH."""
         words = [
             {"start": 1.0, "end": 1.5, "no_speech_prob": 0.8},
         ]
-        source = _check_whisper_confirmation(1.0, 2.0, words)
-        assert source == SilenceSource.BOTH
+        result = _check_silence(1.0, 2.0, words, 30.0)
+        assert result is not None
+        assert result[2] == SilenceSource.BOTH
 
-    def test_whisper_rejects_non_silence(self):
-        """Words with low no_speech_prob don't confirm silence."""
+    def test_dense_speech_rejected(self):
+        """Words covering >50% of silence region → rejected (returns None)."""
         words = [
-            {"start": 1.0, "end": 1.5, "no_speech_prob": 0.2},
+            {"start": 1.0, "end": 2.5, "no_speech_prob": 0.05},
         ]
-        source = _check_whisper_confirmation(1.0, 2.0, words)
-        assert source == SilenceSource.FFMPEG
+        result = _check_silence(1.0, 3.0, words, 30.0)
+        assert result is None
+
+    def test_edge_overlap_ffmpeg_source(self):
+        """Sparse edge overlap (<50% speech) → FFMPEG source."""
+        words = [
+            {"start": 1.0, "end": 1.3, "no_speech_prob": 0.05},
+        ]
+        result = _check_silence(1.0, 3.0, words, 30.0)
+        assert result is not None
+        assert result[2] == SilenceSource.FFMPEG
 
     def test_any_word_threshold(self):
         """D-03: Only ONE word needs high no_speech_prob to confirm."""
@@ -213,32 +229,27 @@ class TestCrossReference:
             {"start": 1.5, "end": 2.0, "no_speech_prob": 0.9},
             {"start": 2.0, "end": 2.5, "no_speech_prob": 0.1},
         ]
-        source = _check_whisper_confirmation(1.0, 2.5, words)
-        assert source == SilenceSource.BOTH
+        result = _check_silence(1.0, 2.5, words, 30.0)
+        assert result is not None
+        assert result[2] == SilenceSource.BOTH
 
-    def test_no_overlapping_words(self):
-        """No words overlapping silence region → FFmpeg-only."""
+    def test_no_overlapping_words_confirms_both(self):
+        """No words overlapping silence region → BOTH (pure silence)."""
         words = [
             {"start": 5.0, "end": 6.0, "no_speech_prob": 0.9},
         ]
-        source = _check_whisper_confirmation(1.0, 2.0, words)
-        assert source == SilenceSource.FFMPEG
+        result = _check_silence(1.0, 2.0, words, 30.0)
+        assert result is not None
+        assert result[2] == SilenceSource.BOTH
 
-    def test_times_overlapping(self):
-        """Overlapping time ranges detected correctly."""
-        assert _times_overlap(1.0, 3.0, 2.0, 4.0) is True
-
-    def test_times_non_overlapping(self):
-        """Non-overlapping time ranges return False."""
-        assert _times_overlap(1.0, 2.0, 3.0, 4.0) is False
-
-    def test_times_overlap_edge(self):
-        """Touching edges are NOT overlap."""
-        assert _times_overlap(1.0, 2.0, 2.0, 3.0) is False
-
-    def test_times_overlap_unknown_end(self):
-        """One range has 0 end (unknown) — overlap detected."""
-        assert _times_overlap(1.0, 0, 0.5, 2.0) is True
+    def test_low_no_speech_prob_sparse_speech(self):
+        """Low no_speech_prob with sparse speech (<50%) → FFMPEG source."""
+        words = [
+            {"start": 1.0, "end": 1.2, "no_speech_prob": 0.2},
+        ]
+        result = _check_silence(1.0, 3.0, words, 30.0)
+        assert result is not None
+        assert result[2] == SilenceSource.FFMPEG
 
     def test_config_no_speech_threshold(self):
         """Config NO_SPEECH_THRESHOLD matches whisper container (D-03)."""

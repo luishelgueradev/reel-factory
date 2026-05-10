@@ -1,8 +1,9 @@
 import React from "react";
-import { Composition, registerRoot } from "remotion";
-import { SubtitledVideo } from "./compositions/Subtitles";
+import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile } from "remotion";
+import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher.js";
 import type { TikTokPage } from "@remotion/captions";
 import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config.js";
+import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config.js";
 
 export interface RemotionProps {
   videoSrc: string;
@@ -10,18 +11,49 @@ export interface RemotionProps {
   videoWidth?: number;
   videoHeight?: number;
   totalDurationMs?: number;
-  lineHeight?: number;
-  fontSize?: number;
-  activeColor?: string;
-  inactiveColor?: string;
-  outlineColor?: string;
-  outlineWidth?: number;
-  bottomOffset?: number;
   // PipelineConfig-driven props (D-01, D-02)
   subtitleLayout?: SubtitleLayoutMode;
   subtitleConfig?: SubtitleConfig;
   titles?: TitleConfig[];
 }
+
+/**
+ * SubtitledVideo composition: renders video background + subtitle overlay
+ * using the config-driven LayoutDispatcher (D-01, D-05).
+ *
+ * - Reads subtitleLayout from subtitleConfig to select the correct layout mode
+ * - Falls back to TikTok (backward compatible) when config is missing
+ * - Preserves existing video rendering via OffthreadVideo
+ */
+const SubtitledVideo: React.FC<RemotionProps> = ({
+  videoSrc,
+  captionPages,
+  subtitleConfig,
+}) => {
+  // Build the SubtitleConfig, merging defaults for any missing fields
+  const config: SubtitleConfig = {
+    layout: subtitleConfig?.layout ?? "tiktok",
+    fontFamily: subtitleConfig?.fontFamily,
+    fontSize: subtitleConfig?.fontSize ?? DEFAULT_SUBTITLE_CONFIG.fontSize,
+    activeColor: subtitleConfig?.activeColor ?? DEFAULT_SUBTITLE_CONFIG.activeColor,
+    inactiveColor: subtitleConfig?.inactiveColor ?? DEFAULT_SUBTITLE_CONFIG.inactiveColor,
+    outlineColor: subtitleConfig?.outlineColor ?? DEFAULT_SUBTITLE_CONFIG.outlineColor,
+    outlineWidth: subtitleConfig?.outlineWidth ?? DEFAULT_SUBTITLE_CONFIG.outlineWidth,
+    backgroundHighlight: subtitleConfig?.backgroundHighlight,
+    textShadow: subtitleConfig?.textShadow,
+    letterSpacing: subtitleConfig?.letterSpacing,
+    position: subtitleConfig?.position ?? DEFAULT_SUBTITLE_CONFIG.position,
+    lineHeight: subtitleConfig?.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight,
+    bottomOffset: subtitleConfig?.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset,
+  };
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+      {videoSrc && <OffthreadVideo src={staticFile(videoSrc)} />}
+      <SubtitleLayoutRenderer captionPages={captionPages} config={config} />
+    </AbsoluteFill>
+  );
+};
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -34,17 +66,10 @@ export const RemotionRoot: React.FC = () => {
       height={1920}
       defaultProps={{
         videoSrc: "",
-        captionPages: [],
+        captionPages: [] as TikTokPage[],
         videoWidth: 1080,
         videoHeight: 1920,
         totalDurationMs: 10000,
-        lineHeight: 1.3,
-        fontSize: 58,
-        activeColor: "#FFFF00",
-        inactiveColor: "#FFFFFF",
-        outlineColor: "#000000",
-        outlineWidth: 3,
-        bottomOffset: 250,
         // PipelineConfig defaults — TikTok layout is default (D-05)
         subtitleLayout: "tiktok" as SubtitleLayoutMode,
         subtitleConfig: {

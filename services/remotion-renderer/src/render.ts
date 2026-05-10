@@ -222,16 +222,23 @@ async function main() {
       videoWidth,
       videoHeight,
       totalDurationMs,
-      // D-03: Env var fallbacks — config takes precedence when present
-      activeColor: pipelineConfig?.subtitle?.activeColor || process.env.ACTIVE_COLOR || "#FFFF00",
-      inactiveColor: pipelineConfig?.subtitle?.inactiveColor || process.env.INACTIVE_COLOR || "#FFFFFF",
-      fontSize: pipelineConfig?.subtitle?.fontSize || parseInt(process.env.FONT_SIZE || "58", 10),
-      bottomOffset,
       // D-01, D-02: PipelineConfig-driven props
+      // D-03: Env var fallbacks — config takes precedence when present
       subtitleLayout: pipelineConfig?.subtitle?.layout || ("tiktok" as SubtitleLayoutMode),
-      subtitleConfig: pipelineConfig?.subtitle || {
-        layout: "tiktok" as SubtitleLayoutMode,
-        ...DEFAULT_SUBTITLE_CONFIG,
+      subtitleConfig: {
+        layout: pipelineConfig?.subtitle?.layout || "tiktok",
+        fontFamily: pipelineConfig?.subtitle?.fontFamily,
+        fontSize: pipelineConfig?.subtitle?.fontSize || parseInt(process.env.FONT_SIZE || "58", 10),
+        activeColor: pipelineConfig?.subtitle?.activeColor || process.env.ACTIVE_COLOR || "#FFFF00",
+        inactiveColor: pipelineConfig?.subtitle?.inactiveColor || process.env.INACTIVE_COLOR || "#FFFFFF",
+        outlineColor: pipelineConfig?.subtitle?.outlineColor,
+        outlineWidth: pipelineConfig?.subtitle?.outlineWidth,
+        backgroundHighlight: pipelineConfig?.subtitle?.backgroundHighlight,
+        textShadow: pipelineConfig?.subtitle?.textShadow,
+        letterSpacing: pipelineConfig?.subtitle?.letterSpacing,
+        position: pipelineConfig?.subtitle?.position || "bottom-center",
+        lineHeight: pipelineConfig?.subtitle?.lineHeight,
+        bottomOffset: pipelineConfig?.subtitle?.bottomOffset || bottomOffset,
       } satisfies SubtitleConfig,
       titles: pipelineConfig?.titles || [],
     };

@@ -3,7 +3,12 @@ FROM video-pipeline-base-node:latest
 WORKDIR /app
 
 # Copy shared Remotion source from renderer (D-14: both containers share same compositions)
-COPY --from=remotion-renderer /app/src /app/remotion-renderer-src
+# Uses Docker BuildKit additional_contexts named 'renderer-src' from docker-compose.yml
+COPY --from=renderer-src compositions/ /app/remotion-renderer-src/compositions/
+COPY --from=renderer-src Root.tsx /app/remotion-renderer-src/Root.tsx
+COPY --from=renderer-src captions.ts /app/remotion-renderer-src/captions.ts
+COPY --from=renderer-src pipeline-config.ts /app/remotion-renderer-src/pipeline-config.ts
+COPY --from=renderer-src fonts.ts /app/remotion-renderer-src/fonts.ts
 
 # Install dependencies and ensure Chrome is available for Remotion Studio
 COPY package.json package-lock.json* ./
@@ -15,9 +20,8 @@ RUN npm install && \
 COPY src/ ./src/
 COPY tsconfig.json ./
 
-# Copy shared compositions from renderer (D-14: same source code for preview and render)
-RUN mkdir -p /app/src/compositions && \
-    cp -r /app/remotion-renderer-src/compositions/* /app/src/compositions/ && \
+# Copy shared compositions from renderer staging area (D-14: same source code for preview and render)
+RUN cp -r /app/remotion-renderer-src/compositions/* /app/src/compositions/ 2>/dev/null; \
     cp /app/remotion-renderer-src/Root.tsx /app/src/ && \
     cp /app/remotion-renderer-src/captions.ts /app/src/ && \
     cp /app/remotion-renderer-src/pipeline-config.ts /app/src/ && \

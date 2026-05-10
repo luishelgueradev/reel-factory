@@ -6,7 +6,9 @@
   "scripts": {
     "studio": "npx remotion studio",
     "server": "npx tsx src/server.ts",
-    "dev": "npx tsx src/server.ts"
+    "dev": "npx tsx src/server.ts",
+    "build:editor": "vite build src/editor --outDir ../../dist/editor",
+    "dev:editor": "vite src/editor --port 5174"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.457",
@@ -23,7 +25,13 @@
     "@types/cors": "^2.8.17",
     "@types/node": "^22.0.0",
     "@types/express": "^5.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vite": "^5.4.0"
   }
 }

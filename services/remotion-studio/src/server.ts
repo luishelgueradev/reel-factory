@@ -137,6 +137,25 @@ app.post("/api/render", (_req, res) => {
   });
 });
 
+// ─── Serve editor SPA at /editor (D-16) ────────────────────────────────────────
+
+const EDITOR_DIST = path.resolve(process.env.EDITOR_DIST || "dist/editor");
+
+app.use("/editor", express.static(EDITOR_DIST));
+
+// SPA fallback: serve index.html for any /editor/* route that doesn't match a static file
+app.get("/editor/*", (_req, res) => {
+  const indexHtml = path.join(EDITOR_DIST, "index.html");
+  if (fs.existsSync(indexHtml)) {
+    res.sendFile(indexHtml);
+  } else {
+    res.status(404).json({
+      error: "Editor SPA not built",
+      message: "Run 'npm run build:editor' to build the config editor SPA",
+    });
+  }
+});
+
 // ─── Helper: Resolve config file path ──────────────────────────────────────
 
 function resolveConfigPath(): string | null {
@@ -159,10 +178,11 @@ function resolveConfigPath(): string | null {
 // ─── Start server ───────────────────────────────────────────────────────────
 
 export const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[remotion-studio] Config API listening on port ${PORT}`);
+  console.log(`[remotion-studio] Config API and Editor SPA listening on port ${PORT}`);
   console.log(`  GET  /api/config  — Read pipeline config`);
   console.log(`  PUT  /api/config  — Write pipeline config`);
   console.log(`  POST /api/render  — Render trigger (not yet implemented)`);
+  console.log(`  GET  /editor      — Config Editor SPA`);
   console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set)"}`);
   console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
 });

@@ -1,0 +1,29 @@
+{
+  "name": "remotion-studio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "npx remotion studio",
+    "server": "npx tsx src/server.ts",
+    "dev": "npx tsx src/server.ts"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.457",
+    "@remotion/captions": "4.0.457",
+    "@remotion/cli": "4.0.457",
+    "@remotion/google-fonts": "4.0.457",
+    "@remotion/renderer": "4.0.457",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "remotion": "4.0.457",
+
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/node": "^22.0.0",
+    "@types/express": "^5.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

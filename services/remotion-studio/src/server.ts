@@ -1,0 +1,170 @@
+// ─── Remotion Studio: Express server for live preview + config API ────────
+// Per D-14, D-15, D-18:
+// - Serves Remotion Studio for live preview of compositions
+// - Provides GET/PUT /api/config endpoints for pipeline-config.json
+// - Reads pipeline-config.json from shared volume (D-19)
+// - Validates config writes against PipelineConfig schema (T-06-09)
+
+import express from "express";
+import cors from "cors";
+import fs from "fs";
+import path from "path";
+import { validatePipelineConfig } from "./pipeline-config.js";
+import type { PipelineConfig } from "./pipeline-config.js";
+
+const PORT = parseInt(process.env.PORT || "3123", 10);
+const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
+const INPUT_PATH = process.env.INPUT_PATH || "";
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: "1mb" }));
+
+// ─── Health check ──────────────────────────────────────────────────────────
+
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", service: "remotion-studio", port: PORT });
+});
+
+// ─── GET /api/config — Read pipeline-config.json (D-19, D-03) ──────────────
+
+app.get("/api/config", (_req, res) => {
+  const configPath = resolveConfigPath();
+
+  if (!configPath) {
+    // No config path configured — return defaults (D-03: graceful fallback)
+    return res.json({
+      subtitle: { layout: "tiktok" },
+      titles: [],
+      _meta: { source: "defaults", reason: "no PIPELINE_CONFIG_PATH set" },
+    });
+  }
+
+  try {
+    if (!fs.existsSync(configPath)) {
+      // Config file doesn't exist yet — return defaults (D-03)
+      return res.json({
+        subtitle: { layout: "tiktok" },
+        titles: [],
+        _meta: { source: "defaults", reason: "config file not found", path: configPath },
+      });
+    }
+
+    const raw = fs.readFileSync(configPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    const validation = validatePipelineConfig(parsed);
+
+    if (!validation.valid) {
+      // Config file exists but is invalid — still return it, flag issues
+      return res.json({
+        ...parsed,
+        _meta: { source: "file", valid: false, errors: validation.errors, path: configPath },
+      });
+    }
+
+    return res.json({
+      ...parsed,
+      _meta: { source: "file", valid: true, path: configPath },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error reading config";
+    console.error("[studio] Error reading config:", message);
+    return res.status(500).json({
+      subtitle: { layout: "tiktok" },
+      titles: [],
+      _meta: { source: "defaults", reason: "error reading config", error: message },
+    });
+  }
+});
+
+// ─── PUT /api/config — Write pipeline-config.json (D-16, T-06-09) ──────────
+
+app.put("/api/config", (req, res) => {
+  const configPath = resolveConfigPath();
+
+  if (!configPath) {
+    return res.status(400).json({
+      error: "PIPELINE_CONFIG_PATH not configured",
+      message: "Set PIPELINE_CONFIG_PATH env var to enable config writes",
+    });
+  }
+
+  const body = req.body;
+
+  // Validate against PipelineConfig schema (T-06-09)
+  const validation = validatePipelineConfig(body);
+  if (!validation.valid) {
+    return res.status(400).json({
+      error: "Invalid config",
+      errors: validation.errors,
+    });
+  }
+
+  try {
+    // Ensure directory exists
+    const dir = path.dirname(configPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Write config, stripping _meta if present
+    const { _meta, ...configToWrite } = body as PipelineConfig & { _meta?: unknown };
+    fs.writeFileSync(configPath, JSON.stringify(configToWrite, null, 2));
+
+    console.log("[studio] Config written to:", configPath);
+    return res.json({
+      ...configToWrite,
+      _meta: { source: "file", valid: true, path: configPath },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error writing config";
+    console.error("[studio] Error writing config:", message);
+    return res.status(500).json({
+      error: "Failed to write config",
+      message,
+    });
+  }
+});
+
+// ─── POST /api/render — Render trigger placeholder (D-20, future Plan 05) ─
+
+app.post("/api/render", (_req, res) => {
+  res.status(501).json({
+    status: "not_implemented",
+    message: "Render trigger not yet configured. Will be implemented in Plan 05.",
+  });
+});
+
+// ─── Helper: Resolve config file path ──────────────────────────────────────
+
+function resolveConfigPath(): string | null {
+  // PIPELINE_CONFIG_PATH takes precedence (D-19)
+  if (PIPELINE_CONFIG_PATH) {
+    return PIPELINE_CONFIG_PATH;
+  }
+
+  // Fallback: derive from INPUT_PATH (standard pipeline pattern)
+  if (INPUT_PATH) {
+    // INPUT_PATH = /data/pipeline/{job_id}/remotion-renderer/output.mp4
+    // Config should be at /data/pipeline/{job_id}/remotion-renderer/pipeline-config.json
+    const inputDir = path.dirname(INPUT_PATH);
+    return path.join(inputDir, "pipeline-config.json");
+  }
+
+  return null;
+}
+
+// ─── Start server ───────────────────────────────────────────────────────────
+
+export const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`[remotion-studio] Config API listening on port ${PORT}`);
+  console.log(`  GET  /api/config  — Read pipeline config`);
+  console.log(`  PUT  /api/config  — Write pipeline config`);
+  console.log(`  POST /api/render  — Render trigger (not yet implemented)`);
+  console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set)"}`);
+  console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
+});
+
+export default app;

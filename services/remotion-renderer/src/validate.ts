@@ -240,29 +240,32 @@ export function validatePipelineConfigFile(outputDir: string): string[] {
 export function validateLayoutModes(outputDir: string): string[] {
   const errors: string[] = [];
 
+  // WR-05: Only check source files when explicitly enabled (CI/development), not in Docker production
+  const validateSourceFiles = process.env.VALIDATE_SOURCE_FILES === "true";
+
   // Check that LayoutDispatcher can render all 4 layout modes
-  // Verify composition files exist for each mode
-  const compositionsDir = `${outputDir}/../remotion-renderer/src/compositions`;
-  const requiredLayouts = ["TikTokLayout", "SentenceLayout", "BarLayout", "KaraokeLayout"];
+  // Verify composition files exist for each mode (source-file checks only when enabled)
+  if (validateSourceFiles) {
+    const compositionsDir = `${outputDir}/../remotion-renderer/src/compositions`;
+    const requiredLayouts = ["TikTokLayout", "SentenceLayout", "BarLayout", "KaraokeLayout"];
 
-  // In E2E context, check the source directory
-  // When running from validate.ts CLI, outputDir might be the step output dir
-  const srcDir = fs.existsSync(compositionsDir)
-    ? compositionsDir
-    : `${outputDir}/compositions`;
+    const srcDir = fs.existsSync(compositionsDir)
+      ? compositionsDir
+      : `${outputDir}/compositions`;
 
-  if (fs.existsSync(srcDir)) {
-    for (const layout of requiredLayouts) {
-      const filePath = `${srcDir}/${layout}.tsx`;
-      if (!fs.existsSync(filePath)) {
-        errors.push(`VISU-01: Layout component not found: ${layout}.tsx`);
+    if (fs.existsSync(srcDir)) {
+      for (const layout of requiredLayouts) {
+        const filePath = `${srcDir}/${layout}.tsx`;
+        if (!fs.existsSync(filePath)) {
+          errors.push(`VISU-01: Layout component not found: ${layout}.tsx`);
+        }
       }
-    }
 
-    // Check LayoutDispatcher exists
-    const dispatcherPath = `${srcDir}/LayoutDispatcher.tsx`;
-    if (!fs.existsSync(dispatcherPath)) {
-      errors.push("VISU-01: LayoutDispatcher.tsx not found");
+      // Check LayoutDispatcher exists
+      const dispatcherPath = `${srcDir}/LayoutDispatcher.tsx`;
+      if (!fs.existsSync(dispatcherPath)) {
+        errors.push("VISU-01: LayoutDispatcher.tsx not found");
+      }
     }
   }
 
@@ -292,15 +295,20 @@ export function validateLayoutModes(outputDir: string): string[] {
 export function validateTitleOverlays(outputDir: string): string[] {
   const errors: string[] = [];
 
-  // Check TitleOverlay component exists
-  const compositionsDir = `${outputDir}/../remotion-renderer/src/compositions`;
-  const srcDir = fs.existsSync(compositionsDir)
-    ? compositionsDir
-    : `${outputDir}/compositions`;
+  // WR-05: Only check source files when explicitly enabled (CI/development), not in Docker production
+  const validateSourceFiles = process.env.VALIDATE_SOURCE_FILES === "true";
 
-  const titleOverlayPath = `${srcDir}/TitleOverlay.tsx`;
-  if (fs.existsSync(srcDir) && !fs.existsSync(titleOverlayPath)) {
-    errors.push("VISU-01: TitleOverlay.tsx component not found");
+  // Check TitleOverlay component exists (source-file check only when enabled)
+  if (validateSourceFiles) {
+    const compositionsDir = `${outputDir}/../remotion-renderer/src/compositions`;
+    const srcDir = fs.existsSync(compositionsDir)
+      ? compositionsDir
+      : `${outputDir}/compositions`;
+
+    const titleOverlayPath = `${srcDir}/TitleOverlay.tsx`;
+    if (fs.existsSync(srcDir) && !fs.existsSync(titleOverlayPath)) {
+      errors.push("VISU-01: TitleOverlay.tsx component not found");
+    }
   }
 
   // Check pipeline-config.json for title configurations
@@ -381,43 +389,48 @@ export function validateTitleOverlays(outputDir: string): string[] {
 export function validateFontInfrastructure(outputDir: string): string[] {
   const errors: string[] = [];
 
-  // Check fonts.ts exists and exports AVAILABLE_FONTS with 5 entries
-  const fontsPath = `${outputDir}/../remotion-renderer/src/fonts.ts`;
-  const altFontsPath = `${outputDir}/fonts.ts`;
+  // WR-05: Only check source files when explicitly enabled (CI/development), not in Docker production
+  const validateSourceFiles = process.env.VALIDATE_SOURCE_FILES === "true";
 
-  const resolvePath = fs.existsSync(fontsPath)
-    ? fontsPath
-    : fs.existsSync(altFontsPath)
-      ? altFontsPath
-      : null;
+  // Check fonts.ts exists and exports AVAILABLE_FONTS (source-file check only when enabled)
+  if (validateSourceFiles) {
+    const fontsPath = `${outputDir}/../remotion-renderer/src/fonts.ts`;
+    const altFontsPath = `${outputDir}/fonts.ts`;
 
-  if (!resolvePath) {
-    errors.push("D-07: fonts.ts not found in expected locations");
-    return errors;
-  }
+    const resolvePath = fs.existsSync(fontsPath)
+      ? fontsPath
+      : fs.existsSync(altFontsPath)
+        ? altFontsPath
+        : null;
 
-  try {
-    const content = fs.readFileSync(resolvePath, "utf-8");
-
-    // Check AVAILABLE_FONTS export
-    if (!content.includes("AVAILABLE_FONTS")) {
-      errors.push("D-07: fonts.ts must export AVAILABLE_FONTS");
+    if (!resolvePath) {
+      errors.push("D-07: fonts.ts not found in expected locations");
+      return errors;
     }
 
-    // Check that AVAILABLE_FONTS includes expected font names
-    const expectedFonts = ["Inter", "Roboto", "Montserrat", "Oswald", "monospace"];
-    for (const font of expectedFonts) {
-      if (!content.includes(`"${font}"`) && !content.includes(`'${font}'`)) {
-        errors.push(`D-07: AVAILABLE_FONTS should include "${font}"`);
+    try {
+      const content = fs.readFileSync(resolvePath, "utf-8");
+
+      // Check AVAILABLE_FONTS export
+      if (!content.includes("AVAILABLE_FONTS")) {
+        errors.push("D-07: fonts.ts must export AVAILABLE_FONTS");
       }
-    }
 
-    // Check loadFont function export
-    if (!content.includes("export") || !content.includes("loadFont")) {
-      errors.push("D-07: fonts.ts must export a loadFont function");
+      // Check that AVAILABLE_FONTS includes expected font names
+      const expectedFonts = ["Inter", "Roboto", "Montserrat", "Oswald", "monospace"];
+      for (const font of expectedFonts) {
+        if (!content.includes(`"${font}"`) && !content.includes(`'${font}'`)) {
+          errors.push(`D-07: AVAILABLE_FONTS should include "${font}"`);
+        }
+      }
+
+      // Check loadFont function export
+      if (!content.includes("export") || !content.includes("loadFont")) {
+        errors.push("D-07: fonts.ts must export a loadFont function");
+      }
+    } catch {
+      errors.push("D-07: Could not read fonts.ts");
     }
-  } catch {
-    errors.push("D-07: Could not read fonts.ts");
   }
 
   return errors;

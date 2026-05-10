@@ -6,15 +6,18 @@ import type { TikTokPage } from "@remotion/captions";
 import type { RemotionProps } from "./Root.js";
 import { validatePipelineConfig, DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config.js";
 import type { PipelineConfig, SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config.js";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
 
 function getVideoDimensions(videoPath: string): { width: number; height: number; durationSec: number } {
-  const probeOut = execSync(
-    `ffprobe -v error -show_entries stream=width,height -show_entries format=duration -of json "${videoPath}"`,
-    { encoding: "utf-8" }
-  );
+  const probeOut = execFileSync("ffprobe", [
+    "-v", "error",
+    "-show_entries", "stream=width,height",
+    "-show_entries", "format=duration",
+    "-of", "json",
+    videoPath,
+  ], { encoding: "utf-8" });
   const data = JSON.parse(probeOut);
   const videoStream = data.streams.find((s: any) => s.codec_name !== undefined && s.width !== undefined);
   const width = videoStream?.width ?? 1080;
@@ -216,19 +219,21 @@ async function main() {
       ? Math.round(safeZone.bottom)
       : 250;
 
+    // D-03: Env var fallback — config takes precedence when present
+    // WR-02: Guard against NaN from non-numeric FONT_SIZE env var
+    const envFontSize = parseInt(process.env.FONT_SIZE || "58", 10);
+
     const inputProps: RemotionProps = {
       videoSrc: videoFileName,
       captionPages,
       videoWidth,
       videoHeight,
       totalDurationMs,
-      // D-01, D-02: PipelineConfig-driven props
-      // D-03: Env var fallbacks — config takes precedence when present
       subtitleLayout: pipelineConfig?.subtitle?.layout || ("tiktok" as SubtitleLayoutMode),
       subtitleConfig: {
         layout: pipelineConfig?.subtitle?.layout || "tiktok",
         fontFamily: pipelineConfig?.subtitle?.fontFamily,
-        fontSize: pipelineConfig?.subtitle?.fontSize || parseInt(process.env.FONT_SIZE || "58", 10),
+        fontSize: pipelineConfig?.subtitle?.fontSize || (Number.isNaN(envFontSize) ? 58 : envFontSize),
         activeColor: pipelineConfig?.subtitle?.activeColor || process.env.ACTIVE_COLOR || "#FFFF00",
         inactiveColor: pipelineConfig?.subtitle?.inactiveColor || process.env.INACTIVE_COLOR || "#FFFFFF",
         outlineColor: pipelineConfig?.subtitle?.outlineColor,

@@ -10,7 +10,24 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { validatePipelineConfig } from "./pipeline-config.js";
-import type { PipelineConfig } from "./pipeline-config.js";
+import type { PipelineConfig, TitleConfig } from "./pipeline-config.js";
+
+// ─── HTML sanitization for XSS prevention (CR-02) ──────────────────────────
+
+function sanitizeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function sanitizeTitles(titles: TitleConfig[]): TitleConfig[] {
+  return titles.map(t => ({
+    ...t,
+    text: sanitizeHtml(t.text),
+    subtitle: t.subtitle ? sanitizeHtml(t.subtitle) : undefined,
+  }));
+}
 
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
@@ -80,6 +97,9 @@ app.get("/api/config", (_req, res) => {
 });
 
 // ─── PUT /api/config — Write pipeline-config.json (D-16, T-06-09) ──────────
+// ⚠️ WR-06: This endpoint has no authentication. It is intended for use within
+// a trusted internal Docker network only. Before exposing this API externally,
+// add authentication (API key, JWT, etc.) and rate limiting.
 
 app.put("/api/config", (req, res) => {
   const configPath = resolveConfigPath();
@@ -109,8 +129,12 @@ app.put("/api/config", (req, res) => {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // Write config, stripping _meta if present
+    // Write config, stripping _meta if present, sanitizing title text (CR-02)
     const { _meta, ...configToWrite } = body as PipelineConfig & { _meta?: unknown };
+    // CR-02: Sanitize title text to prevent stored XSS — strip/escape HTML
+    if (configToWrite.titles && Array.isArray(configToWrite.titles)) {
+      configToWrite.titles = sanitizeTitles(configToWrite.titles);
+    }
     fs.writeFileSync(configPath, JSON.stringify(configToWrite, null, 2));
 
     console.log("[studio] Config written to:", configPath);

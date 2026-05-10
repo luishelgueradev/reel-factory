@@ -136,14 +136,14 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
         />
       </div>
 
-      {/* ── Letter spacing ───────────────────────────────────────────── */}
+        {/* ── Letter spacing ───────────────────────────────────────────── */}
       <div>
         <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
           Letter Spacing: <strong style={{ color: "#fff" }}>{config.letterSpacing ?? 0}</strong>
         </label>
         <input
           type="range"
-          min={-5}
+          min={-1}
           max={20}
           value={config.letterSpacing ?? 0}
           onChange={(e) => onChange({ letterSpacing: Number(e.target.value) })}

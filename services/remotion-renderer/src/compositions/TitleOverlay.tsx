@@ -116,8 +116,8 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
       break;
   }
 
-  // ─── Exit animation: fade out over last 300ms ───────────────────────────
-  if (frame >= exitFadeStartFrame && entranceAnimation !== "none") {
+  // ─── Exit animation: fade out over last 300ms (WR-04: always fade out, including "none" mode)
+  if (frame >= exitFadeStartFrame) {
     const exitFadeEndFrame = durationInFrames;
     const exitOpacity = interpolate(frame, [exitFadeStartFrame, exitFadeEndFrame], [1, 0], {
       extrapolateLeft: "clamp",

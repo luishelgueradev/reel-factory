@@ -140,10 +140,9 @@ function sentencesToPages(sentences: SentenceGroup[]): TikTokPage[] {
 
 const SentencePage: React.FC<{
   page: TikTokPage;
-  currentSentenceIndex: number;
   currentTokenIdxInSentence: number;
   config: SubtitleConfig;
-}> = ({ page, currentSentenceIndex, currentTokenIdxInSentence, config }) => {
+}> = ({ page, currentTokenIdxInSentence, config }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -174,8 +173,6 @@ const SentencePage: React.FC<{
   const positionStyles = getPositionStyles(position, bottomOffset);
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
 
-  const isCurrentSentence = currentSentenceIndex === 0; // 0 = current since we only render the active sentence page
-
   return (
     <div
       style={{
@@ -203,9 +200,9 @@ const SentencePage: React.FC<{
             key={`${token.text}-${i}`}
             style={{
               display: "inline-block",
-              fontSize: isCurrentSentence ? fontSize : fontSize * 0.85,
+              fontSize,
               color,
-              fontWeight: isCurrentSentence ? (isTokenActive ? 800 : 700) : 400,
+              fontWeight: isTokenActive ? 800 : 700,
               letterSpacing: letterSpacing ?? "-0.02em",
               lineHeight: lineHeight ?? 1.3,
               WebkitTextStroke: outlineWidth,
@@ -293,7 +290,6 @@ const SentencePageForLayout: React.FC<{
   return (
     <SentencePage
       page={page}
-      currentSentenceIndex={0}
       currentTokenIdxInSentence={currentTokenIdx}
       config={config}
     />

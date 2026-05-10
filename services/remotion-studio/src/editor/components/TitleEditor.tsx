@@ -23,16 +23,6 @@ const DEFAULT_TITLE_STYLE = {
   textColor: "#FFFFFF",
 };
 
-/** Sanitize text for XSS prevention (T-06-12) */
-function sanitizeText(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 export function TitleEditor({ titles, onChange }: TitleEditorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [addingNew, setAddingNew] = useState(false);
@@ -137,9 +127,9 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             }}
           >
             <div>
-              <div style={{ fontWeight: 600, fontSize: 14, color: "#e0e0e0" }}>{sanitizeText(title.text)}</div>
+              <div style={{ fontWeight: 600, fontSize: 14, color: "#e0e0e0" }}>{title.text}</div>
               {title.subtitle && (
-                <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{sanitizeText(title.subtitle)}</div>
+                <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{title.subtitle}</div>
               )}
               <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
                 {(title.startTimeMs / 1000).toFixed(1)}s → {(title.startTimeMs / 1000 + title.durationMs / 1000).toFixed(1)}s ({title.durationMs}ms)

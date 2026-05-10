@@ -2,6 +2,7 @@ import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { SubtitledVideo } from "./compositions/Subtitles";
 import type { TikTokPage } from "@remotion/captions";
+import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config.js";
 
 export interface RemotionProps {
   videoSrc: string;
@@ -16,6 +17,10 @@ export interface RemotionProps {
   outlineColor?: string;
   outlineWidth?: number;
   bottomOffset?: number;
+  // PipelineConfig-driven props (D-01, D-02)
+  subtitleLayout?: SubtitleLayoutMode;
+  subtitleConfig?: SubtitleConfig;
+  titles?: TitleConfig[];
 }
 
 export const RemotionRoot: React.FC = () => {
@@ -40,6 +45,13 @@ export const RemotionRoot: React.FC = () => {
         outlineColor: "#000000",
         outlineWidth: 3,
         bottomOffset: 250,
+        // PipelineConfig defaults — TikTok layout is default (D-05)
+        subtitleLayout: "tiktok" as SubtitleLayoutMode,
+        subtitleConfig: {
+          layout: "tiktok" as SubtitleLayoutMode,
+          position: "bottom-center" as SubtitlePosition,
+        } satisfies SubtitleConfig,
+        titles: [] as TitleConfig[],
       }}
       calculateMetadata={async ({ props }) => {
         const durationMs = props.totalDurationMs || 10000;

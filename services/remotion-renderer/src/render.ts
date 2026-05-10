@@ -4,6 +4,8 @@ import { transcriptToCaptionPages, areTimestampsAlreadyRemapped } from "./captio
 import type { SilenceCutList, FinalizerInfo } from "./captions.js";
 import type { TikTokPage } from "@remotion/captions";
 import type { RemotionProps } from "./Root.js";
+import { validatePipelineConfig, DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config.js";
+import type { PipelineConfig, SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config.js";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -140,6 +142,30 @@ async function main() {
     console.warn("WARN: FINALIZER_INFO_PATH set but file not found:", finalizerInfoPath);
   }
 
+  // Load pipeline-config.json if provided (D-02, D-03: config takes precedence, env vars are fallback)
+  const pipelineConfigPath = process.env.PIPELINE_CONFIG_PATH;
+  let pipelineConfig: PipelineConfig | null = null;
+  if (pipelineConfigPath && fs.existsSync(pipelineConfigPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(pipelineConfigPath, "utf-8"));
+      const validation = validatePipelineConfig(parsed);
+      if (validation.valid) {
+        pipelineConfig = parsed as PipelineConfig;
+        console.log("  Loaded pipeline-config.json:", JSON.stringify(pipelineConfig.subtitle.layout));
+        if (pipelineConfig.titles && pipelineConfig.titles.length > 0) {
+          console.log(`  ${pipelineConfig.titles.length} title overlay(s) configured`);
+        }
+      } else {
+        console.warn("WARN: pipeline-config.json validation failed:", validation.errors.join("; "));
+        console.warn("  Falling back to environment variable defaults");
+      }
+    } catch (e) {
+      console.warn("WARN: Failed to parse pipeline-config.json, using env var defaults:", (e as Error).message);
+    }
+  } else if (pipelineConfigPath) {
+    console.warn("WARN: PIPELINE_CONFIG_PATH set but file not found:", pipelineConfigPath);
+  }
+
   const outputDir = path.dirname(outputPath);
   fs.mkdirSync(outputDir, { recursive: true });
 
@@ -196,10 +222,18 @@ async function main() {
       videoWidth,
       videoHeight,
       totalDurationMs,
-      activeColor: process.env.ACTIVE_COLOR || "#FFFF00",
-      inactiveColor: process.env.INACTIVE_COLOR || "#FFFFFF",
-      fontSize: parseInt(process.env.FONT_SIZE || "58", 10),
+      // D-03: Env var fallbacks — config takes precedence when present
+      activeColor: pipelineConfig?.subtitle?.activeColor || process.env.ACTIVE_COLOR || "#FFFF00",
+      inactiveColor: pipelineConfig?.subtitle?.inactiveColor || process.env.INACTIVE_COLOR || "#FFFFFF",
+      fontSize: pipelineConfig?.subtitle?.fontSize || parseInt(process.env.FONT_SIZE || "58", 10),
       bottomOffset,
+      // D-01, D-02: PipelineConfig-driven props
+      subtitleLayout: pipelineConfig?.subtitle?.layout || ("tiktok" as SubtitleLayoutMode),
+      subtitleConfig: pipelineConfig?.subtitle || {
+        layout: "tiktok" as SubtitleLayoutMode,
+        ...DEFAULT_SUBTITLE_CONFIG,
+      } satisfies SubtitleConfig,
+      titles: pipelineConfig?.titles || [],
     };
     const composition = await selectComposition({
       serveUrl: bundleLocation,
@@ -240,6 +274,20 @@ async function main() {
       fps: 30,
       remotion_info: {
         use_angle_egl: true,
+      },
+      // D-02: PipelineConfig info for debugging
+      pipeline_config: pipelineConfig ? {
+        loaded: true,
+        source: pipelineConfigPath || "unknown",
+        subtitle_layout: pipelineConfig.subtitle.layout,
+        subtitle_position: pipelineConfig.subtitle.position || DEFAULT_SUBTITLE_CONFIG.position,
+        titles_count: pipelineConfig.titles?.length || 0,
+      } : {
+        loaded: false,
+        source: "env_vars",
+        subtitle_layout: "tiktok",
+        subtitle_position: "bottom-center",
+        titles_count: 0,
       },
     };
     fs.writeFileSync(

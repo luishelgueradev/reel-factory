@@ -1,6 +1,7 @@
 import React from "react";
-import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile } from "remotion";
+import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile, Sequence } from "remotion";
 import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher.js";
+import { TitleOverlay } from "./compositions/TitleOverlay.js";
 import type { TikTokPage } from "@remotion/captions";
 import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config.js";
 import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config.js";
@@ -29,6 +30,7 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
   videoSrc,
   captionPages,
   subtitleConfig,
+  titles,
 }) => {
   // Build the SubtitleConfig, merging defaults for any missing fields
   const config: SubtitleConfig = {
@@ -51,6 +53,22 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       {videoSrc && <OffthreadVideo src={staticFile(videoSrc)} />}
       <SubtitleLayoutRenderer captionPages={captionPages} config={config} />
+      {/* Title overlays (D-10, D-13): titles coexist with subtitles at overlapping timestamps */}
+      {(titles ?? []).map((title, i) => {
+        const fps = 30; // matches composition fps
+        const fromFrame = Math.round(title.startTimeMs * (fps / 1000));
+        const durationInFrames = Math.max(1, Math.round(title.durationMs * (fps / 1000)));
+        return (
+          <Sequence key={`title-${i}`} from={fromFrame} durationInFrames={durationInFrames}>
+            <TitleOverlay
+              text={title.text}
+              subtitle={title.subtitle}
+              style={title.style}
+              durationMs={title.durationMs}
+            />
+          </Sequence>
+        );
+      })}
     </AbsoluteFill>
   );
 };

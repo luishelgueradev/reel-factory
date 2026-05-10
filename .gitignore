@@ -1,5 +1,6 @@
 # Pipeline output (user videos)
 pipeline/
+videos/
 
 # Python
 __pycache__/

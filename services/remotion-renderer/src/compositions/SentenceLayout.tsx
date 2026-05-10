@@ -7,64 +7,15 @@ import {
   interpolate,
 } from "remotion";
 import type { TikTokPage, TikTokToken } from "@remotion/captions";
-import type { SubtitleConfig, SubtitlePosition } from "../pipeline-config.js";
+import type { SubtitleConfig } from "../pipeline-config.js";
 import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config.js";
-
-// ─── Timing constants (shared across layouts) ───────────────────────────────
-
-const FADE_IN_MS = 100;
-const FADE_OUT_MS = 300;
-const PAGE_OVERLAP_GUARD_MS = 100;
-
-// ─── Position helpers (D-09) ────────────────────────────────────────────────
-
-function getPositionStyles(
-  position: SubtitlePosition,
-  bottomOffset: number
-): React.CSSProperties {
-  switch (position) {
-    case "bottom-center":
-      return {
-        position: "absolute" as const,
-        bottom: bottomOffset,
-        left: 40,
-        right: 40,
-        textAlign: "center" as const,
-      };
-    case "top-center":
-      return {
-        position: "absolute" as const,
-        top: 100,
-        left: 40,
-        right: 40,
-        textAlign: "center" as const,
-      };
-    case "center-screen":
-      return {
-        position: "absolute" as const,
-        top: "50%",
-        left: 40,
-        right: 40,
-        transform: "translateY(-50%)",
-        textAlign: "center" as const,
-      };
-  }
-}
-
-// ─── Background highlight (D-08) ────────────────────────────────────────────
-
-function getBackgroundHighlightStyle(
-  backgroundHighlight: SubtitleConfig["backgroundHighlight"]
-): React.CSSProperties {
-  if (!backgroundHighlight || !backgroundHighlight.enabled) {
-    return {};
-  }
-  return {
-    backgroundColor: backgroundHighlight.color,
-    padding: `${backgroundHighlight.padding}px`,
-    borderRadius: `${backgroundHighlight.borderRadius}px`,
-  };
-}
+import {
+  FADE_IN_MS,
+  FADE_OUT_MS,
+  PAGE_OVERLAP_GUARD_MS,
+  getPositionStyles,
+  getBackgroundHighlightStyle,
+} from "./shared-styles.js";
 
 // ─── Sentence grouping ──────────────────────────────────────────────────────
 

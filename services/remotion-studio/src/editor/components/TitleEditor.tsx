@@ -23,6 +23,28 @@ const DEFAULT_TITLE_STYLE = {
   textColor: "#FFFFFF",
 };
 
+function rgbaToHex(rgba: string): string {
+  const match = rgba.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\)/);
+  if (!match) return "#000000";
+  const r = parseInt(match[1]).toString(16).padStart(2, "0");
+  const g = parseInt(match[2]).toString(16).padStart(2, "0");
+  const b = parseInt(match[3]).toString(16).padStart(2, "0");
+  return `#${r}${g}${b}`;
+}
+
+function rgbaToAlpha(rgba: string): number {
+  const match = rgba.match(/rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(?:,\s*([\d.]+))?\)/);
+  if (!match) return 1;
+  return match[1] !== undefined ? parseFloat(match[1]) : 1;
+}
+
+function hexAndAlphaToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function TitleEditor({ titles, onChange }: TitleEditorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [addingNew, setAddingNew] = useState(false);
@@ -267,12 +289,31 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               <label style={{ fontSize: 12, color: "#999" }}>Background</label>
               <input
                 type="color"
-                value={newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)"}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, backgroundColor: e.target.value },
-                }))}
+                value={rgbaToHex(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)")}
+                onChange={(e) => {
+                  const alpha = rgbaToAlpha(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)");
+                  setNewTitle((prev) => ({
+                    ...prev,
+                    style: { ...prev.style!, backgroundColor: hexAndAlphaToRgba(e.target.value, alpha) },
+                  }));
+                }}
                 style={{ width: 48, height: 36, border: "1px solid #444", borderRadius: 4, padding: 2, background: "#2a2a3e", cursor: "pointer" }}
+              />
+              <label style={{ fontSize: 10, color: "#777" }}>Opacity</label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={rgbaToAlpha(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)")}
+                onChange={(e) => {
+                  const hex = rgbaToHex(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)");
+                  setNewTitle((prev) => ({
+                    ...prev,
+                    style: { ...prev.style!, backgroundColor: hexAndAlphaToRgba(hex, parseFloat(e.target.value)) },
+                  }));
+                }}
+                style={{ width: 48 }}
               />
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>

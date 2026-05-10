@@ -51,15 +51,15 @@ export async function loadFont(fontFamily: string): Promise<string> {
 
   const loader = FONT_LOADERS[fontFamily];
   if (!loader) {
-    console.warn(`[fonts] Unknown font family "${fontFamily}", falling back to system default`);
-    return "sans-serif";
+    console.warn(`[fonts] Unknown font family "${fontFamily}", falling back to monospace`);
+    return "monospace";
   }
 
   try {
     const result = await loader.loadFont();
     return result.fontFamily;
   } catch (err) {
-    console.warn(`[fonts] Failed to load font "${fontFamily}", falling back to system default:`, err);
-    return "sans-serif";
+    console.warn(`[fonts] Failed to load font "${fontFamily}", falling back to monospace:`, err);
+    return "monospace";
   }
 }

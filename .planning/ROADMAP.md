@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Silence Detection & Removal** - Cross-referenced silence detection and hard-cut removal preserving A/V sync
 - [ ] **Phase 4: 9:16 Vertical Output** - FFmpeg finalizer that crops and encodes vertical social video
 - [ ] **Phase 5: Remotion + Animated Subtitles** - Word-by-word TikTok-style subtitles burned into video
-- [ ] **Phase 6: Animated Intros & Outros** - Parameterized Remotion template sequences at video start/end
+- [x] **Phase 6: Animated Intros & Outros** - Parameterized Remotion template sequences at video start/end (completed 2026-05-10)
 - [ ] **Phase 7: Visual Cuts & Zooms** - Automatic zoom on emphasis and visual jump-cut transitions
 - [ ] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video
 - [ ] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing

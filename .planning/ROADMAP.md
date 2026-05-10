@@ -123,8 +123,8 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Pipeline config schema & config-driven composition architecture (D-01, D-02, D-03, D-05, D-12, D-17)
 - [x] 06-02-PLAN.md — Subtitle layout modes: TikTok, Sentence, Bar, Karaoke + LayoutDispatcher (D-04, D-06, D-08, D-09)
-- [ ] 06-03-PLAN.md — Title overlays with entrance animations & curated font infrastructure (D-07, D-10, D-11, D-13, VISU-01, VISU-02)
-- [ ] 06-04-PLAN.md — Remotion Studio Docker container + Docker Compose integration (D-14, D-15, D-18, D-19)
+- [x] 06-03-PLAN.md — Title overlays with entrance animations & curated font infrastructure (D-07, D-10, D-11, D-13, VISU-01, VISU-02)
+- [x] 06-04-PLAN.md — Remotion Studio Docker container + Docker Compose integration (D-14, D-15, D-18, D-19)
 - [ ] 06-05-PLAN.md — Config editor SPA + validation module + E2E test (D-16, D-20, VISU-01, VISU-02)
 
 ### Phase 7: Visual Cuts & Zooms

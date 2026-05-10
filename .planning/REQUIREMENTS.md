@@ -43,8 +43,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Visual Enhancements
 
-- [ ] **VISU-01**: Animated intro template is rendered at video start (parameterized with brand props)
-- [ ] **VISU-02**: Animated outro template is rendered at video end (parameterized with brand props)
+- [x] **VISU-01**: Animated intro template is rendered at video start (parameterized with brand props)
+- [x] **VISU-02**: Animated outro template is rendered at video end (parameterized with brand props)
 - [ ] **VISU-03**: Automatic zoom-in on speaker during emphasis moments (triggered by Whisper confidence/silence boundaries)
 - [ ] **VISU-04**: Jump cuts have visual transitions (zoom or crop shift) to make cuts feel intentional
 
@@ -125,8 +125,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SUBT-01 | Phase 5 | Complete |
 | SUBT-02 | Phase 5 | Complete |
 | SUBT-03 | Phase 5 | Complete |
-| VISU-01 | Phase 6 | Pending |
-| VISU-02 | Phase 6 | Pending |
+| VISU-01 | Phase 6 | Complete |
+| VISU-02 | Phase 6 | Complete |
 | VISU-03 | Phase 7 | Pending |
 | VISU-04 | Phase 7 | Pending |
 | SRTE-01 | Phase 8 | Pending |

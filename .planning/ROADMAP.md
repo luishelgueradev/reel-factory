@@ -13,8 +13,8 @@ Build a self-hosted Docker pipeline that transforms talking-head MP4 videos into
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Pipeline Infrastructure** - Docker Compose foundation with shared volumes and step contracts (completed 2026-05-05)
-- [ ] **Phase 2: Whisper Transcription** - Audio extraction and Spanish transcription with word-level timestamps
-- [ ] **Phase 3: Silence Detection & Removal** - Cross-referenced silence detection and hard-cut removal preserving A/V sync
+- [x] **Phase 2: Whisper Transcription** - Audio extraction and Spanish transcription with word-level timestamps (completed 2026-05-06)
+- [x] **Phase 3: Silence Detection & Removal** - Cross-referenced silence detection and hard-cut removal preserving A/V sync (completed 2026-05-11)
 - [x] **Phase 4: 9:16 Vertical Output** - FFmpeg finalizer that crops and encodes vertical social video (completed 2026-05-11)
 - [ ] **Phase 5: Remotion + Animated Subtitles** - Word-by-word TikTok-style subtitles burned into video
 - [x] **Phase 6: Animated Intros & Outros** - Parameterized Remotion template sequences at video start/end (completed 2026-05-10)
@@ -218,8 +218,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Pipeline Infrastructure | 4/4 | Complete    | 2026-05-05 |
-| 2. Whisper Transcription | 0/3 | Not started | - |
-| 3. Silence Detection & Removal | 0/3 | Not started | - |
+| 2. Whisper Transcription | 3/3 | Complete | 2026-05-06 |
+| 3. Silence Detection & Removal | 4/3 | Complete | 2026-05-11 |
 | 4. 9:16 Vertical Output | 3/3 | Complete | 2026-05-11 |
 | 5. Remotion + Animated Subtitles | 0/3 | Planned | - |
 | 6. Animated Intros & Outros | 5/5 | Complete    | 2026-05-10 |

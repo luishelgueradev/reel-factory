@@ -1,10 +1,14 @@
 import React from "react";
 import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile, Sequence } from "remotion";
-import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher.js";
-import { TitleOverlay } from "./compositions/TitleOverlay.js";
+import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher";
+import { TitleOverlay } from "./compositions/TitleOverlay";
+import { ZoomContainer } from "./compositions/ZoomContainer";
+import { JumpCutTransition } from "./compositions/JumpCutTransition";
 import type { TikTokPage } from "@remotion/captions";
-import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config.js";
-import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config.js";
+import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config";
+import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
+import type { ZoomEvent } from "./zoom-detection";
+import type { TransitionEvent } from "./compositions/JumpCutTransition";
 
 export interface RemotionProps {
   videoSrc: string;
@@ -16,6 +20,9 @@ export interface RemotionProps {
   subtitleLayout?: SubtitleLayoutMode;
   subtitleConfig?: SubtitleConfig;
   titles?: TitleConfig[];
+  // Phase 7: Visual effects (D-08, D-10)
+  zoomEvents?: ZoomEvent[];
+  transitionEvents?: TransitionEvent[];
 }
 
 /**
@@ -31,6 +38,9 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
   captionPages,
   subtitleConfig,
   titles,
+  zoomEvents = [],
+  transitionEvents = [],
+  totalDurationMs,
 }) => {
   // Build the SubtitleConfig, merging defaults for any missing fields
   const config: SubtitleConfig = {
@@ -51,9 +61,13 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {videoSrc && <OffthreadVideo src={staticFile(videoSrc)} />}
+      {/* D-08: ZoomContainer wraps OffthreadVideo — subtitles/titles NOT zoomed (D-10) */}
+      <ZoomContainer zoomEvents={zoomEvents} totalDurationMs={totalDurationMs ?? 10000}>
+        {videoSrc && <OffthreadVideo src={staticFile(videoSrc)} />}
+      </ZoomContainer>
+      {/* Subtitles on top of video — not affected by zoom */}
       <SubtitleLayoutRenderer captionPages={captionPages} config={config} />
-      {/* Title overlays (D-10, D-13): titles coexist with subtitles at overlapping timestamps */}
+      {/* Title overlays on top of subtitles — not affected by zoom */}
       {(titles ?? []).map((title, i) => {
         const fps = 30; // matches composition fps
         const fromFrame = Math.round(title.startTimeMs * (fps / 1000));
@@ -70,6 +84,13 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
           </Sequence>
         );
       })}
+      {/* D-09: Jump-cut transitions at silence cut boundaries */}
+      {transitionEvents.length > 0 && (
+        <JumpCutTransition
+          transitionEvents={transitionEvents}
+          totalDurationMs={totalDurationMs ?? 10000}
+        />
+      )}
     </AbsoluteFill>
   );
 };
@@ -96,6 +117,9 @@ export const RemotionRoot: React.FC = () => {
           position: "bottom-center" as SubtitlePosition,
         } satisfies SubtitleConfig,
         titles: [] as TitleConfig[],
+        // Phase 7: Visual effects defaults (D-08, D-10)
+        zoomEvents: [] as ZoomEvent[],
+        transitionEvents: [] as TransitionEvent[],
       }}
       calculateMetadata={async ({ props }) => {
         const durationMs = props.totalDurationMs || 10000;

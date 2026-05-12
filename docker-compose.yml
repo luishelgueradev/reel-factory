@@ -143,6 +143,27 @@ services:
       retries: 3
       start_period: 30s
 
+  # API Server: exposes processing pipeline via REST API (Phase 9, Plan 03)
+  # Per D-01: Express.js container on Node.js 22 with Docker socket for sibling orchestration
+  # Per D-06: Serves artifact URLs from shared pipeline volume
+  api-server:
+    <<: *pipeline-common
+    build:
+      context: ./services/api-server
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+    ports:
+      - "${API_PORT:-3000}:3000"
+    volumes:
+      - ./pipeline:/data/pipeline
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID:-}
+      - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-600000}
+      - PORT=3000
+      - NODE_ENV=production
+
   # SRT/VTT Exporter: generates sidecar subtitle files with remapped timestamps
   # Per D-01, D-02: Node.js service following pipeline step contract
   # Per D-12: Runs in parallel with remotion-renderer (both consume transcript + silence-cuts)

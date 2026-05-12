@@ -2,13 +2,15 @@ import express from "express";
 import multer from "multer";
 import { processRouter, UnsupportedMediaTypeError, FileTooLargeError } from "./routes/process.js";
 import { artifactsRouter } from "./routes/artifacts.js";
+import { healthRouter } from "./routes/health.js";
 
 const app = express();
 
 // Parse JSON request bodies
 app.use(express.json());
 
-// Mount route handlers
+// Mount route handlers — health check first for fast liveness probing
+app.use(healthRouter);
 app.use(processRouter);
 app.use(artifactsRouter);
 

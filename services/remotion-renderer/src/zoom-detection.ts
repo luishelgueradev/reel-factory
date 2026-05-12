@@ -137,10 +137,10 @@ export function detectZoomEvents(
           break; // Only the first word after each silence boundary
         }
 
-        // Optimization: if word start is past the window, stop searching for this cut
-        if (wordStartMs > windowEndMs) {
-          break;
-        }
+        // Note: We do NOT break on wordStartMs > windowEndMs because
+        // remapped timestamps can be out of order relative to the original
+        // word array. A word that appears later in the array might have an
+        // earlier remapped timestamp, so we must check all words.
       }
     }
   }
@@ -153,7 +153,7 @@ export function detectZoomEvents(
 
   rawEvents.sort((a, b) => a.startTimeMs - b.startTimeMs);
 
-  const merged: ZoomEvent[] = [rawEvents[0]];
+  const merged: ZoomEvent[] = [{ ...rawEvents[0] }];
   for (let i = 1; i < rawEvents.length; i++) {
     const prev = merged[merged.length - 1];
     const curr = rawEvents[i];
@@ -168,7 +168,7 @@ export function detectZoomEvents(
       prev.durationMs = mergedEnd - prev.startTimeMs;
       prev.scale = Math.max(prev.scale, curr.scale);
     } else {
-      merged.push(curr);
+      merged.push({ ...curr });
     }
   }
 

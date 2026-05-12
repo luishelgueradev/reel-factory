@@ -63,12 +63,14 @@ for VIDEO in "$@"; do
     export INPUT_PATH="/data/pipeline/$NAME/ffmpeg-finalizer/output.mp4"
     export OUTPUT_PATH="/data/pipeline/$NAME/remotion-renderer/output.mp4"
     export TRANSCRIPT_PATH="/data/pipeline/$NAME/whisper/transcript.json"
-    export SILENCE_CUTS_PATH="/data/pipeline/$NAME/silence-cutter/silence-cuts.json"
     export FINALIZER_INFO_PATH="/data/pipeline/$NAME/ffmpeg-finalizer/finalizer-info.json"
 
+    # NOTE: SILENCE_CUTS_PATH intentionally not passed — Whisper runs on the cut video
+    # so transcript timestamps are already on the silence-removed timeline.
+    # The detection logic in areTimestampsAlreadyRemapped handles this automatically.
     docker compose run --rm \
         -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH -e TRANSCRIPT_PATH \
-        -e SILENCE_CUTS_PATH -e FINALIZER_INFO_PATH \
+        -e FINALIZER_INFO_PATH \
         remotion-renderer 2>&1 | grep -E '\[remotion-renderer\]|Completed|ERROR|Render:' || true
 
     # Copy output

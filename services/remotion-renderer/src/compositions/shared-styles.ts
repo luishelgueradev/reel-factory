@@ -1,10 +1,18 @@
-import type { SubtitleConfig, SubtitlePosition } from "../pipeline-config.js";
+import type { SubtitleConfig, SubtitlePosition } from "../pipeline-config";
 
 // ─── Timing constants (shared across all layouts) ──────────────────────────
 
 export const FADE_IN_MS = 100;
 export const FADE_OUT_MS = 300;
 export const PAGE_OVERLAP_GUARD_MS = 100;
+
+// ─── Transition animation constants (D-05, D-06, D-07) ─────────────────────
+
+export const TRANSITION_PRE_CUT_MS = 150;  // Effect starts 150ms before cut (D-05)
+export const TRANSITION_POST_CUT_MS = 100; // Effect ends 100ms after cut (D-05)
+export const DEFAULT_TRANSITION_DURATION_MS = 250; // D-07
+export const ZOOM_TRANSITION_SCALE = 1.08;  // D-06
+export const CROP_SHIFT_PX = 20;            // D-06
 
 // ─── Position helpers (D-09) ─────────────────────────────────────────────────
 

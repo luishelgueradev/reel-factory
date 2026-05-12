@@ -168,14 +168,12 @@ Plans:
   1. POST /process accepts an MP4 via multipart upload and returns the processed video in the response
   2. API response includes URLs to all intermediate artifacts (transcript, cut list, intermediate videos) for inspection
   3. Long videos complete without timeout — timeout handling returns a meaningful status rather than hanging
-**Plans**: 5 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] 09-01: Express.js API server scaffolding with multipart upload support
-- [ ] 09-02: POST /process endpoint — upload → pipeline execution → processed video response
-- [ ] 09-03: Artifact serving — static file URLs for all intermediate pipeline outputs
-- [ ] 09-04: Timeout handling for long videos (configurable timeout, graceful failure response)
-- [ ] 09-05: End-to-end API test — curl upload → processed 9:16 video with all artifacts
+- [ ] 09-01-PLAN.md — API server scaffolding, Zod schemas, Multer upload, artifact serving (APIS-01, APIS-02)
+- [ ] 09-02-PLAN.md — Pipeline orchestration via Dockerode, POST /process handler, timeout handling (APIS-01, APIS-02, APIS-03)
+- [ ] 09-03-PLAN.md — Docker integration, health endpoint, E2E validation (APIS-01, APIS-02, APIS-03)
 
 ### Phase 10: Async Batch + Orchestrator
 **Goal**: Users can submit multiple videos for queued batch processing with concurrent execution and rate limiting

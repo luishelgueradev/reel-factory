@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   validatePipelineConfig,
+  DEFAULT_ZOOM_CONFIG,
+  DEFAULT_TRANSITION_CONFIG,
+  DEFAULT_VISUAL_EFFECTS,
   type PipelineConfig,
   type SubtitleConfig,
   type SubtitleLayoutMode,
@@ -8,6 +11,9 @@ import {
   type BackgroundHighlight,
   type TitleConfig,
   type TitleStyleProps,
+  type VisualEffectsConfig,
+  type ZoomConfig,
+  type TransitionConfig,
 } from "./pipeline-config.js";
 
 describe("validatePipelineConfig", () => {
@@ -209,6 +215,255 @@ describe("validatePipelineConfig", () => {
       const config = { subtitle: { layout: "karaoke" } };
       const result = validatePipelineConfig(config);
       expect(result.valid).toBe(true);
+    });
+  });
+
+  describe("visualEffects validation", () => {
+    it("accepts config without visualEffects section (defaults apply)", () => {
+      const config = { subtitle: { layout: "tiktok" } };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("accepts valid full visualEffects config", () => {
+      const config: PipelineConfig = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: {
+            enabled: true,
+            confidenceThreshold: 0.7,
+            maxScale: 1.2,
+            rampMs: 400,
+            mergeGapMs: 600,
+          },
+          transitions: {
+            enabled: true,
+            type: "zoom",
+            durationMs: 300,
+            maxScale: 1.1,
+            shiftPx: 25,
+          },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("accepts visualEffects with only zooms (transitions omitted)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { enabled: true },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("accepts visualEffects with only transitions (zooms omitted)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          transitions: { type: "crop-shift" },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("accepts zooms.enabled = false (D-12: disabled zoom passes validation)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { enabled: false },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("accepts empty visualEffects object (all effects use defaults)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {},
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+    });
+
+    // Invalid configs
+    it("rejects invalid confidenceThreshold (negative)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { confidenceThreshold: -0.5 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("confidenceThreshold"))).toBe(true);
+    });
+
+    it("rejects invalid confidenceThreshold (> 1)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { confidenceThreshold: 1.5 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("confidenceThreshold"))).toBe(true);
+    });
+
+    it("rejects maxScale <= 1.0 for zooms", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { maxScale: 1.0 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("zooms.maxScale"))).toBe(true);
+    });
+
+    it("rejects maxScale <= 1.0 for transitions", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          transitions: { maxScale: 0.9 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("transitions.maxScale"))).toBe(true);
+    });
+
+    it("rejects invalid transition type", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          transitions: { type: "dissolve" },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("transitions.type"))).toBe(true);
+    });
+
+    it("rejects durationMs <= 0", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          transitions: { durationMs: 0 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("durationMs"))).toBe(true);
+    });
+
+    it("rejects rampMs <= 0", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { rampMs: 0 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("rampMs"))).toBe(true);
+    });
+
+    it("rejects mergeGapMs < 0", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { mergeGapMs: -100 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("mergeGapMs"))).toBe(true);
+    });
+
+    it("rejects shiftPx <= 0", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          transitions: { shiftPx: 0 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("shiftPx"))).toBe(true);
+    });
+
+    it("accepts mergeGapMs = 0 (no merging)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: {
+          zooms: { mergeGapMs: 0 },
+        },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("rejects visualEffects as non-object", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: "invalid",
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("visualEffects"))).toBe(true);
+    });
+
+    it("rejects zooms as non-object", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: { zooms: "invalid" },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("zooms"))).toBe(true);
+    });
+
+    it("rejects transitions as non-object", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        visualEffects: { transitions: 42 },
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("transitions"))).toBe(true);
+    });
+  });
+
+  describe("visual effects defaults", () => {
+    it("DEFAULT_ZOOM_CONFIG has expected values", () => {
+      expect(DEFAULT_ZOOM_CONFIG.enabled).toBe(true);
+      expect(DEFAULT_ZOOM_CONFIG.confidenceThreshold).toBe(0.6);
+      expect(DEFAULT_ZOOM_CONFIG.maxScale).toBe(1.15);
+      expect(DEFAULT_ZOOM_CONFIG.rampMs).toBe(300);
+      expect(DEFAULT_ZOOM_CONFIG.mergeGapMs).toBe(500);
+    });
+
+    it("DEFAULT_TRANSITION_CONFIG has expected values", () => {
+      expect(DEFAULT_TRANSITION_CONFIG.enabled).toBe(true);
+      expect(DEFAULT_TRANSITION_CONFIG.type).toBe("zoom");
+      expect(DEFAULT_TRANSITION_CONFIG.durationMs).toBe(250);
+      expect(DEFAULT_TRANSITION_CONFIG.maxScale).toBe(1.08);
+      expect(DEFAULT_TRANSITION_CONFIG.shiftPx).toBe(20);
+    });
+
+    it("DEFAULT_VISUAL_EFFECTS contains zoom and transition defaults", () => {
+      expect(DEFAULT_VISUAL_EFFECTS.zooms).toEqual(DEFAULT_ZOOM_CONFIG);
+      expect(DEFAULT_VISUAL_EFFECTS.transitions).toEqual(DEFAULT_TRANSITION_CONFIG);
     });
   });
 });

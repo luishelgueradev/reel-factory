@@ -68,12 +68,42 @@ export interface TitleConfig {
   style?: TitleStyleProps;
 }
 
+// ─── Visual Effects (D-11, D-12) ────────────────────────────────────────────
+
+/** Transition animation type between silence cuts */
+export type TransitionType = "zoom" | "crop-shift" | "none";
+
+/** Zoom effect configuration (D-11, VISU-03) */
+export interface ZoomConfig {
+  enabled?: boolean;            // default: true
+  confidenceThreshold?: number;  // default: 0.6 (lower = more zooms)
+  maxScale?: number;             // default: 1.15
+  rampMs?: number;               // default: 300 (zoom ramp duration in ms)
+  mergeGapMs?: number;           // default: 500 (merge events within this gap)
+}
+
+/** Transition effect configuration (D-06, D-07, D-11) */
+export interface TransitionConfig {
+  enabled?: boolean;            // default: true
+  type?: TransitionType;        // default: "zoom"
+  durationMs?: number;          // default: 250
+  maxScale?: number;            // default: 1.08 (for zoom type)
+  shiftPx?: number;              // default: 20 (for crop-shift type)
+}
+
+/** Visual effects configuration (D-11, D-12) */
+export interface VisualEffectsConfig {
+  zooms?: ZoomConfig;
+  transitions?: TransitionConfig;
+}
+
 // ─── Top-level PipelineConfig (D-01, D-02) ─────────────────────────────────
 
 /** PipelineConfig — the single config that drives Remotion rendering */
 export interface PipelineConfig {
   subtitle: SubtitleConfig;
   titles?: TitleConfig[];
+  visualEffects?: VisualEffectsConfig; // D-11
 }
 
 // ─── Default values (D-03, D-06) ──────────────────────────────────────────
@@ -102,11 +132,38 @@ export const DEFAULT_SUBTITLE_CONFIG: Required<
   bottomOffset: 250,
 };
 
+// ─── Visual Effects Defaults (D-03, D-06, D-07, D-12) ──────────────────────
+
+/** Default ZoomConfig values */
+export const DEFAULT_ZOOM_CONFIG: Required<ZoomConfig> = {
+  enabled: true,
+  confidenceThreshold: 0.6,
+  maxScale: 1.15,
+  rampMs: 300,
+  mergeGapMs: 500,
+};
+
+/** Default TransitionConfig values */
+export const DEFAULT_TRANSITION_CONFIG: Required<TransitionConfig> = {
+  enabled: true,
+  type: "zoom",
+  durationMs: 250,
+  maxScale: 1.08,
+  shiftPx: 20,
+};
+
+/** Default VisualEffectsConfig values — absent visualEffects means effects enabled with defaults (D-12) */
+export const DEFAULT_VISUAL_EFFECTS: Required<VisualEffectsConfig> = {
+  zooms: DEFAULT_ZOOM_CONFIG,
+  transitions: DEFAULT_TRANSITION_CONFIG,
+};
+
 // ─── Validation ────────────────────────────────────────────────────────────
 
 const VALID_LAYOUT_MODES: SubtitleLayoutMode[] = ["tiktok", "sentence", "bar", "karaoke"];
 const VALID_POSITIONS: SubtitlePosition[] = ["bottom-center", "top-center", "center-screen"];
 const VALID_ENTRANCE_ANIMATIONS: TitleEntranceAnimation[] = ["slide-up", "fade-in", "none"];
+const VALID_TRANSITION_TYPES: TransitionType[] = ["zoom", "crop-shift", "none"];
 
 /**
  * Validate a PipelineConfig object.
@@ -244,6 +301,74 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
           }
         }
       });
+    }
+  }
+
+  // Validate visualEffects (optional, D-11, D-12)
+  if (cfg.visualEffects !== undefined) {
+    const ve = cfg.visualEffects as Record<string, unknown>;
+    if (typeof ve !== "object" || ve === null || Array.isArray(ve)) {
+      errors.push("PipelineConfig.visualEffects must be an object");
+    } else {
+      // Validate zooms sub-object (optional)
+      if (ve.zooms !== undefined) {
+        const z = ve.zooms as Record<string, unknown>;
+        if (typeof z !== "object" || z === null || Array.isArray(z)) {
+          errors.push("visualEffects.zooms must be an object");
+        } else {
+          if (z.confidenceThreshold !== undefined) {
+            if (typeof z.confidenceThreshold !== "number" || z.confidenceThreshold < 0 || z.confidenceThreshold > 1) {
+              errors.push("visualEffects.zooms.confidenceThreshold must be between 0 and 1");
+            }
+          }
+          if (z.maxScale !== undefined) {
+            if (typeof z.maxScale !== "number" || z.maxScale <= 1.0) {
+              errors.push("visualEffects.zooms.maxScale must be > 1.0");
+            }
+          }
+          if (z.rampMs !== undefined) {
+            if (typeof z.rampMs !== "number" || z.rampMs <= 0) {
+              errors.push("visualEffects.zooms.rampMs must be > 0");
+            }
+          }
+          if (z.mergeGapMs !== undefined) {
+            if (typeof z.mergeGapMs !== "number" || z.mergeGapMs < 0) {
+              errors.push("visualEffects.zooms.mergeGapMs must be >= 0");
+            }
+          }
+        }
+      }
+
+      // Validate transitions sub-object (optional)
+      if (ve.transitions !== undefined) {
+        const tr = ve.transitions as Record<string, unknown>;
+        if (typeof tr !== "object" || tr === null || Array.isArray(tr)) {
+          errors.push("visualEffects.transitions must be an object");
+        } else {
+          if (tr.type !== undefined) {
+            if (typeof tr.type !== "string" || !VALID_TRANSITION_TYPES.includes(tr.type as TransitionType)) {
+              errors.push(
+                `visualEffects.transitions.type must be one of: ${VALID_TRANSITION_TYPES.join(", ")}, got: ${JSON.stringify(tr.type)}`
+              );
+            }
+          }
+          if (tr.durationMs !== undefined) {
+            if (typeof tr.durationMs !== "number" || tr.durationMs <= 0) {
+              errors.push("visualEffects.transitions.durationMs must be > 0");
+            }
+          }
+          if (tr.maxScale !== undefined) {
+            if (typeof tr.maxScale !== "number" || tr.maxScale <= 1.0) {
+              errors.push("visualEffects.transitions.maxScale must be > 1.0");
+            }
+          }
+          if (tr.shiftPx !== undefined) {
+            if (typeof tr.shiftPx !== "number" || tr.shiftPx <= 0) {
+              errors.push("visualEffects.transitions.shiftPx must be > 0");
+            }
+          }
+        }
+      }
     }
   }
 

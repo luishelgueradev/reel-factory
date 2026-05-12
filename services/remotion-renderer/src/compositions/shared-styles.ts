@@ -14,6 +14,12 @@ export const DEFAULT_TRANSITION_DURATION_MS = 250; // D-07
 export const ZOOM_TRANSITION_SCALE = 1.08;  // D-06
 export const CROP_SHIFT_PX = 20;            // D-06
 
+// ─── Zoom animation constants (D-03) ─────────────────────────────────────
+
+export const ZOOM_RAMP_MS = 300;           // Ease-in and ease-out ramp duration
+export const DEFAULT_ZOOM_SCALE = 1.15;    // 15% zoom (D-03)
+export const ZOOM_MERGE_GAP_MS = 500;       // Merge events within this gap (D-04)
+
 // ─── Position helpers (D-09) ─────────────────────────────────────────────────
 
 export function getPositionStyles(

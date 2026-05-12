@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Remotion + Animated Subtitles** - Word-by-word TikTok-style subtitles burned into video
 - [x] **Phase 6: Animated Intros & Outros** - Parameterized Remotion template sequences at video start/end (completed 2026-05-10)
 - [ ] **Phase 7: Visual Cuts & Zooms** - Automatic zoom on emphasis and visual jump-cut transitions
-- [ ] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video
+- [ ] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video (completed 2026-05-12)
 - [ ] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing
 - [ ] **Phase 10: Async Batch + Orchestrator** - BullMQ queue, Redis, and pipeline orchestrator for batch jobs
 - [ ] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId}
@@ -158,7 +158,7 @@ Plans:
 
 Plans:
 - [x] 08-01-PLAN.md — SRT/VTT format generation service with timestamp remapping (SRTE-01)
-- [ ] 08-02-PLAN.md — Docker Compose integration and E2E validation (SRTE-01)
+- [x] 08-02-PLAN.md — Docker Compose integration and E2E validation (SRTE-01)
 
 ### Phase 9: Synchronous API
 **Goal**: Users can submit a single video via REST API and receive a fully processed result synchronously
@@ -225,7 +225,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Remotion + Animated Subtitles | 0/3 | Planned | - |
 | 6. Animated Intros & Outros | 5/5 | Complete    | 2026-05-10 |
 | 7. Visual Cuts & Zooms | 0/5 | Not started | - |
-| 8. SRT/VTT Subtitle Export | 0/2 | Planned | - |
+| 8. SRT/VTT Subtitle Export | 2/2 | Complete | 2026-05-12 |
 | 9. Synchronous API | 0/5 | Not started | - |
 | 10. Async Batch + Orchestrator | 0/6 | Not started | - |
 | 11. Progress Tracking | 0/4 | Not started | - |

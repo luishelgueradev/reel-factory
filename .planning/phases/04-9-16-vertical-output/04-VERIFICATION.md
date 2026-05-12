@@ -1,29 +1,32 @@
 ---
 phase: 04-9-16-vertical-output
-verified: 2026-05-07T21:30:00Z
-status: human_needed
-score: 7/9 must-haves verified
+verified: 2026-05-12T00:00:00Z
+status: passed
+score: 9/9 must-haves verified
 overrides_applied: 0
-re_verification: false
-gaps: []
-human_verification:
-  - test: "Run E2E Docker test: bash scripts/test-ffmpeg-finalizer.sh"
-    expected: "ALL TESTS PASSED — output video is 1080x1920, crop_strategy=center, safe_zone values correct, crop_applied=false for 9:16 input"
-    why_human: "Requires running Docker containers which cannot be verified programmatically in this environment"
-  - test: "Visually inspect 9:16 output video for distortion and proper center-crop"
-    expected: "Video plays correctly at 9:16 with no visual distortion, speaker centered in frame"
-    why_human: "Visual quality assessment requires human viewing"
-  - test: "Verify finalizer-info.json safe zone values match D-06 specification"
-    expected: "safe_zone: top=100, bottom=230, left=54, right=54"
-    why_human: "Requires running Docker containers to produce actual output file"
+re_verification:
+  previous_status: human_needed
+  previous_score: 6/9
+  human_verified:
+    - test: "Run E2E Docker test: bash scripts/test-ffmpeg-finalizer.sh"
+      result: pass
+      verified_by: 04-HUMAN-UAT.md test 1
+    - test: "Visually inspect 9:16 output video for distortion and proper center-crop"
+      result: pass
+      verified_by: 04-HUMAN-UAT.md test 2
+    - test: "Verify finalizer-info.json safe zone values match D-06 specification"
+      result: pass
+      verified_by: 04-HUMAN-UAT.md test 3
+  gaps_closed: []
+  regressions: []
 ---
 
 # Phase 4: 9:16 Vertical Output Verification Report
 
 **Phase Goal:** Video output is rendered in 9:16 vertical format with center-crop reframing optimized for social media
-**Verified:** 2026-05-07T21:30:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Verified:** 2026-05-12
+**Status:** passed (9/9)
+**Re-verification:** Yes — human UAT confirmed 3 previously deferred items
 
 ## Goal Achievement
 
@@ -36,12 +39,12 @@ human_verification:
 | 3 | Output is always exactly 1080x1920 regardless of input dimensions (D-04) | ✓ VERIFIED | `config.VERTICAL_WIDTH = 1080`, `config.VERTICAL_HEIGHT = 1920`; `apply_finalizer()` always outputs at target dimensions; validated by `test_output_dimensions` and `validate_finalizer_info` |
 | 4 | Safe zone metadata is output in finalizer-info.json for Phase 5 subtitle positioning (VERT-03) | ✓ VERIFIED | `crop.py` L175-179 returns safe_zone dict with values from config constants; `main.py` writes `finalizer-info.json` with `FinalizerInfo` model; schema.py `SafeZone(top, bottom, left, right)` validates structure |
 | 5 | All config constants have D-XX decision traceability comments | ✓ VERIFIED | `config.py` contains 14 D-XX annotations (D-04, D-01, D-08, D-09, D-10, D-11, D-06, D-05); each constant has inline comment with decision reference |
-| 6 | An MP4 processed through the complete ffmpeg-finalizer Docker container produces a 1080x1920 output (VERT-01) | ? NEEDS HUMAN | E2E test script exists and appears correct, but requires Docker runtime to execute. Cannot verify actual Docker container output without running containers |
-| 7 | Wide input videos get center-cropped in the Docker pipeline (VERT-02) | ? NEEDS HUMAN | Same as #6 — requires Docker execution to confirm center-crop in pipeline |
-| 8 | finalizer-info.json contains safe zone metadata for Phase 5 (VERT-03) | ? NEEDS HUMAN | Depends on Docker E2E run producing actual output files |
+| 6 | An MP4 processed through the complete ffmpeg-finalizer Docker container produces a 1080x1920 output (VERT-01) | ✓ VERIFIED | Human UAT confirmed: E2E Docker test passes with ALL TESTS PASSED, output is 1080x1920 |
+| 7 | Wide input videos get center-cropped in the Docker pipeline (VERT-02) | ✓ VERIFIED | Human UAT confirmed: visually inspected, no distortion, speaker centered |
+| 8 | finalizer-info.json contains safe zone metadata for Phase 5 (VERT-03) | ✓ VERIFIED | Human UAT confirmed: safe_zone values correct (top=100, bottom=230, left=54, right=54) |
 | 9 | manifest.json is written with correct status and output paths following step contract | ✓ VERIFIED | `main.py` `_write_manifest()` follows whisper/silence-cutter pattern; writes `manifest.json` with `step_name`, `input_file`, `output_files`, `status`, `exit_code`; uses `OUTPUT_PATH` env var for directory when no output files |
 
-**Score:** 6/9 truths verified (3 require Docker execution for E2E confirmation)
+**Score:** 9/9 truths verified (3 human-confirmed via 04-HUMAN-UAT.md)
 
 ### Deferred Items
 
@@ -116,25 +119,15 @@ No orphaned requirements — all VERT-01/02/03 are covered by plans.
 
 No TODOs, FIXMEs, placeholder code, empty implementations, or hardcoded empty data found. All data flows are real, not stubs.
 
-### Human Verification Required
+### Human Verification Results
 
-### 1. E2E Docker Pipeline Test
+All 3 items confirmed passing via 04-HUMAN-UAT.md (2026-05-11):
 
-**Test:** `cd /home/luis/proyectos/reel-factory && bash scripts/test-ffmpeg-finalizer.sh`
-**Expected:** ALL TESTS PASSED — VERT-01 (1080x1920), VERT-02 (center crop), VERT-03 (safe zone top=100/bottom=230/left=54/right=54), D-03 (crop_applied=false for 9:16 input)
-**Why human:** Requires Docker runtime to build and run containers; cannot execute without Docker daemon
-
-### 2. Visual Quality of 9:16 Output
-
-**Test:** Play the output video from `pipeline/{JOB_ID}/ffmpeg-finalizer/output.mp4`
-**Expected:** Video plays correctly at 9:16 aspect ratio with no visual distortion; speaker face centered in frame for wide inputs
-**Why human:** Visual quality assessment requires human viewing; automated tests check dimensions but not visual fidelity
-
-### 3. finalizer-info.json Safe Zone Values
-
-**Test:** Inspect `pipeline/{JOB_ID}/ffmpeg-finalizer/finalizer-info.json`
-**Expected:** `safe_zone: {top: 100, bottom: 230, left: 54, right: 54}`; `crop_strategy: "center"`; `crop_applied: true/false` per input aspect ratio
-**Why human:** Requires Docker E2E run to produce actual file; cannot verify real output JSON without running pipeline
+| # | Test | Result | Evidence |
+|---|------|--------|----------|
+| 1 | E2E Docker test: bash scripts/test-ffmpeg-finalizer.sh | ✓ PASS | 04-HUMAN-UAT test 1 |
+| 2 | Visual quality of 9:16 output | ✓ PASS | 04-HUMAN-UAT test 2 |
+| 3 | finalizer-info.json safe zone values | ✓ PASS | 04-HUMAN-UAT test 3 |
 
 ### Gaps Summary
 
@@ -152,5 +145,5 @@ The only remaining verification is the Docker E2E test which requires a running 
 
 ---
 
-_Verified: 2026-05-07T21:30:00Z_
-_Verifier: the agent (gsd-verifier)_
+_Verified: 2026-05-07 (initial), 2026-05-12 (human UAT confirmed)_
+_Verifier: the agent (gsd-verifier) + human UAT_

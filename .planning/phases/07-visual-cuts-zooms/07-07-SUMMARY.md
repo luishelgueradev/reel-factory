@@ -96,6 +96,19 @@ None - no external service configuration required.
 - WR-02 and WR-07 warnings from 07-VERIFICATION.md are resolved
 - Ready for gap closure continuation (JumpCutTransition architectural fix is Plan 08)
 
+## Self-Check: PASSED
+
+- [x] zoom-detection.ts exists and has both fixes applied
+- [x] zoom-detection.test.ts exists with 27 tests (23 original + 4 new)
+- [x] 07-07-SUMMARY.md exists
+- [x] Commit 1799171 (RED) found
+- [x] Commit 4c6d34a (GREEN) found
+- [x] Commit 4f4071b (docs) found
+- [x] All 238 tests pass
+- [x] No `if (wordStartMs > windowEndMs) { break; }` pattern in code (0 matches)
+- [x] `{ ...rawEvents[0] }` pattern present (1 match)
+- [x] `{ ...curr }` pattern present (1 match)
+
 ---
 *Phase: 07-visual-cuts-zooms*
 *Completed: 2026-05-12*

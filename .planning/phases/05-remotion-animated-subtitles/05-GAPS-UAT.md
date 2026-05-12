@@ -24,7 +24,7 @@ reason: Validación interna del código, cubierta por tests unitarios
 ### 3. Pipeline config: SILENCE_CUTS_PATH no se pasa a remotion-renderer
 expected: process.sh NO pasa SILENCE_CUTS_PATH al container remotion-renderer. Hay un comentario explicando por qué.
 result: issue
-reported: "process.sh aún pasa SILENCE_CUTS_PATH y FINALIZER_INFO_PATH al remotion-renderer (líneas 66, 67, 71). El plan 05-05 indicaba que NO debía pasarse SILENCE_CUTS_PATH."
+reported: "process.sh aún pasa SILENCE_CUTS_PATH al remotion-renderer (líneas 66, 71). Solo SILENCE_CUTS_PATH debe eliminarse; FINALIZER_INFO_PATH sí es necesario."
 severity: major
 
 ### 4. Tests unitarios pasan
@@ -43,9 +43,13 @@ skipped: 1
 
 - truth: "process.sh NO pasa SILENCE_CUTS_PATH al container remotion-renderer, con un comentario explicando por qué"
   status: failed
-  reason: "process.sh aún pasa SILENCE_CUTS_PATH y FINALIZER_INFO_PATH al remotion-renderer (líneas 66, 67, 71)"
+  reason: "process.sh aún pasa SILENCE_CUTS_PATH al remotion-renderer (líneas 66, 71). FINALIZER_INFO_PATH sí debe pasarse (safe zone positioning)."
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Plan 05-05 Task 1 no se ejecutó completamente en process.sh. Las líneas 66 y 71 aún pasan SILENCE_CUTS_PATH al remotion-renderer, cuando no debería pasarse porque Whisper corre sobre el video ya cortado y la detección de areTimestampsAlreadyRemapped maneja el caso. Solo SILENCE_CUTS_PATH debe eliminarse; FINALIZER_INFO_PATH sí debe保留se para safe zone positioning."
+  artifacts:
+    - path: "process.sh"
+      issue: "líneas 66 y 71 pasan SILENCE_CUTS_PATH al remotion-renderer"
+  missing:
+    - "Eliminar SILENCE_CUTS_PATH del export y del docker compose run en process.sh"
+    - "Agregar comentario explicando por qué no se pasa SILENCE_CUTS_PATH"

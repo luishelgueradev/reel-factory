@@ -143,6 +143,33 @@ services:
       retries: 3
       start_period: 30s
 
+  # SRT/VTT Exporter: generates sidecar subtitle files with remapped timestamps
+  # Per D-01, D-02: Node.js service following pipeline step contract
+  # Per D-12: Runs in parallel with remotion-renderer (both consume transcript + silence-cuts)
+  srt-exporter:
+    <<: *pipeline-common
+    build:
+      context: ./services/srt-exporter
+    depends_on:
+      base-node:
+        condition: service_completed_successfully
+      whisper:
+        condition: service_completed_successfully
+      silence-cutter:
+        condition: service_completed_successfully
+    environment:
+      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
+      - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/srt-exporter/output.vtt
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+      - TRANSCRIPT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
+      - SILENCE_CUTS_PATH=/data/pipeline/${PIPELINE_JOB_ID}/silence-cutter/silence-cuts.json
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/srt-exporter/manifest.json"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
   # FFmpeg Finalizer: converts to 9:16 vertical (1080x1920) with center-crop
   ffmpeg-finalizer:
     <<: *pipeline-common

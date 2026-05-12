@@ -1,11 +1,15 @@
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { transcriptToCaptionPages, areTimestampsAlreadyRemapped } from "./captions.js";
-import type { SilenceCutList, FinalizerInfo } from "./captions.js";
+import { transcriptToCaptionPages, areTimestampsAlreadyRemapped } from "./captions";
+import type { SilenceCutList, FinalizerInfo } from "./captions";
 import type { TikTokPage } from "@remotion/captions";
-import type { RemotionProps } from "./Root.js";
-import { validatePipelineConfig, DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config.js";
-import type { PipelineConfig, SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config.js";
+import type { RemotionProps } from "./Root";
+import { validatePipelineConfig, DEFAULT_SUBTITLE_CONFIG, DEFAULT_VISUAL_EFFECTS } from "./pipeline-config";
+import type { PipelineConfig, SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig, VisualEffectsConfig } from "./pipeline-config";
+import { detectZoomEvents } from "./zoom-detection";
+import type { ZoomEvent } from "./zoom-detection";
+import { buildTransitionEvents } from "./compositions/JumpCutTransition";
+import type { TransitionEvent } from "./compositions/JumpCutTransition";
 import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -169,6 +173,26 @@ async function main() {
     console.warn("WARN: PIPELINE_CONFIG_PATH set but file not found:", pipelineConfigPath);
   }
 
+  // D-11: Extract visual effects config with deep merge of defaults
+  const visualEffects: VisualEffectsConfig = {
+    ...DEFAULT_VISUAL_EFFECTS,
+    ...pipelineConfig?.visualEffects,
+    zooms: {
+      ...DEFAULT_VISUAL_EFFECTS.zooms,
+      ...pipelineConfig?.visualEffects?.zooms,
+    },
+    transitions: {
+      ...DEFAULT_VISUAL_EFFECTS.transitions,
+      ...pipelineConfig?.visualEffects?.transitions,
+    },
+  };
+
+  if (pipelineConfig?.visualEffects) {
+    console.log(`  Visual effects: zooms=${pipelineConfig.visualEffects.zooms?.enabled ?? true}, transitions=${pipelineConfig.visualEffects.transitions?.type ?? 'zoom'}`);
+  } else {
+    console.log(`  Visual effects: using defaults (zooms enabled, transitions: zoom)`);
+  }
+
   const outputDir = path.dirname(outputPath);
   fs.mkdirSync(outputDir, { recursive: true });
 
@@ -188,6 +212,21 @@ async function main() {
     } else {
       console.log('  Timestamp timeline: no silence cuts data (using original timestamps)');
     }
+
+    // D-01: Compute zoom events from transcript confidence + silence boundaries
+    const zoomEvents: ZoomEvent[] = detectZoomEvents(
+      transcript,
+      silenceCuts,
+      visualEffects.zooms
+    );
+    console.log(`  ${zoomEvents.length} zoom event(s) detected (threshold: ${visualEffects.zooms?.confidenceThreshold ?? 0.6})`);
+
+    // D-05: Build transition events at silence cut boundaries
+    const transitionEvents: TransitionEvent[] = buildTransitionEvents(
+      silenceCuts,
+      visualEffects.transitions
+    );
+    console.log(`  ${transitionEvents.length} transition event(s) at silence cut boundaries`);
 
     const totalDurationMs = Math.round(durationSec * 1000);
 
@@ -246,6 +285,9 @@ async function main() {
         bottomOffset: pipelineConfig?.subtitle?.bottomOffset || bottomOffset,
       } satisfies SubtitleConfig,
       titles: pipelineConfig?.titles || [],
+      // Phase 7: Visual effects (D-08, D-10)
+      zoomEvents,
+      transitionEvents,
     };
     const composition = await selectComposition({
       serveUrl: bundleLocation,
@@ -300,6 +342,14 @@ async function main() {
         subtitle_layout: "tiktok",
         subtitle_position: "bottom-center",
         titles_count: 0,
+      },
+      // Phase 7: Visual effects info for debugging
+      visual_effects: {
+        zoom_count: zoomEvents.length,
+        transition_count: transitionEvents.length,
+        zoom_enabled: visualEffects.zooms?.enabled ?? true,
+        transition_type: visualEffects.transitions?.type ?? "zoom",
+        confidence_threshold: visualEffects.zooms?.confidenceThreshold ?? 0.6,
       },
     };
     fs.writeFileSync(

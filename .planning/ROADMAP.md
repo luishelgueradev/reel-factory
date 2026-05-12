@@ -140,7 +140,7 @@ Plans:
 Plans:
 - [x] 07-01: Zoom trigger logic from Whisper confidence scores and silence boundaries
 - [ ] 07-02: Remotion zoom composition (smooth scale animation on speaker)
-- [ ] 07-03: Jump cut transition composition (zoom or crop shift between cut segments)
+- [x] 07-03: Jump cut transition composition (zoom or crop shift between cut segments)
 - [ ] 07-04: Integration — zoom/transition overlays composed with subtitle + intro/outro layers
 - [ ] 07-05: End-to-end validation — emphasis-driven zooms and polished jump cuts in final output
 

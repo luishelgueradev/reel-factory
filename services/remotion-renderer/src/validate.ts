@@ -435,34 +435,36 @@ export function validateVisualLayerOrder(outputDir: string): string[] {
     if (!content.includes("OffthreadVideo")) {
       errors.push("D-10: Root.tsx must render OffthreadVideo inside ZoomContainer");
     }
-    // D-10: Verify correct visual layer ordering
-    // ZoomContainer(video) → SubtitleLayoutRenderer → TitleOverlay Sequences → JumpCutTransition
-    const zoomContainerIdx = content.indexOf("ZoomContainer");
-    const subtitleIdx = content.indexOf("SubtitleLayoutRenderer");
-    const titleIdx = content.indexOf("TitleOverlay");
-    const transitionIdx = content.indexOf("JumpCutTransition");
+    // D-10: Verify correct visual layer ordering in JSX (not imports)
+    // ZoomContainer(video) → SubtitleLayoutRenderer → TitleOverlay Sequences
+    // Transition effects are applied inside ZoomContainer via transitionEvents prop (07-06 fix)
+    const jsxLines = content.split("\n").filter(line => line.trimStart().startsWith("<"));
+    const zoomContainerJsxIdx = jsxLines.findIndex(line => line.includes("ZoomContainer"));
+    const subtitleJsxIdx = jsxLines.findIndex(line => line.includes("SubtitleLayoutRenderer"));
+    const titleJsxIdx = jsxLines.findIndex(line => line.includes("TitleOverlay"));
 
-    if (zoomContainerIdx !== -1 && subtitleIdx !== -1 && subtitleIdx < zoomContainerIdx) {
+    if (zoomContainerJsxIdx !== -1 && subtitleJsxIdx !== -1 && subtitleJsxIdx < zoomContainerJsxIdx) {
       errors.push("D-10: SubtitleLayoutRenderer must render after ZoomContainer (subtitles outside zoom)");
     }
-    if (subtitleIdx !== -1 && titleIdx !== -1 && titleIdx < subtitleIdx) {
+    if (subtitleJsxIdx !== -1 && titleJsxIdx !== -1 && titleJsxIdx < subtitleJsxIdx) {
       errors.push("D-10: TitleOverlay must render after SubtitleLayoutRenderer");
     }
-    if (titleIdx !== -1 && transitionIdx !== -1 && transitionIdx < titleIdx) {
-      errors.push("D-10: JumpCutTransition must render after TitleOverlay (topmost layer)");
+
+    // D-10/VISU-04: Verify transitionEvents is passed to ZoomContainer
+    if (!content.includes("transitionEvents={transitionEvents}")) {
+      errors.push("VISU-04: Root.tsx must pass transitionEvents prop to ZoomContainer");
     }
 
-    // Verify import order: ZoomContainer, JumpCutTransition, SubtitleLayoutRenderer, TitleOverlay
+    // Verify ZoomContainer and TransitionEvent imports
     const imports = content.split("\n").filter(line => line.startsWith("import"));
     const zoomImportIdx = imports.findIndex(line => line.includes("ZoomContainer"));
-    const transitionImportIdx = imports.findIndex(line => line.includes("JumpCutTransition"));
+    const transitionImportIdx = imports.findIndex(line => line.includes("TransitionEvent"));
 
-    // Check that ZoomContainer and JumpCutTransition are imported
     if (zoomImportIdx === -1) {
       errors.push("D-10: Root.tsx must import ZoomContainer");
     }
     if (transitionImportIdx === -1) {
-      errors.push("D-10: Root.tsx must import JumpCutTransition");
+      errors.push("VISU-04: Root.tsx must import TransitionEvent type");
     }
   } catch {
     errors.push("D-10: Could not read Root.tsx for layer order validation");

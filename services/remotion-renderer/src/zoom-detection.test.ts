@@ -431,3 +431,124 @@ describe("detectZoomEvents - Timestamp remapping", () => {
     expect(events[0].startTimeMs).toBe(500);
   });
 });
+
+// ─── Fix: Signal 2 out-of-order remapped timestamps (WR-02) ────────────────────
+
+describe("detectZoomEvents - Signal 2 finds all valid words regardless of remapping order", () => {
+  it("finds word after silence even when remapping produces out-of-order timestamps", () => {
+    // Word[0] has original start=5.0 but remaps to 100ms (early cut shift).
+    // Word[1] has original start=1.0 but remaps to 500ms (later in timeline).
+    // Silence boundary at new_end=10ms.
+    // The valid word is word[1] at 500ms (within [10ms, 510ms] window),
+    // BUT word[0] appears first in the array with remapped start 100ms.
+    // Without the fix, word[1] at 500ms would be missed because the `break`
+    // on `wordStartMs > windowEndMs` would fire on word[0] (100ms is within
+    // window) BUT if word ordering were different, it could cause premature exit.
+    // After fix: all words are checked regardless of order.
+    const transcript = makeTranscript([
+      { word: "early", start: 5.0, end: 5.2, confidence: 0.95 },
+      { word: "target", start: 1.0, end: 1.3, confidence: 0.95 },
+    ], 10);
+
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 4.5,
+      original_duration: 10,
+      new_duration: 5.5,
+      cuts: [{
+        original_start: 0.5,
+        original_end: 5.0,
+        new_start: 0.5,
+        // new_end very small: silence boundary at 10ms on cut timeline
+        new_end: 0.01,
+        duration: 4.5,
+        source: "both",
+        cumulative_shift: 0,
+      }],
+    };
+
+    const events = detectZoomEvents(transcript, silenceCuts);
+    // Should find at least one mild zoom event from Signal 2
+    // The "target" word remaps to ~500ms which is within the 500ms window after 10ms
+    const mildZoomEvents = events.filter((e) => e.scale < 1.15);
+    expect(mildZoomEvents.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("finds ALL valid words after silence boundary, not just the first in original order", () => {
+    // Create a scenario where words remap to different positions such that
+    // iterating in original order could miss words that fall within the window.
+    // Specifically: word[0] has remapped start AFTER the window, word[1] has
+    // remapped start WITHIN the window. Without the break fix, word[1] could be
+    // skipped if word[0]'s remapped start > windowEndMs caused early break.
+    const transcript = makeTranscript([
+      { word: "past", start: 0.7, end: 0.9, confidence: 0.95 },
+      { word: "hello", start: 0.4, end: 0.6, confidence: 0.95 },
+    ], 5);
+
+    // Single silence cut with boundary at new_end=0.35 (350ms)
+    const silenceCuts: SilenceCutList = {
+      total_segments_removed: 1,
+      total_silence_removed: 0.1,
+      original_duration: 5,
+      new_duration: 4.9,
+      cuts: [{
+        original_start: 0,
+        original_end: 0.35,
+        new_start: 0,
+        new_end: 0.35,
+        duration: 0.35,
+        source: "both",
+        cumulative_shift: 0,
+      }],
+    };
+
+    const events = detectZoomEvents(transcript, silenceCuts);
+    // "hello" at original 400ms should be checked even though
+    // "past" at original 700ms might be past the window
+    const mildZoomEvents = events.filter((e) => e.scale < 1.15);
+    expect(mildZoomEvents.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ─── Fix: Merge immutability (WR-07) ──────────────────────────────────────────
+
+describe("detectZoomEvents - Immutability", () => {
+  it("does not mutate input config object", () => {
+    const transcript = makeTranscript([
+      { word: "low", start: 1.0, end: 1.3, confidence: 0.3 },
+    ]);
+
+    const config: ZoomConfig = {
+      enabled: true,
+      confidenceThreshold: 0.5,
+      maxScale: 1.2,
+    };
+    const originalThreshold = config.confidenceThreshold;
+    const originalMaxScale = config.maxScale;
+
+    detectZoomEvents(transcript, null, config);
+
+    expect(config.confidenceThreshold).toBe(originalThreshold);
+    expect(config.maxScale).toBe(originalMaxScale);
+  });
+
+  it("merged events are independent objects — modifying result doesn't affect original events", () => {
+    // This tests that detectZoomEvents produces new objects in the merged
+    // array, not references to rawEvents array elements.
+    const transcript = makeTranscript([
+      { word: "a", start: 1.0, end: 1.3, confidence: 0.3 },
+      { word: "b", start: 3.0, end: 3.3, confidence: 0.4 },
+    ]);
+
+    const events = detectZoomEvents(transcript, null);
+    expect(events.length).toBeGreaterThanOrEqual(1);
+
+    // Modify the result
+    const originalScale = events[0].scale;
+    events[0].scale = 999;
+
+    // Re-run detectZoomEvents — should still produce the original scale
+    const events2 = detectZoomEvents(transcript, null);
+    expect(events2[0].scale).toBe(originalScale);
+  });
+});

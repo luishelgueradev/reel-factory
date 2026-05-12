@@ -19,7 +19,7 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 ### Active
 
 - [ ] Intro/outro animados con plantillas Remotion
-- [ ] Zooms automáticos y jump cuts visuales en momentos clave
+- [x] Zooms automáticos y jump cuts visuales en momentos clave (Validated in Phase 07)
 - [ ] B-roll automático con placeholders (infraestructura lista, clips reales después)
 
 ### Validated (continued)
@@ -68,6 +68,9 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 | Subtítulos en minúsculas (salvo inicio de frase) | Estilo TikTok/Reels consistente, evita mayúsculas incorrectas de Whisper | Validated in Phase 5 |
 | Pipeline orden: Whisper→Silence→Finalizer→Remotion | Whisper en video original para timestamps correctos, remotion-renderer recibe 9:16 final | Validated in Phase 5 |
 
+| Zoom+transition scale multiplicativo en ZoomContainer | Transición aplicada a overlay vacío era invisible; combinar escala en el elemento que envuelve el video la hace visible | Validated in Phase 07 |
+| Merge inmutable con shallow clones en zoom-detection | rawEvents no debe mutarse por la función de merge; spread operator previene side effects | Validated in Phase 07 |
+
 ## Deferred Items for Phase 6
 
 | Category | Item | Notes |
@@ -95,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-08 after Phase 05 completion*
+*Last updated: 2026-05-12 after Phase 07 completion*

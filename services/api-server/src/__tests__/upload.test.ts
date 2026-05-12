@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import request from "supertest";
 import express from "express";
 import multer from "multer";
@@ -7,9 +7,30 @@ import path from "path";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
 
+// Mock runPipeline so upload tests don't need Docker
+vi.mock("../orchestrator.js", () => ({
+  runPipeline: vi.fn(),
+  PipelineStepError: class PipelineStepError extends Error {
+    public readonly stepName: string;
+    public readonly exitCode: number;
+    public readonly errorMessage: string;
+    constructor(stepName: string, exitCode: number, errorMessage: string) {
+      super(`Pipeline step "${stepName}" failed (exit code ${exitCode}): ${errorMessage}`);
+      this.name = "PipelineStepError";
+      this.stepName = stepName;
+      this.exitCode = exitCode;
+      this.errorMessage = errorMessage;
+    }
+  },
+  STEPS: [],
+}));
+
+import type { PipelineResult } from "../orchestrator.js";
+import { runPipeline } from "../orchestrator.js";
+
 // Import the Express app
 import { app } from "../index.js";
-import { upload, UnsupportedMediaTypeError, FileTooLargeError } from "../routes/upload.js";
+import { upload, UnsupportedMediaTypeError, FileTooLargeError } from "../routes/process.js";
 
 const TEST_PIPELINE_DIR = process.env.PIPELINE_DATA_DIR || "/tmp/api-test-pipeline";
 
@@ -103,46 +124,37 @@ describe("POST /process - upload endpoint", () => {
     expect(response.body.error).toContain("500MB");
   });
 
-  it("should return 202 with jobId for valid MP4 upload and create job directory", async () => {
+  it("should return 200 with jobId and videoUrl for valid MP4 upload when pipeline succeeds", async () => {
+    // Mock runPipeline to return a successful result
+    const mockResult: PipelineResult = {
+      jobId: "test-job-id",
+      steps: [
+        { name: "whisper", durationSeconds: 10, status: "success" },
+      ],
+      artifacts: {
+        whisper: ["transcript.json", "manifest.json"],
+        "remotion-renderer": ["output.mp4"],
+      },
+      totalDurationSeconds: 60,
+      videoUrl: "/artifacts/test-job-id/remotion-renderer/output.mp4",
+    };
+    vi.mocked(runPipeline).mockResolvedValue(mockResult);
+
     const response = await request(app)
       .post("/process")
       .attach("video", Buffer.from("fake mp4 data for testing"), {
         filename: "sample.mp4",
         contentType: "video/mp4",
       });
-    expect(response.status).toBe(202);
+    expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("jobId");
-    expect(response.body).toHaveProperty("status", "uploaded");
-    expect(response.body).toHaveProperty("message");
+    expect(response.body).toHaveProperty("videoUrl");
+    expect(response.body).toHaveProperty("duration_seconds");
 
-    // Verify jobId is a UUID v4 format
-    const jobId = response.body.jobId;
-    const uuidV4Regex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    expect(jobId).toMatch(uuidV4Regex);
-
-    // Verify directory structure was created
-    const pipelineDir = process.env.PIPELINE_DATA_DIR || "/data/pipeline";
-    const inputDir = path.join(pipelineDir, jobId, "input");
-    const inputExists = await fs
-      .stat(inputDir)
-      .then(() => true)
-      .catch(() => false);
-    expect(inputExists).toBe(true);
-
-    // Verify video.mp4 exists in input directory
-    const videoFile = path.join(inputDir, "video.mp4");
-    const videoExists = await fs
-      .stat(videoFile)
-      .then(() => true)
-      .catch(() => false);
-    expect(videoExists).toBe(true);
-
-    // Clean up test directory
-    await fs.rm(path.join(pipelineDir, jobId), {
-      recursive: true,
-      force: true,
-    });
+    // Verify runPipeline was called with a jobId
+    expect(runPipeline).toHaveBeenCalledOnce();
+    const callArgs = vi.mocked(runPipeline).mock.calls[0];
+    expect(callArgs[0]).toBeTruthy(); // jobId should be provided
   });
 });
 

@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { uploadRouter, UnsupportedMediaTypeError, FileTooLargeError } from "./routes/upload.js";
+import { processRouter, UnsupportedMediaTypeError, FileTooLargeError } from "./routes/process.js";
 import { artifactsRouter } from "./routes/artifacts.js";
 
 const app = express();
@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 
 // Mount route handlers
-app.use(uploadRouter);
+app.use(processRouter);
 app.use(artifactsRouter);
 
 // 404 fallback handler
@@ -25,7 +25,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
     return;
   }
 
-  // Custom error classes from upload route
+  // Custom error classes from process route
   if (err instanceof FileTooLargeError) {
     res.status(413).json({ error: err.message });
     return;

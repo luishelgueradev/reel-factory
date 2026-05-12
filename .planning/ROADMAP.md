@@ -154,12 +154,11 @@ Plans:
   1. An SRT subtitle file is generated alongside the processed video output
   2. A VTT subtitle file is generated alongside the processed video output
   3. Sidecar timestamps are aligned with the silence-processed video (not the original input timestamps)
-**Plans**: 3 plans
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: SRT format converter from Whisper transcript data (re-mapped to post-silence-removal timestamps)
-- [ ] 08-02: VTT format converter from Whisper transcript data
-- [ ] 08-03: Sidecar file output alongside final video in job artifact directory
+- [ ] 08-01-PLAN.md — SRT/VTT format generation service with timestamp remapping (SRTE-01)
+- [ ] 08-02-PLAN.md — Docker Compose integration and E2E validation (SRTE-01)
 
 ### Phase 9: Synchronous API
 **Goal**: Users can submit a single video via REST API and receive a fully processed result synchronously
@@ -226,7 +225,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Remotion + Animated Subtitles | 0/3 | Planned | - |
 | 6. Animated Intros & Outros | 5/5 | Complete    | 2026-05-10 |
 | 7. Visual Cuts & Zooms | 0/5 | Not started | - |
-| 8. SRT/VTT Subtitle Export | 0/3 | Not started | - |
+| 8. SRT/VTT Subtitle Export | 0/2 | Planned | - |
 | 9. Synchronous API | 0/5 | Not started | - |
 | 10. Async Batch + Orchestrator | 0/6 | Not started | - |
 | 11. Progress Tracking | 0/4 | Not started | - |

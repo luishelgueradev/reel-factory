@@ -1,0 +1,266 @@
+import Dockerode from "dockerode";
+import fs from "fs/promises";
+import path from "path";
+import { PIPELINE_DATA_DIR } from "./constants.js";
+import type { PipelineManifest } from "../../shared/schemas/manifest.js";
+
+/**
+ * Pipeline step configuration matching docker-compose.yml service definitions.
+ * Each step specifies the Docker image name, environment variables, and
+ * any step dependency (used for healthcheck/ordering).
+ */
+export interface PipelineStepConfig {
+  name: string;
+  image: string;
+  envVars: Record<string, string>;
+  waitForStep?: string; // depends_on in docker-compose
+}
+
+/**
+ * Result of a successful pipeline run.
+ * Contains all step durations, artifact map, and the processed video URL.
+ */
+export interface PipelineResult {
+  jobId: string;
+  steps: { name: string; durationSeconds: number; status: string }[];
+  artifacts: Record<string, string[]>; // stepName → [filenames]
+  totalDurationSeconds: number;
+  videoUrl: string;
+}
+
+/**
+ * Custom error thrown when a pipeline step fails.
+ * Contains the step name, container exit code, and error message from manifest.
+ */
+export class PipelineStepError extends Error {
+  public readonly stepName: string;
+  public readonly exitCode: number;
+  public readonly errorMessage: string;
+
+  constructor(stepName: string, exitCode: number, errorMessage: string) {
+    super(`Pipeline step "${stepName}" failed (exit code ${exitCode}): ${errorMessage}`);
+    this.name = "PipelineStepError";
+    this.stepName = stepName;
+    this.exitCode = exitCode;
+    this.errorMessage = errorMessage;
+  }
+}
+
+/**
+ * Configuration for each pipeline step.
+ * Matches docker-compose.yml exactly: order, image names, and env vars.
+ *
+ * Step order: whisper → silence-cutter → ffmpeg-finalizer → remotion-renderer → srt-exporter
+ * Per process.sh and D-02/D-10.
+ */
+export const STEPS: PipelineStepConfig[] = [
+  {
+    name: "whisper",
+    image: "video-pipeline-whisper",
+    envVars: {
+      INPUT_PATH: "/data/pipeline/{jobId}/input/video.mp4",
+      OUTPUT_PATH: "/data/pipeline/{jobId}/whisper/transcript.json",
+      PIPELINE_JOB_ID: "{jobId}",
+      HF_HOME: "/data/pipeline/.cache/huggingface",
+    },
+  },
+  {
+    name: "silence-cutter",
+    image: "video-pipeline-silence-cutter",
+    envVars: {
+      INPUT_PATH: "/data/pipeline/{jobId}/input/video.mp4",
+      OUTPUT_PATH: "/data/pipeline/{jobId}/silence-cutter/output.mp4",
+      PIPELINE_JOB_ID: "{jobId}",
+      TRANSCRIPT_PATH: "/data/pipeline/{jobId}/whisper/transcript.json",
+      SILENCE_MIN_DURATION: "0.5",
+      SILENCE_CUT_SHRINK: "0.4",
+    },
+  },
+  {
+    name: "ffmpeg-finalizer",
+    image: "video-pipeline-ffmpeg-finalizer",
+    envVars: {
+      INPUT_PATH: "/data/pipeline/{jobId}/silence-cutter/output.mp4",
+      OUTPUT_PATH: "/data/pipeline/{jobId}/ffmpeg-finalizer/output.mp4",
+      PIPELINE_JOB_ID: "{jobId}",
+      VERTICAL_WIDTH: "1080",
+      VERTICAL_HEIGHT: "1920",
+      CROP_STRATEGY: "center",
+    },
+  },
+  {
+    name: "remotion-renderer",
+    image: "video-pipeline-remotion-renderer",
+    envVars: {
+      INPUT_PATH: "/data/pipeline/{jobId}/ffmpeg-finalizer/output.mp4",
+      OUTPUT_PATH: "/data/pipeline/{jobId}/remotion-renderer/output.mp4",
+      PIPELINE_JOB_ID: "{jobId}",
+      TRANSCRIPT_PATH: "/data/pipeline/{jobId}/whisper/transcript.json",
+      SILENCE_CUTS_PATH: "/data/pipeline/{jobId}/silence-cutter/silence-cuts.json",
+      FINALIZER_INFO_PATH: "/data/pipeline/{jobId}/ffmpeg-finalizer/finalizer-info.json",
+      ACTIVE_COLOR: "#FFFF00",
+      INACTIVE_COLOR: "#FFFFFF",
+      FONT_SIZE: "58",
+    },
+  },
+  {
+    name: "srt-exporter",
+    image: "video-pipeline-srt-exporter",
+    envVars: {
+      INPUT_PATH: "/data/pipeline/{jobId}/input/video.mp4",
+      OUTPUT_PATH: "/data/pipeline/{jobId}/srt-exporter/output.vtt",
+      PIPELINE_JOB_ID: "{jobId}",
+      TRANSCRIPT_PATH: "/data/pipeline/{jobId}/whisper/transcript.json",
+      SILENCE_CUTS_PATH: "/data/pipeline/{jobId}/silence-cutter/silence-cuts.json",
+    },
+  },
+];
+
+/**
+ * Resolves env vars for a step, replacing {jobId} placeholders with actual jobId.
+ * This allows the STEPS config to contain path templates that are resolved at runtime.
+ */
+function resolveEnvVars(step: PipelineStepConfig, jobId: string): Record<string, string> {
+  const resolved: Record<string, string> = {};
+  for (const [key, value] of Object.entries(step.envVars)) {
+    resolved[key] = value.replace(/\{jobId\}/g, jobId);
+  }
+  return resolved;
+}
+
+/**
+ * Options for running the pipeline.
+ * Allows dependency injection for testing.
+ */
+export interface RunPipelineOptions {
+  /** Override the pipeline data directory (for testing) */
+  pipelineDataDir?: string;
+  /** Override the Docker instance (for testing) */
+  docker?: Dockerode;
+}
+
+/**
+ * Runs the full pipeline: all 5 Docker containers sequentially.
+ *
+ * For each step:
+ * 1. Creates a Docker container with the correct image and env vars
+ * 2. Starts the container and waits for completion
+ * 3. Reads the step's manifest.json to check success/failure
+ * 4. If manifest.status is "error" or container exits non-zero without manifest, throws PipelineStepError
+ * 5. Collects step results and artifact file lists
+ *
+ * Returns PipelineResult with all step durations, artifact map, and video URL.
+ */
+export async function runPipeline(
+  jobId: string,
+  options: RunPipelineOptions = {}
+): Promise<PipelineResult> {
+  const pipelineDir = options.pipelineDataDir || PIPELINE_DATA_DIR;
+  const docker = options.docker || new Dockerode();
+
+  const steps: PipelineResult["steps"] = [];
+  const artifacts: Record<string, string[]> = {};
+  const pipelineStartTime = Date.now();
+
+  for (const step of STEPS) {
+    const envVars = resolveEnvVars(step, jobId);
+
+    // Convert envVars to Docker format (array of KEY=VALUE strings)
+    const envArray = Object.entries(envVars).map(
+      ([key, value]) => `${key}=${value}`
+    );
+
+    const container = await docker.createContainer({
+      Image: step.image,
+      Env: envArray,
+      HostConfig: {
+        Binds: [`${pipelineDir}:/data/pipeline`],
+        NetworkMode: "pipeline-net",
+        AutoRemove: true,
+      },
+    });
+
+    // Start container
+    await container.start();
+
+    // Stream logs with step prefix
+    const stream = await container.logs({
+      follow: false,
+      stdout: true,
+      stderr: true,
+    });
+    if (stream && stream.length > 0) {
+      const logOutput = stream.toString("utf8").trim();
+      if (logOutput) {
+        console.log(`[${step.name}] ${logOutput}`);
+      }
+    }
+
+    // Wait for container completion
+    const exitResult = await container.wait();
+    const exitCode = typeof exitResult === "object" && "StatusCode" in exitResult
+      ? (exitResult as { StatusCode: number }).StatusCode
+      : 1;
+
+    // Read manifest.json from the step's output directory
+    const manifestFilePath = path.join(
+      pipelineDir,
+      jobId,
+      step.name,
+      "manifest.json"
+    );
+
+    let manifest: PipelineManifest | null = null;
+    try {
+      const manifestContent = await fs.readFile(manifestFilePath, "utf-8");
+      manifest = JSON.parse(manifestContent) as PipelineManifest;
+    } catch {
+      // Manifest not found or not readable — container may have crashed before writing it
+    }
+
+    // Check for failure conditions
+    if (manifest && manifest.status === "error") {
+      throw new PipelineStepError(
+        step.name,
+        manifest.exit_code,
+        manifest.error_message || "Unknown error"
+      );
+    }
+
+    if (exitCode !== 0 && !manifest) {
+      throw new PipelineStepError(
+        step.name,
+        exitCode,
+        `Container exited with code ${exitCode} and no manifest found`
+      );
+    }
+
+    // Collect step results
+    const durationSeconds = manifest?.duration_seconds ?? 0;
+
+    steps.push({
+      name: step.name,
+      durationSeconds,
+      status: "success",
+    });
+
+    // Collect artifact file list from the step directory
+    const stepDir = path.join(pipelineDir, jobId, step.name);
+    try {
+      const stepFiles = await fs.readdir(stepDir);
+      artifacts[step.name] = stepFiles;
+    } catch {
+      artifacts[step.name] = [];
+    }
+  }
+
+  const totalDurationSeconds = (Date.now() - pipelineStartTime) / 1000;
+
+  return {
+    jobId,
+    steps,
+    artifacts,
+    totalDurationSeconds,
+    videoUrl: `/artifacts/${jobId}/remotion-renderer/output.mp4`,
+  };
+}

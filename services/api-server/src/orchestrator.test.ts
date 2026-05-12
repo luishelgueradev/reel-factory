@@ -6,20 +6,28 @@ import {
   runPipeline,
   PipelineStepError,
   STEPS,
-  type PipelineResult,
   type PipelineStepConfig,
 } from "./orchestrator.js";
 import type { PipelineManifest } from "../../shared/schemas/manifest.js";
 
-// We mock Dockerode entirely — these are unit tests, not integration tests
-vi.mock("dockerode", () => {
-  const EventEmitter = require("events");
-  return {
-    default: vi.fn().mockImplementation(() => ({
-      createContainer: vi.fn(),
-    })),
+/**
+ * Creates a mock Docker instance that creates containers with the specified behavior.
+ * All containers succeed with exit code 0 by default.
+ */
+function createMockDocker(options?: { exitCode?: number }) {
+  const exitCode = options?.exitCode ?? 0;
+  const mockContainer = {
+    start: vi.fn().mockResolvedValue(undefined),
+    wait: vi.fn().mockResolvedValue({ StatusCode: exitCode }),
+    logs: vi.fn().mockResolvedValue(Buffer.from("")),
+    remove: vi.fn().mockResolvedValue(undefined),
   };
-});
+
+  return {
+    createContainer: vi.fn().mockResolvedValue(mockContainer),
+    _mockContainer: mockContainer,
+  };
+}
 
 describe("STEPS configuration", () => {
   it("should have exactly 5 steps", () => {
@@ -125,32 +133,28 @@ describe("runPipeline", () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  it("should return PipelineResult with all step durations and videoUrl when all steps succeed", async () => {
-    // Create a mock Docker instance that succeeds for all containers
-    const mockDocker = {
-      createContainer: vi.fn(),
-    };
-
+  /**
+   * Creates a mock Docker instance that succeeds for all containers.
+   * Also creates manifest.json files for each step in the pipeline data directory.
+   */
+  async function createSuccessMockDocker(jobId: string, pipelineDir: string) {
     const mockContainer = {
       start: vi.fn().mockResolvedValue(undefined),
       wait: vi.fn().mockResolvedValue({ StatusCode: 0 }),
+      logs: vi.fn().mockResolvedValue(Buffer.from("")),
       remove: vi.fn().mockResolvedValue(undefined),
     };
 
-    // Each call to createContainer returns a container that succeeds
-    mockDocker.createContainer.mockResolvedValue(mockContainer);
+    const docker = {
+      createContainer: vi.fn().mockResolvedValue(mockContainer),
+    };
 
-    // We need to also create manifest files for each step
-    // The orchestrator reads manifests from the pipeline volume
-    const jobId = "test-job-123";
-    const stepNames = STEPS.map((s) => s.name);
-
-    // Create step directories with manifest.json files
-    for (const stepName of stepNames) {
-      const stepDir = path.join(tmpDir, jobId, stepName);
+    // Create step directories with success manifest.json files for each step
+    for (const step of STEPS) {
+      const stepDir = path.join(pipelineDir, jobId, step.name);
       await fs.mkdir(stepDir, { recursive: true });
       const manifest: PipelineManifest = {
-        step_name: stepName,
+        step_name: step.name,
         input_file: `/data/pipeline/${jobId}/input/video.mp4`,
         output_files: ["output.mp4"],
         duration_seconds: 10.5,
@@ -164,10 +168,22 @@ describe("runPipeline", () => {
       );
     }
 
-    // Override PIPELINE_DATA_DIR for the test and also the docker instance
+    // Also create output files in step directories for artifact collection
+    for (const step of STEPS) {
+      const stepDir = path.join(pipelineDir, jobId, step.name);
+      await fs.writeFile(path.join(stepDir, "output.mp4"), "fake");
+    }
+
+    return docker;
+  }
+
+  it("should return PipelineResult with all step durations and videoUrl when all steps succeed", async () => {
+    const jobId = "test-job-success";
+    const docker = await createSuccessMockDocker(jobId, tmpDir);
+
     const result = await runPipeline(jobId, {
       pipelineDataDir: tmpDir,
-      docker: mockDocker as any,
+      docker: docker as any,
     });
 
     expect(result).toHaveProperty("jobId", jobId);
@@ -180,21 +196,47 @@ describe("runPipeline", () => {
     expect(result).toHaveProperty("artifacts");
   });
 
-  it("should throw PipelineStepError when a step's manifest has status 'error'", async () => {
-    const mockDocker = {
-      createContainer: vi.fn(),
-    };
+  it("should call createContainer once per step with correct image and env vars", async () => {
+    const jobId = "test-job-envcheck";
+    const docker = await createSuccessMockDocker(jobId, tmpDir);
 
-    // First container (whisper) will succeed with an error manifest
+    await runPipeline(jobId, {
+      pipelineDataDir: tmpDir,
+      docker: docker as any,
+    });
+
+    // Should have been called 5 times (one per step)
+    expect(docker.createContainer).toHaveBeenCalledTimes(5);
+
+    // Check that the first call was for whisper
+    const firstCall = docker.createContainer.mock.calls[0][0];
+    expect(firstCall.Image).toBe("video-pipeline-whisper");
+    expect(firstCall.Env).toBeDefined();
+    expect(firstCall.Env.length).toBeGreaterThan(0);
+    // Verify that jobId was substituted in env vars
+    const envObj: Record<string, string> = {};
+    for (const envStr of firstCall.Env) {
+      const [key, ...valueParts] = envStr.split("=");
+      envObj[key] = valueParts.join("=");
+    }
+    expect(envObj.PIPELINE_JOB_ID).toBe(jobId);
+    expect(envObj.INPUT_PATH).toContain(jobId);
+  });
+
+  it("should throw PipelineStepError when a step's manifest has status 'error'", async () => {
+    const jobId = "test-job-err-manifest";
     const mockContainer = {
       start: vi.fn().mockResolvedValue(undefined),
       wait: vi.fn().mockResolvedValue({ StatusCode: 1 }),
+      logs: vi.fn().mockResolvedValue(Buffer.from("")),
       remove: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockDocker.createContainer.mockResolvedValue(mockContainer);
+    const docker = {
+      createContainer: vi.fn().mockResolvedValue(mockContainer),
+    };
 
-    const jobId = "test-job-error";
+    // Create an error manifest for whisper
     const stepDir = path.join(tmpDir, jobId, "whisper");
     await fs.mkdir(stepDir, { recursive: true });
     const manifest: PipelineManifest = {
@@ -212,15 +254,10 @@ describe("runPipeline", () => {
       JSON.stringify(manifest)
     );
 
-    await expect(
-      runPipeline(jobId, { pipelineDataDir: tmpDir, docker: mockDocker as any })
-    ).rejects.toThrow(PipelineStepError);
-
     try {
-      await runPipeline(jobId, {
-        pipelineDataDir: tmpDir,
-        docker: mockDocker as any,
-      });
+      await runPipeline(jobId, { pipelineDataDir: tmpDir, docker: docker as any });
+      // Should not reach here
+      expect.unreachable("Should have thrown PipelineStepError");
     } catch (err) {
       expect(err).toBeInstanceOf(PipelineStepError);
       const stepErr = err as PipelineStepError;
@@ -230,30 +267,23 @@ describe("runPipeline", () => {
   });
 
   it("should throw PipelineStepError when container exits with non-zero code and no manifest", async () => {
-    const mockDocker = {
-      createContainer: vi.fn(),
-    };
-
-    // Container exits with non-zero code but no manifest file
+    const jobId = "test-job-no-manifest";
     const mockContainer = {
       start: vi.fn().mockResolvedValue(undefined),
       wait: vi.fn().mockResolvedValue({ StatusCode: 137 }),
+      logs: vi.fn().mockResolvedValue(Buffer.from("")),
       remove: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockDocker.createContainer.mockResolvedValue(mockContainer);
+    const docker = {
+      createContainer: vi.fn().mockResolvedValue(mockContainer),
+    };
 
-    const jobId = "test-job-no-manifest";
-
-    await expect(
-      runPipeline(jobId, { pipelineDataDir: tmpDir, docker: mockDocker as any })
-    ).rejects.toThrow(PipelineStepError);
+    // No manifest files created — container crashed before writing one
 
     try {
-      await runPipeline(jobId, {
-        pipelineDataDir: tmpDir,
-        docker: mockDocker as any,
-      });
+      await runPipeline(jobId, { pipelineDataDir: tmpDir, docker: docker as any });
+      expect.unreachable("Should have thrown PipelineStepError");
     } catch (err) {
       expect(err).toBeInstanceOf(PipelineStepError);
       const stepErr = err as PipelineStepError;

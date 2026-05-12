@@ -139,10 +139,10 @@ Plans:
 
 Plans:
 - [x] 07-01: Zoom trigger logic from Whisper confidence scores and silence boundaries
-- [ ] 07-02: Remotion zoom composition (smooth scale animation on speaker)
+- [x] 07-02: Remotion zoom composition (smooth scale animation on speaker)
 - [x] 07-03: Jump cut transition composition (zoom or crop shift between cut segments)
-- [ ] 07-04: Integration — zoom/transition overlays composed with subtitle + intro/outro layers
-- [ ] 07-05: End-to-end validation — emphasis-driven zooms and polished jump cuts in final output
+- [x] 07-04: Integration — zoom/transition overlays composed with subtitle + intro/outro layers
+- [x] 07-05: End-to-end validation — emphasis-driven zooms and polished jump cuts in final output
 
 ### Phase 8: SRT/VTT Subtitle Export
 **Goal**: SRT and VTT sidecar subtitle files are generated alongside the burned-in video for platform upload

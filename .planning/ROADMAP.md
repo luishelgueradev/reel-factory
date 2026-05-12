@@ -157,7 +157,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — SRT/VTT format generation service with timestamp remapping (SRTE-01)
+- [x] 08-01-PLAN.md — SRT/VTT format generation service with timestamp remapping (SRTE-01)
 - [ ] 08-02-PLAN.md — Docker Compose integration and E2E validation (SRTE-01)
 
 ### Phase 9: Synchronous API

@@ -50,7 +50,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### SRT Export
 
-- [ ] **SRTE-01**: Pipeline exports SRT/VTT subtitle sidecar files alongside burned-in video
+- [x] **SRTE-01**: Pipeline exports SRT/VTT subtitle sidecar files alongside burned-in video
 
 ### API - Synchronous
 
@@ -129,7 +129,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VISU-02 | Phase 6 | Complete |
 | VISU-03 | Phase 7 | Pending |
 | VISU-04 | Phase 7 | Pending |
-| SRTE-01 | Phase 8 | Pending |
+| SRTE-01 | Phase 8 | Complete |
 | APIS-01 | Phase 9 | Pending |
 | APIS-02 | Phase 9 | Pending |
 | APIS-03 | Phase 9 | Pending |

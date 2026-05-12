@@ -6,6 +6,11 @@ import {
   validateTimestampsRemapped,
   validateRemotionOutput,
   validateSafeZone,
+  validateVisualEffectsConfig,
+  validateZoomEvents,
+  validateTransitionEvents,
+  validateVisualLayerOrder,
+  validateZoomDetection,
 } from "./validate";
 
 // ─── validateManifest ─────────────────────────────────────────────────
@@ -370,5 +375,399 @@ describe("validateCaptionPages: impossible timestamps (fromMs > toMs)", () => {
     expect(errors.some(e => e.includes("page[1].tokens[0]"))).toBe(true);
     expect(errors.some(e => e.includes("8000"))).toBe(true);
     expect(errors.some(e => e.includes("7000"))).toBe(true);
+  });
+});
+
+// ─── validateVisualEffectsConfig (VISU-03, VISU-04, D-12) ──────────────
+
+describe("validateVisualEffectsConfig", () => {
+  it("passes for null config (D-12: absent means defaults apply)", () => {
+    const errors = validateVisualEffectsConfig(null);
+    expect(errors).toEqual([]);
+  });
+
+  it("passes for undefined config (D-12: absent means defaults apply)", () => {
+    const errors = validateVisualEffectsConfig(undefined);
+    expect(errors).toEqual([]);
+  });
+
+  it("passes for valid full visualEffects config", () => {
+    const config = {
+      zooms: {
+        enabled: true,
+        confidenceThreshold: 0.6,
+        maxScale: 1.15,
+        rampMs: 300,
+        mergeGapMs: 500,
+      },
+      transitions: {
+        enabled: true,
+        type: "zoom",
+        durationMs: 250,
+        maxScale: 1.08,
+        shiftPx: 20,
+      },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors).toEqual([]);
+  });
+
+  it("passes for valid minimal config (only zooms.enabled=false, D-12)", () => {
+    const config = {
+      zooms: { enabled: false },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors).toEqual([]);
+  });
+
+  it("passes for valid minimal config (only transitions.enabled=false)", () => {
+    const config = {
+      transitions: { enabled: false },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors).toEqual([]);
+  });
+
+  it("passes for empty object (no zooms or transitions overrides)", () => {
+    const errors = validateVisualEffectsConfig({});
+    expect(errors).toEqual([]);
+  });
+
+  it("fails when config is an array (not an object)", () => {
+    const errors = validateVisualEffectsConfig([1, 2, 3]);
+    expect(errors.some(e => e.includes("VISU-03"))).toBe(true);
+  });
+
+  it("fails when zooms.confidenceThreshold is out of range (above 1)", () => {
+    const config = {
+      zooms: { confidenceThreshold: 1.5 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("confidenceThreshold"))).toBe(true);
+  });
+
+  it("fails when zooms.confidenceThreshold is negative", () => {
+    const config = {
+      zooms: { confidenceThreshold: -0.1 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("confidenceThreshold"))).toBe(true);
+  });
+
+  it("fails when zooms.maxScale is <= 1.0", () => {
+    const config = {
+      zooms: { maxScale: 0.9 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("maxScale"))).toBe(true);
+  });
+
+  it("fails when zooms.rampMs is not positive", () => {
+    const config = {
+      zooms: { rampMs: 0 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("rampMs"))).toBe(true);
+  });
+
+  it("fails when zooms.mergeGapMs is negative", () => {
+    const config = {
+      zooms: { mergeGapMs: -10 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("mergeGapMs"))).toBe(true);
+  });
+
+  it("fails when zooms.enabled is not a boolean", () => {
+    const config = {
+      zooms: { enabled: "yes" },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("enabled") && e.includes("boolean"))).toBe(true);
+  });
+
+  it("fails when zooms is not an object", () => {
+    const config = {
+      zooms: "invalid",
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("zooms must be an object"))).toBe(true);
+  });
+
+  it("fails when transitions.type is invalid (VISU-04)", () => {
+    const config = {
+      transitions: { type: "dissolve" },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("type"))).toBe(true);
+  });
+
+  it("fails when transitions.durationMs is not positive (VISU-04)", () => {
+    const config = {
+      transitions: { durationMs: 0 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("durationMs"))).toBe(true);
+  });
+
+  it("fails when transitions.maxScale is <= 1.0 (VISU-04)", () => {
+    const config = {
+      transitions: { maxScale: 1.0 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("maxScale"))).toBe(true);
+  });
+
+  it("fails when transitions.shiftPx is not positive (VISU-04)", () => {
+    const config = {
+      transitions: { shiftPx: 0 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("shiftPx"))).toBe(true);
+  });
+
+  it("fails when transitions is not an object (VISU-04)", () => {
+    const config = {
+      transitions: 42,
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("transitions must be an object"))).toBe(true);
+  });
+
+  it("fails when transitions.enabled is not a boolean (VISU-04)", () => {
+    const config = {
+      transitions: { enabled: 1 },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("enabled") && e.includes("boolean"))).toBe(true);
+  });
+
+  // D-12: Test that disabling zooms produces no zoom-related validation errors
+  it("D-12: passes with zooms.enabled=false (zooms disabled)", () => {
+    const config = {
+      zooms: { enabled: false },
+      transitions: { enabled: false, type: "none" },
+    };
+    const errors = validateVisualEffectsConfig(config);
+    expect(errors).toEqual([]);
+  });
+});
+
+// ─── validateZoomEvents (VISU-03) ──────────────────────────────────────
+
+describe("validateZoomEvents", () => {
+  it("returns no errors when remotion-info.json doesn't exist", () => {
+    const errors = validateZoomEvents("/nonexistent/path");
+    expect(errors).toEqual([]);
+  });
+
+  it("returns no errors when visual_effects section is missing", () => {
+    // This tests the "version before Phase 7" case
+    const tmpDir = `/tmp/validate-test-zoom-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+    }));
+    const errors = validateZoomEvents(tmpDir);
+    expect(errors).toEqual([]);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("passes when visual_effects has valid zoom_count", () => {
+    const tmpDir = `/tmp/validate-test-zoom-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+      visual_effects: {
+        zoom_count: 5,
+        transition_count: 2,
+        zoom_enabled: true,
+        transition_type: "zoom",
+        confidence_threshold: 0.6,
+      },
+    }));
+    const errors = validateZoomEvents(tmpDir);
+    expect(errors.filter(e => e.includes("VISU-03"))).toEqual([]);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("fails when zoom_count is negative (VISU-03)", () => {
+    const tmpDir = `/tmp/validate-test-zoom-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+      visual_effects: {
+        zoom_count: -1,
+        transition_count: 0,
+        zoom_enabled: true,
+        transition_type: "zoom",
+      },
+    }));
+    const errors = validateZoomEvents(tmpDir);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("zoom_count"))).toBe(true);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("fails when zoom_count is not a number (VISU-03)", () => {
+    const tmpDir = `/tmp/validate-test-zoom-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+      visual_effects: {
+        zoom_count: "five",
+        transition_count: 0,
+      },
+    }));
+    const errors = validateZoomEvents(tmpDir);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("zoom_count"))).toBe(true);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("fails when confidence_threshold is out of range (VISU-03)", () => {
+    const tmpDir = `/tmp/validate-test-zoom-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+      visual_effects: {
+        zoom_count: 3,
+        transition_count: 0,
+        confidence_threshold: 1.5,
+      },
+    }));
+    const errors = validateZoomEvents(tmpDir);
+    expect(errors.some(e => e.includes("VISU-03") && e.includes("confidence_threshold"))).toBe(true);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+});
+
+// ─── validateTransitionEvents (VISU-04) ──────────────────────────────────
+
+describe("validateTransitionEvents", () => {
+  it("returns no errors when remotion-info.json doesn't exist", () => {
+    const errors = validateTransitionEvents("/nonexistent/path");
+    expect(errors).toEqual([]);
+  });
+
+  it("returns no errors when visual_effects section is missing", () => {
+    const tmpDir = `/tmp/validate-test-trans-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+    }));
+    const errors = validateTransitionEvents(tmpDir);
+    expect(errors).toEqual([]);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("passes when visual_effects has valid transition_count and type", () => {
+    const tmpDir = `/tmp/validate-test-trans-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+      visual_effects: {
+        zoom_count: 5,
+        transition_count: 3,
+        zoom_enabled: true,
+        transition_type: "zoom",
+        confidence_threshold: 0.6,
+      },
+    }));
+    const errors = validateTransitionEvents(tmpDir);
+    expect(errors.filter(e => e.includes("VISU-04"))).toEqual([]);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("fails when transition_count is negative (VISU-04)", () => {
+    const tmpDir = `/tmp/validate-test-trans-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+      visual_effects: {
+        zoom_count: 0,
+        transition_count: -2,
+      },
+    }));
+    const errors = validateTransitionEvents(tmpDir);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("transition_count"))).toBe(true);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it("fails when transition_type is invalid (VISU-04)", () => {
+    const tmpDir = `/tmp/validate-test-trans-${Date.now()}`;
+    const fs = require("fs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    fs.writeFileSync(`${tmpDir}/remotion-info.json`, JSON.stringify({
+      input_width: 1080,
+      input_height: 1920,
+      caption_pages: 3,
+      visual_effects: {
+        zoom_count: 0,
+        transition_count: 0,
+        transition_type: "dissolve",
+      },
+    }));
+    const errors = validateTransitionEvents(tmpDir);
+    expect(errors.some(e => e.includes("VISU-04") && e.includes("transition_type"))).toBe(true);
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+});
+
+// ─── validateVisualLayerOrder (D-10) ─────────────────────────────────────
+
+describe("validateVisualLayerOrder", () => {
+  it("returns no errors when VALIDATE_SOURCE_FILES is not set (WR-05)", () => {
+    delete process.env.VALIDATE_SOURCE_FILES;
+    const errors = validateVisualLayerOrder("/any/path");
+    expect(errors).toEqual([]);
+  });
+
+  it("reports error when Root.tsx is missing and VALIDATE_SOURCE_FILES=true", () => {
+    const original = process.env.VALIDATE_SOURCE_FILES;
+    process.env.VALIDATE_SOURCE_FILES = "true";
+    const errors = validateVisualLayerOrder("/nonexistent/path");
+    process.env.VALIDATE_SOURCE_FILES = original;
+    expect(errors.some(e => e.includes("D-10") || e.includes("Root.tsx"))).toBe(true);
+  });
+});
+
+// ─── validateZoomDetection (VISU-03) ─────────────────────────────────────
+
+describe("validateZoomDetection", () => {
+  it("returns no errors when VALIDATE_SOURCE_FILES is not set (WR-05)", () => {
+    delete process.env.VALIDATE_SOURCE_FILES;
+    const errors = validateZoomDetection("/any/path");
+    expect(errors).toEqual([]);
+  });
+
+  it("reports error when zoom-detection.ts is missing and VALIDATE_SOURCE_FILES=true", () => {
+    const original = process.env.VALIDATE_SOURCE_FILES;
+    process.env.VALIDATE_SOURCE_FILES = "true";
+    const errors = validateZoomDetection("/nonexistent/path");
+    process.env.VALIDATE_SOURCE_FILES = original;
+    expect(errors.some(e => e.includes("VISU-03"))).toBe(true);
   });
 });

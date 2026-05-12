@@ -7,7 +7,7 @@
  */
 
 import fs from "fs";
-import { validatePipelineConfig } from "./pipeline-config.js";
+import { validatePipelineConfig } from "./pipeline-config";
 
 // ─── Manifest validation (SUBT-01) ──────────────────────────────────────
 
@@ -230,6 +230,291 @@ export function validatePipelineConfigFile(outputDir: string): string[] {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     errors.push(`VISU-01: pipeline-config.json parse error: ${message}`);
+  }
+
+  return errors;
+}
+
+// ─── Visual Effects Config validation (VISU-03, VISU-04, D-12) ──────────
+
+export function validateVisualEffectsConfig(config: unknown): string[] {
+  const errors: string[] = [];
+
+  if (config === null || config === undefined) {
+    // D-12: visualEffects is optional — absent means defaults apply
+    return errors;
+  }
+
+  if (typeof config !== "object" || Array.isArray(config)) {
+    errors.push("VISU-03: visualEffects must be an object if present");
+    return errors;
+  }
+
+  const ve = config as Record<string, unknown>;
+
+  // Validate zooms sub-object (optional within visualEffects)
+  if (ve.zooms !== undefined) {
+    if (typeof ve.zooms !== "object" || ve.zooms === null || Array.isArray(ve.zooms)) {
+      errors.push("VISU-03: visualEffects.zooms must be an object");
+    } else {
+      const z = ve.zooms as Record<string, unknown>;
+      if (z.enabled !== undefined && typeof z.enabled !== "boolean") {
+        errors.push("VISU-03: visualEffects.zooms.enabled must be a boolean");
+      }
+      if (z.confidenceThreshold !== undefined) {
+        if (typeof z.confidenceThreshold !== "number" || z.confidenceThreshold < 0 || z.confidenceThreshold > 1) {
+          errors.push("VISU-03: visualEffects.zooms.confidenceThreshold must be between 0 and 1");
+        }
+      }
+      if (z.maxScale !== undefined) {
+        if (typeof z.maxScale !== "number" || z.maxScale <= 1.0) {
+          errors.push("VISU-03: visualEffects.zooms.maxScale must be > 1.0");
+        }
+      }
+      if (z.rampMs !== undefined) {
+        if (typeof z.rampMs !== "number" || z.rampMs <= 0) {
+          errors.push("VISU-03: visualEffects.zooms.rampMs must be > 0");
+        }
+      }
+      if (z.mergeGapMs !== undefined) {
+        if (typeof z.mergeGapMs !== "number" || z.mergeGapMs < 0) {
+          errors.push("VISU-03: visualEffects.zooms.mergeGapMs must be >= 0");
+        }
+      }
+    }
+  }
+
+  // Validate transitions sub-object (optional within visualEffects)
+  if (ve.transitions !== undefined) {
+    if (typeof ve.transitions !== "object" || ve.transitions === null || Array.isArray(ve.transitions)) {
+      errors.push("VISU-04: visualEffects.transitions must be an object");
+    } else {
+      const tr = ve.transitions as Record<string, unknown>;
+      if (tr.enabled !== undefined && typeof tr.enabled !== "boolean") {
+        errors.push("VISU-04: visualEffects.transitions.enabled must be a boolean");
+      }
+      if (tr.type !== undefined) {
+        const validTypes = ["zoom", "crop-shift", "none"];
+        if (typeof tr.type !== "string" || !validTypes.includes(tr.type)) {
+          errors.push(`VISU-04: visualEffects.transitions.type must be one of: ${validTypes.join(", ")}, got: ${JSON.stringify(tr.type)}`);
+        }
+      }
+      if (tr.durationMs !== undefined) {
+        if (typeof tr.durationMs !== "number" || tr.durationMs <= 0) {
+          errors.push("VISU-04: visualEffects.transitions.durationMs must be > 0");
+        }
+      }
+      if (tr.maxScale !== undefined) {
+        if (typeof tr.maxScale !== "number" || tr.maxScale <= 1.0) {
+          errors.push("VISU-04: visualEffects.transitions.maxScale must be > 1.0");
+        }
+      }
+      if (tr.shiftPx !== undefined) {
+        if (typeof tr.shiftPx !== "number" || tr.shiftPx <= 0) {
+          errors.push("VISU-04: visualEffects.transitions.shiftPx must be > 0");
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+// ─── Zoom Events validation (VISU-03) ────────────────────────────────────
+
+export function validateZoomEvents(outputDir: string): string[] {
+  const errors: string[] = [];
+
+  const infoPath = `${outputDir}/remotion-info.json`;
+  if (!fs.existsSync(infoPath)) {
+    // No remotion-info.json — can't validate zoom events
+    return errors;
+  }
+
+  try {
+    const info = JSON.parse(fs.readFileSync(infoPath, "utf-8")) as Record<string, unknown>;
+    const ve = info.visual_effects as Record<string, unknown> | undefined;
+
+    if (!ve) {
+      // No visual_effects section — skip (may be from a version before Phase 7)
+      return errors;
+    }
+
+    // VISU-03: zoom_count should be a non-negative number
+    if (typeof ve.zoom_count !== "number" || ve.zoom_count < 0) {
+      errors.push("VISU-03: remotion-info.json visual_effects.zoom_count must be a non-negative number");
+    }
+
+    // VISU-03: If zoom is enabled, zoom events should be detected when transcript has low-confidence words
+    const zoomEnabled = ve.zoom_enabled !== false; // default true
+    if (zoomEnabled && typeof ve.zoom_count === "number" && ve.zoom_count === 0) {
+      // Informational: zoom enabled but no events detected
+      // This is valid (maybe no low-confidence words), not an error
+    }
+
+    // VISU-03: confidence_threshold should be a number between 0 and 1
+    if (ve.confidence_threshold !== undefined) {
+      if (typeof ve.confidence_threshold !== "number" || ve.confidence_threshold < 0 || ve.confidence_threshold > 1) {
+        errors.push("VISU-03: remotion-info.json visual_effects.confidence_threshold must be between 0 and 1");
+      }
+    }
+  } catch {
+    // Parse errors covered by validateRemotionInfo
+  }
+
+  return errors;
+}
+
+// ─── Transition Events validation (VISU-04) ──────────────────────────────
+
+export function validateTransitionEvents(outputDir: string): string[] {
+  const errors: string[] = [];
+
+  const infoPath = `${outputDir}/remotion-info.json`;
+  if (!fs.existsSync(infoPath)) {
+    return errors;
+  }
+
+  try {
+    const info = JSON.parse(fs.readFileSync(infoPath, "utf-8")) as Record<string, unknown>;
+    const ve = info.visual_effects as Record<string, unknown> | undefined;
+
+    if (!ve) {
+      return errors;
+    }
+
+    // VISU-04: transition_count should be a non-negative number
+    if (typeof ve.transition_count !== "number" || ve.transition_count < 0) {
+      errors.push("VISU-04: remotion-info.json visual_effects.transition_count must be a non-negative number");
+    }
+
+    // VISU-04: transition_type should be a valid type when present
+    if (ve.transition_type !== undefined) {
+      const validTypes = ["zoom", "crop-shift", "none"];
+      if (typeof ve.transition_type !== "string" || !validTypes.includes(ve.transition_type)) {
+        errors.push(`VISU-04: remotion-info.json visual_effects.transition_type must be one of: ${validTypes.join(", ")}`);
+      }
+    }
+  } catch {
+    // Parse errors covered by validateRemotionInfo
+  }
+
+  return errors;
+}
+
+// ─── Visual Layer Order validation (D-10) ──────────────────────────────────
+
+export function validateVisualLayerOrder(outputDir: string): string[] {
+  const errors: string[] = [];
+
+  // WR-05: Only check source files when explicitly enabled
+  const validateSourceFiles = process.env.VALIDATE_SOURCE_FILES === "true";
+  if (!validateSourceFiles) {
+    return errors;
+  }
+
+  const compositionsDir = `${outputDir}/../remotion-renderer/src/compositions`;
+  const srcDir = fs.existsSync(compositionsDir) ? compositionsDir : `${outputDir}/compositions`;
+
+  const rootPath = `${outputDir}/../remotion-renderer/src/Root.tsx`;
+  const altRootPath = `${outputDir}/Root.tsx`;
+  const rootFile = fs.existsSync(rootPath) ? rootPath : fs.existsSync(altRootPath) ? altRootPath : null;
+
+  if (!rootFile) {
+    errors.push("D-10: Root.tsx not found for layer order validation");
+    return errors;
+  }
+
+  try {
+    const content = fs.readFileSync(rootFile, "utf-8");
+
+    // D-10: Verify ZoomContainer wraps OffthreadVideo
+    if (!content.includes("ZoomContainer")) {
+      errors.push("D-10: Root.tsx must import and render ZoomContainer");
+    }
+    if (!content.includes("OffthreadVideo")) {
+      errors.push("D-10: Root.tsx must render OffthreadVideo inside ZoomContainer");
+    }
+    // D-10: Verify correct visual layer ordering
+    // ZoomContainer(video) → SubtitleLayoutRenderer → TitleOverlay Sequences → JumpCutTransition
+    const zoomContainerIdx = content.indexOf("ZoomContainer");
+    const subtitleIdx = content.indexOf("SubtitleLayoutRenderer");
+    const titleIdx = content.indexOf("TitleOverlay");
+    const transitionIdx = content.indexOf("JumpCutTransition");
+
+    if (zoomContainerIdx !== -1 && subtitleIdx !== -1 && subtitleIdx < zoomContainerIdx) {
+      errors.push("D-10: SubtitleLayoutRenderer must render after ZoomContainer (subtitles outside zoom)");
+    }
+    if (subtitleIdx !== -1 && titleIdx !== -1 && titleIdx < subtitleIdx) {
+      errors.push("D-10: TitleOverlay must render after SubtitleLayoutRenderer");
+    }
+    if (titleIdx !== -1 && transitionIdx !== -1 && transitionIdx < titleIdx) {
+      errors.push("D-10: JumpCutTransition must render after TitleOverlay (topmost layer)");
+    }
+
+    // Verify import order: ZoomContainer, JumpCutTransition, SubtitleLayoutRenderer, TitleOverlay
+    const imports = content.split("\n").filter(line => line.startsWith("import"));
+    const zoomImportIdx = imports.findIndex(line => line.includes("ZoomContainer"));
+    const transitionImportIdx = imports.findIndex(line => line.includes("JumpCutTransition"));
+
+    // Check that ZoomContainer and JumpCutTransition are imported
+    if (zoomImportIdx === -1) {
+      errors.push("D-10: Root.tsx must import ZoomContainer");
+    }
+    if (transitionImportIdx === -1) {
+      errors.push("D-10: Root.tsx must import JumpCutTransition");
+    }
+  } catch {
+    errors.push("D-10: Could not read Root.tsx for layer order validation");
+  }
+
+  return errors;
+}
+
+// ─── Zoom Detection validation (VISU-03) ──────────────────────────────────
+
+export function validateZoomDetection(outputDir: string): string[] {
+  const errors: string[] = [];
+
+  // WR-05: Only check source files when explicitly enabled
+  const validateSourceFiles = process.env.VALIDATE_SOURCE_FILES === "true";
+  if (!validateSourceFiles) {
+    return errors;
+  }
+
+  const detectionSrcPath = `${outputDir}/../remotion-renderer/src/zoom-detection.ts`;
+  const altPath = `${outputDir}/zoom-detection.ts`;
+  const detectionPath = fs.existsSync(detectionSrcPath) ? detectionSrcPath : fs.existsSync(altPath) ? altPath : null;
+
+  if (!detectionPath) {
+    errors.push("VISU-03: zoom-detection.ts not found in expected locations");
+    return errors;
+  }
+
+  try {
+    const content = fs.readFileSync(detectionPath, "utf-8");
+
+    // Verify detectZoomEvents export
+    if (!content.includes("export") || !content.includes("detectZoomEvents")) {
+      errors.push("VISU-03: zoom-detection.ts must export detectZoomEvents function");
+    }
+
+    // Verify it accepts WhisperTranscript parameter
+    if (!content.includes("WhisperTranscript")) {
+      errors.push("VISU-03: zoom-detection.ts must accept WhisperTranscript parameter");
+    }
+
+    // Verify it accepts SilenceCutList parameter (or null)
+    if (!content.includes("SilenceCutList")) {
+      errors.push("VISU-03: zoom-detection.ts must accept SilenceCutList parameter");
+    }
+
+    // Verify it accepts optional ZoomConfig parameter  
+    if (!content.includes("ZoomConfig")) {
+      errors.push("VISU-03: zoom-detection.ts must accept optional ZoomConfig parameter");
+    }
+  } catch {
+    errors.push("VISU-03: Could not read zoom-detection.ts");
   }
 
   return errors;
@@ -496,6 +781,17 @@ export function validateRemotionOutput(outputDir: string): string[] {
 
   // Phase 6: Font infrastructure validation (D-07)
   errors.push(...validateFontInfrastructure(outputDir));
+
+  // Phase 7: Visual effects validation (VISU-03, VISU-04)
+  errors.push(...validateVisualEffectsConfig(
+    fs.existsSync(`${outputDir}/pipeline-config.json`)
+      ? JSON.parse(fs.readFileSync(`${outputDir}/pipeline-config.json`, "utf-8"))
+      : null
+  ));
+  errors.push(...validateZoomEvents(outputDir));
+  errors.push(...validateTransitionEvents(outputDir));
+  errors.push(...validateVisualLayerOrder(outputDir));
+  errors.push(...validateZoomDetection(outputDir));
 
   return errors;
 }

@@ -1,8 +1,12 @@
-// ─── JumpCutTransition: Visual effects at silence cut boundaries (VISU-04) ───
+// ─── JumpCutTransition: Pure transition effect computation (VISU-04) ───
 //
-// Renders brief zoom or crop-shift effects at each transition boundary, making
-// jump cuts feel intentional rather than raw splices. Two types supported:
+// Transition effects are now applied within ZoomContainer, combining
+// zoom and transition scale multiplicatively on the video-wrapping element.
+// This fixes the architectural bug where transitions were rendered as an
+// empty overlay sibling — CSS transforms on an empty div had no visual
+// effect on the video underneath (confirmed in 07-VERIFICATION.md).
 //
+// Two transition types supported:
 //   1. zoom (D-06): brief scale-up burst at the cut point, ease-in/ease-out
 //   2. crop-shift (D-06): horizontal shift that creates a framing change
 //
@@ -10,14 +14,11 @@
 // point and end `TRANSITION_POST_CUT_MS` (100ms) after, totaling 250ms by
 // default (D-07).
 //
-// The `computeTransitionEffect` function is exported as a pure function for
-// unit testing independently from the React component.
+// The `computeTransitionEffect` and `buildTransitionEvents` functions are
+// exported as pure functions for use in ZoomContainer and unit testing.
+// The TransitionEvent type is used by ZoomContainer to apply combined effects.
 
-import React from "react";
 import {
-  AbsoluteFill,
-  useCurrentFrame,
-  useVideoConfig,
   interpolate,
   Easing,
 } from "remotion";
@@ -48,16 +49,7 @@ export interface TransitionEvent {
   shiftPx?: number;
 }
 
-// ─── JumpCutTransition props ────────────────────────────────────────────────
-
-interface JumpCutTransitionProps {
-  /** Array of transition events computed from silence cuts */
-  transitionEvents: TransitionEvent[];
-  /** Total video duration in milliseconds */
-  totalDurationMs: number;
-}
-
-// ─── Pure transition effect computation (exported for testing) ──────────────
+// ─── Pure transition effect computation (exported for testing + ZoomContainer) ───
 
 /**
  * Compute the transition effect (scale and translateX) at a given time.
@@ -143,59 +135,11 @@ export function computeTransitionEffect(
   return { scale: 1.0, translateX: 0 };
 }
 
-// ─── JumpCutTransition React component ──────────────────────────────────────
-
-/**
- * JumpCutTransition component renders a transparent overlay that applies
- * brief visual effects at silence cut boundaries.
- *
- * For each transition event, it computes scale (zoom) or translateX (crop-shift)
- * at the current frame and applies the transform via CSS.
- *
- * Multiple overlapping transitions: the most recent active transition wins.
- */
-export const JumpCutTransition: React.FC<JumpCutTransitionProps> = ({
-  transitionEvents,
-  totalDurationMs,
-}) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const currentTimeMs = frame * (1000 / fps);
-
-  // Find the active transition at the current time (most recent if overlapping)
-  let activeEffect: { scale: number; translateX: number } = { scale: 1.0, translateX: 0 };
-
-  for (let i = transitionEvents.length - 1; i >= 0; i--) {
-    const event = transitionEvents[i];
-    if (currentTimeMs >= event.startTimeMs && currentTimeMs < event.startTimeMs + event.durationMs) {
-      activeEffect = computeTransitionEffect(currentTimeMs, event);
-      break; // Use the most recent active transition (defensive for overlaps)
-    }
-  }
-
-  // Only apply transform if there's an active effect
-  const hasActiveTransition = activeEffect.scale !== 1.0 || activeEffect.translateX !== 0;
-
-  if (!hasActiveTransition) {
-    return <AbsoluteFill style={{ pointerEvents: "none" }} />;
-  }
-
-  return (
-    <AbsoluteFill
-      style={{
-        pointerEvents: "none",
-        transform: `${activeEffect.scale !== 1.0 ? `scale(${activeEffect.scale})` : ""} ${activeEffect.translateX !== 0 ? `translateX(${activeEffect.translateX}px)` : ""}`.trim(),
-        transformOrigin: "center center",
-      }}
-    />
-  );
-};
-
 // ─── buildTransitionEvents factory ──────────────────────────────────────────
 
 /**
  * Convert a SilenceCutList and TransitionConfig into TransitionEvent[] for
- * the JumpCutTransition component.
+ * the ZoomContainer component (formerly JumpCutTransition).
  *
  * Per D-05: Each transition starts `TRANSITION_PRE_CUT_MS` before the cut
  * boundary and covers `durationMs` total.

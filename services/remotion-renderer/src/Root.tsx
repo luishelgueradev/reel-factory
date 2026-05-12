@@ -3,12 +3,11 @@ import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile, Se
 import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher";
 import { TitleOverlay } from "./compositions/TitleOverlay";
 import { ZoomContainer } from "./compositions/ZoomContainer";
-import { JumpCutTransition } from "./compositions/JumpCutTransition";
+import type { TransitionEvent } from "./compositions/JumpCutTransition";
 import type { TikTokPage } from "@remotion/captions";
 import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
 import type { ZoomEvent } from "./zoom-detection";
-import type { TransitionEvent } from "./compositions/JumpCutTransition";
 
 export interface RemotionProps {
   videoSrc: string;
@@ -61,8 +60,12 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      {/* D-08: ZoomContainer wraps OffthreadVideo — subtitles/titles NOT zoomed (D-10) */}
-      <ZoomContainer zoomEvents={zoomEvents} totalDurationMs={totalDurationMs ?? 10000}>
+      {/* D-08/VISU-04: ZoomContainer wraps OffthreadVideo with combined zoom+transition scale */}
+      <ZoomContainer
+        zoomEvents={zoomEvents}
+        transitionEvents={transitionEvents}
+        totalDurationMs={totalDurationMs ?? 10000}
+      >
         {videoSrc && <OffthreadVideo src={staticFile(videoSrc)} />}
       </ZoomContainer>
       {/* Subtitles on top of video — not affected by zoom */}
@@ -84,13 +87,6 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
           </Sequence>
         );
       })}
-      {/* D-09: Jump-cut transitions at silence cut boundaries */}
-      {transitionEvents.length > 0 && (
-        <JumpCutTransition
-          transitionEvents={transitionEvents}
-          totalDurationMs={totalDurationMs ?? 10000}
-        />
-      )}
     </AbsoluteFill>
   );
 };

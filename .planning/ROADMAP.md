@@ -135,7 +135,7 @@ Plans:
   1. During emphasis moments (triggered by Whisper confidence dips and silence boundaries), the video automatically zooms in on the speaker
   2. Jump cuts have visible zoom or crop-shift transitions — cuts appear intentional rather than raw splices
   3. Zoom and transition effects are timed to audio cues derived from transcript/silence data
-**Plans**: 5 plans
+**Plans:** 7 plans
 
 Plans:
 - [x] 07-01: Zoom trigger logic from Whisper confidence scores and silence boundaries
@@ -143,6 +143,8 @@ Plans:
 - [x] 07-03: Jump cut transition composition (zoom or crop shift between cut segments)
 - [x] 07-04: Integration — zoom/transition overlays composed with subtitle + intro/outro layers
 - [x] 07-05: End-to-end validation — emphasis-driven zooms and polished jump cuts in final output
+- [ ] 07-06: [GAP CLOSURE] Fix invisible jump-cut transitions — combine zoom+transition scale on ZoomContainer (VISU-04)
+- [ ] 07-07: [GAP CLOSURE] Fix Signal 2 break bug and merge mutability in zoom-detection.ts
 
 ### Phase 8: SRT/VTT Subtitle Export
 **Goal**: SRT and VTT sidecar subtitle files are generated alongside the burned-in video for platform upload

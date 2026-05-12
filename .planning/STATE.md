@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-05-12T11:53:30.741Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-05-12T12:22:06.627Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 11
   completed_phases: 5
   total_plans: 30
-  completed_plans: 26
-  percent: 87
+  completed_plans: 28
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 07 (visual-cuts-zooms) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-05-12
 
-Progress: [█████████░] 87%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -76,9 +76,11 @@ Recent decisions affecting current work:
 - [Phase 06 P04]: validatePipelineConfig from shared pipeline-config.ts used in studio config API — no extra Zod dependency needed
 - [Phase 07-visual-cuts-zooms]: JumpCutTransition uses Remotion interpolate() with Easing.bezier for smooth transitions
 - [Phase 07-visual-cuts-zooms]: buildTransitionEvents placed alongside component in JumpCutTransition.tsx for cohesion
+- [Phase 07-visual-cuts-zooms P04]: Visual effects follow strict layer order: ZoomContainer(video) → Subtitles → Titles → JumpCutTransition
+- [Phase 07-visual-cuts-zooms P04]: VisualEffectsConfig deep-merged from PipelineConfig with defaults for nested objects
 
 ## Session Continuity
 
-Last session: 2026-05-12T11:53:30.731Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-05-12T12:19:17.731Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None

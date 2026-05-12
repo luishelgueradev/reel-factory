@@ -107,53 +107,58 @@ function splitLongSegment(
   endTimeMs: number,
   startIndex: number
 ): SrtCue[] {
-  // Find split positions at punctuation
-  const splitPositions: number[] = [];
-  for (let i = 0; i < text.length; i++) {
-    if (SPLIT_PUNCTUATION.test(text[i])) {
-      splitPositions.push(i);
-    }
-  }
-
-  if (splitPositions.length === 0) {
-    // No punctuation — keep as one cue per D-05
-    return [{ index: startIndex, startTimeMs, endTimeMs, text }];
-  }
-
   const words = text.split(/\s+/);
   const totalWords = words.length;
   const durationMs = endTimeMs - startTimeMs;
 
-  // Split at roughly the midpoint punctuation
-  const midPoint = Math.floor(splitPositions.length / 2);
-  const splitCharPos = splitPositions[midPoint];
-
-  // Find which word contains the split character position
-  // Build a word-position map to find the split point
-  let charPos = 0;
-  let splitWordIdx = 0;
-  for (let i = 0; i < words.length; i++) {
-    if (charPos <= splitCharPos && charPos + words[i].length >= splitCharPos) {
-      splitWordIdx = i;
-      break;
-    }
-    charPos += words[i].length + 1; // +1 for the space
-  }
-
-  // Split into two cues at the word boundary
-  const firstHalf = words.slice(0, splitWordIdx + 1).join(" ");
-  const secondHalf = words.slice(splitWordIdx + 1).join(" ");
-
-  if (!secondHalf.trim()) {
-    // Split would create empty second cue — keep as one
+  if (totalWords <= 1) {
     return [{ index: startIndex, startTimeMs, endTimeMs, text }];
   }
 
-  const midpointMs = startTimeMs + Math.round((splitWordIdx / totalWords) * durationMs);
+  // Find the word index closest to the midpoint that ends with punctuation
+  const midWordIdx = Math.floor(totalWords / 2);
+  let splitAfterIdx = -1;
+
+  // Search outward from midpoint for a word ending with punctuation
+  for (let offset = 0; offset <= midWordIdx; offset++) {
+    // Search forward from midpoint
+    const forwardIdx = midWordIdx + offset;
+    if (forwardIdx < totalWords && SPLIT_PUNCTUATION.test(words[forwardIdx][words[forwardIdx].length - 1])) {
+      // Don't split on the last word (would create empty second cue)
+      if (forwardIdx < totalWords - 1) {
+        splitAfterIdx = forwardIdx;
+        break;
+      }
+    }
+    // Search backward from midpoint
+    if (offset > 0) {
+      const backwardIdx = midWordIdx - offset;
+      if (backwardIdx >= 0 && SPLIT_PUNCTUATION.test(words[backwardIdx][words[backwardIdx].length - 1])) {
+        if (backwardIdx < totalWords - 1) {
+          splitAfterIdx = backwardIdx;
+          break;
+        }
+      }
+    }
+  }
+
+  if (splitAfterIdx === -1) {
+    // No punctuation found — keep as one cue per D-05
+    return [{ index: startIndex, startTimeMs, endTimeMs, text }];
+  }
+
+  const firstHalf = words.slice(0, splitAfterIdx + 1).join(" ");
+  const secondHalf = words.slice(splitAfterIdx + 1).join(" ");
+
+  if (!secondHalf.trim()) {
+    return [{ index: startIndex, startTimeMs, endTimeMs, text }];
+  }
+
+  const splitMs = startTimeMs + Math.round(((splitAfterIdx + 1) / totalWords) * durationMs);
 
   return [
-    { index: startIndex, startTimeMs, endTimeMs: midpointMs, text: firstHalf },
-    { index: startIndex + 1, startTimeMs: midpointMs, endTimeMs, text: secondHalf },
+    { index: startIndex, startTimeMs, endTimeMs: splitMs, text: firstHalf },
+    { index: startIndex + 1, startTimeMs: splitMs, endTimeMs, text: secondHalf },
   ];
 }
 

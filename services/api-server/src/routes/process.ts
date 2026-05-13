@@ -7,7 +7,8 @@ import { ProcessResponseSchema } from "../schemas/response.js";
 import { ArtifactResponseSchema } from "../schemas/response.js";
 import { isValidVideoMimetype } from "../schemas/request.js";
 import { PIPELINE_DATA_DIR } from "../constants.js";
-import { runPipeline, PipelineStepError } from "../orchestrator.js";
+import { runPipeline, PipelineStepError, STEPS } from "../orchestrator.js";
+import { updateJobProgress } from "../progress.js";
 
 /**
  * Multer disk storage configuration.
@@ -110,12 +111,26 @@ processRouter.post("/process", upload.single("video"), async (req: Request, res:
   const destPath = path.join(jobInputDir, "video.mp4");
   await fs.rename(tmpPath, destPath);
 
+  // Per D-04: Write initial "queued" status to Redis for synchronous jobs
+  // so they appear in GET /status queries even before the pipeline starts
+  await updateJobProgress(jobId, { status: "queued", currentStep: "queued" });
+
   // Configure timeout per D-07
   const timeoutMs = parseInt(process.env.PROCESS_TIMEOUT_MS || String(DEFAULT_TIMEOUT_MS), 10);
 
+  // Per D-04: onStepStart callback updates Redis progress during synchronous execution
+  // Same pattern as worker.ts onStepStart
+  const onStepStart = async (stepName: string, stepIndex: number, totalSteps: number) => {
+    const completedSteps = STEPS.slice(0, stepIndex).map(s => s.name);
+    await updateJobProgress(jobId, { status: "active", currentStep: stepName, completedSteps });
+  };
+
   try {
-    // Run the entire pipeline
-    const result = await runPipeline(jobId);
+    // Run the entire pipeline with progress tracking
+    const result = await runPipeline(jobId, { onStepStart });
+
+    // Mark job as completed in Redis
+    await updateJobProgress(jobId, { status: "completed", currentStep: "completed" });
 
     // Build artifact map with URLs
     const artifactsWithUrls: Record<string, string[]> = {};
@@ -137,6 +152,13 @@ processRouter.post("/process", upload.single("video"), async (req: Request, res:
   } catch (err: unknown) {
     // Handle PipelineStepError — step failure
     if (err instanceof PipelineStepError) {
+      // Per D-04: Mark as failed with step details in Redis
+      await updateJobProgress(jobId, {
+        status: "failed",
+        currentStep: err.stepName,
+        error: `Step ${err.stepName} failed (exit ${err.exitCode}): ${err.errorMessage}`,
+      });
+
       res.status(500).json({
         jobId,
         error: {
@@ -150,6 +172,12 @@ processRouter.post("/process", upload.single("video"), async (req: Request, res:
 
     // Handle timeout errors
     if (err instanceof Error && err.message.includes("timeout")) {
+      await updateJobProgress(jobId, {
+        status: "failed",
+        currentStep: "timeout",
+        error: `Pipeline exceeded ${timeoutMs}ms timeout`,
+      });
+
       res.status(408).json({
         jobId,
         error: {
@@ -162,6 +190,12 @@ processRouter.post("/process", upload.single("video"), async (req: Request, res:
 
     // Generic error
     console.error("Pipeline error:", err);
+    await updateJobProgress(jobId, {
+      status: "failed",
+      currentStep: "unknown",
+      error: err instanceof Error ? err.message : "Internal server error",
+    });
+
     res.status(500).json({
       jobId,
       error: {

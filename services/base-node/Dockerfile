@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpango-1.0-0 \
         libcairo2 \
         libcups2 \
-      && curl -L "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" -o /tmp/ffmpeg.tar.xz \
+      && curl -L "https://johnvansickle.com/ffmpeg/releases/ffmpeg-7.1.1-amd64-static.tar.xz" -o /tmp/ffmpeg.tar.xz \
       && tar -xf /tmp/ffmpeg.tar.xz -C /tmp \
       && FFDIR=$(ls -d /tmp/ffmpeg-*-amd64-static | head -1) \
       && cp "${FFDIR}/ffmpeg" /usr/local/bin/ \

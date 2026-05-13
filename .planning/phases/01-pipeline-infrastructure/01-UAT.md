@@ -1,9 +1,9 @@
 ---
-status: testing
+status: diagnosed
 phase: 01-pipeline-infrastructure
 source: 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md
 started: 2026-05-13T12:00:00Z
-updated: 2026-05-13T20:20:00Z
+updated: 2026-05-13T20:25:00Z
 ---
 
 ## Current Test
@@ -56,16 +56,26 @@ skipped: 0
 
 - truth: "FFmpeg --version returns the same pinned version (7.1.1) across all containers"
   status: failed
-  reason: "User reported: both containers show ffmpeg version 7.0.2-static, not the expected 7.1.1. The .env has FFMPEG_VERSION=7.1.1 but the Dockerfiles download from the release tarball URL which yields 7.0.0 - the version env var is not actually used in the download URL"
+  reason: "User reported: both containers show ffmpeg version 7.0.2-static, not the expected 7.1.1. The .env has FFMPEG_VERSION=7.1.1 but the Dockerfiles download from the release tarball URL which yields 7.0.2 - the version env var is not actually used in the download URL"
   severity: major
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: "Both base-python/Dockerfile and base-node/Dockerfile download FFmpeg from the generic 'release' tarball URL (ffmpeg-release-amd64-static.tar.xz) which always fetches the current release (7.0.2). The FFMPEG_VERSION build arg from .env.example is not referenced in the Dockerfile curl URLs. Commit c5f9a0a mentions 'dynamic FFmpeg path' but the Dockerfiles still use a hardcoded generic URL."
+  artifacts:
+    - path: "services/base-python/Dockerfile"
+      issue: "Downloads from generic release URL without version pinning (line 7)"
+    - path: "services/base-node/Dockerfile"
+      issue: "Downloads from generic release URL without version pinning (line 21)"
+  missing:
+    - "Pin FFmpeg download URL to specific version (7.1.1) or use FFMPEG_VERSION build arg in the curl URL"
 
 - truth: "scripts/smoke-test.sh exists and validates all 5 PIPE requirements"
   status: failed
   reason: "User reported: scripts/smoke-test.sh does not exist - file referenced in SUMMARY as created but missing from disk"
   severity: major
   test: 7
-  artifacts: []
-  missing: []
+  root_cause: "scripts/smoke-test.sh was created in commit 075d728 but deleted in commit c5f9a0a during a bug fix sweep. The 01-04-SUMMARY.md still references it as a deliverable."
+  artifacts:
+    - path: "scripts/smoke-test.sh"
+      issue: "File deleted in commit c5f9a0a, no longer exists on disk"
+  missing:
+    - "Restore scripts/smoke-test.sh or remove reference from SUMMARY and update it to work with current bind-mount setup"

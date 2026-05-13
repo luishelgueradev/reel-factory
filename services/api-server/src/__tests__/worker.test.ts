@@ -132,10 +132,11 @@ describe("BullMQ Worker", () => {
 
       // Should have called updateJobProgress for each of the 5 steps (active) + 1 completed = 6
       expect(updateJobProgress).toHaveBeenCalledTimes(6);
-      // Verify the first step progress update
+      // Verify the first step progress update — no completed steps before whisper starts
       expect(updateJobProgress).toHaveBeenNthCalledWith(1, "test-job-2", {
         status: "active",
         currentStep: "whisper",
+        completedSteps: [],
       });
       // Verify the completed call
       expect(updateJobProgress).toHaveBeenNthCalledWith(6, "test-job-2", {
@@ -233,10 +234,11 @@ describe("BullMQ Worker", () => {
 
       await processJob(mockJob);
 
-      // Check that updateJobProgress was called with status and currentStep
+      // Check that updateJobProgress was called with status, currentStep, and completedSteps
       expect(updateJobProgress).toHaveBeenCalledWith("test-job-6", {
         status: "active",
         currentStep: "whisper",
+        completedSteps: [],
       });
 
       // Also check that job.updateProgress was called for BullMQ progress tracking

@@ -35,10 +35,14 @@ export async function processJob(job: Job): Promise<void> {
   }
 
   // Step-by-step progress tracking via onStepStart callback
+  // Per D-02/D-05: Push completed step names and progress percentage to Redis
   const onStepStart = async (stepName: string, stepIndex: number, totalSteps: number) => {
+    // Compute the list of completed steps: all steps before the current one
+    const completedSteps = STEPS.slice(0, stepIndex).map(s => s.name);
     await updateJobProgress(jobId, {
       status: "active",
       currentStep: stepName,
+      completedSteps,
     });
     // Also update job progress in BullMQ for queue-level tracking
     await job.updateProgress(Math.round(((stepIndex + 1) / totalSteps) * 100));

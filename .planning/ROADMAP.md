@@ -43,7 +43,7 @@ Plans:
 - [x] 01-02: Step contract schema — env vars, exit codes, manifest.json artifact, and documentation
 - [x] 01-03: Base Docker images with pinned FFmpeg + pipeline service chain in Compose
 - [x] 01-04: Smoke test — validate full step contract end-to-end with no-op container
-- [ ] 01-05: [GAP CLOSURE] Pin FFmpeg 7.1.1 in Dockerfiles + restore smoke-test.sh (PIPE-05, PIPE-01–04)
+- [x] 01-05: [GAP CLOSURE] Pin FFmpeg 7.1.1 in Dockerfiles + restore smoke-test.sh (PIPE-05, PIPE-01–04)
 
 ### Phase 2: Whisper Transcription
 **Goal**: Audio is extracted from MP4 and transcribed with word-level Spanish timestamps — the data foundation for all downstream steps
@@ -216,7 +216,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Pipeline Infrastructure | 4/4 | Complete    | 2026-05-05 |
+| 1. Pipeline Infrastructure | 5/5 | Complete    | 2026-05-05 |
 | 2. Whisper Transcription | 3/3 | Complete | 2026-05-06 |
 | 3. Silence Detection & Removal | 4/4 | Complete | 2026-05-11 |
 | 4. 9:16 Vertical Output | 3/3 | Complete | 2026-05-11 |

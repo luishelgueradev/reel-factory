@@ -1,14 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Self-contained mock factories — vi.mock factories are hoisted before any
-// module-level declarations. Use inline vi.fn() to avoid TDZ issues.
+/**
+ * Strategy for mocking Redis in progress.ts:
+ * progress.ts calls createQueueConnection() once at module level and caches
+ * the result in a `const redis`. Our mock factory runs at module load time,
+ * so the factory-created mock IS the instance used by progress.ts — but only
+ * if we return the SAME object every time createQueueConnection is called.
+ *
+ * We use vi.hoisted() to create the shared mock object before vi.mock() runs,
+ * so the factory can reference it. This ensures both our tests and the
+ * progress.ts module itself operate on the same set of spies.
+ */
+const mockRedisMethods = vi.hoisted(() => ({
+  hset: vi.fn().mockResolvedValue(1),
+  hsetnx: vi.fn().mockResolvedValue(1),
+  expire: vi.fn().mockResolvedValue(1),
+  hgetall: vi.fn().mockResolvedValue({}),
+  rpush: vi.fn().mockResolvedValue(1),
+  lrange: vi.fn().mockResolvedValue([]),
+  quit: vi.fn().mockResolvedValue("OK"),
+}));
+
 vi.mock("../queue.js", () => ({
-  createQueueConnection: () => ({
-    hset: vi.fn().mockResolvedValue(1),
-    hsetnx: vi.fn().mockResolvedValue(1),
-    expire: vi.fn().mockResolvedValue(1),
-    hgetall: vi.fn().mockResolvedValue({}),
-  }),
+  createQueueConnection: () => mockRedisMethods,
+  QUEUE_NAME: "video-processing",
+  videoQueue: { add: vi.fn(), getJob: vi.fn() },
+  closeQueueConnection: vi.fn(),
 }));
 
 vi.mock("../orchestrator.js", () => ({
@@ -39,53 +56,28 @@ import { updateJobProgress, getJobProgress, getJobStatus } from "../progress.js"
 
 const TOTAL_STEPS = 5;
 
-/**
- * Helper to get mock Redis functions from the mocked createQueueConnection.
- * Since the mock factory creates a new object per call but progress.ts caches
- * the connection at module level, we need to access the singleton Redis instance.
- * We do this by calling createQueueConnection() again, which returns a new mock
- * object — but for test assertions we need the actual instance used by the module.
- * 
- * Instead, we spy on the real module exports to verify behavior via their effects.
- */
-
 describe("Progress tracking", () => {
-  /**
-   * Access the mock Redis instance used by progress.ts.
-   * progress.ts calls createQueueConnection() at module load time and stores
-   * the result in a const. We re-invoke the factory to get the same shape,
-   * but for assertion we rely on the actual function calls made.
-   */
-  function getMockRedis() {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createQueueConnection } = require("../queue.js");
-    return createQueueConnection();
-  }
-
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset all mocks on the Redis instance
-    const redis = getMockRedis();
-    vi.mocked(redis.hset).mockResolvedValue(1);
-    vi.mocked(redis.hsetnx).mockResolvedValue(1);
-    vi.mocked(redis.expire).mockResolvedValue(1);
-    vi.mocked(redis.hgetall).mockResolvedValue({});
+    // Reset default mock return values
+    mockRedisMethods.hset.mockResolvedValue(1);
+    mockRedisMethods.hsetnx.mockResolvedValue(1);
+    mockRedisMethods.expire.mockResolvedValue(1);
+    mockRedisMethods.hgetall.mockResolvedValue({});
   });
 
   // ── getJobStatus ──
 
   describe("getJobStatus", () => {
     it("should return null for unknown jobId", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({} as Record<string, string>);
+      mockRedisMethods.hgetall.mockResolvedValue({});
 
       const result = await getJobStatus("non-existent-uuid");
       expect(result).toBeNull();
     });
 
     it("should return steps array parsed from comma-joined string in Redis hash", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "active",
         currentStep: "ffmpeg-finalizer",
         steps: "whisper,silence-cutter",
@@ -99,8 +91,7 @@ describe("Progress tracking", () => {
     });
 
     it("should return empty steps array when steps field is empty string", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "active",
         currentStep: "whisper",
         steps: "",
@@ -114,8 +105,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute progress as 0% when status is queued", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "queued",
         currentStep: "",
         steps: "",
@@ -128,9 +118,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute progress based on completed steps count when status is active", async () => {
-      // Whisper has completed, silence-cutter is active → stepIndex 1, 1 completed step before it
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "active",
         currentStep: "silence-cutter",
         steps: "whisper",
@@ -145,8 +133,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute progress as 100 when status is completed", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "completed",
         currentStep: "completed",
         steps: "whisper,silence-cutter,ffmpeg-finalizer,remotion-renderer,srt-exporter",
@@ -159,9 +146,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute progress correctly for first step active", async () => {
-      // First step (whisper) just started, no completed steps yet
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "active",
         currentStep: "whisper",
         steps: "",
@@ -176,8 +161,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute stepInfo as fraction format", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "active",
         currentStep: "ffmpeg-finalizer",
         steps: "whisper,silence-cutter",
@@ -191,8 +175,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute stepInfo as 0/5 when status is queued", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "queued",
         currentStep: "",
         steps: "",
@@ -204,8 +187,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute stepInfo as 5/5 when status is completed", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "completed",
         currentStep: "completed",
         steps: "whisper,silence-cutter,ffmpeg-finalizer,remotion-renderer,srt-exporter",
@@ -218,8 +200,7 @@ describe("Progress tracking", () => {
     });
 
     it("should return error field from Redis hash when status is failed", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "failed",
         currentStep: "whisper",
         steps: "",
@@ -235,8 +216,7 @@ describe("Progress tracking", () => {
     });
 
     it("should return startedAt from Redis hash", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "active",
         currentStep: "remotion-renderer",
         steps: "whisper,silence-cutter,ffmpeg-finalizer",
@@ -249,8 +229,7 @@ describe("Progress tracking", () => {
     });
 
     it("should return null startedAt when not set in Redis", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "queued",
         currentStep: "",
         steps: "",
@@ -262,8 +241,7 @@ describe("Progress tracking", () => {
     });
 
     it("should return full typed JobStatus object", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "active",
         currentStep: "silence-cutter",
         steps: "whisper",
@@ -285,9 +263,7 @@ describe("Progress tracking", () => {
     });
 
     it("should compute progress correctly for failed job at step boundary", async () => {
-      // Failed at ffmpeg-finalizer (step 3), with 2 completed steps
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({
+      mockRedisMethods.hgetall.mockResolvedValue({
         status: "failed",
         currentStep: "ffmpeg-finalizer",
         steps: "whisper,silence-cutter",
@@ -307,14 +283,13 @@ describe("Progress tracking", () => {
 
   describe("updateJobProgress with completedSteps", () => {
     it("should store completedSteps as comma-joined string in Redis hash", async () => {
-      const redis = getMockRedis();
       await updateJobProgress("test-job-id", {
         status: "active",
         currentStep: "silence-cutter",
         completedSteps: ["whisper"],
       });
 
-      expect(vi.mocked(redis.hset)).toHaveBeenCalledWith(
+      expect(mockRedisMethods.hset).toHaveBeenCalledWith(
         "job:test-job-id",
         expect.objectContaining({
           steps: "whisper",
@@ -323,14 +298,13 @@ describe("Progress tracking", () => {
     });
 
     it("should store multiple completedSteps as comma-joined string", async () => {
-      const redis = getMockRedis();
       await updateJobProgress("test-job-id", {
         status: "active",
         currentStep: "ffmpeg-finalizer",
         completedSteps: ["whisper", "silence-cutter"],
       });
 
-      expect(vi.mocked(redis.hset)).toHaveBeenCalledWith(
+      expect(mockRedisMethods.hset).toHaveBeenCalledWith(
         "job:test-job-id",
         expect.objectContaining({
           steps: "whisper,silence-cutter",
@@ -339,14 +313,13 @@ describe("Progress tracking", () => {
     });
 
     it("should store empty string for steps when completedSteps is empty array", async () => {
-      const redis = getMockRedis();
       await updateJobProgress("test-job-id", {
         status: "active",
         currentStep: "whisper",
         completedSteps: [],
       });
 
-      expect(vi.mocked(redis.hset)).toHaveBeenCalledWith(
+      expect(mockRedisMethods.hset).toHaveBeenCalledWith(
         "job:test-job-id",
         expect.objectContaining({
           steps: "",
@@ -355,7 +328,6 @@ describe("Progress tracking", () => {
     });
 
     it("should set startedAt via hsetnx when status is active", async () => {
-      const redis = getMockRedis();
       await updateJobProgress("test-job-id", {
         status: "active",
         currentStep: "whisper",
@@ -363,7 +335,7 @@ describe("Progress tracking", () => {
       });
 
       // hsetnx should be called to set startedAt only once
-      expect(vi.mocked(redis.hsetnx)).toHaveBeenCalledWith(
+      expect(mockRedisMethods.hsetnx).toHaveBeenCalledWith(
         "job:test-job-id",
         "startedAt",
         expect.any(String) // ISO timestamp
@@ -371,23 +343,21 @@ describe("Progress tracking", () => {
     });
 
     it("should not set startedAt when status is not active", async () => {
-      const redis = getMockRedis();
       await updateJobProgress("test-job-id", {
         status: "queued",
       });
 
-      expect(vi.mocked(redis.hsetnx)).not.toHaveBeenCalled();
+      expect(mockRedisMethods.hsetnx).not.toHaveBeenCalled();
     });
 
     it("should still work without completedSteps (backward compatible)", async () => {
-      const redis = getMockRedis();
       await updateJobProgress("test-job-id", {
         status: "active",
         currentStep: "whisper",
       });
 
       // Should not include 'steps' key in hset fields when completedSteps not provided
-      const hsetCall = vi.mocked(redis.hset).mock.calls[0];
+      const hsetCall = mockRedisMethods.hset.mock.calls[0];
       const fields = hsetCall[1] as Record<string, string>;
       expect(fields.steps).toBeUndefined();
     });
@@ -397,22 +367,20 @@ describe("Progress tracking", () => {
 
   describe("getJobProgress (backward compatibility)", () => {
     it("should return null for unknown jobId", async () => {
-      const redis = getMockRedis();
-      vi.mocked(redis.hgetall).mockResolvedValue({} as Record<string, string>);
+      mockRedisMethods.hgetall.mockResolvedValue({});
 
       const result = await getJobProgress("non-existent-uuid");
       expect(result).toBeNull();
     });
 
     it("should return raw hash for existing job", async () => {
-      const redis = getMockRedis();
       const expected = {
         status: "active",
         currentStep: "whisper",
         steps: "",
         updatedAt: "2026-05-13T12:00:00.000Z",
       };
-      vi.mocked(redis.hgetall).mockResolvedValue(expected);
+      mockRedisMethods.hgetall.mockResolvedValue(expected);
 
       const result = await getJobProgress("test-job-id");
       expect(result).toEqual(expected);

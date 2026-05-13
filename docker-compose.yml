@@ -153,6 +153,8 @@ services:
     depends_on:
       base-node:
         condition: service_completed_successfully
+    group_add:
+      - "1001"
     ports:
       - "${API_PORT:-3000}:3000"
     volumes:
@@ -161,6 +163,8 @@ services:
     environment:
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID:-}
       - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-600000}
+      - PIPELINE_NETWORK=${PIPELINE_NETWORK:-reel-factory_pipeline-net}
+      - HOST_PIPELINE_DIR=${HOST_PIPELINE_DIR:-/home/luis/proyectos/reel-factory/pipeline}
       - PORT=3000
       - NODE_ENV=production
 

@@ -36,5 +36,18 @@ RUN npx tsx --version
 
 EXPOSE 3000
 
+# Add node user to docker group so it can access the Docker socket
+# The GID must match the host's docker group (varies by system: 998, 1001, etc.)
+ARG DOCKER_GID=1001
+RUN if getent group docker >/dev/null 2>&1; then \
+        EXISTING_GID=$(getent group docker | cut -d: -f3); \
+        if [ "$EXISTING_GID" != "${DOCKER_GID}" ]; then \
+            groupmod -g ${DOCKER_GID} docker; \
+        fi; \
+    else \
+        groupadd -g ${DOCKER_GID} docker; \
+    fi \
+    && usermod -aG docker node
+
 # Run the API server using tsx for TypeScript execution
 CMD ["npx", "tsx", "src/index.ts"]

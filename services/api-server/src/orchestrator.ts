@@ -1,7 +1,7 @@
 import Dockerode from "dockerode";
 import fs from "fs/promises";
 import path from "path";
-import { PIPELINE_DATA_DIR } from "./constants.js";
+import { PIPELINE_DATA_DIR, PIPELINE_NETWORK, HOST_PIPELINE_DIR } from "./constants.js";
 import type { PipelineManifest } from "../../shared/schemas/manifest.js";
 
 /**
@@ -56,7 +56,7 @@ export class PipelineStepError extends Error {
 export const STEPS: PipelineStepConfig[] = [
   {
     name: "whisper",
-    image: "video-pipeline-whisper",
+    image: "reel-factory-whisper",
     envVars: {
       INPUT_PATH: "/data/pipeline/{jobId}/input/video.mp4",
       OUTPUT_PATH: "/data/pipeline/{jobId}/whisper/transcript.json",
@@ -66,7 +66,7 @@ export const STEPS: PipelineStepConfig[] = [
   },
   {
     name: "silence-cutter",
-    image: "video-pipeline-silence-cutter",
+    image: "reel-factory-silence-cutter",
     envVars: {
       INPUT_PATH: "/data/pipeline/{jobId}/input/video.mp4",
       OUTPUT_PATH: "/data/pipeline/{jobId}/silence-cutter/output.mp4",
@@ -78,7 +78,7 @@ export const STEPS: PipelineStepConfig[] = [
   },
   {
     name: "ffmpeg-finalizer",
-    image: "video-pipeline-ffmpeg-finalizer",
+    image: "reel-factory-ffmpeg-finalizer",
     envVars: {
       INPUT_PATH: "/data/pipeline/{jobId}/silence-cutter/output.mp4",
       OUTPUT_PATH: "/data/pipeline/{jobId}/ffmpeg-finalizer/output.mp4",
@@ -90,7 +90,7 @@ export const STEPS: PipelineStepConfig[] = [
   },
   {
     name: "remotion-renderer",
-    image: "video-pipeline-remotion-renderer",
+    image: "reel-factory-remotion-renderer",
     envVars: {
       INPUT_PATH: "/data/pipeline/{jobId}/ffmpeg-finalizer/output.mp4",
       OUTPUT_PATH: "/data/pipeline/{jobId}/remotion-renderer/output.mp4",
@@ -105,7 +105,7 @@ export const STEPS: PipelineStepConfig[] = [
   },
   {
     name: "srt-exporter",
-    image: "video-pipeline-srt-exporter",
+    image: "reel-factory-srt-exporter",
     envVars: {
       INPUT_PATH: "/data/pipeline/{jobId}/input/video.mp4",
       OUTPUT_PATH: "/data/pipeline/{jobId}/srt-exporter/output.vtt",
@@ -135,6 +135,10 @@ function resolveEnvVars(step: PipelineStepConfig, jobId: string): Record<string,
 export interface RunPipelineOptions {
   /** Override the pipeline data directory (for testing) */
   pipelineDataDir?: string;
+  /** Override the host-side pipeline directory for Docker bind mounts */
+  hostPipelineDir?: string;
+  /** Override the Docker network name (for testing or different Compose project) */
+  pipelineNetwork?: string;
   /** Override the Docker instance (for testing) */
   docker?: Dockerode;
 }
@@ -156,6 +160,7 @@ export async function runPipeline(
   options: RunPipelineOptions = {}
 ): Promise<PipelineResult> {
   const pipelineDir = options.pipelineDataDir || PIPELINE_DATA_DIR;
+  const hostPipelineDir = options.hostPipelineDir || HOST_PIPELINE_DIR;
   const docker = options.docker || new Dockerode();
 
   const steps: PipelineResult["steps"] = [];
@@ -170,15 +175,29 @@ export async function runPipeline(
       ([key, value]) => `${key}=${value}`
     );
 
-    const container = await docker.createContainer({
+    const containerConfig: Dockerode.CreateContainerOptions = {
       Image: step.image,
       Env: envArray,
       HostConfig: {
-        Binds: [`${pipelineDir}:/data/pipeline`],
-        NetworkMode: "pipeline-net",
+        Binds: [`${hostPipelineDir}:/data/pipeline`],
+        NetworkMode: options.pipelineNetwork || PIPELINE_NETWORK,
         AutoRemove: true,
       },
-    });
+    };
+
+    // Pass GPU device for whisper step if available
+    if (step.name === "whisper") {
+      containerConfig.HostConfig!.DeviceRequests = [
+        {
+          Driver: "nvidia",
+          Count: -1,
+          DeviceIDs: undefined,
+          Capabilities: [["gpu"]],
+        },
+      ];
+    }
+
+    const container = await docker.createContainer(containerConfig);
 
     // Start container
     await container.start();

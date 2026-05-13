@@ -44,7 +44,7 @@ describe("STEPS configuration", () => {
 
   it("whisper step should have correct env vars", () => {
     const whisper = STEPS[0];
-    expect(whisper.image).toBe("video-pipeline-whisper");
+    expect(whisper.image).toBe("reel-factory-whisper");
     expect(whisper.envVars).toHaveProperty("INPUT_PATH");
     expect(whisper.envVars.INPUT_PATH).toContain("/input/video.mp4");
     expect(whisper.envVars).toHaveProperty("OUTPUT_PATH");
@@ -56,7 +56,7 @@ describe("STEPS configuration", () => {
 
   it("silence-cutter step should have correct env vars including TRANSCRIPT_PATH", () => {
     const step = STEPS[1];
-    expect(step.image).toBe("video-pipeline-silence-cutter");
+    expect(step.image).toBe("reel-factory-silence-cutter");
     expect(step.envVars).toHaveProperty("INPUT_PATH");
     expect(step.envVars).toHaveProperty("OUTPUT_PATH");
     expect(step.envVars).toHaveProperty("PIPELINE_JOB_ID");
@@ -68,7 +68,7 @@ describe("STEPS configuration", () => {
 
   it("ffmpeg-finalizer step should have correct env vars including VERTICAL_WIDTH/HEIGHT and CROP_STRATEGY", () => {
     const step = STEPS[2];
-    expect(step.image).toBe("video-pipeline-ffmpeg-finalizer");
+    expect(step.image).toBe("reel-factory-ffmpeg-finalizer");
     expect(step.envVars).toHaveProperty("INPUT_PATH");
     expect(step.envVars.INPUT_PATH).toContain("/silence-cutter/output.mp4");
     expect(step.envVars).toHaveProperty("OUTPUT_PATH");
@@ -81,7 +81,7 @@ describe("STEPS configuration", () => {
 
   it("remotion-renderer step should have correct env vars including TRANSCRIPT_PATH, SILENCE_CUTS_PATH, FINALIZER_INFO_PATH", () => {
     const step = STEPS[3];
-    expect(step.image).toBe("video-pipeline-remotion-renderer");
+    expect(step.image).toBe("reel-factory-remotion-renderer");
     expect(step.envVars).toHaveProperty("INPUT_PATH");
     expect(step.envVars.INPUT_PATH).toContain("/ffmpeg-finalizer/output.mp4");
     expect(step.envVars).toHaveProperty("OUTPUT_PATH");
@@ -97,7 +97,7 @@ describe("STEPS configuration", () => {
 
   it("srt-exporter step should have correct env vars including TRANSCRIPT_PATH and SILENCE_CUTS_PATH", () => {
     const step = STEPS[4];
-    expect(step.image).toBe("video-pipeline-srt-exporter");
+    expect(step.image).toBe("reel-factory-srt-exporter");
     expect(step.envVars).toHaveProperty("INPUT_PATH");
     expect(step.envVars.INPUT_PATH).toContain("/input/video.mp4");
     expect(step.envVars).toHaveProperty("OUTPUT_PATH");
@@ -210,7 +210,7 @@ describe("runPipeline", () => {
 
     // Check that the first call was for whisper
     const firstCall = docker.createContainer.mock.calls[0][0];
-    expect(firstCall.Image).toBe("video-pipeline-whisper");
+    expect(firstCall.Image).toBe("reel-factory-whisper");
     expect(firstCall.Env).toBeDefined();
     expect(firstCall.Env.length).toBeGreaterThan(0);
     // Verify that jobId was substituted in env vars

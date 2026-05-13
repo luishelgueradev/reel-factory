@@ -141,6 +141,8 @@ export interface RunPipelineOptions {
   pipelineNetwork?: string;
   /** Override the Docker instance (for testing) */
   docker?: Dockerode;
+  /** Callback invoked before each pipeline step starts */
+  onStepStart?: (stepName: string, stepIndex: number, totalSteps: number) => Promise<void>;
 }
 
 /**
@@ -167,8 +169,14 @@ export async function runPipeline(
   const artifacts: Record<string, string[]> = {};
   const pipelineStartTime = Date.now();
 
-  for (const step of STEPS) {
+  for (let stepIndex = 0; stepIndex < STEPS.length; stepIndex++) {
+    const step = STEPS[stepIndex];
     const envVars = resolveEnvVars(step, jobId);
+
+    // Notify progress before starting each step
+    if (options.onStepStart) {
+      await options.onStepStart(step.name, stepIndex, STEPS.length);
+    }
 
     // Convert envVars to Docker format (array of KEY=VALUE strings)
     const envArray = Object.entries(envVars).map(

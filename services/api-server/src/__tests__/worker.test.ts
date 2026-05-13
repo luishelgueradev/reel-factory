@@ -1,13 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Job } from "bullmq";
 
-// Mocks must be declared before imports that use them
-const mockRunPipeline = vi.fn();
-const mockUpdateJobProgress = vi.fn();
-const mockCreateQueueConnection = vi.fn();
-
+// Self-contained mock factories — no references to external variables
+// (vi.mock factories are hoisted and executed before any const declarations)
 vi.mock("../orchestrator.js", () => ({
-  runPipeline: mockRunPipeline,
+  runPipeline: vi.fn().mockResolvedValue({
+    jobId: "default",
+    steps: [],
+    artifacts: {},
+    totalDurationSeconds: 0,
+    videoUrl: "/artifacts/default/output.mp4",
+  }),
   PipelineStepError: class PipelineStepError extends Error {
     public readonly stepName: string;
     public readonly exitCode: number;
@@ -27,16 +30,15 @@ vi.mock("../orchestrator.js", () => ({
     { name: "remotion-renderer", image: "test", envVars: {} },
     { name: "srt-exporter", image: "test", envVars: {} },
   ],
-  PipelineResult: class PipelineResult {},
 }));
 
 vi.mock("../progress.js", () => ({
-  updateJobProgress: mockUpdateJobProgress,
+  updateJobProgress: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../queue.js", () => ({
   QUEUE_NAME: "video-processing",
-  createQueueConnection: mockCreateQueueConnection,
+  createQueueConnection: vi.fn().mockReturnValue({}),
   closeQueueConnection: vi.fn(),
 }));
 
@@ -44,24 +46,25 @@ vi.mock("../constants.js", () => ({
   PIPELINE_DATA_DIR: "/tmp/test-pipeline",
 }));
 
-// Mock fs/promises for directory cleanup
-const mockFsRm = vi.fn();
 vi.mock("fs/promises", () => ({
   default: {
-    rm: mockFsRm,
+    rm: vi.fn().mockResolvedValue(undefined),
   },
-  rm: mockFsRm,
 }));
 
 // Import after mocks
-import { processJob } from "../worker.js";
+import { runPipeline } from "../orchestrator.js";
 import { PipelineStepError } from "../orchestrator.js";
+import { updateJobProgress } from "../progress.js";
+import { processJob } from "../worker.js";
+import fs from "fs/promises";
 
 describe("BullMQ Worker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUpdateJobProgress.mockResolvedValue(undefined);
-    mockFsRm.mockResolvedValue(undefined);
+    // Re-set default resolved values after clearAllMocks
+    vi.mocked(updateJobProgress).mockResolvedValue(undefined);
+    vi.mocked(fs.rm).mockResolvedValue(undefined);
   });
 
   // Test 1: Worker module exports startWorker() and stopWorker()
@@ -80,7 +83,7 @@ describe("BullMQ Worker", () => {
   // Test 2: Job processor calls runPipeline() with correct jobId and updates progress before each step
   describe("processJob", () => {
     it("should call runPipeline with jobId and onStepStart callback", async () => {
-      mockRunPipeline.mockResolvedValue({
+      vi.mocked(runPipeline).mockResolvedValue({
         jobId: "test-job-1",
         steps: [],
         artifacts: {},
@@ -96,14 +99,13 @@ describe("BullMQ Worker", () => {
 
       await processJob(mockJob);
 
-      expect(mockRunPipeline).toHaveBeenCalledWith("test-job-1", expect.objectContaining({
+      expect(runPipeline).toHaveBeenCalledWith("test-job-1", expect.objectContaining({
         onStepStart: expect.any(Function),
       }));
     });
 
     it("should update progress before each pipeline step via onStepStart callback", async () => {
-      const capturedOnStepStart: Array<(name: string, idx: number, total: number) => Promise<void>> = [];
-      mockRunPipeline.mockImplementation(async (_jobId: string, options?: { onStepStart?: (stepName: string, stepIndex: number, totalSteps: number) => Promise<void> }) => {
+      vi.mocked(runPipeline).mockImplementation(async (_jobId: string, options?: { onStepStart?: (stepName: string, stepIndex: number, totalSteps: number) => Promise<void> }) => {
         if (options?.onStepStart) {
           // Simulate orchestrator calling onStepStart for each of the 5 steps
           const steps = ["whisper", "silence-cutter", "ffmpeg-finalizer", "remotion-renderer", "srt-exporter"];
@@ -129,16 +131,14 @@ describe("BullMQ Worker", () => {
       await processJob(mockJob);
 
       // Should have called updateJobProgress for each of the 5 steps (active) + 1 completed = 6
-      // Active calls: 5 (one per step)
-      // Completed call: 1
-      expect(mockUpdateJobProgress).toHaveBeenCalledTimes(6);
+      expect(updateJobProgress).toHaveBeenCalledTimes(6);
       // Verify the first step progress update
-      expect(mockUpdateJobProgress).toHaveBeenNthCalledWith(1, "test-job-2", {
+      expect(updateJobProgress).toHaveBeenNthCalledWith(1, "test-job-2", {
         status: "active",
         currentStep: "whisper",
       });
       // Verify the completed call
-      expect(mockUpdateJobProgress).toHaveBeenNthCalledWith(6, "test-job-2", {
+      expect(updateJobProgress).toHaveBeenNthCalledWith(6, "test-job-2", {
         status: "completed",
         currentStep: "completed",
       });
@@ -148,7 +148,7 @@ describe("BullMQ Worker", () => {
   // Test 3: Successful job marks status "completed" in Redis progress
   describe("successful job completion", () => {
     it("should mark status as completed in Redis when runPipeline succeeds", async () => {
-      mockRunPipeline.mockResolvedValue({
+      vi.mocked(runPipeline).mockResolvedValue({
         jobId: "test-job-3",
         steps: [{ name: "whisper", durationSeconds: 5, status: "success" }],
         artifacts: {},
@@ -165,7 +165,7 @@ describe("BullMQ Worker", () => {
       await processJob(mockJob);
 
       // Last updateJobProgress call should be "completed"
-      const lastCall = mockUpdateJobProgress.mock.calls[mockUpdateJobProgress.mock.calls.length - 1];
+      const lastCall = vi.mocked(updateJobProgress).mock.calls[vi.mocked(updateJobProgress).mock.calls.length - 1];
       expect(lastCall).toEqual(["test-job-3", { status: "completed", currentStep: "completed" }]);
     });
   });
@@ -173,7 +173,7 @@ describe("BullMQ Worker", () => {
   // Test 4: Failed job (PipelineStepError) marks status "failed" with error details in Redis
   describe("failed job handling", () => {
     it("should mark status as failed with error details when PipelineStepError is thrown", async () => {
-      mockRunPipeline.mockRejectedValue(new PipelineStepError("whisper", 1, "Transcription failed"));
+      vi.mocked(runPipeline).mockRejectedValue(new PipelineStepError("whisper", 1, "Transcription failed"));
 
       const mockJob = {
         id: "bullmq-job-4",
@@ -183,7 +183,7 @@ describe("BullMQ Worker", () => {
 
       await expect(processJob(mockJob)).rejects.toThrow();
 
-      expect(mockUpdateJobProgress).toHaveBeenCalledWith("test-job-4", {
+      expect(updateJobProgress).toHaveBeenCalledWith("test-job-4", {
         status: "failed",
         currentStep: "whisper",
         error: "Step whisper failed (exit 1): Transcription failed",
@@ -191,7 +191,7 @@ describe("BullMQ Worker", () => {
     });
 
     it("should mark status as failed with unknown step for non-PipelineStepError", async () => {
-      mockRunPipeline.mockRejectedValue(new Error("Something went wrong"));
+      vi.mocked(runPipeline).mockRejectedValue(new Error("Something went wrong"));
 
       const mockJob = {
         id: "bullmq-job-5",
@@ -201,7 +201,7 @@ describe("BullMQ Worker", () => {
 
       await expect(processJob(mockJob)).rejects.toThrow();
 
-      expect(mockUpdateJobProgress).toHaveBeenCalledWith("test-job-5", {
+      expect(updateJobProgress).toHaveBeenCalledWith("test-job-5", {
         status: "failed",
         currentStep: "unknown",
         error: "Something went wrong",
@@ -212,7 +212,7 @@ describe("BullMQ Worker", () => {
   // Test 5: Progress hash includes currentStep, status, and updatedAt after each pipeline step
   describe("progress tracking details", () => {
     it("should include currentStep, status in progress updates", async () => {
-      mockRunPipeline.mockImplementation(async (_jobId: string, options?: { onStepStart?: (stepName: string, stepIndex: number, totalSteps: number) => Promise<void> }) => {
+      vi.mocked(runPipeline).mockImplementation(async (_jobId: string, options?: { onStepStart?: (stepName: string, stepIndex: number, totalSteps: number) => Promise<void> }) => {
         if (options?.onStepStart) {
           await options.onStepStart("whisper", 0, 5);
         }
@@ -234,7 +234,7 @@ describe("BullMQ Worker", () => {
       await processJob(mockJob);
 
       // Check that updateJobProgress was called with status and currentStep
-      expect(mockUpdateJobProgress).toHaveBeenCalledWith("test-job-6", {
+      expect(updateJobProgress).toHaveBeenCalledWith("test-job-6", {
         status: "active",
         currentStep: "whisper",
       });
@@ -244,7 +244,7 @@ describe("BullMQ Worker", () => {
     });
 
     it("should update BullMQ job progress with percentage", async () => {
-      mockRunPipeline.mockImplementation(async (_jobId: string, options?: { onStepStart?: (stepName: string, stepIndex: number, totalSteps: number) => Promise<void> }) => {
+      vi.mocked(runPipeline).mockImplementation(async (_jobId: string, options?: { onStepStart?: (stepName: string, stepIndex: number, totalSteps: number) => Promise<void> }) => {
         if (options?.onStepStart) {
           await options.onStepStart("silence-cutter", 1, 5);
         }
@@ -272,7 +272,7 @@ describe("BullMQ Worker", () => {
 
   describe("directory cleanup on retry", () => {
     it("should clean up step output directories before running pipeline", async () => {
-      mockRunPipeline.mockResolvedValue({
+      vi.mocked(runPipeline).mockResolvedValue({
         jobId: "test-job-8",
         steps: [],
         artifacts: {},
@@ -289,13 +289,14 @@ describe("BullMQ Worker", () => {
       await processJob(mockJob);
 
       // Should attempt to remove all 5 step directories
-      expect(mockFsRm).toHaveBeenCalledTimes(5);
+      const mockedRm = vi.mocked(fs.rm);
+      expect(mockedRm).toHaveBeenCalledTimes(5);
       // Verify step directory paths
-      expect(mockFsRm).toHaveBeenCalledWith(
+      expect(mockedRm).toHaveBeenCalledWith(
         "/tmp/test-pipeline/test-job-8/whisper",
         expect.objectContaining({ recursive: true, force: true })
       );
-      expect(mockFsRm).toHaveBeenCalledWith(
+      expect(mockedRm).toHaveBeenCalledWith(
         "/tmp/test-pipeline/test-job-8/silence-cutter",
         expect.objectContaining({ recursive: true, force: true })
       );

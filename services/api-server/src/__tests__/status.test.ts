@@ -87,37 +87,7 @@ describe("GET /status/:jobId - status endpoint", () => {
     expect([400, 404]).toContain(response.status);
   });
 
-  // ── 200 with correct StatusResponse shape for active job (per D-01) ──
-
-  it("should return 200 with correct StatusResponse shape for an active job", async () => {
-    const jobId = uuidv4();
-    vi.mocked(getJobStatus).mockResolvedValue({
-      jobId,
-      status: "active",
-      currentStep: "silence-cutter",
-      progress: 40,
-      stepInfo: "2/5",
-      steps: ["whisper"],
-      startedAt: "2026-05-13T12:00:00.000Z",
-      error: undefined,
-    });
-    vi.mocked(videoQueue.getJob).mockResolvedValue(null);
-
-    const response = await request(app).get(`/status/${jobId}`);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({
-      jobId,
-      status: "active",
-      currentStep: "silence-cutter",
-      progress: 40,
-      stepInfo: "2/5",
-      steps: ["whisper"],
-      startedAt: "2026-05-13T12:00:00.000Z",
-    });
-  });
-
-  // ── 200 with queued job details (per D-01) ──
+  // ── 200 with queued job response ──
 
   it("should return 200 with queued status for a queued job", async () => {
     const jobId = uuidv4();
@@ -147,13 +117,42 @@ describe("GET /status/:jobId - status endpoint", () => {
     });
   });
 
-  // ── 200 with completed job details ──
+  // ── 200 with active job response at step 2 ──
 
-  it("should return 200 with completed status for a completed job", async () => {
+  it("should return 200 with active response at step 2 with progress=40, stepInfo=2/5", async () => {
     const jobId = uuidv4();
     vi.mocked(getJobStatus).mockResolvedValue({
       jobId,
-      status: "queued",
+      status: "active",
+      currentStep: "silence-cutter",
+      progress: 40,
+      stepInfo: "2/5",
+      steps: ["whisper"],
+      startedAt: "2026-05-13T12:00:00.000Z",
+      error: undefined,
+    });
+    vi.mocked(videoQueue.getJob).mockResolvedValue(null);
+
+    const response = await request(app).get(`/status/${jobId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      jobId,
+      status: "active",
+      currentStep: "silence-cutter",
+      progress: 40,
+      stepInfo: "2/5",
+      steps: ["whisper"],
+    });
+  });
+
+  // ── 200 with completed job response ──
+
+  it("should return 200 with completed status showing progress=100, stepInfo=5/5, all steps", async () => {
+    const jobId = uuidv4();
+    vi.mocked(getJobStatus).mockResolvedValue({
+      jobId,
+      status: "queued", // Redis still says queued, but BullMQ overrides
       currentStep: "completed",
       progress: 100,
       stepInfo: "5/5",
@@ -175,10 +174,38 @@ describe("GET /status/:jobId - status endpoint", () => {
       status: "completed",
       progress: 100,
       stepInfo: "5/5",
+      steps: ["whisper", "silence-cutter", "ffmpeg-finalizer", "remotion-renderer", "srt-exporter"],
     });
   });
 
-  // ── BullMQ job state overrides Redis progress for completed/failed ──
+  // ── 200 with failed job error details ──
+
+  it("should return 200 with failed status and error field populated", async () => {
+    const jobId = uuidv4();
+    vi.mocked(getJobStatus).mockResolvedValue({
+      jobId,
+      status: "failed",
+      currentStep: "whisper",
+      progress: 20,
+      stepInfo: "1/5",
+      steps: [],
+      startedAt: "2026-05-13T12:00:00.000Z",
+      error: "Step whisper failed (exit 1): Transcription failed",
+    });
+    vi.mocked(videoQueue.getJob).mockResolvedValue(null);
+
+    const response = await request(app).get(`/status/${jobId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      jobId,
+      status: "failed",
+      currentStep: "whisper",
+      error: "Step whisper failed (exit 1): Transcription failed",
+    });
+  });
+
+  // ── BullMQ state overrides Redis progress for completed ──
 
   it("should override Redis status with BullMQ completed state", async () => {
     const jobId = uuidv4();
@@ -204,6 +231,8 @@ describe("GET /status/:jobId - status endpoint", () => {
     expect(response.body.status).toBe("completed");
   });
 
+  // ── BullMQ state overrides Redis progress for failed ──
+
   it("should override Redis status with BullMQ failed state", async () => {
     const jobId = uuidv4();
     // Redis says "active" but BullMQ says "failed" — BullMQ wins
@@ -226,33 +255,6 @@ describe("GET /status/:jobId - status endpoint", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.status).toBe("failed");
-  });
-
-  // ── 200 with failed job error details ──
-
-  it("should return 200 with failed status and error details", async () => {
-    const jobId = uuidv4();
-    vi.mocked(getJobStatus).mockResolvedValue({
-      jobId,
-      status: "failed",
-      currentStep: "whisper",
-      progress: 20,
-      stepInfo: "1/5",
-      steps: [],
-      startedAt: "2026-05-13T12:00:00.000Z",
-      error: "Step whisper failed (exit 1): Transcription failed",
-    });
-    vi.mocked(videoQueue.getJob).mockResolvedValue(null);
-
-    const response = await request(app).get(`/status/${jobId}`);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({
-      jobId,
-      status: "failed",
-      currentStep: "whisper",
-      error: "Step whisper failed (exit 1): Transcription failed",
-    });
   });
 
   // ── Progress percentage matches step-index formula (per D-05) ──

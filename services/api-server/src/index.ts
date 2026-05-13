@@ -4,6 +4,7 @@ import { processRouter, UnsupportedMediaTypeError, FileTooLargeError } from "./r
 import { artifactsRouter } from "./routes/artifacts.js";
 import { healthRouter } from "./routes/health.js";
 import { batchRouter } from "./routes/batch.js";
+import { statusRouter } from "./routes/status.js";
 import { startWorker, stopWorker } from "./worker.js";
 import { closeQueueConnection } from "./queue.js";
 
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use(healthRouter);
 app.use(processRouter);
 app.use(batchRouter);
+app.use(statusRouter);
 app.use(artifactsRouter);
 
 // 404 fallback handler

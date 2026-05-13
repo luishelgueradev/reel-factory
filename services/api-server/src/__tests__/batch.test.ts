@@ -224,15 +224,17 @@ describe("GET /batch/:batchId - batch status endpoint", () => {
         updatedAt: "2026-05-13T00:01:00Z",
       });
 
-    // Mock BullMQ getJob to return job data with filename
+    // Mock BullMQ getJob to return job data with filename and getState
     vi.mocked(videoQueue.getJob)
       .mockResolvedValueOnce({
         data: { jobId: jobId1, filename: "clip1.mp4", batchId },
         returnvalue: undefined,
+        getState: vi.fn().mockResolvedValue("completed"),
       } as any)
       .mockResolvedValueOnce({
         data: { jobId: jobId2, filename: "clip2.mp4", batchId },
         returnvalue: undefined,
+        getState: vi.fn().mockResolvedValue("failed"),
       } as any);
 
     const response = await request(app).get(`/batch/${batchId}`);

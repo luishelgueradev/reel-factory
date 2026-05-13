@@ -3,6 +3,7 @@ import multer from "multer";
 import { processRouter, UnsupportedMediaTypeError, FileTooLargeError } from "./routes/process.js";
 import { artifactsRouter } from "./routes/artifacts.js";
 import { healthRouter } from "./routes/health.js";
+import { batchRouter } from "./routes/batch.js";
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 // Mount route handlers — health check first for fast liveness probing
 app.use(healthRouter);
 app.use(processRouter);
+app.use(batchRouter);
 app.use(artifactsRouter);
 
 // 404 fallback handler
@@ -24,6 +26,12 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   // Multer file size limit error (LIMIT_FILE_SIZE)
   if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
     res.status(413).json({ error: "File size exceeds 500MB limit" });
+    return;
+  }
+
+  // Multer file count limit error (LIMIT_FILE_COUNT / LIMIT_UNEXPECTED_FILE) — batch upload exceeding MAX_BATCH_SIZE
+  if (err instanceof multer.MulterError && (err.code === "LIMIT_UNEXPECTED_FILE" || err.code === "LIMIT_FILE_COUNT")) {
+    res.status(413).json({ error: "Too many files in batch" });
     return;
   }
 

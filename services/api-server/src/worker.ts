@@ -4,8 +4,8 @@ import path from "path";
 import { runPipeline, PipelineStepError } from "./orchestrator.js";
 import { STEPS } from "./orchestrator.js";
 import { updateJobProgress } from "./progress.js";
-import { QUEUE_NAME, createQueueConnection, closeQueueConnection } from "./queue.js";
-import { PIPELINE_DATA_DIR } from "./constants.js";
+import { QUEUE_NAME, createQueueConnection } from "./queue.js";
+import { PIPELINE_DATA_DIR, MAX_CONCURRENT_JOBS } from "./constants.js";
 
 /**
  * BullMQ job processor that wraps runPipeline() with per-step progress tracking.
@@ -74,11 +74,9 @@ export async function processJob(job: Job): Promise<void> {
  * Per D-08, default concurrency is 2 (configurable via MAX_CONCURRENT_JOBS env var).
  */
 export function startWorker(): Worker {
-  const concurrency = parseInt(process.env.MAX_CONCURRENT_JOBS || "2", 10);
-
   const worker = new Worker(QUEUE_NAME, processJob, {
     connection: createQueueConnection(),
-    concurrency,
+    concurrency: MAX_CONCURRENT_JOBS,
   });
 
   worker.on("completed", (job) => {
@@ -93,7 +91,7 @@ export function startWorker(): Worker {
     console.error(`Worker error: ${err.message}`);
   });
 
-  console.log(`Worker started with concurrency ${concurrency}`);
+  console.log(`Worker started with concurrency ${MAX_CONCURRENT_JOBS}`);
   return worker;
 }
 

@@ -1,11 +1,6 @@
 import { Queue } from "bullmq";
 import Redis from "ioredis";
-
-/**
- * Redis connection URL. Defaults to localhost for development;
- * in Docker, overridden via REDIS_URL env var (redis://redis:6379).
- */
-const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+import { REDIS_URL } from "./constants.js";
 
 /**
  * BullMQ queue name for video processing jobs.

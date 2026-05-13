@@ -6,14 +6,8 @@ import fs from "fs/promises";
 import { BatchResponseSchema, BatchStatusResponseSchema } from "../schemas/batch.js";
 import { videoQueue } from "../queue.js";
 import { updateJobProgress, addJobToBatch, getBatchJobs, getJobProgress } from "../progress.js";
-import { PIPELINE_DATA_DIR } from "../constants.js";
+import { PIPELINE_DATA_DIR, MAX_BATCH_SIZE } from "../constants.js";
 import { isValidVideoMimetype } from "../schemas/request.js";
-
-/**
- * Maximum number of files per batch request.
- * Configurable via MAX_BATCH_SIZE env var, default 10 per D-10.
- */
-const MAX_BATCH_SIZE = parseInt(process.env.MAX_BATCH_SIZE || "10", 10);
 
 /**
  * Multer disk storage configuration for batch uploads.

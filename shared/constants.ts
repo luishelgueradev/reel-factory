@@ -28,6 +28,7 @@ export const STEP_NAMES = {
   silenceCutter: "silence-cutter",
   remotionRenderer: "remotion-renderer",
   ffmpegFinalizer: "ffmpeg-finalizer",
+  srtExporter: "srt-exporter",
 } as const;
 
 export const EXIT_CODES = {

@@ -16,11 +16,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Whisper Transcription** - Audio extraction and Spanish transcription with word-level timestamps (completed 2026-05-06)
 - [x] **Phase 3: Silence Detection & Removal** - Cross-referenced silence detection and hard-cut removal preserving A/V sync (completed 2026-05-11)
 - [x] **Phase 4: 9:16 Vertical Output** - FFmpeg finalizer that crops and encodes vertical social video (completed 2026-05-11)
-- [ ] **Phase 5: Remotion + Animated Subtitles** - Word-by-word TikTok-style subtitles burned into video
+- [x] **Phase 5: Remotion + Animated Subtitles** - Word-by-word TikTok-style subtitles burned into video (completed 2026-05-11)
 - [x] **Phase 6: Animated Intros & Outros** - Parameterized Remotion template sequences at video start/end (completed 2026-05-10)
-- [ ] **Phase 7: Visual Cuts & Zooms** - Automatic zoom on emphasis and visual jump-cut transitions
+- [x] **Phase 7: Visual Cuts & Zooms** - Automatic zoom on emphasis and visual jump-cut transitions (completed 2026-05-12)
 - [ ] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video (completed 2026-05-12)
-- [ ] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing
+- [x] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing (completed 2026-05-13)
 - [x] **Phase 10: Async Batch + Orchestrator** - BullMQ queue, Redis, and pipeline orchestrator for batch jobs (completed 2026-05-13)
 - [ ] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId}
 
@@ -69,12 +69,13 @@ Plans:
   2. Silent sections are removed with hard cuts (no transition effects between remaining segments)
   3. Audio and video remain perfectly synchronized after all silence cuts — no visible or audible drift
   4. A JSON cut list artifact is produced documenting every silence removal with timestamps and durations
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
 - [x] 03-01-PLAN.md — Container infrastructure + silencedetect module + cross-reference engine + silence-cuts schema (SILC-01, SILC-04)
 - [x] 03-02-PLAN.md — Hard-cut video assembly with A/V sync + main.py pipeline entry point (SILC-02, SILC-03)
 - [x] 03-03-PLAN.md — Validation module + unit tests + E2E Docker test (SILC-01, SILC-02, SILC-03, SILC-04)
+- [x] 03-06-PLAN.md — [GAP CLOSURE] Fix unit test import errors
 
 ### Phase 4: 9:16 Vertical Output
 **Goal**: Video output is rendered in 9:16 vertical format with center-crop reframing optimized for social media
@@ -99,7 +100,7 @@ Plans:
   1. Output video has subtitles that animate word-by-word, appearing in sync with the speaker's voice
   2. The currently spoken word is visually highlighted TikTok-style (stands out from surrounding words)
   3. Subtitle timing matches audio with no visible lag — words highlight precisely when spoken
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 Plans:
 - [x] 05-01-PLAN.md — Docker infrastructure + pipeline reordering (D-05, D-07, D-12, SUBT-01, SUBT-03)
@@ -107,6 +108,7 @@ Plans:
 - [x] 05-03-PLAN.md — Validation module + E2E Docker test (SUBT-01, SUBT-02, SUBT-03)
 - [x] 05-04-PLAN.md — [GAP CLOSURE] Fix double-remap bug: detection logic + auto-skip in transcriptToCaptionPages (SUBT-02, SUBT-03)
 - [x] 05-05-PLAN.md — [GAP CLOSURE] Pipeline config fix + E2E test standalone + defensive validation (SUBT-02, SUBT-03)
+- [x] 05-06-PLAN.md — [GAP CLOSURE] Remove SILENCE_CUTS_PATH from remotion-renderer
 
 ### Phase 6: Subtitle Enhancements, Titles & Web Config
 **Goal**: Configurable subtitle styles (4 layout modes), timed title overlays, and a web-based Remotion Studio for live preview and configuration — all driven by pipeline-config.json
@@ -199,13 +201,12 @@ Plans:
   1. GET /status/{jobId} returns which pipeline step is currently executing (transcribing, removing silence, rendering, etc.)
   2. Progress response includes current step name and completion percentage where available
   3. Status updates reflect actual step transitions — not stuck on a stale step name
-**Plans**: 4 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] 11-01: Progress event schema (step name, percentage, timestamp)
-- [ ] 11-02: Orchestrator step-transition progress reporting to Redis
-- [ ] 11-03: GET /status/{jobId} endpoint implementation
-- [ ] 11-04: End-to-end progress test — submit job, poll status, verify step transitions
+- [ ] 11-01-PLAN.md — Progress data layer: extend progress.ts with completed steps, progress %, stepInfo, and status Zod schema (PROG-01, PROG-02)
+- [ ] 11-02-PLAN.md — Status endpoint: GET /status/:jobId route, POST /process progress extension, router mounting (PROG-01, PROG-02)
+- [ ] 11-03-PLAN.md — E2E validation: comprehensive status endpoint tests and progress flow simulation (PROG-01, PROG-02)
 
 ## Progress
 
@@ -216,12 +217,12 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Pipeline Infrastructure | 4/4 | Complete    | 2026-05-05 |
 | 2. Whisper Transcription | 3/3 | Complete | 2026-05-06 |
-| 3. Silence Detection & Removal | 4/3 | Complete | 2026-05-11 |
+| 3. Silence Detection & Removal | 4/4 | Complete | 2026-05-11 |
 | 4. 9:16 Vertical Output | 3/3 | Complete | 2026-05-11 |
-| 5. Remotion + Animated Subtitles | 0/3 | Planned | - |
+| 5. Remotion + Animated Subtitles | 5/5 | Complete | 2026-05-11 |
 | 6. Animated Intros & Outros | 5/5 | Complete    | 2026-05-10 |
-| 7. Visual Cuts & Zooms | 0/5 | Not started | - |
+| 7. Visual Cuts & Zooms | 7/7 | Complete | 2026-05-12 |
 | 8. SRT/VTT Subtitle Export | 2/2 | Complete | 2026-05-12 |
-| 9. Synchronous API | 0/5 | Not started | - |
+| 9. Synchronous API | 3/3 | Complete | 2026-05-13 |
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 0/4 | Not started | - |

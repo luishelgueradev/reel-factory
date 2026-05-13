@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 7: Visual Cuts & Zooms** - Automatic zoom on emphasis and visual jump-cut transitions
 - [ ] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video (completed 2026-05-12)
 - [ ] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing
-- [ ] **Phase 10: Async Batch + Orchestrator** - BullMQ queue, Redis, and pipeline orchestrator for batch jobs
+- [x] **Phase 10: Async Batch + Orchestrator** - BullMQ queue, Redis, and pipeline orchestrator for batch jobs (completed 2026-05-13)
 - [ ] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId}
 
 ## Phase Details
@@ -183,13 +183,13 @@ Plans:
   1. POST /batch accepts multiple video files and returns unique job IDs for each
   2. BullMQ + Redis job queue manages concurrent processing with configurable rate limiting — no resource contention crashes
   3. Pipeline orchestrator executes the full step sequence per job, starting and stopping containers in order
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 10-01-PLAN.md — Redis + BullMQ queue infrastructure and batch schemas
-- [ ] 10-02-PLAN.md — POST /batch endpoint and GET /batch/{batchId} status
-- [ ] 10-03-PLAN.md — BullMQ worker with progress tracking and retry handling
-- [ ] 10-04-PLAN.md — Concurrency configuration and E2E batch validation
+- [x] 10-01-PLAN.md — Redis + BullMQ queue infrastructure and batch schemas
+- [x] 10-02-PLAN.md — POST /batch endpoint and GET /batch/{batchId} status
+- [x] 10-03-PLAN.md — BullMQ worker with progress tracking and retry handling
+- [x] 10-04-PLAN.md — Concurrency configuration and E2E batch validation
 
 ### Phase 11: Progress Tracking
 **Goal**: Users can check real-time progress of processing jobs per pipeline step
@@ -223,5 +223,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Visual Cuts & Zooms | 0/5 | Not started | - |
 | 8. SRT/VTT Subtitle Export | 2/2 | Complete | 2026-05-12 |
 | 9. Synchronous API | 0/5 | Not started | - |
-| 10. Async Batch + Orchestrator | 0/4 | Planned | - |
+| 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 0/4 | Not started | - |

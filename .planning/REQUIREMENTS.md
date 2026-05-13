@@ -60,9 +60,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### API - Async Batch
 
-- [ ] **APIA-01**: POST /batch endpoint accepts multiple videos and returns job IDs
-- [ ] **APIA-02**: BullMQ + Redis job queue manages concurrent processing with rate limiting
-- [ ] **APIA-03**: Pipeline orchestrator executes step sequence per job, managing container lifecycle
+- [x] **APIA-01**: POST /batch endpoint accepts multiple videos and returns job IDs
+- [x] **APIA-02**: BullMQ + Redis job queue manages concurrent processing with rate limiting
+- [x] **APIA-03**: Pipeline orchestrator executes step sequence per job, managing container lifecycle
 
 ### Progress Tracking
 
@@ -133,9 +133,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIS-01 | Phase 9 | Pending |
 | APIS-02 | Phase 9 | Pending |
 | APIS-03 | Phase 9 | Pending |
-| APIA-01 | Phase 10 | Pending |
-| APIA-02 | Phase 10 | Pending |
-| APIA-03 | Phase 10 | Pending |
+| APIA-01 | Phase 10 | Complete |
+| APIA-02 | Phase 10 | Complete |
+| APIA-03 | Phase 10 | Complete |
 | PROG-01 | Phase 11 | Pending |
 | PROG-02 | Phase 11 | Pending |
 

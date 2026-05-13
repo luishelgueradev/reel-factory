@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-05-13T13:29:36.038Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-05-13T13:40:30.000Z"
 last_activity: 2026-05-13
 progress:
   total_phases: 11
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 11 (progress-tracking) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
+Plan: 3 of 3
+Status: Executing
 Last activity: 2026-05-13
 
 Progress: [██████████] 95%
@@ -67,6 +67,7 @@ Progress: [██████████] 95%
 | Phase 08-srt-vtt-subtitle-export P01 | 13min | 2 tasks | 8 files |
 | Phase 08-srt-vtt-subtitle-export P02 | 7min | 2 tasks | 3 files |
 | Phase 11-progress-tracking P01 | 19min | 2 tasks | 5 files |
+| Phase 11-progress-tracking P02 | 9min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -89,10 +90,12 @@ Recent decisions affecting current work:
 
 - [Phase 08 P02]: srt-exporter runs in parallel with remotion-renderer (both consume transcript + silence-cuts independently per D-12)
 - [Phase 08 P02]: OUTPUT_PATH env var points to output.vtt file; outputDir derived via path.dirname() same as render.ts pattern
-- [Phase ?]: Completed steps stored as comma-joined string in Redis hash per D-02 — Step names don't contain commas, safe to join/split
+- [Phase 11-progress-tracking P02]: Express path normalization handles path traversal as 404 before route handler — more secure than 400
+- [Phase 11-progress-tracking P02]: POST /process uses same onStepStart callback pattern as worker.ts (D-04)
+- [Phase 11-progress-tracking P02]: BullMQ job state overrides Redis progress status for completed/failed (same pattern as batch.ts)
 
 ## Session Continuity
 
-Last session: 2026-05-13T13:29:36.026Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-05-13T13:40:30.000Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None

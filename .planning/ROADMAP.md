@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video (completed 2026-05-12)
 - [x] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing (completed 2026-05-13)
 - [x] **Phase 10: Async Batch + Orchestrator** - BullMQ queue, Redis, and pipeline orchestrator for batch jobs (completed 2026-05-13)
-- [ ] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId}
+- [x] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId} (completed 2026-05-13)
 
 ## Phase Details
 
@@ -201,12 +201,12 @@ Plans:
   1. GET /status/{jobId} returns which pipeline step is currently executing (transcribing, removing silence, rendering, etc.)
   2. Progress response includes current step name and completion percentage where available
   3. Status updates reflect actual step transitions — not stuck on a stale step name
-**Plans:** 2/3 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 11-01-PLAN.md — Progress data layer: extend progress.ts with completed steps, progress %, stepInfo, and status Zod schema (PROG-01, PROG-02)
 - [x] 11-02-PLAN.md — Status endpoint: GET /status/:jobId route, POST /process progress extension, router mounting (PROG-01, PROG-02)
-- [ ] 11-03-PLAN.md — E2E validation: comprehensive status endpoint tests and progress flow simulation (PROG-01, PROG-02)
+- [x] 11-03-PLAN.md — E2E validation: comprehensive status endpoint tests and progress flow simulation (PROG-01, PROG-02)
 
 ## Progress
 
@@ -225,4 +225,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 8. SRT/VTT Subtitle Export | 2/2 | Complete | 2026-05-12 |
 | 9. Synchronous API | 3/3 | Complete | 2026-05-13 |
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
-| 11. Progress Tracking | 2/3 | In Progress |  |
+| 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |

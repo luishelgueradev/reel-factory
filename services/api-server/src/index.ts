@@ -4,6 +4,8 @@ import { processRouter, UnsupportedMediaTypeError, FileTooLargeError } from "./r
 import { artifactsRouter } from "./routes/artifacts.js";
 import { healthRouter } from "./routes/health.js";
 import { batchRouter } from "./routes/batch.js";
+import { startWorker, stopWorker } from "./worker.js";
+import { closeQueueConnection } from "./queue.js";
 
 const app = express();
 
@@ -55,9 +57,27 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 if (process.env.NODE_ENV !== "test") {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`API server listening on port ${PORT}`);
   });
+
+  // Start BullMQ worker alongside the Express server (per D-12)
+  const worker = startWorker();
+
+  // Graceful shutdown on SIGTERM/SIGINT
+  const gracefulShutdown = async () => {
+    console.log("Shutting down...");
+    await stopWorker(worker);
+    await closeQueueConnection();
+    server.close(() => {
+      process.exit(0);
+    });
+    // Force exit after 10s if server.close doesn't complete
+    setTimeout(() => process.exit(1), 10000);
+  };
+
+  process.on("SIGTERM", gracefulShutdown);
+  process.on("SIGINT", gracefulShutdown);
 }
 
 export { app };

@@ -143,9 +143,33 @@ services:
       retries: 3
       start_period: 30s
 
+  # ═════════════════════════════════════════════════════
+  # Infrastructure
+  # ═════════════════════════════════════════════════════
+
+  # Redis: job queue backing store + progress tracking (Phase 10)
+  # Per D-04: Required by BullMQ and per-job progress hashes
+  # Per D-05: AOF persistence for job durability, LRU eviction for stale data
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pipeline-net
+    restart: unless-stopped
+
   # API Server: exposes processing pipeline via REST API (Phase 9, Plan 03)
   # Per D-01: Express.js container on Node.js 22 with Docker socket for sibling orchestration
   # Per D-06: Serves artifact URLs from shared pipeline volume
+  # Per D-02: BullMQ queue for async batch processing (Phase 10)
   api-server:
     <<: *pipeline-common
     build:
@@ -153,6 +177,8 @@ services:
     depends_on:
       base-node:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     group_add:
       - "1001"
     ports:
@@ -165,6 +191,9 @@ services:
       - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-600000}
       - PIPELINE_NETWORK=${PIPELINE_NETWORK:-reel-factory_pipeline-net}
       - HOST_PIPELINE_DIR=${HOST_PIPELINE_DIR:-/home/luis/proyectos/reel-factory/pipeline}
+      - REDIS_URL=redis://redis:6379
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-2}
+      - MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-10}
       - PORT=3000
       - NODE_ENV=production
 
@@ -216,6 +245,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+volumes:
+  redis-data:
 
 networks:
   pipeline-net:

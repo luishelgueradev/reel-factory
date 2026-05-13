@@ -66,8 +66,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Progress Tracking
 
-- [ ] **PROG-01**: GET /status/{jobId} returns per-step progress (transcribing, removing silence, rendering, etc.)
-- [ ] **PROG-02**: Progress includes current step name and completion percentage where available
+- [x] **PROG-01**: GET /status/{jobId} returns per-step progress (transcribing, removing silence, rendering, etc.)
+- [x] **PROG-02**: Progress includes current step name and completion percentage where available
 
 ## v2 Requirements
 
@@ -136,8 +136,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIA-01 | Phase 10 | Complete |
 | APIA-02 | Phase 10 | Complete |
 | APIA-03 | Phase 10 | Complete |
-| PROG-01 | Phase 11 | Pending |
-| PROG-02 | Phase 11 | Pending |
+| PROG-01 | Phase 11 | Complete |
+| PROG-02 | Phase 11 | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total

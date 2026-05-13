@@ -26,15 +26,17 @@ export const HOST_PIPELINE_DIR = process.env.HOST_PIPELINE_DIR || "/data/pipelin
 /**
  * Maximum number of files per batch request.
  * Per D-10: configurable via MAX_BATCH_SIZE env var, default 10.
+ * NaN from non-numeric env vars coerces to the default.
  */
-export const MAX_BATCH_SIZE = parseInt(process.env.MAX_BATCH_SIZE || "10", 10);
+export const MAX_BATCH_SIZE = Number(parseInt(process.env.MAX_BATCH_SIZE || "10", 10)) || 10;
 
 /**
  * Maximum number of concurrent pipeline jobs processed by the BullMQ worker.
  * Per D-08: configurable via MAX_CONCURRENT_JOBS env var, default 2.
  * Prevents resource contention when processing multiple videos simultaneously.
+ * NaN from non-numeric env vars coerces to the default.
  */
-export const MAX_CONCURRENT_JOBS = parseInt(process.env.MAX_CONCURRENT_JOBS || "2", 10);
+export const MAX_CONCURRENT_JOBS = Number(parseInt(process.env.MAX_CONCURRENT_JOBS || "2", 10)) || 2;
 
 /**
  * Redis connection URL.

@@ -20,17 +20,22 @@ healthRouter.get("/health", async (_req: Request, res: Response) => {
   let queueStatus: string = "disconnected";
 
   // Check Redis connectivity with 5s timeout
+  // Use try/finally to guarantee the per-request connection is always closed
+  let healthRedis: ReturnType<typeof createQueueConnection> | null = null;
   try {
-    const redis = createQueueConnection();
-    const pingPromise = redis.ping();
+    healthRedis = createQueueConnection();
+    const pingPromise = healthRedis.ping();
     const timeoutPromise = new Promise<string>((_, reject) =>
       setTimeout(() => reject(new Error("timeout")), 5000)
     );
     await Promise.race([pingPromise, timeoutPromise]);
     redisStatus = "connected";
-    await redis.quit();
   } catch {
     redisStatus = "disconnected";
+  } finally {
+    if (healthRedis) {
+      try { await healthRedis.quit(); } catch { /* best effort */ }
+    }
   }
 
   // Check BullMQ queue connectivity with 5s timeout

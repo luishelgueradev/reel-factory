@@ -36,13 +36,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Intermediate artifacts from any step are inspectable as files on the shared volume
   4. A new container step can be added to docker-compose.yml and the pipeline sequence without modifying existing step container configurations
   5. FFmpeg --version returns the same pinned version across all containers in the pipeline
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
 - [x] 01-01: Docker Compose project scaffolding with shared volumes, env vars, and directory conventions
 - [x] 01-02: Step contract schema — env vars, exit codes, manifest.json artifact, and documentation
 - [x] 01-03: Base Docker images with pinned FFmpeg + pipeline service chain in Compose
 - [x] 01-04: Smoke test — validate full step contract end-to-end with no-op container
+- [ ] 01-05: [GAP CLOSURE] Pin FFmpeg 7.1.1 in Dockerfiles + restore smoke-test.sh (PIPE-05, PIPE-01–04)
 
 ### Phase 2: Whisper Transcription
 **Goal**: Audio is extracted from MP4 and transcribed with word-level Spanish timestamps — the data foundation for all downstream steps

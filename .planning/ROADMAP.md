@@ -171,9 +171,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — API server scaffolding, Zod schemas, Multer upload, artifact serving (APIS-01, APIS-02)
-- [ ] 09-02-PLAN.md — Pipeline orchestration via Dockerode, POST /process handler, timeout handling (APIS-01, APIS-02, APIS-03)
-- [ ] 09-03-PLAN.md — Docker integration, health endpoint, E2E validation (APIS-01, APIS-02, APIS-03)
+- [x] 09-01-PLAN.md — API server scaffolding, Zod schemas, Multer upload, artifact serving (APIS-01, APIS-02)
+- [x] 09-02-PLAN.md — Pipeline orchestration via Dockerode, POST /process handler, timeout handling (APIS-01, APIS-02, APIS-03)
+- [x] 09-03-PLAN.md — Docker integration, health endpoint, E2E validation (APIS-01, APIS-02, APIS-03)
 
 ### Phase 10: Async Batch + Orchestrator
 **Goal**: Users can submit multiple videos for queued batch processing with concurrent execution and rate limiting

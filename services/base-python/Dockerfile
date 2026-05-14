@@ -1,21 +1,48 @@
-FROM python:3.12-slim AS base
+FROM python:3.12-slim AS builder
+
+ARG FFMPEG_VERSION=7.1.1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        nasm \
+        yasm \
+        libx264-dev \
+        pkg-config \
         curl \
         xz-utils \
         ca-certificates \
-      && curl -L "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz" -o /tmp/ffmpeg.tar.xz \
-      && tar -xf /tmp/ffmpeg.tar.xz -C /tmp \
-      && cp /tmp/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ \
-      && cp /tmp/ffmpeg-master-latest-linux64-gpl/bin/ffprobe /usr/local/bin/ \
-      && chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe \
-      && rm -rf /tmp/ffmpeg* \
-      && apt-get purge -y curl xz-utils \
-      && apt-get autoremove -y \
-      && apt-get clean \
-      && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-RUN ffmpeg -version | head -1 && ffprobe -version | head -1
+RUN curl -sL "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" -o /tmp/ffmpeg.tar.xz \
+    && tar -xf /tmp/ffmpeg.tar.xz -C /tmp \
+    && cd /tmp/ffmpeg-${FFMPEG_VERSION} \
+    && ./configure \
+        --prefix=/usr/local \
+        --enable-gpl \
+        --enable-libx264 \
+        --enable-avfilter \
+        --enable-small \
+        --disable-doc \
+        --disable-htmlpages \
+        --disable-manpages \
+        --disable-podpages \
+        --disable-txtpages \
+    && make -j$(nproc) \
+    && make install \
+    && rm -rf /tmp/ffmpeg*
+
+FROM python:3.12-slim AS base
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libx264-164 \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+COPY --from=builder /usr/local/bin/ffprobe /usr/local/bin/ffprobe
+RUN chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
+
+RUN ffmpeg -version | head -1 && ffmpeg -encoders 2>/dev/null | grep -q libx264
 
 RUN mkdir -p /data/pipeline
 

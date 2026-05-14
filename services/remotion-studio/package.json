@@ -18,8 +18,7 @@
     "@remotion/renderer": "4.0.457",
     "cors": "^2.8.5",
     "express": "^5.2.1",
-    "remotion": "4.0.457",
-
+    "remotion": "4.0.457"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

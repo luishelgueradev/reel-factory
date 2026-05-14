@@ -125,7 +125,7 @@ services:
     build:
       context: ./services/remotion-studio
       additional_contexts:
-        - renderer-src=../remotion-renderer/src
+        - renderer-src=./services/remotion-renderer/src
     depends_on:
       base-node:
         condition: service_completed_successfully

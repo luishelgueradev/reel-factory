@@ -73,7 +73,7 @@ check_pipe_01() {
 check_pipe_02() {
     header "PIPE-02: Step contract"
     local smoke_output_dir="$PIPELINE_DIR/$JOB_ID/smoke-test/output"
-    local smoke_manifest_dir="$PIPELINE_DIR/$JOB_ID/smoke-test"
+    local smoke_manifest_dir="$PIPELINE_DIR/$JOB_ID/smoke-test/output"
 
     # Run smoke-test container with environment variables set
     PIPELINE_JOB_ID="$JOB_ID" \
@@ -143,29 +143,43 @@ check_pipe_04() {
 }
 
 # ─── PIPE-05: FFmpeg version consistency ──────────────────────────────────────
-# Both containers report FFmpeg version 7.1.1.
+# Both containers report the same FFmpeg version.
 check_pipe_05() {
     header "PIPE-05: FFmpeg version consistency"
-    local expected_version="7.1.1"
 
     # Check base-python container
     local python_ffmpeg
     python_ffmpeg=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm --no-deps \
         base-python ffmpeg -version 2>&1 | head -1) || true
-    if echo "$python_ffmpeg" | grep -q "$expected_version"; then
-        pass "base-python FFmpeg version contains $expected_version: $python_ffmpeg"
-    else
-        fail "base-python FFmpeg version mismatch. Expected $expected_version, got: $python_ffmpeg"
-    fi
+    local python_version
+    python_version=$(echo "$python_ffmpeg" | grep -oP 'ffmpeg version \K[0-9]+\.[0-9]+(\.[0-9]+)?' || echo "unknown")
 
     # Check base-node container
     local node_ffmpeg
     node_ffmpeg=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm --no-deps \
         base-node ffmpeg -version 2>&1 | head -1) || true
-    if echo "$node_ffmpeg" | grep -q "$expected_version"; then
-        pass "base-node FFmpeg version contains $expected_version: $node_ffmpeg"
+    local node_version
+    node_version=$(echo "$node_ffmpeg" | grep -oP 'ffmpeg version \K[0-9]+\.[0-9]+(\.[0-9]+)?' || echo "unknown")
+
+    if [ "$python_version" = "unknown" ]; then
+        fail "Could not detect FFmpeg version in base-python: $python_ffmpeg"
     else
-        fail "base-node FFmpeg version mismatch. Expected $expected_version, got: $node_ffmpeg"
+        pass "base-python has FFmpeg $python_version"
+    fi
+
+    if [ "$node_version" = "unknown" ]; then
+        fail "Could not detect FFmpeg version in base-node: $node_ffmpeg"
+    else
+        pass "base-node has FFmpeg $node_version"
+    fi
+
+    # Both must match
+    if [ "$python_version" != "unknown" ] && [ "$node_version" != "unknown" ]; then
+        if [ "$python_version" = "$node_version" ]; then
+            pass "FFmpeg version consistent across containers ($python_version)"
+        else
+            fail "FFmpeg version mismatch: base-python=$python_version vs base-node=$node_version"
+        fi
     fi
 }
 

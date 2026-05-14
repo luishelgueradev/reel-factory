@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-pipeline-infrastructure
 source: 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md
 started: 2026-05-14T00:00:00Z
@@ -57,5 +57,13 @@ skipped: 0
   reason: "User reported: Both containers show ffmpeg version N-124445-g22d06b39ce-20260513 (BtbN nightly), not the pinned 7.1.1. Both Dockerfiles download from 'ffmpeg-master-latest-linux64-gpl.tar.xz' instead of a version-pinned URL. Versions are consistent between containers but not pinned as required."
   severity: major
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: "Original gap closure (commit 26e5841) pinned FFmpeg to 7.1.1 via johnvansickle.com, but commit b7a1426 switched to BtbN/FFmpeg-Builds 'latest' URL because johnvansickle.com returned HTTP 415. BtbN latest provides nightly master builds instead of a version-pinned release. Both containers download from the same URL so consistency is maintained, but the version is not pinned to 7.1.1."
+  artifacts:
+    - path: "services/base-python/Dockerfile"
+      issue: "Downloads BtbN latest nightly (ffmpeg-master-latest-linux64-gpl.tar.xz) instead of version-pinned build"
+    - path: "services/base-node/Dockerfile"
+      issue: "Downloads BtbN latest nightly (ffmpeg-master-latest-linux64-gpl.tar.xz) instead of version-pinned build"
+    - path: ".env.example"
+      issue: "FFMPEG_SOURCE=BtbN-latest does not pin a version"
+  missing:
+    - "Pin FFmpeg to a specific BtbN release tag (e.g., https://github.com/BtbN/FFmpeg-Builds/releases/download/7.1.1/ffmpeg-7.1.1-linux64-gpl.tar.xz) or use a version-specific URL pattern"

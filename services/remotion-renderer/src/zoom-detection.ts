@@ -15,8 +15,8 @@ import {
   areTimestampsAlreadyRemapped,
   type WhisperTranscript,
   type SilenceCutList,
-} from "./captions.js";
-import { type ZoomConfig, DEFAULT_ZOOM_CONFIG } from "./pipeline-config.js";
+} from "./captions";
+import { type ZoomConfig, DEFAULT_ZOOM_CONFIG } from "./pipeline-config";
 
 // ─── ZoomEvent interface ─────────────────────────────────────────────────────
 

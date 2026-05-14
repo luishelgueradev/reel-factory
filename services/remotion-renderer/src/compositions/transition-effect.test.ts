@@ -2,20 +2,20 @@ import { describe, it, expect } from "vitest";
 import {
   computeTransitionEffect,
   buildTransitionEvents,
-} from "./JumpCutTransition.js";
-import type { TransitionEvent } from "./JumpCutTransition.js";
-import { computeZoomScale } from "./ZoomContainer.js";
-import type { ZoomEvent } from "../zoom-detection.js";
-import { computeCombinedTransitionEffect } from "./ZoomContainer.js";
-import type { SilenceCutList } from "./captions.js";
-import type { TransitionConfig } from "./pipeline-config.js";
+} from "./JumpCutTransition";
+import type { TransitionEvent } from "./JumpCutTransition";
+import { computeZoomScale } from "./ZoomContainer";
+import type { ZoomEvent } from "../zoom-detection";
+import { computeCombinedTransitionEffect } from "./ZoomContainer";
+import type { SilenceCutList } from "./captions";
+import type { TransitionConfig } from "./pipeline-config";
 import {
   TRANSITION_PRE_CUT_MS,
   ZOOM_TRANSITION_SCALE,
   CROP_SHIFT_PX,
   DEFAULT_TRANSITION_DURATION_MS,
   ZOOM_RAMP_MS,
-} from "./shared-styles.js";
+} from "./shared-styles";
 
 // ─── computeTransitionEffect tests ────────────────────────────────────────────
 

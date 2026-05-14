@@ -22,16 +22,16 @@ import {
   interpolate,
   Easing,
 } from "remotion";
-import type { SilenceCutList } from "../captions.js";
-import type { TransitionConfig } from "../pipeline-config.js";
+import type { SilenceCutList } from "../captions";
+import type { TransitionConfig } from "../pipeline-config";
 import {
   DEFAULT_TRANSITION_CONFIG,
-} from "../pipeline-config.js";
+} from "../pipeline-config";
 import {
   TRANSITION_PRE_CUT_MS,
   ZOOM_TRANSITION_SCALE,
   CROP_SHIFT_PX,
-} from "./shared-styles.js";
+} from "./shared-styles";
 
 // ─── TransitionEvent interface ──────────────────────────────────────────────
 

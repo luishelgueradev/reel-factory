@@ -14,7 +14,7 @@ import {
   type VisualEffectsConfig,
   type ZoomConfig,
   type TransitionConfig,
-} from "./pipeline-config.js";
+} from "./pipeline-config";
 
 describe("validatePipelineConfig", () => {
   describe("valid configs", () => {

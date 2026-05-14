@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   detectZoomEvents,
-} from "./zoom-detection.js";
-import type { WhisperTranscript, SilenceCutList } from "./captions.js";
-import type { ZoomConfig } from "./pipeline-config.js";
+} from "./zoom-detection";
+import type { WhisperTranscript, SilenceCutList } from "./captions";
+import type { ZoomConfig } from "./pipeline-config";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

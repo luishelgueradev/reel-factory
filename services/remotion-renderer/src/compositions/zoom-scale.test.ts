@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { computeZoomScale } from "./ZoomContainer.js";
-import type { ZoomEvent } from "../zoom-detection.js";
-import { ZOOM_RAMP_MS, DEFAULT_ZOOM_SCALE } from "./shared-styles.js";
+import { computeZoomScale } from "./ZoomContainer";
+import type { ZoomEvent } from "../zoom-detection";
+import { ZOOM_RAMP_MS, DEFAULT_ZOOM_SCALE } from "./shared-styles";
 
 // ─── computeZoomScale tests ────────────────────────────────────────────────
 

@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { computeZoomScale } from "./ZoomContainer.js";
-import { computeTransitionEffect } from "./JumpCutTransition.js";
-import type { ZoomEvent } from "../zoom-detection.js";
-import type { TransitionEvent } from "./JumpCutTransition.js";
-import { ZOOM_RAMP_MS, ZOOM_TRANSITION_SCALE, CROP_SHIFT_PX } from "./shared-styles.js";
+import { computeZoomScale } from "./ZoomContainer";
+import { computeTransitionEffect } from "./JumpCutTransition";
+import type { ZoomEvent } from "../zoom-detection";
+import type { TransitionEvent } from "./JumpCutTransition";
+import { ZOOM_RAMP_MS, ZOOM_TRANSITION_SCALE, CROP_SHIFT_PX } from "./shared-styles";
 
 // ─── Combined zoom + transition scale computation tests ──────────────────────
 //

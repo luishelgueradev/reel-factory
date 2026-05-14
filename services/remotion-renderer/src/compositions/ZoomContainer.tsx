@@ -21,10 +21,10 @@ import {
   interpolate,
   Easing,
 } from "remotion";
-import type { ZoomEvent } from "../zoom-detection.js";
-import type { TransitionEvent } from "./JumpCutTransition.js";
-import { computeTransitionEffect } from "./JumpCutTransition.js";
-import { ZOOM_RAMP_MS } from "./shared-styles.js";
+import type { ZoomEvent } from "../zoom-detection";
+import type { TransitionEvent } from "./JumpCutTransition";
+import { computeTransitionEffect } from "./JumpCutTransition";
+import { ZOOM_RAMP_MS } from "./shared-styles";
 
 // ─── ZoomContainer props ──────────────────────────────────────────────────
 

@@ -167,8 +167,8 @@ const EDITOR_DIST = path.resolve(process.env.EDITOR_DIST || "dist/editor");
 
 app.use("/editor", express.static(EDITOR_DIST));
 
-// SPA fallback: serve index.html for any /editor/* route that doesn't match a static file
-app.get("/editor/*", (_req, res) => {
+// SPA fallback: serve index.html for any /editor route that doesn't match a static file
+app.get("/editor/{*splat}", (_req, res) => {
   const indexHtml = path.join(EDITOR_DIST, "index.html");
   if (fs.existsSync(indexHtml)) {
     res.sendFile(indexHtml);

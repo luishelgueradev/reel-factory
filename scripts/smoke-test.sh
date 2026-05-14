@@ -146,9 +146,10 @@ check_pipe_04() {
 }
 
 # ─── PIPE-05: FFmpeg version consistency ──────────────────────────────────────
-# Both containers report the same FFmpeg version.
+# Both containers report the same FFmpeg version, pinned to 7.1.1.
 check_pipe_05() {
     header "PIPE-05: FFmpeg version consistency"
+    local EXPECTED_VERSION="7.1.1"
 
     # Check base-python container
     local python_ffmpeg
@@ -174,12 +175,21 @@ check_pipe_05() {
         pass "base-node has FFmpeg $node_version"
     fi
 
-    # Both must match
+    # Both must match (consistency)
     if [ -n "$python_version" ] && [ -n "$node_version" ]; then
         if [ "$python_version" = "$node_version" ]; then
             pass "FFmpeg version consistent across containers ($python_version)"
         else
             fail "FFmpeg version mismatch: base-python=$python_version vs base-node=$node_version"
+        fi
+    fi
+
+    # Version must be pinned to expected version (not a nightly build)
+    if [ -n "$python_version" ]; then
+        if echo "$python_version" | grep -q "$EXPECTED_VERSION"; then
+            pass "FFmpeg version is pinned to $EXPECTED_VERSION (base-python: $python_version)"
+        else
+            fail "FFmpeg version not pinned to $EXPECTED_VERSION — got '$python_version' in base-python"
         fi
     fi
 }

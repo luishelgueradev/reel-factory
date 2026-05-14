@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 01-pipeline-infrastructure
-source: 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md
-started: 2026-05-13T12:00:00Z
-updated: 2026-05-13T20:25:00Z
+source: 01-01-SUMMARY.md, 01-02-SUMMARY.md, 01-03-SUMMARY.md, 01-04-SUMMARY.md, 01-05-SUMMARY.md
+started: 2026-05-14T00:00:00Z
+updated: 2026-05-14T02:40:00Z
 ---
 
 ## Current Test
@@ -13,69 +13,49 @@ updated: 2026-05-13T20:25:00Z
 ## Tests
 
 ### 1. Cold Start Smoke Test
-expected: Kill any running containers. Start the application from scratch with docker compose up --build. The base-python and base-node images build successfully, the smoke-test container starts, and docker compose ps shows services running without errors.
+expected: Kill any running containers. Start the application from scratch with `docker compose up --build`. The base-python and base-node images build successfully, and `docker compose ps` shows services running without errors.
 result: pass
 
 ### 2. Shared Volume I/O
 expected: An MP4 file placed in the shared Docker volume is accessible by a processing container via INPUT_PATH environment variable. A container can write output to OUTPUT_PATH on the shared named volume and the file appears on the host.
 result: pass
 
-### 3. Intermediate Artifacts Inspectable
-expected: The smoke-test container writes an intermediate analysis.json artifact that is visible as a file on the shared volume, demonstrating that intermediate outputs from any step are inspectable.
+### 3. Pipeline Extensibility
+expected: A new container step can be added to docker-compose.yml and the pipeline sequence without modifying existing step container configurations. The smoke-test service was added without changes to other services.
 result: pass
 
-### 4. Pipeline Extensibility
-expected: A new container step can be added to docker-compose.yml and the pipeline sequence without modifying existing step container configurations. Adding the smoke-test service required no changes to other services.
-result: pass
-
-### 5. FFmpeg Version Consistency
-expected: FFmpeg --version returns the same pinned version (7.1.1) across all containers in the pipeline (base-python and base-node).
-result: issue
-reported: "both containers show ffmpeg version 7.0.2-static, not the expected 7.1.1. The .env has FFMPEG_VERSION=7.1.1 but the Dockerfiles download from the release tarball URL which yields 7.0.2 - the version env var is not actually used in the download URL"
-severity: major
-
-### 6. Step Contract Validation
+### 4. Step Contract Validation
 expected: The smoke-test container reads INPUT_PATH, copies the input file to OUTPUT_PATH, and writes a manifest.json with step_name, status, timestamp, input_file, output_files, and duration_seconds fields.
 result: pass
 
-### 7. E2E Smoke Test Script
-expected: Running scripts/smoke-test.sh validates all 5 PIPE requirements with pass/fail reporting for each check (shared volume I/O, step contract, manifest generation, extensibility, FFmpeg version consistency).
+### 5. FFmpeg Version Consistency
+expected: FFmpeg --version returns 7.1.1 (the pinned version) across all containers in the pipeline (base-python and base-node). The .env FFMPEG_VERSION matches the actual installed version.
 result: issue
-reported: "scripts/smoke-test.sh does not exist - file referenced in SUMMARY as created but missing from disk"
+reported: "Both containers show ffmpeg version N-124445-g22d06b39ce-20260513 (BtbN nightly), not the pinned 7.1.1. Both Dockerfiles download from 'ffmpeg-master-latest-linux64-gpl.tar.xz' instead of a version-pinned URL. Versions are consistent between containers but not pinned as required."
 severity: major
+
+### 6. E2E Smoke Test Script
+expected: Running `./scripts/smoke-test.sh` validates all 5 PIPE requirements with pass/fail reporting for each check (shared volume I/O, step contract, manifest generation, extensibility, FFmpeg version consistency).
+result: pass
+
+### 7. Intermediate Artifacts Inspectable
+expected: The smoke-test container writes an intermediate analysis.json artifact that is visible as a file on the shared volume, demonstrating that intermediate outputs from any step are inspectable.
+result: pass
 
 ## Summary
 
 total: 7
-passed: 5
-issues: 2
+passed: 6
+issues: 1
 pending: 0
 skipped: 0
 
 ## Gaps
 
-- truth: "FFmpeg --version returns the same pinned version (7.1.1) across all containers"
+- truth: "FFmpeg --version returns 7.1.1 (the pinned version) across all containers"
   status: failed
-  reason: "User reported: both containers show ffmpeg version 7.0.2-static, not the expected 7.1.1. The .env has FFMPEG_VERSION=7.1.1 but the Dockerfiles download from the release tarball URL which yields 7.0.2 - the version env var is not actually used in the download URL"
+  reason: "User reported: Both containers show ffmpeg version N-124445-g22d06b39ce-20260513 (BtbN nightly), not the pinned 7.1.1. Both Dockerfiles download from 'ffmpeg-master-latest-linux64-gpl.tar.xz' instead of a version-pinned URL. Versions are consistent between containers but not pinned as required."
   severity: major
   test: 5
-  root_cause: "Both base-python/Dockerfile and base-node/Dockerfile download FFmpeg from the generic 'release' tarball URL (ffmpeg-release-amd64-static.tar.xz) which always fetches the current release (7.0.2). The FFMPEG_VERSION build arg from .env.example is not referenced in the Dockerfile curl URLs. Commit c5f9a0a mentions 'dynamic FFmpeg path' but the Dockerfiles still use a hardcoded generic URL."
-  artifacts:
-    - path: "services/base-python/Dockerfile"
-      issue: "Downloads from generic release URL without version pinning (line 7)"
-    - path: "services/base-node/Dockerfile"
-      issue: "Downloads from generic release URL without version pinning (line 21)"
-  missing:
-    - "Pin FFmpeg download URL to specific version (7.1.1) or use FFMPEG_VERSION build arg in the curl URL"
-
-- truth: "scripts/smoke-test.sh exists and validates all 5 PIPE requirements"
-  status: failed
-  reason: "User reported: scripts/smoke-test.sh does not exist - file referenced in SUMMARY as created but missing from disk"
-  severity: major
-  test: 7
-  root_cause: "scripts/smoke-test.sh was created in commit 075d728 but deleted in commit c5f9a0a during a bug fix sweep. The 01-04-SUMMARY.md still references it as a deliverable."
-  artifacts:
-    - path: "scripts/smoke-test.sh"
-      issue: "File deleted in commit c5f9a0a, no longer exists on disk"
-  missing:
-    - "Restore scripts/smoke-test.sh or remove reference from SUMMARY and update it to work with current bind-mount setup"
+  artifacts: []
+  missing: []

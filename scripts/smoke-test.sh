@@ -26,6 +26,7 @@ cleanup() {
         rm -rf "$PIPELINE_DIR/$JOB_ID"
         echo "  Removed $PIPELINE_DIR/$JOB_ID"
     fi
+    docker compose -f "$PROJECT_DIR/docker-compose.yml" down --remove-orphans 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -57,10 +58,13 @@ check_pipe_01() {
         fail "Input file NOT found on host at $input_dir/video.mp4"
     fi
 
-    # Verify container can see the same path
+    # Verify container can see the same path via Docker run
     local container_check
-    container_check=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm --no-deps \
-        base-python ls "/data/pipeline/$JOB_ID/input/video.mp4" 2>/dev/null) || true
+    container_check=$(docker run --rm \
+        -v "$PIPELINE_DIR:/data/pipeline" \
+        --entrypoint ls \
+        video-pipeline-base-python:latest \
+        "/data/pipeline/$JOB_ID/input/video.mp4" 2>/dev/null) || true
     if echo "$container_check" | grep -q "video.mp4"; then
         pass "Container can read input file via bind mount"
     else
@@ -73,7 +77,6 @@ check_pipe_01() {
 check_pipe_02() {
     header "PIPE-02: Step contract"
     local smoke_output_dir="$PIPELINE_DIR/$JOB_ID/smoke-test/output"
-    local smoke_manifest_dir="$PIPELINE_DIR/$JOB_ID/smoke-test/output"
 
     # Run smoke-test container with environment variables set
     PIPELINE_JOB_ID="$JOB_ID" \
@@ -89,10 +92,10 @@ check_pipe_02() {
     fi
 
     # Check manifest.json was written
-    if [ -f "$smoke_manifest_dir/manifest.json" ]; then
-        pass "Manifest written at $smoke_manifest_dir/manifest.json"
+    if [ -f "$smoke_output_dir/manifest.json" ]; then
+        pass "Manifest written at $smoke_output_dir/manifest.json"
     else
-        fail "Manifest NOT found at $smoke_manifest_dir/manifest.json"
+        fail "Manifest NOT found at $smoke_output_dir/manifest.json"
     fi
 }
 
@@ -100,7 +103,7 @@ check_pipe_02() {
 # analysis.json exists on host filesystem after step runs.
 check_pipe_03() {
     header "PIPE-03: Intermediate artifacts inspectable"
-    local intermediate_file="$PIPELINE_DIR/$JOB_ID/smoke-test/intermediate/analysis.json"
+    local intermediate_file="$PIPELINE_DIR/$JOB_ID/smoke-test/output/intermediate/analysis.json"
 
     if [ -f "$intermediate_file" ]; then
         pass "Intermediate artifact exists at $intermediate_file"
@@ -128,13 +131,13 @@ check_pipe_04() {
     header "PIPE-04: Pipeline extensibility"
     local compose_file="$PROJECT_DIR/docker-compose.yml"
 
-    if grep -q "^  smoke-test:" "$compose_file"; then
+    if grep -q "smoke-test:" "$compose_file"; then
         pass "smoke-test service defined in docker-compose.yml"
     else
         fail "smoke-test service NOT found in docker-compose.yml"
     fi
 
-    # Also verify the service can be referenced by future steps
+    # Verify the compose file is valid
     if docker compose -f "$compose_file" config --services 2>/dev/null | grep -q "smoke-test"; then
         pass "smoke-test service validated by docker compose config"
     else
@@ -149,32 +152,30 @@ check_pipe_05() {
 
     # Check base-python container
     local python_ffmpeg
-    python_ffmpeg=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm --no-deps \
-        base-python ffmpeg -version 2>&1 | head -1) || true
+    python_ffmpeg=$(docker run --rm video-pipeline-base-python:latest ffmpeg -version 2>&1 | head -1) || true
     local python_version
-    python_version=$(echo "$python_ffmpeg" | grep -oP 'ffmpeg version \K[0-9]+\.[0-9]+(\.[0-9]+)?' || echo "unknown")
+    python_version=$(echo "$python_ffmpeg" | sed -n 's/ffmpeg version \([^ ]*\).*/\1/p')
 
     # Check base-node container
     local node_ffmpeg
-    node_ffmpeg=$(docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm --no-deps \
-        base-node ffmpeg -version 2>&1 | head -1) || true
+    node_ffmpeg=$(docker run --rm video-pipeline-base-node:latest ffmpeg -version 2>&1 | head -1) || true
     local node_version
-    node_version=$(echo "$node_ffmpeg" | grep -oP 'ffmpeg version \K[0-9]+\.[0-9]+(\.[0-9]+)?' || echo "unknown")
+    node_version=$(echo "$node_ffmpeg" | sed -n 's/ffmpeg version \([^ ]*\).*/\1/p')
 
-    if [ "$python_version" = "unknown" ]; then
+    if [ -z "$python_version" ]; then
         fail "Could not detect FFmpeg version in base-python: $python_ffmpeg"
     else
         pass "base-python has FFmpeg $python_version"
     fi
 
-    if [ "$node_version" = "unknown" ]; then
+    if [ -z "$node_version" ]; then
         fail "Could not detect FFmpeg version in base-node: $node_ffmpeg"
     else
         pass "base-node has FFmpeg $node_version"
     fi
 
     # Both must match
-    if [ "$python_version" != "unknown" ] && [ "$node_version" != "unknown" ]; then
+    if [ -n "$python_version" ] && [ -n "$node_version" ]; then
         if [ "$python_version" = "$node_version" ]; then
             pass "FFmpeg version consistent across containers ($python_version)"
         else
@@ -193,7 +194,7 @@ main() {
     # Build images first (ensures latest Dockerfiles are used)
     echo ""
     echo "Building base images..."
-    docker compose -f "$PROJECT_DIR/docker-compose.yml" build base-python base-node 2>&1 | tail -1
+    docker compose -f "$PROJECT_DIR/docker-compose.yml" build base-python base-node 2>&1 | tail -3
 
     check_pipe_01
     check_pipe_02

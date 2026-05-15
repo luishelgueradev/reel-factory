@@ -262,10 +262,8 @@ export function transcriptToCaptionPages(
   for (const page of pages) {
     for (let i = 0; i < page.tokens.length; i++) {
       const token = page.tokens[i];
-      const isSentenceStart = i === 0;
       const isProperNoun = PROPER_NOUNS.has(token.text.trim());
-      if (isProperNoun) continue;
-      if (isSentenceStart) {
+      if (isProperNoun) {
         token.text = token.text.charAt(0).toUpperCase() + token.text.slice(1).toLowerCase();
       } else {
         token.text = token.text.toLowerCase();

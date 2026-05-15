@@ -69,7 +69,7 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
         {videoSrc && <OffthreadVideo src={staticFile(videoSrc)} />}
       </ZoomContainer>
       {/* Subtitles on top of video — not affected by zoom */}
-      <SubtitleLayoutRenderer captionPages={captionPages} config={config} />
+      <SubtitleLayoutRenderer captionPages={captionPages} config={config} totalDurationMs={totalDurationMs} />
       {/* Title overlays on top of subtitles — not affected by zoom */}
       {(titles ?? []).map((title, i) => {
         const fps = 30; // matches composition fps
@@ -119,7 +119,7 @@ export const RemotionRoot: React.FC = () => {
       }}
       calculateMetadata={async ({ props }) => {
         const durationMs = props.totalDurationMs || 10000;
-        const cappedDurationMs = Math.min(durationMs + 500, 300000);
+        const cappedDurationMs = Math.min(durationMs, 7200000);
 
         return {
           durationInFrames: Math.ceil((cappedDurationMs / 1000) * 30),

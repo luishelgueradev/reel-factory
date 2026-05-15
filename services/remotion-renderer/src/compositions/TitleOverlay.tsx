@@ -7,8 +7,8 @@ import {
   delayRender,
   continueRender,
 } from "remotion";
-import type { TitleStyleProps } from "../pipeline-config.js";
-import { loadFont } from "../fonts.js";
+import type { TitleStyleProps } from "../pipeline-config";
+import { loadFont } from "../fonts";
 
 // ─── TitleOverlay: Animated title card with entrance/exit animations ───────
 // Per D-10 (intro/outro title types), D-11 (visual style), D-13 (title/subtitle coexistence)

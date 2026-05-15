@@ -7,15 +7,15 @@ import {
   interpolate,
 } from "remotion";
 import type { TikTokPage } from "@remotion/captions";
-import type { SubtitleConfig } from "../pipeline-config.js";
-import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config.js";
+import type { SubtitleConfig } from "../pipeline-config";
+import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 import {
   FADE_IN_MS,
   FADE_OUT_MS,
   PAGE_OVERLAP_GUARD_MS,
   getPositionStyles,
   getBackgroundHighlightStyle,
-} from "./shared-styles.js";
+} from "./shared-styles";
 
 // ─── CaptionWord ────────────────────────────────────────────────────────────
 
@@ -148,11 +148,13 @@ const CaptionPage: React.FC<{
 export interface TikTokLayoutProps {
   captionPages: TikTokPage[];
   config: SubtitleConfig;
+  totalDurationMs?: number;
 }
 
 export const TikTokLayout: React.FC<TikTokLayoutProps> = ({
   captionPages,
   config,
+  totalDurationMs,
 }) => {
   const { fps } = useVideoConfig();
 
@@ -165,7 +167,10 @@ export const TikTokLayout: React.FC<TikTokLayoutProps> = ({
         const nextPageStartMs = i + 1 < captionPages.length ? captionPages[i + 1].startMs : Infinity;
         const displayEndMs = lastTokenEndMs + FADE_OUT_MS;
         const safeEndMs = Math.min(displayEndMs, nextPageStartMs - PAGE_OVERLAP_GUARD_MS);
-        const durationInFrames = Math.max(1, Math.round((safeEndMs - page.startMs) * (fps / 1000)) + 1);
+        const clampedEndMs = (i === captionPages.length - 1 && totalDurationMs)
+          ? Math.min(safeEndMs, totalDurationMs)
+          : safeEndMs;
+        const durationInFrames = Math.max(1, Math.ceil((clampedEndMs - page.startMs) * (fps / 1000)));
 
         return (
           <Sequence key={i} from={fromFrame} durationInFrames={durationInFrames}>

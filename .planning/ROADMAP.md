@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Remotion + Animated Subtitles** - Word-by-word TikTok-style subtitles burned into video (completed 2026-05-11)
 - [x] **Phase 6: Animated Intros & Outros** - Parameterized Remotion template sequences at video start/end (completed 2026-05-10)
 - [x] **Phase 7: Visual Cuts & Zooms** - Automatic zoom on emphasis and visual jump-cut transitions (completed 2026-05-12)
-- [ ] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video (completed 2026-05-12)
+- [x] **Phase 8: SRT/VTT Subtitle Export** - Sidecar subtitle files generated alongside burned-in video (completed 2026-05-12)
 - [x] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing (completed 2026-05-13)
 - [x] **Phase 10: Async Batch + Orchestrator** - BullMQ queue, Redis, and pipeline orchestrator for batch jobs (completed 2026-05-13)
 - [x] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId} (completed 2026-05-13)
@@ -44,7 +44,7 @@ Plans:
 - [x] 01-03: Base Docker images with pinned FFmpeg + pipeline service chain in Compose
 - [x] 01-04: Smoke test — validate full step contract end-to-end with no-op container
 - [x] 01-05: [GAP CLOSURE] Pin FFmpeg 7.1.1 in Dockerfiles + restore smoke-test.sh (PIPE-05, PIPE-01–04)
-- [ ] 01-06: [GAP CLOSURE] Compile FFmpeg 7.1.1 from source in both base Dockerfiles (PIPE-05)
+- [x] 01-06: [GAP CLOSURE] Compile FFmpeg 7.1.1 from source in both base Dockerfiles (PIPE-05)
 
 ### Phase 2: Whisper Transcription
 **Goal**: Audio is extracted from MP4 and transcribed with word-level Spanish timestamps — the data foundation for all downstream steps
@@ -217,7 +217,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Pipeline Infrastructure | 5/5 | Complete    | 2026-05-05 |
+| 1. Pipeline Infrastructure | 6/6 | Complete    | 2026-05-05 |
 | 2. Whisper Transcription | 3/3 | Complete | 2026-05-06 |
 | 3. Silence Detection & Removal | 4/4 | Complete | 2026-05-11 |
 | 4. 9:16 Vertical Output | 3/3 | Complete | 2026-05-11 |

@@ -5,6 +5,9 @@ import {
 import type { WhisperTranscript, SilenceCutList } from "./captions";
 import type { ZoomConfig } from "./pipeline-config";
 
+/** Config with zooms enabled — needed since default changed to disabled */
+const ZOOMS_ENABLED: ZoomConfig = { enabled: true };
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Create a minimal Whisper transcript with given words */
@@ -38,7 +41,7 @@ describe("detectZoomEvents - Signal 1: Confidence dips", () => {
       { word: "es", start: 2.0, end: 2.2, confidence: 0.3 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(2);
     expect(events[0].startTimeMs).toBe(1000);
     expect(events[0].scale).toBe(1.15);
@@ -51,10 +54,10 @@ describe("detectZoomEvents - Signal 1: Confidence dips", () => {
       { word: "palabra", start: 0.5, end: 0.8, confidence: 0.75 },
     ]);
 
-    const eventsDefault = detectZoomEvents(transcript, null);
+    const eventsDefault = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(eventsDefault).toHaveLength(0);
 
-    const eventsCustom = detectZoomEvents(transcript, null, { confidenceThreshold: 0.8 });
+    const eventsCustom = detectZoomEvents(transcript, null, { ...ZOOMS_ENABLED, confidenceThreshold: 0.8 });
     expect(eventsCustom).toHaveLength(1);
     expect(eventsCustom[0].startTimeMs).toBe(500);
   });
@@ -64,7 +67,7 @@ describe("detectZoomEvents - Signal 1: Confidence dips", () => {
       { word: "test", start: 2.0, end: 2.5, confidence: 0.3 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].durationMs).toBe(500);
   });
@@ -74,7 +77,7 @@ describe("detectZoomEvents - Signal 1: Confidence dips", () => {
       { word: "eh", start: 1.0, end: 1.01, confidence: 0.2 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].durationMs).toBe(300);
   });
@@ -84,7 +87,7 @@ describe("detectZoomEvents - Signal 1: Confidence dips", () => {
       { word: "test", start: 1.0, end: 1.3, confidence: 0.3 },
     ]);
 
-    const events = detectZoomEvents(transcript, null, { maxScale: 1.3 });
+    const events = detectZoomEvents(transcript, null, { ...ZOOMS_ENABLED, maxScale: 1.3 });
     expect(events).toHaveLength(1);
     expect(events[0].scale).toBe(1.3);
   });
@@ -117,7 +120,7 @@ describe("detectZoomEvents - Signal 2: Sentence starts after silence", () => {
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     const mildZoomEvents = events.filter((e) => e.scale < 1.15);
     expect(mildZoomEvents.length).toBeGreaterThanOrEqual(1);
     expect(mildZoomEvents[0].scale).toBeCloseTo(1.15 * 0.87, 2);
@@ -128,7 +131,7 @@ describe("detectZoomEvents - Signal 2: Sentence starts after silence", () => {
       { word: "test", start: 1.0, end: 1.3, confidence: 0.3 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].scale).toBe(1.15);
   });
@@ -146,7 +149,7 @@ describe("detectZoomEvents - Signal 2: Sentence starts after silence", () => {
       cuts: [],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].scale).toBe(1.15);
   });
@@ -174,7 +177,7 @@ describe("detectZoomEvents - Signal 2: Sentence starts after silence", () => {
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     expect(events).toHaveLength(0);
   });
 
@@ -199,7 +202,7 @@ describe("detectZoomEvents - Signal 2: Sentence starts after silence", () => {
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts, { maxScale: 1.3 });
+    const events = detectZoomEvents(transcript, silenceCuts, { ...ZOOMS_ENABLED, maxScale: 1.3 });
     const mildZoomEvents = events.filter((e) => e.scale < 1.3);
     expect(mildZoomEvents.length).toBeGreaterThanOrEqual(1);
     expect(mildZoomEvents[0].scale).toBeCloseTo(1.3 * 0.87, 2);
@@ -215,7 +218,7 @@ describe("detectZoomEvents - Event merging", () => {
       { word: "low2", start: 1.5, end: 1.8, confidence: 0.4 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].startTimeMs).toBe(1000);
     expect(events[0].durationMs).toBeGreaterThanOrEqual(800);
@@ -228,7 +231,7 @@ describe("detectZoomEvents - Event merging", () => {
       { word: "low2", start: 3.0, end: 3.3, confidence: 0.4 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(2);
   });
 
@@ -238,7 +241,7 @@ describe("detectZoomEvents - Event merging", () => {
       { word: "low2", start: 2.0, end: 2.3, confidence: 0.4 },
     ]);
 
-    const events = detectZoomEvents(transcript, null, { mergeGapMs: 1000 });
+    const events = detectZoomEvents(transcript, null, { ...ZOOMS_ENABLED, mergeGapMs: 1000 });
     expect(events).toHaveLength(1);
   });
 
@@ -248,7 +251,7 @@ describe("detectZoomEvents - Event merging", () => {
       { word: "low2", start: 1.5, end: 1.8, confidence: 0.4 },
     ]);
 
-    const events = detectZoomEvents(transcript, null, { mergeGapMs: 100 });
+    const events = detectZoomEvents(transcript, null, { ...ZOOMS_ENABLED, mergeGapMs: 100 });
     expect(events).toHaveLength(2);
   });
 
@@ -274,7 +277,7 @@ describe("detectZoomEvents - Event merging", () => {
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].scale).toBe(1.15);
   });
@@ -294,7 +297,7 @@ describe("detectZoomEvents - Edge cases", () => {
 
   it("returns empty array for empty transcript (no words)", () => {
     const transcript = makeTranscript([]);
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(0);
   });
 
@@ -305,7 +308,7 @@ describe("detectZoomEvents - Edge cases", () => {
       { word: "test", start: 1.5, end: 1.8, confidence: 0.90 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(0);
   });
 
@@ -315,7 +318,7 @@ describe("detectZoomEvents - Edge cases", () => {
       { word: "low1", start: 1.0, end: 1.3, confidence: 0.4 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events.length).toBeGreaterThanOrEqual(2);
     for (let i = 1; i < events.length; i++) {
       expect(events[i].startTimeMs).toBeGreaterThanOrEqual(events[i - 1].startTimeMs);
@@ -327,7 +330,7 @@ describe("detectZoomEvents - Edge cases", () => {
       { word: "low", start: 1.0, end: 1.3, confidence: 0.2 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].scale).toBe(1.15);
   });
@@ -363,7 +366,7 @@ describe("detectZoomEvents - Timestamp remapping", () => {
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].startTimeMs).toBe(5000);
   });
@@ -395,7 +398,7 @@ describe("detectZoomEvents - Timestamp remapping", () => {
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     expect(events[0].startTimeMs).toBe(7000);
   });
@@ -425,7 +428,7 @@ describe("detectZoomEvents - Timestamp remapping", () => {
       ],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     expect(events).toHaveLength(1);
     // Already on cut timeline → no remap → startTimeMs = 500 (original 0.5s)
     expect(events[0].startTimeMs).toBe(500);
@@ -489,7 +492,7 @@ describe("detectZoomEvents - Signal 2 finds all valid words regardless of remapp
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     // With the WR-02 fix (break removed), Signal 2 should find "hello" (380ms)
     // which is in the window [350ms, 850ms]
     const mildZoomEvents = events.filter((e) => e.scale < 1.15);
@@ -524,7 +527,7 @@ describe("detectZoomEvents - Signal 2 finds all valid words regardless of remapp
       }],
     };
 
-    const events = detectZoomEvents(transcript, silenceCuts);
+    const events = detectZoomEvents(transcript, silenceCuts, ZOOMS_ENABLED);
     const mildZoomEvents = events.filter((e) => e.scale < 1.15);
     // "near" at 400ms is within [350ms, 850ms] window after silence boundary at 350ms
     expect(mildZoomEvents.length).toBeGreaterThanOrEqual(1);
@@ -561,7 +564,7 @@ describe("detectZoomEvents - Immutability", () => {
       { word: "b", start: 3.0, end: 3.3, confidence: 0.4 },
     ]);
 
-    const events = detectZoomEvents(transcript, null);
+    const events = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events.length).toBeGreaterThanOrEqual(1);
 
     // Modify the result
@@ -569,7 +572,7 @@ describe("detectZoomEvents - Immutability", () => {
     events[0].scale = 999;
 
     // Re-run detectZoomEvents — should still produce the original scale
-    const events2 = detectZoomEvents(transcript, null);
+    const events2 = detectZoomEvents(transcript, null, ZOOMS_ENABLED);
     expect(events2[0].scale).toBe(originalScale);
   });
 });

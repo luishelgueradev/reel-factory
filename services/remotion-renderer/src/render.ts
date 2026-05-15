@@ -188,9 +188,9 @@ async function main() {
   };
 
   if (pipelineConfig?.visualEffects) {
-    console.log(`  Visual effects: zooms=${pipelineConfig.visualEffects.zooms?.enabled ?? true}, transitions=${pipelineConfig.visualEffects.transitions?.type ?? 'zoom'}`);
+    console.log(`  Visual effects: zooms=${pipelineConfig.visualEffects.zooms?.enabled ?? false}, transitions=${pipelineConfig.visualEffects.transitions?.type ?? 'zoom'}`);
   } else {
-    console.log(`  Visual effects: using defaults (zooms enabled, transitions: zoom)`);
+    console.log(`  Visual effects: using defaults (zooms disabled, transitions: zoom)`);
   }
 
   const outputDir = path.dirname(outputPath);
@@ -347,7 +347,7 @@ async function main() {
       visual_effects: {
         zoom_count: zoomEvents.length,
         transition_count: transitionEvents.length,
-        zoom_enabled: visualEffects.zooms?.enabled ?? true,
+        zoom_enabled: visualEffects.zooms?.enabled ?? false,
         transition_type: visualEffects.transitions?.type ?? "zoom",
         confidence_threshold: visualEffects.zooms?.confidenceThreshold ?? 0.6,
       },

@@ -136,10 +136,15 @@ export const DEFAULT_SUBTITLE_CONFIG: Required<
 
 /** Default ZoomConfig values */
 export const DEFAULT_ZOOM_CONFIG: Required<ZoomConfig> = {
-  enabled: true,
+
+  enabled: false,
+
   confidenceThreshold: 0.6,
+
   maxScale: 1.15,
+
   rampMs: 300,
+
   mergeGapMs: 500,
 };
 

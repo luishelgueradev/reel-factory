@@ -446,7 +446,7 @@ describe("validatePipelineConfig", () => {
 
   describe("visual effects defaults", () => {
     it("DEFAULT_ZOOM_CONFIG has expected values", () => {
-      expect(DEFAULT_ZOOM_CONFIG.enabled).toBe(true);
+      expect(DEFAULT_ZOOM_CONFIG.enabled).toBe(false);
       expect(DEFAULT_ZOOM_CONFIG.confidenceThreshold).toBe(0.6);
       expect(DEFAULT_ZOOM_CONFIG.maxScale).toBe(1.15);
       expect(DEFAULT_ZOOM_CONFIG.rampMs).toBe(300);

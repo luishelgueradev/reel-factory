@@ -1,8 +1,8 @@
 ---
-status: root_cause_found
+status: resolved
 trigger: Words dont sync with audio and progressive drift problem
 created: "2026-05-08"
-updated: "2026-05-08"
+updated: "2026-05-15"
 ---
 
 # Subtitle Sync — Progressive Drift
@@ -18,8 +18,8 @@ updated: "2026-05-08"
 ## Current Focus
 
 - **hypothesis:** CONFIRMED — `remapTimestamps` in `captions.ts` uses `cumulative_shift` incorrectly due to off-by-one in how cumulative_shift is stored vs used
-- **next_action:** apply fix
-- **reasoning_checkpoint:** Root cause identified and verified with concrete examples
+- **next_action:** complete
+- **reasoning_checkpoint:** Root cause identified, fix applied, all 21 tests pass including regression test
 
 ## Evidence
 
@@ -45,12 +45,20 @@ The `remapTimestamps()` function in `services/remotion-renderer/src/captions.ts`
 
 ### Fix
 
-Two possible approaches (option A recommended):
+**Applied: Option A** — Fix `remapTimestamps` to add current cut's duration when timestamp is after its original_end.
 
-**Option A — Fix `remapTimestamps` to add current cut's duration when timestamp is after its original_end:**
-When the binary search finds a cut where `original_start <= time`, also check if `time > cut.original_end`. If so, the full shift at that point is `cumulative_shift + cut.duration`. This preserves backward compatibility with existing silence-cuts.json data.
+The fix was applied in `services/remotion-renderer/src/captions.ts` lines 122-126:
+```typescript
+if (originalTimeSec >= applicableCut.original_end) {
+  return originalTimeMs - Math.round((applicableCut.cumulative_shift + applicableCut.duration) * 1000);
+}
+```
 
-**Option B — Fix `cumulative_shift` generation to include current cut's duration:**
-Change `cross_reference.py` and `main.py` to increment `cumulative_shift` BEFORE storing it in the SilenceCut. This makes `cumulative_shift` represent "total shift at this cut point" rather than "total shift before this cut". But this would require updating the TypeScript side to match, and would be a breaking change for any existing silence-cuts.json files.
+This correctly computes the full shift as `cumulative_shift + cut.duration` when the timestamp falls after a cut's `original_end`, because `cumulative_shift` represents shift from PREVIOUS cuts only.
+
+**Verification:** All 21 unit tests pass, including the regression test `"remaps correctly across multiple cuts without progressive drift (regression)"` which validates the exact drift scenario from the bug report (Cut 1: 3-5s, Cut 2: 10-13s, verifying words at 2s/7s/9s/15s/20s remap correctly).
+
+**File changed:** `services/remotion-renderer/src/captions.ts`
+**Test file:** `services/remotion-renderer/src/captions.test.ts` (regression test added)
 
 ### specialist_hint: typescript

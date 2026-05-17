@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 12 context gathered
-last_updated: "2026-05-17T22:51:02.600Z"
+status: planned
+stopped_at: Phase 12 planned — 2 plans in 2 waves
+last_updated: "2026-05-17T23:30:00.000Z"
 last_activity: 2026-05-17
 progress:
   total_phases: 12
@@ -21,11 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinámico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automáticamente.
-**Current focus:** Phase 11 — progress-tracking
+**Current focus:** Phase 12 — subtitle-preview-lab
 
 ## Current Position
 
-Phase: 12 (subtitle-preview-lab) — PLANNING
+Phase: 12 (subtitle-preview-lab) — PLANNED
+Plan: 0 of 2
+Status: Plans created, ready for execution
 Plan: 0 of 0
 Status: Planning
 Last activity: 2026-05-17

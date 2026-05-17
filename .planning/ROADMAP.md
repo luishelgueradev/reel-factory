@@ -210,10 +210,28 @@ Plans:
 - [x] 11-02-PLAN.md — Status endpoint: GET /status/:jobId route, POST /process progress extension, router mounting (PROG-01, PROG-02)
 - [x] 11-03-PLAN.md — E2E validation: comprehensive status endpoint tests and progress flow simulation (PROG-01, PROG-02)
 
+### Phase 12: Subtitle Preview Lab
+**Goal**: Interactive web page for live subtitle style preview with all tunable parameters, rendering fonts exactly as they appear in the final video output over a sample background
+**Depends on**: Phase 5 (Remotion rendering), Phase 6 (config editor infrastructure)
+**Requirements**: PREV-01, PREV-02, PREV-03
+**Success Criteria** (what must be TRUE):
+  1. A web page at `/preview` shows a 9:16 viewport with a sample video/image background and subtitle text rendered on top
+  2. All 18 available fonts render with the same engine used in production (Remotion's font loading), so preview exactly matches final output
+  3. Every subtitle parameter is adjustable in real-time: layout mode, fontFamily, fontSize, activeColor, inactiveColor, letterSpacing, lineHeight, backgroundHighlight, outlineColor, outlineWidth, position, bottomOffset, pastWordOpacity
+  4. A sample Spanish paragraph cycles through word-by-word highlighting with configurable timing speed, so the user can see how active/past/future words look during playback
+  5. Font grid view shows all 18 fonts simultaneously in a single page with the same sample text, allowing direct visual comparison before selecting one
+  6. Changes to any parameter update the preview instantly without page reload or re-render
+
+### Phase 12 Details
+
+Plans:
+- [ ] 12-01-PLAN.md — Add pastWordOpacity to SubtitleConfig and all 4 layout components, extend StyleControls with lineHeight + pastWordOpacity sliders (PREV-03)
+- [ ] 12-02-PLAN.md — Build /preview SPA with @remotion/player, React Router, textToCaptionPages, font grid, Express routing (PREV-01, PREV-02, PREV-03)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -228,3 +246,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 9. Synchronous API | 3/3 | Complete | 2026-05-13 |
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
+| 12. Subtitle Preview Lab | 0/2 | In progress | — |

@@ -653,22 +653,17 @@ function FontCard({ fontName, onSelect }: { fontName: string; onSelect: (font: s
 | A5 | React Router v7 `BrowserRouter` is compatible with Vite SPA builds and Express static serving | Architecture Patterns | Standard pattern — very low risk. v7 BrowserRouter is backward compatible with v6. |
 | A6 | The existing `SentenceLayout` `PAST_OPACITY = 0.5` hardcode should be replaced with `config.pastWordOpacity ?? 0.4` to match the new default | Architecture Patterns | If wrong, SentenceLayout would have inconsistent behavior |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Sample video selection**
+1. **Sample video selection** — RESOLVED: D-06 specifies a sample MP4 bundled in `public/`. Plan 02 creates a placeholder and documents user-provided replacement.
    - What we know: D-06 specifies a sample MP4 bundled in `public/`. Must be a talking-head clip for subtitle context.
-   - What's unclear: Exact clip, duration, whether to include multiple clips or one.
-   - Recommendation: Use a single 5-second Spanish speaking clip. File should be <5MB for Docker image size. The planner can select a specific clip or generate a placeholder.
+   - Resolution: Single 5-second placeholder, user provides actual clip. Per D-06.
 
-2. **Player composition duration**
-   - What we know: The Player needs `durationInFrames`. With synthetic timestamps, total duration depends on text length.
-   - What's unclear: How to dynamically update duration when textarea content changes.
-   - Recommendation: Calculate `durationInFrames` from the last caption page's `endMs`. When text changes, recalculate and update the Player's `durationInFrames` prop. This triggers a remount.
+2. **Player composition duration** — RESOLVED: Calculate `durationInFrames` from the last caption page's `endMs`. When text changes, recalculate and update Player's `durationInFrames` prop. Per CONTEXT.md D-10 (standard Remotion playback controls).
+   - Resolution: Dynamic `durationInFrames` computed from TikTokPage end time. Per D-10.
 
-3. **Video source when textarea text differs from sample video audio**
-   - What we know: The sample video has its own audio track. The subtitles are synthetic from textarea, not from real transcription.
-   - What's unclear: Should the video play muted, or should audio play while text-based subtitles appear?
-   - Recommendation: Player can be muted by default with `initiallyMuted={true}`. The subtitles are independent of video audio — they're driven by synthetic timestamps from textarea text.
+3. **Video source when textarea text differs from sample video audio** — RESOLVED: Player is muted by default with `initiallyMuted={true}`. Subtitles are driven by synthetic timestamps from textarea text — independent of video audio. Per CONTEXT.md D-10. Additionally, the `rawVideoSrc` prop added in Plan 01 allows bypassing `staticFile()` for browser context.
+   - Resolution: Initially muted, subtitles independent. `rawVideoSrc` ensures video loads via direct URL in Player context.
 
 ## Environment Availability
 

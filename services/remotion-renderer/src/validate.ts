@@ -704,7 +704,7 @@ export function validateFontInfrastructure(outputDir: string): string[] {
       }
 
       // Check that AVAILABLE_FONTS includes expected font names
-      const expectedFonts = ["Inter", "Roboto", "Montserrat", "Oswald", "monospace"];
+      const expectedFonts = ["Inter", "Roboto", "Montserrat", "Oswald", "Poppins", "BebasNeue", "Antonio", "Raleway", "Ubuntu", "Nunito", "SpaceGrotesk", "Rubik", "SourceSans3", "Outfit", "PlayfairDisplay", "LexendDeca", "Signika", "Lato", "monospace"];
       for (const font of expectedFonts) {
         if (!content.includes(`"${font}"`) && !content.includes(`'${font}'`)) {
           errors.push(`D-07: AVAILABLE_FONTS should include "${font}"`);

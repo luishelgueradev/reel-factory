@@ -27,6 +27,7 @@ const BarWord: React.FC<{
   inactiveColor: string;
   outlineColor: string;
   outlineWidth: number;
+  fontFamily?: string;
   letterSpacing?: number;
   lineHeight?: number;
 }> = ({
@@ -38,6 +39,7 @@ const BarWord: React.FC<{
   inactiveColor,
   outlineColor,
   outlineWidth,
+  fontFamily,
   letterSpacing,
   lineHeight,
 }) => {
@@ -50,6 +52,7 @@ const BarWord: React.FC<{
         fontSize,
         color,
         fontWeight: isActive ? 800 : wasActive ? 700 : 600,
+        fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
         lineHeight: lineHeight ?? 1.3,
         WebkitTextStroke: outlineWidth,
@@ -79,6 +82,7 @@ const BarPage: React.FC<{
   const inactiveColor = config.inactiveColor ?? DEFAULT_SUBTITLE_CONFIG.inactiveColor;
   const outlineColor = config.outlineColor ?? DEFAULT_SUBTITLE_CONFIG.outlineColor;
   const outlineWidth = config.outlineWidth ?? DEFAULT_SUBTITLE_CONFIG.outlineWidth;
+  const fontFamily = config.fontFamily;
   const position = config.position ?? DEFAULT_SUBTITLE_CONFIG.position;
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
@@ -133,6 +137,7 @@ const BarPage: React.FC<{
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         opacity,
+        fontFamily: fontFamily || undefined,
       }}
     >
       <div
@@ -158,6 +163,7 @@ const BarPage: React.FC<{
               inactiveColor={inactiveColor}
               outlineColor={outlineColor}
               outlineWidth={outlineWidth}
+              fontFamily={fontFamily}
               letterSpacing={letterSpacing}
               lineHeight={lineHeight}
             />

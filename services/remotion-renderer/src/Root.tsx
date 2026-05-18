@@ -1,5 +1,5 @@
 import React from "react";
-import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile, Sequence } from "remotion";
+import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile, Sequence, delayRender, continueRender } from "remotion";
 import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher";
 import { TitleOverlay } from "./compositions/TitleOverlay";
 import { ZoomContainer } from "./compositions/ZoomContainer";
@@ -8,6 +8,7 @@ import type { TikTokPage } from "@remotion/captions";
 import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
 import type { ZoomEvent } from "./zoom-detection";
+import { loadFont } from "./fonts";
 
 export interface RemotionProps {
   videoSrc: string;
@@ -57,6 +58,16 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
     lineHeight: subtitleConfig?.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight,
     bottomOffset: subtitleConfig?.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset,
   };
+
+  // Load Google Font for subtitles — delay render until font is available (D-07, T-06-07)
+  const fontFamily = config.fontFamily || "Inter";
+  React.useEffect(() => {
+    if (fontFamily === "monospace" || fontFamily === "") return;
+    const handle = delayRender(`Loading subtitle font: ${fontFamily}`);
+    loadFont(fontFamily)
+      .then(() => continueRender(handle))
+      .catch(() => continueRender(handle));
+  }, [fontFamily]);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>

@@ -102,6 +102,7 @@ const SentencePage: React.FC<{
   const inactiveColor = config.inactiveColor ?? DEFAULT_SUBTITLE_CONFIG.inactiveColor;
   const outlineColor = config.outlineColor ?? DEFAULT_SUBTITLE_CONFIG.outlineColor;
   const outlineWidth = config.outlineWidth ?? DEFAULT_SUBTITLE_CONFIG.outlineWidth;
+  const fontFamily = config.fontFamily;
   const position = config.position ?? DEFAULT_SUBTITLE_CONFIG.position;
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
@@ -123,6 +124,11 @@ const SentencePage: React.FC<{
 
   const positionStyles = getPositionStyles(position, bottomOffset);
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
+  const sentenceDefaultBg = !config.backgroundHighlight?.enabled
+    ? { backgroundColor: "rgba(0, 0, 0, 0.6)", padding: "8px 16px", borderRadius: "8px" }
+    : {};
+
+  const PAST_OPACITY = 0.5;
 
   return (
     <div
@@ -131,6 +137,11 @@ const SentencePage: React.FC<{
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         opacity,
+        fontFamily: fontFamily || undefined,
+        textRendering: "geometricPrecision",
+        WebkitFontSmoothing: "antialiased",
+        MozOsxFontSmoothing: "grayscale",
+        ...sentenceDefaultBg,
         ...bgHighlightStyles,
       }}
     >
@@ -138,13 +149,12 @@ const SentencePage: React.FC<{
         const isTokenActive = i === currentTokenIdxInSentence;
         const isTokenPast = i < currentTokenIdxInSentence;
 
-        // In sentence mode, we highlight the full current sentence brighter
-        // and individual tokens within the current sentence get active/inactive treatment
         const color = isTokenActive
           ? activeColor
           : isTokenPast
-            ? activeColor  // Past tokens in current sentence stay highlighted
+            ? inactiveColor
             : inactiveColor;
+        const wordOpacity = isTokenPast ? PAST_OPACITY : 1;
 
         return (
           <span
@@ -153,14 +163,17 @@ const SentencePage: React.FC<{
               display: "inline-block",
               fontSize,
               color,
-              fontWeight: isTokenActive ? 800 : 700,
+              opacity: wordOpacity,
+              fontWeight: 700,
+              fontFamily: fontFamily || undefined,
               letterSpacing: letterSpacing ?? "-0.02em",
               lineHeight: lineHeight ?? 1.3,
               WebkitTextStroke: outlineWidth,
               WebkitTextStrokeColor: outlineColor,
               paintOrder: "stroke fill",
-              padding: "0 2px",
+              padding: "0 4px",
               whiteSpace: "pre-wrap",
+              willChange: "opacity",
             }}
           >
             {token.text}
@@ -211,6 +224,7 @@ export const SentenceLayout: React.FC<SentenceLayoutProps> = ({
               page={page}
               sentenceIndex={i}
               config={config}
+              pageFromFrame={fromFrame}
             />
           </Sequence>
         );
@@ -226,17 +240,20 @@ const SentencePageForLayout: React.FC<{
   page: TikTokPage;
   sentenceIndex: number;
   config: SubtitleConfig;
-}> = ({ page, sentenceIndex, config }) => {
+  pageFromFrame: number;
+}> = ({ page, sentenceIndex, config, pageFromFrame }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   // Find which token in this sentence is currently active
+  // pageFromFrame shifts absolute timestamps to sequence-relative frames,
+  // matching Remotion's useCurrentFrame() inside <Sequence>
   const tokens = page.tokens;
   let currentTokenIdx = -1;
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
-    const fromFrame = Math.round(t.fromMs * (fps / 1000));
-    const toFrame = Math.round(t.toMs * (fps / 1000));
+    const fromFrame = Math.round(t.fromMs * (fps / 1000)) - pageFromFrame;
+    const toFrame = Math.round(t.toMs * (fps / 1000)) - pageFromFrame;
     if (frame >= fromFrame && frame <= toFrame) {
       currentTokenIdx = i;
       break;

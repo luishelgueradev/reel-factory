@@ -109,6 +109,7 @@ services:
       - ACTIVE_COLOR=${ACTIVE_COLOR:-#FFFF00}
       - INACTIVE_COLOR=${INACTIVE_COLOR:-#FFFFFF}
       - FONT_SIZE=${FONT_SIZE:-58}
+      - PIPELINE_CONFIG_PATH=${PIPELINE_CONFIG_PATH:-}
     healthcheck:
       test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/manifest.json"]
       interval: 5s

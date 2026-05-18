@@ -27,6 +27,7 @@ const CaptionWord: React.FC<{
   color: string;
   outlineColor: string;
   outlineWidth: number;
+  fontFamily?: string;
   letterSpacing?: number;
   lineHeight?: number;
 }> = ({
@@ -37,6 +38,7 @@ const CaptionWord: React.FC<{
   color,
   outlineColor,
   outlineWidth,
+  fontFamily,
   letterSpacing,
   lineHeight,
 }) => {
@@ -47,6 +49,7 @@ const CaptionWord: React.FC<{
         fontSize,
         color,
         fontWeight: isActive ? 800 : wasActive ? 700 : 600,
+        fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
         lineHeight: lineHeight ?? 1.3,
         WebkitTextStroke: outlineWidth,
@@ -76,6 +79,7 @@ const CaptionPage: React.FC<{
   const inactiveColor = config.inactiveColor ?? DEFAULT_SUBTITLE_CONFIG.inactiveColor;
   const outlineColor = config.outlineColor ?? DEFAULT_SUBTITLE_CONFIG.outlineColor;
   const outlineWidth = config.outlineWidth ?? DEFAULT_SUBTITLE_CONFIG.outlineWidth;
+  const fontFamily = config.fontFamily;
   const position = config.position ?? DEFAULT_SUBTITLE_CONFIG.position;
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
@@ -117,6 +121,7 @@ const CaptionPage: React.FC<{
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         opacity,
+        fontFamily: fontFamily || undefined,
         ...bgHighlightStyles,
       }}
     >
@@ -124,20 +129,21 @@ const CaptionPage: React.FC<{
         const isActive = i === currentTokenIdx;
         const wasActive = i < currentTokenIdx;
 
-        return (
-          <CaptionWord
-            key={`${token.text}-${i}`}
-            text={token.text}
-            isActive={isActive}
-            wasActive={wasActive}
-            fontSize={fontSize}
-            color={isActive ? activeColor : inactiveColor}
-            outlineColor={outlineColor}
-            outlineWidth={outlineWidth}
-            letterSpacing={letterSpacing}
-            lineHeight={lineHeight}
-          />
-        );
+          return (
+           <CaptionWord
+             key={`${token.text}-${i}`}
+             text={token.text}
+             isActive={isActive}
+             wasActive={wasActive}
+             fontSize={fontSize}
+             color={isActive ? activeColor : inactiveColor}
+             outlineColor={outlineColor}
+             outlineWidth={outlineWidth}
+             fontFamily={fontFamily}
+             letterSpacing={letterSpacing}
+             lineHeight={lineHeight}
+           />
+         );
       })}
     </div>
   );

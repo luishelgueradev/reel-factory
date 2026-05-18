@@ -1,5 +1,5 @@
 // ─── Font infrastructure (D-07) ──────────────────────────────────────────────
-// Curated font set: Inter, Roboto, Montserrat, Oswald, and system monospace fallback.
+// Curated font set: 18 Google Fonts + system monospace fallback.
 // Fonts are loaded via @remotion/google-fonts at render time (T-06-07 mitigation:
 // try/catch with monospace fallback if Google Fonts CDN is unavailable).
 
@@ -7,11 +7,29 @@ import { loadFont as loadInter, fontFamily as interFamily } from "@remotion/goog
 import { loadFont as loadRoboto, fontFamily as robotoFamily } from "@remotion/google-fonts/Roboto";
 import { loadFont as loadMontserrat, fontFamily as montserratFamily } from "@remotion/google-fonts/Montserrat";
 import { loadFont as loadOswald, fontFamily as oswaldFamily } from "@remotion/google-fonts/Oswald";
+import { loadFont as loadPoppins, fontFamily as poppinsFamily } from "@remotion/google-fonts/Poppins";
+import { loadFont as loadBebasNeue, fontFamily as bebasNeueFamily } from "@remotion/google-fonts/BebasNeue";
+import { loadFont as loadAntonio, fontFamily as antonioFamily } from "@remotion/google-fonts/Antonio";
+import { loadFont as loadRaleway, fontFamily as ralewayFamily } from "@remotion/google-fonts/Raleway";
+import { loadFont as loadUbuntu, fontFamily as ubuntuFamily } from "@remotion/google-fonts/Ubuntu";
+import { loadFont as loadNunito, fontFamily as nunitoFamily } from "@remotion/google-fonts/Nunito";
+import { loadFont as loadSpaceGrotesk, fontFamily as spaceGroteskFamily } from "@remotion/google-fonts/SpaceGrotesk";
+import { loadFont as loadRubik, fontFamily as rubikFamily } from "@remotion/google-fonts/Rubik";
+import { loadFont as loadSourceSans3, fontFamily as sourceSans3Family } from "@remotion/google-fonts/SourceSans3";
+import { loadFont as loadOutfit, fontFamily as outfitFamily } from "@remotion/google-fonts/Outfit";
+import { loadFont as loadPlayfairDisplay, fontFamily as playfairDisplayFamily } from "@remotion/google-fonts/PlayfairDisplay";
+import { loadFont as loadLexendDeca, fontFamily as lexendDecaFamily } from "@remotion/google-fonts/LexendDeca";
+import { loadFont as loadSignika, fontFamily as signikaFamily } from "@remotion/google-fonts/Signika";
+import { loadFont as loadLato, fontFamily as latoFamily } from "@remotion/google-fonts/Lato";
 
 // ─── Available fonts (D-07) ─────────────────────────────────────────────────
 
 /** Curated font set available for title and subtitle text */
-export const AVAILABLE_FONTS = ["Inter", "Roboto", "Montserrat", "Oswald", "monospace"] as const;
+export const AVAILABLE_FONTS = [
+  "Inter", "Roboto", "Montserrat", "Oswald", "Poppins", "BebasNeue", "Antonio",
+  "Raleway", "Ubuntu", "Nunito", "SpaceGrotesk", "Rubik", "SourceSans3",
+  "Outfit", "PlayfairDisplay", "LexendDeca", "Signika", "Lato", "monospace",
+] as const;
 
 export type AvailableFont = (typeof AVAILABLE_FONTS)[number];
 
@@ -29,6 +47,20 @@ const FONT_LOADERS: Record<string, { fontFamily: string; loadFont: (...args: any
   Roboto: { fontFamily: robotoFamily, loadFont: loadRoboto },
   Montserrat: { fontFamily: montserratFamily, loadFont: loadMontserrat },
   Oswald: { fontFamily: oswaldFamily, loadFont: loadOswald },
+  Poppins: { fontFamily: poppinsFamily, loadFont: loadPoppins },
+  BebasNeue: { fontFamily: bebasNeueFamily, loadFont: loadBebasNeue },
+  Antonio: { fontFamily: antonioFamily, loadFont: loadAntonio },
+  Raleway: { fontFamily: ralewayFamily, loadFont: loadRaleway },
+  Ubuntu: { fontFamily: ubuntuFamily, loadFont: loadUbuntu },
+  Nunito: { fontFamily: nunitoFamily, loadFont: loadNunito },
+  SpaceGrotesk: { fontFamily: spaceGroteskFamily, loadFont: loadSpaceGrotesk },
+  Rubik: { fontFamily: rubikFamily, loadFont: loadRubik },
+  SourceSans3: { fontFamily: sourceSans3Family, loadFont: loadSourceSans3 },
+  Outfit: { fontFamily: outfitFamily, loadFont: loadOutfit },
+  PlayfairDisplay: { fontFamily: playfairDisplayFamily, loadFont: loadPlayfairDisplay },
+  LexendDeca: { fontFamily: lexendDecaFamily, loadFont: loadLexendDeca },
+  Signika: { fontFamily: signikaFamily, loadFont: loadSignika },
+  Lato: { fontFamily: latoFamily, loadFont: loadLato },
 };
 
 // ─── loadFont: Async font loading with fallback ──────────────────────────────
@@ -40,7 +72,7 @@ const FONT_LOADERS: Record<string, { fontFamily: string; loadFont: (...args: any
  * Google Fonts CDN unavailable in Docker), the function falls back to system
  * monospace and logs a warning — rendering continues without blocking.
  *
- * @param fontFamily - Font family name (e.g., "Inter", "Roboto", "Montserrat", "Oswald")
+ * @param fontFamily - Font family name (e.g., "Inter", "Roboto", "Montserrat", etc.)
  * @returns The fontFamily string to use in CSS/Remotion styles
  */
 export async function loadFont(fontFamily: string): Promise<string> {

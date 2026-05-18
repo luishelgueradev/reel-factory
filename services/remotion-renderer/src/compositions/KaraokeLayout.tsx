@@ -30,6 +30,7 @@ const KaraokeWord: React.FC<{
   inactiveColor: string;
   outlineColor: string;
   outlineWidth: number;
+  fontFamily?: string;
   letterSpacing?: number;
   lineHeight?: number;
 }> = ({
@@ -44,6 +45,7 @@ const KaraokeWord: React.FC<{
   inactiveColor,
   outlineColor,
   outlineWidth,
+  fontFamily,
   letterSpacing,
   lineHeight,
 }) => {
@@ -71,6 +73,7 @@ const KaraokeWord: React.FC<{
         position: "relative",
         padding: "0 2px",
         whiteSpace: "pre-wrap",
+        fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
         lineHeight: lineHeight ?? 1.3,
       }}
@@ -103,6 +106,7 @@ const KaraokeWord: React.FC<{
           WebkitTextStrokeColor: outlineColor,
           paintOrder: "stroke fill",
           whiteSpace: "pre-wrap",
+          fontFamily: fontFamily || undefined,
           letterSpacing: letterSpacing ?? "-0.02em",
           lineHeight: lineHeight ?? 1.3,
         }}
@@ -128,6 +132,7 @@ const KaraokePage: React.FC<{
   const inactiveColor = config.inactiveColor ?? DEFAULT_SUBTITLE_CONFIG.inactiveColor;
   const outlineColor = config.outlineColor ?? DEFAULT_SUBTITLE_CONFIG.outlineColor;
   const outlineWidth = config.outlineWidth ?? DEFAULT_SUBTITLE_CONFIG.outlineWidth;
+  const fontFamily = config.fontFamily;
   const position = config.position ?? DEFAULT_SUBTITLE_CONFIG.position;
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
@@ -169,6 +174,7 @@ const KaraokePage: React.FC<{
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         opacity,
+        fontFamily: fontFamily || undefined,
         ...bgHighlightStyles,
       }}
     >
@@ -190,6 +196,7 @@ const KaraokePage: React.FC<{
             inactiveColor={inactiveColor}
             outlineColor={outlineColor}
             outlineWidth={outlineWidth}
+            fontFamily={fontFamily}
             letterSpacing={letterSpacing}
             lineHeight={lineHeight}
           />

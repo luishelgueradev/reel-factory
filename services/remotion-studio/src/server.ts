@@ -161,6 +161,13 @@ app.post("/api/render", (_req, res) => {
   });
 });
 
+// ─── Serve static files from public/ (D-06: sample video) ────────────────────
+// Per D-06: Sample video bundled in public/ directory for the preview page.
+// Also used by Remotion Player for staticFile('/sample-video.mp4').
+
+const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || "public");
+app.use(express.static(PUBLIC_DIR));
+
 // ─── Serve editor SPA at /editor (D-16) ────────────────────────────────────────
 
 const EDITOR_DIST = path.resolve(process.env.EDITOR_DIST || "dist/editor");
@@ -176,6 +183,34 @@ app.get("/editor/{*splat}", (_req, res) => {
     res.status(404).json({
       error: "Editor SPA not built",
       message: "Run 'npm run build:editor' to build the config editor SPA",
+    });
+  }
+});
+
+// ─── Serve preview SPA at /preview (D-01, D-02) ──────────────────────────────
+// Per D-02: Single SPA with routing — /preview shares the same Vite build as /editor.
+// Both routes serve the same index.html; React Router handles client-side routing.
+
+app.get("/preview", (_req, res) => {
+  const indexHtml = path.join(EDITOR_DIST, "index.html");
+  if (fs.existsSync(indexHtml)) {
+    res.sendFile(indexHtml);
+  } else {
+    res.status(404).json({
+      error: "Preview SPA not built",
+      message: "Run 'npm run build:editor' to build the SPA",
+    });
+  }
+});
+
+app.get("/preview/{*splat}", (_req, res) => {
+  const indexHtml = path.join(EDITOR_DIST, "index.html");
+  if (fs.existsSync(indexHtml)) {
+    res.sendFile(indexHtml);
+  } else {
+    res.status(404).json({
+      error: "Preview SPA not built",
+      message: "Run 'npm run build:editor' to build the SPA",
     });
   }
 });
@@ -207,6 +242,7 @@ export const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`  PUT  /api/config  — Write pipeline config`);
   console.log(`  POST /api/render  — Render trigger (not yet implemented)`);
   console.log(`  GET  /editor      — Config Editor SPA`);
+  console.log(`  GET  /preview     — Subtitle Preview SPA`);
   console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set)"}`);
   console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
 });

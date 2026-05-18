@@ -15,15 +15,17 @@
     "@remotion/captions": "4.0.457",
     "@remotion/cli": "4.0.457",
     "@remotion/google-fonts": "4.0.457",
+    "@remotion/player": "4.0.457",
     "@remotion/renderer": "4.0.457",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "react-router-dom": "^7.15.1",
     "remotion": "4.0.457"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
-    "@types/node": "^22.0.0",
     "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",

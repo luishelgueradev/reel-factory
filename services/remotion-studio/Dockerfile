@@ -28,8 +28,9 @@ RUN cp -r /app/remotion-renderer-src/compositions/* /app/src/compositions/ 2>/de
     cp /app/remotion-renderer-src/fonts.ts /app/src/ && \
     rm -rf /app/remotion-renderer-src
 
-# Public directory for Remotion static file serving
-RUN mkdir -p /app/public && chmod -R 777 /app/public && chmod 777 /app
+# Public directory for Remotion static file serving and sample video (D-06)
+COPY public/ /app/public/
+RUN chmod -R 777 /app/public
 
 EXPOSE 3123
 

@@ -12,6 +12,9 @@ export default defineConfig({
       // In Docker, these files are already in src/ (via the COPY step in Dockerfile)
     },
   },
+  // public/ directory at project root serves static assets like sample-video.mp4
+  // Per D-06: sample video for preview page, served at root path by Vite dev server
+  publicDir: path.resolve(__dirname, "public"),
   build: {
     outDir: "../../dist/editor",
     emptyOutDir: true,

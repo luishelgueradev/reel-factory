@@ -226,7 +226,7 @@ Plans:
 
 Plans:
 - [x] 12-01-PLAN.md — Add pastWordOpacity to SubtitleConfig and all 4 layout components, extend StyleControls with lineHeight + pastWordOpacity sliders (PREV-03)
-- [ ] 12-02-PLAN.md — Build /preview SPA with @remotion/player, React Router, textToCaptionPages, font grid, Express routing (PREV-01, PREV-02, PREV-03)
+- [x] 12-02-PLAN.md — Build /preview SPA with @remotion/player, React Router, textToCaptionPages, font grid, Express routing (PREV-01, PREV-02, PREV-03)
 
 ## Progress
 
@@ -246,4 +246,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 9. Synchronous API | 3/3 | Complete | 2026-05-13 |
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
-| 12. Subtitle Preview Lab | 1/2 | In Progress|  |
+| 12. Subtitle Preview Lab | 2/2 | Complete   | 2026-05-18 |

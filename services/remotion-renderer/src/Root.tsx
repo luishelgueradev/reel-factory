@@ -12,6 +12,7 @@ import { loadFont } from "./fonts";
 
 export interface RemotionProps {
   videoSrc: string;
+  rawVideoSrc?: string;
   captionPages: TikTokPage[];
   videoWidth?: number;
   videoHeight?: number;
@@ -33,8 +34,9 @@ export interface RemotionProps {
  * - Falls back to TikTok (backward compatible) when config is missing
  * - Preserves existing video rendering via OffthreadVideo
  */
-const SubtitledVideo: React.FC<RemotionProps> = ({
+export const SubtitledVideo: React.FC<RemotionProps> = ({
   videoSrc,
+  rawVideoSrc,
   captionPages,
   subtitleConfig,
   titles,
@@ -57,6 +59,7 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
     position: subtitleConfig?.position ?? DEFAULT_SUBTITLE_CONFIG.position,
     lineHeight: subtitleConfig?.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight,
     bottomOffset: subtitleConfig?.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset,
+    pastWordOpacity: subtitleConfig?.pastWordOpacity ?? DEFAULT_SUBTITLE_CONFIG.pastWordOpacity,
   };
 
   // Load Google Font for subtitles — delay render until font is available (D-07, T-06-07)
@@ -77,7 +80,7 @@ const SubtitledVideo: React.FC<RemotionProps> = ({
         transitionEvents={transitionEvents}
         totalDurationMs={totalDurationMs ?? 10000}
       >
-        {videoSrc && <OffthreadVideo src={staticFile(videoSrc)} />}
+        {videoSrc && <OffthreadVideo src={rawVideoSrc ?? staticFile(videoSrc)} />}
       </ZoomContainer>
       {/* Subtitles on top of video — not affected by zoom */}
       <SubtitleLayoutRenderer captionPages={captionPages} config={config} totalDurationMs={totalDurationMs} />

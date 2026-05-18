@@ -1,4 +1,5 @@
 import type { SubtitleConfig, SubtitlePosition } from "../pipeline-config";
+import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 
 // ─── Timing constants (shared across all layouts) ──────────────────────────
 
@@ -68,4 +69,10 @@ export function getBackgroundHighlightStyle(
     padding: `${backgroundHighlight.padding}px`,
     borderRadius: `${backgroundHighlight.borderRadius}px`,
   };
+}
+
+// ─── Past word opacity helper (D-07) ──────────────────────────────────────
+
+export function getPastWordOpacity(config: SubtitleConfig): number {
+  return config.pastWordOpacity ?? DEFAULT_SUBTITLE_CONFIG.pastWordOpacity;
 }

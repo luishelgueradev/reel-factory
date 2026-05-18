@@ -15,6 +15,7 @@ import {
   PAGE_OVERLAP_GUARD_MS,
   getPositionStyles,
   getBackgroundHighlightStyle,
+  getPastWordOpacity,
 } from "./shared-styles";
 
 // ─── Sentence grouping ──────────────────────────────────────────────────────
@@ -107,6 +108,7 @@ const SentencePage: React.FC<{
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
   const lineHeight = config.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight;
+  const pastWordOpacity = getPastWordOpacity(config);
 
   // Fade logic
   const fadeInEndFrame = Math.round(FADE_IN_MS * (fps / 1000));
@@ -128,7 +130,7 @@ const SentencePage: React.FC<{
     ? { backgroundColor: "rgba(0, 0, 0, 0.6)", padding: "8px 16px", borderRadius: "8px" }
     : {};
 
-  const PAST_OPACITY = 0.5;
+  const pastWordOpacityVal = pastWordOpacity;
 
   return (
     <div
@@ -154,7 +156,7 @@ const SentencePage: React.FC<{
           : isTokenPast
             ? inactiveColor
             : inactiveColor;
-        const wordOpacity = isTokenPast ? PAST_OPACITY : 1;
+        const wordOpacity = isTokenPast ? pastWordOpacityVal : 1;
 
         return (
           <span

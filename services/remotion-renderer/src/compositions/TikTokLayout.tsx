@@ -15,6 +15,7 @@ import {
   PAGE_OVERLAP_GUARD_MS,
   getPositionStyles,
   getBackgroundHighlightStyle,
+  getPastWordOpacity,
 } from "./shared-styles";
 
 // ─── CaptionWord ────────────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ const CaptionWord: React.FC<{
   fontFamily?: string;
   letterSpacing?: number;
   lineHeight?: number;
+  pastWordOpacity: number;
 }> = ({
   text,
   isActive,
@@ -41,13 +43,18 @@ const CaptionWord: React.FC<{
   fontFamily,
   letterSpacing,
   lineHeight,
+  pastWordOpacity,
 }) => {
+  // Opacity: active/current word = 1, wasActive (past) word = pastWordOpacity, upcoming word = 1
+  const wordOpacity = isActive ? 1 : wasActive ? pastWordOpacity : 1;
+
   return (
     <span
       style={{
         display: "inline-block",
         fontSize,
         color,
+        opacity: wordOpacity,
         fontWeight: isActive ? 800 : wasActive ? 700 : 600,
         fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
@@ -84,6 +91,7 @@ const CaptionPage: React.FC<{
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
   const lineHeight = config.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight;
+  const pastWordOpacity = getPastWordOpacity(config);
 
   const tokens = page.tokens;
   let currentTokenIdx = -1;
@@ -130,20 +138,21 @@ const CaptionPage: React.FC<{
         const wasActive = i < currentTokenIdx;
 
           return (
-           <CaptionWord
-             key={`${token.text}-${i}`}
-             text={token.text}
-             isActive={isActive}
-             wasActive={wasActive}
-             fontSize={fontSize}
-             color={isActive ? activeColor : inactiveColor}
-             outlineColor={outlineColor}
-             outlineWidth={outlineWidth}
-             fontFamily={fontFamily}
-             letterSpacing={letterSpacing}
-             lineHeight={lineHeight}
-           />
-         );
+            <CaptionWord
+              key={`${token.text}-${i}`}
+              text={token.text}
+              isActive={isActive}
+              wasActive={wasActive}
+              fontSize={fontSize}
+              color={isActive ? activeColor : inactiveColor}
+              outlineColor={outlineColor}
+              outlineWidth={outlineWidth}
+              fontFamily={fontFamily}
+              letterSpacing={letterSpacing}
+              lineHeight={lineHeight}
+              pastWordOpacity={pastWordOpacity}
+            />
+          );
       })}
     </div>
   );

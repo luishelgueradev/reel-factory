@@ -45,6 +45,7 @@ export interface SubtitleConfig {
   position?: SubtitlePosition;
   lineHeight?: number;
   bottomOffset?: number;
+  pastWordOpacity?: number; // opacity for was-active words (0-1, default 0.4)
 }
 
 // ─── Title Overlays (D-10, D-11, D-12) ────────────────────────────────────
@@ -120,6 +121,7 @@ export const DEFAULT_SUBTITLE_CONFIG: Required<
     | "position"
     | "lineHeight"
     | "bottomOffset"
+    | "pastWordOpacity"
   >
 > = {
   fontSize: 58,
@@ -130,6 +132,7 @@ export const DEFAULT_SUBTITLE_CONFIG: Required<
   position: "bottom-center" as SubtitlePosition,
   lineHeight: 1.3,
   bottomOffset: 250,
+  pastWordOpacity: 0.4,
 };
 
 // ─── Visual Effects Defaults (D-03, D-06, D-07, D-12) ──────────────────────
@@ -259,6 +262,16 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
         errors.push("subtitle.textShadow.enabled must be a boolean");
       }
     }
+  }
+
+  // Validate subtitle.pastWordOpacity (optional, must be 0-1 if provided)
+  if (sub.pastWordOpacity !== undefined && (typeof sub.pastWordOpacity !== "number" || sub.pastWordOpacity < 0 || sub.pastWordOpacity > 1)) {
+    errors.push("subtitle.pastWordOpacity must be a number between 0 and 1");
+  }
+
+  // Validate subtitle.lineHeight (optional, must be positive if provided)
+  if (sub.lineHeight !== undefined && (typeof sub.lineHeight !== "number" || sub.lineHeight <= 0)) {
+    errors.push("subtitle.lineHeight must be a positive number");
   }
 
   // Validate titles (optional array)

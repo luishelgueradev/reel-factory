@@ -14,6 +14,7 @@ import {
   PAGE_OVERLAP_GUARD_MS,
   getPositionStyles,
   getBackgroundHighlightStyle,
+  getPastWordOpacity,
 } from "./shared-styles";
 
 // ─── KaraokeWord (progressive fill effect) ──────────────────────────────────
@@ -33,6 +34,7 @@ const KaraokeWord: React.FC<{
   fontFamily?: string;
   letterSpacing?: number;
   lineHeight?: number;
+  pastWordOpacity: number;
 }> = ({
   token,
   isActive,
@@ -48,6 +50,7 @@ const KaraokeWord: React.FC<{
   fontFamily,
   letterSpacing,
   lineHeight,
+  pastWordOpacity,
 }) => {
   // Calculate fill progress for the active word
   const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
@@ -84,6 +87,7 @@ const KaraokeWord: React.FC<{
           fontSize,
           color: inactiveColor,
           fontWeight: 600,
+          opacity: wasActive ? pastWordOpacity : 1,
           WebkitTextStroke: outlineWidth,
           WebkitTextStrokeColor: outlineColor,
           paintOrder: "stroke fill",
@@ -137,6 +141,7 @@ const KaraokePage: React.FC<{
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
   const lineHeight = config.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight;
+  const pastWordOpacity = getPastWordOpacity(config);
 
   const tokens = page.tokens;
   let currentTokenIdx = -1;
@@ -199,6 +204,7 @@ const KaraokePage: React.FC<{
             fontFamily={fontFamily}
             letterSpacing={letterSpacing}
             lineHeight={lineHeight}
+            pastWordOpacity={pastWordOpacity}
           />
         );
       })}

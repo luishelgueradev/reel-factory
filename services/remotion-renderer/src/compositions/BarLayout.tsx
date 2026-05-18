@@ -14,6 +14,7 @@ import {
   FADE_OUT_MS,
   PAGE_OVERLAP_GUARD_MS,
   getPositionStyles,
+  getPastWordOpacity,
 } from "./shared-styles";
 
 // ─── BarWord (single word rendered inside the bar) ───────────────────────────
@@ -30,6 +31,7 @@ const BarWord: React.FC<{
   fontFamily?: string;
   letterSpacing?: number;
   lineHeight?: number;
+  pastWordOpacity: number;
 }> = ({
   text,
   isActive,
@@ -42,8 +44,10 @@ const BarWord: React.FC<{
   fontFamily,
   letterSpacing,
   lineHeight,
+  pastWordOpacity,
 }) => {
   const color = isActive || wasActive ? activeColor : inactiveColor;
+  const wordOpacity = isActive ? 1 : wasActive ? pastWordOpacity : 1;
 
   return (
     <span
@@ -51,6 +55,7 @@ const BarWord: React.FC<{
         display: "inline-block",
         fontSize,
         color,
+        opacity: wordOpacity,
         fontWeight: isActive ? 800 : wasActive ? 700 : 600,
         fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
@@ -87,6 +92,7 @@ const BarPage: React.FC<{
   const bottomOffset = config.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset;
   const letterSpacing = config.letterSpacing;
   const lineHeight = config.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight;
+  const pastWordOpacity = getPastWordOpacity(config);
 
   // Bar-specific: background color from backgroundHighlight or default semi-transparent black
   const barColor = config.backgroundHighlight?.enabled
@@ -166,6 +172,7 @@ const BarPage: React.FC<{
               fontFamily={fontFamily}
               letterSpacing={letterSpacing}
               lineHeight={lineHeight}
+              pastWordOpacity={pastWordOpacity}
             />
           );
         })}

@@ -151,6 +151,66 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
         />
       </div>
 
+      {/* ── Line Height (D-09, PREV-03) ──────────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Line Height: <strong style={{ color: "#fff" }}>{config.lineHeight ?? 1.3}</strong>
+        </label>
+        <input
+          type="range"
+          min={0.8}
+          max={3}
+          step={0.1}
+          value={config.lineHeight ?? 1.3}
+          onChange={(e) => onChange({ lineHeight: Number(e.target.value) })}
+          style={{ width: "100%", accentColor: "#4CAF50" }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+          <span>0.8</span>
+          <span>3.0</span>
+        </div>
+      </div>
+
+      {/* ── Past Word Opacity (D-07, PREV-03) ──────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Past Word Opacity: <strong style={{ color: "#fff" }}>{config.pastWordOpacity ?? 0.4}</strong>
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={config.pastWordOpacity ?? 0.4}
+          onChange={(e) => onChange({ pastWordOpacity: Number(e.target.value) })}
+          style={{ width: "100%", accentColor: "#4CAF50" }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+          <span>0</span>
+          <span>1</span>
+        </div>
+      </div>
+
+      {/* ── Bottom Offset (PREV-03) ────────────────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Bottom Offset: <strong style={{ color: "#fff" }}>{config.bottomOffset ?? 250}px</strong>
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={960}
+          step={10}
+          value={config.bottomOffset ?? 250}
+          onChange={(e) => onChange({ bottomOffset: Number(e.target.value) })}
+          style={{ width: "100%", accentColor: "#4CAF50" }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+          <span>0px</span>
+          <span>960px</span>
+        </div>
+      </div>
+
       {/* ── Background highlight (D-08) ──────────────────────────────── */}
       <div style={{
         padding: "12px 16px",

@@ -35,7 +35,7 @@ class SilenceSegment:
     duration: float
 
 
-def detect_silence(input_path: str) -> List[SilenceSegment]:
+def detect_silence(input_path: str, total_duration: float | None = None) -> List[SilenceSegment]:
     """Run FFmpeg silencedetect on the input MP4 and parse the output.
 
     Per D-02: FFmpeg drives the cross-reference. silencedetect produces clear
@@ -84,14 +84,14 @@ def detect_silence(input_path: str) -> List[SilenceSegment]:
 
     # silencedetect outputs to stderr
     stderr = result.stderr
-    segments = _parse_silencedetect_output(stderr)
+    segments = _parse_silencedetect_output(stderr, total_duration)
 
     print(f"[{config.STEP_NAME}] Detected {len(segments)} candidate silence segments")
 
     return segments
 
 
-def _parse_silencedetect_output(stderr: str) -> List[SilenceSegment]:
+def _parse_silencedetect_output(stderr: str, total_duration: float | None = None) -> List[SilenceSegment]:
     """Parse FFmpeg silencedetect stderr output into SilenceSegment objects.
 
     FFmpeg silencedetect outputs pairs of lines:
@@ -124,10 +124,16 @@ def _parse_silencedetect_output(stderr: str) -> List[SilenceSegment]:
             end_time = ends[i]
             duration = durations[i] if i < len(durations) else (end_time - start_time)
         else:
-            # Silence extends to end of audio — no end marker
-            # Use start as end (will be handled by downstream cross-reference)
-            end_time = start_time
-            duration = 0.0
+            # Silence extends to end of audio — no matching silence_end line.
+            # Close it at the real end of the media so trailing silence is
+            # actually cut. Without total_duration we cannot know where the
+            # audio ends, so fall back to a zero-width segment (dropped later).
+            if total_duration is not None and total_duration > start_time:
+                end_time = total_duration
+                duration = total_duration - start_time
+            else:
+                end_time = start_time
+                duration = 0.0
 
         segments.append(SilenceSegment(
             start=start_time,

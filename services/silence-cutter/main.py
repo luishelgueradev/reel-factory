@@ -110,7 +110,7 @@ def main():
 
         # Step 2: Run FFmpeg silencedetect to find candidate silence segments
         print(f"[{config.STEP_NAME}] Step 2: Running FFmpeg silencedetect")
-        silence_candidates = detect_silence(input_path)
+        silence_candidates = detect_silence(input_path, original_duration)
         print(f"  Found {len(silence_candidates)} candidate silence segments")
 
         # Step 3: Cross-reference with Whisper transcript (if available)
@@ -138,7 +138,7 @@ def main():
                     original_start=actual_start,
                     original_end=actual_end,
                     new_start=max(0, actual_start - cumulative_shift),
-                    new_end=max(0, min(actual_end - cumulative_shift, actual_end - cumulative_shift)),
+                    new_end=max(0, actual_start - cumulative_shift),
                     duration=actual_duration,
                     source=SilenceSource.FFMPEG,
                     cumulative_shift=cumulative_shift,

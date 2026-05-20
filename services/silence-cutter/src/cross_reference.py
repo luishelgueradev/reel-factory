@@ -69,8 +69,12 @@ def cross_reference_silence(
         confirmed_cuts.append(SilenceCut(
             original_start=actual_start,
             original_end=actual_end,
+            # In the silence-removed timeline the cut collapses to a single
+            # point: both boundaries map to (actual_start - cumulative_shift).
+            # Consumers (JumpCutTransition, zoom-detection) read new_end as the
+            # cut point in the new timeline, so new_end must equal new_start.
             new_start=max(0, actual_start - cumulative_shift),
-            new_end=max(0, min(actual_end - cumulative_shift, actual_end - cumulative_shift)),
+            new_end=max(0, actual_start - cumulative_shift),
             duration=actual_duration,
             source=source,
             cumulative_shift=cumulative_shift,
@@ -89,7 +93,9 @@ def cross_reference_silence(
                 original_start=last_cut.original_start,
                 original_end=last_cut.original_end + extra,
                 new_start=last_cut.new_start,
-                new_end=last_cut.new_end + extra,
+                # Cut point in the new timeline is unchanged by eating more
+                # trailing silence — new_end stays equal to new_start.
+                new_end=last_cut.new_start,
                 duration=last_cut.duration + extra,
                 source=last_cut.source,
                 cumulative_shift=last_cut.cumulative_shift,

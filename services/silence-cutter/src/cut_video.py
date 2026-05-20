@@ -5,13 +5,17 @@ Per SILC-03: Audio and video remain synchronized after all silence cuts.
 
 The approach:
 1. Compute keep segments (inverse of silence cuts)
-2. Extract each keep segment as a temporary file using stream copy
-3. Concatenate using FFmpeg concat demuxer with reset_timestamps
-4. Apply setpts=PTS-STARTPTS to ensure A/V sync after concatenation
+2. Extract each keep segment by RE-ENCODING (libx264/aac). `-af apad` pads each
+   segment's audio up to its (-t capped) video duration so audio and video are
+   exactly equal length per segment — this prevents the audio-runs-ahead drift
+   that accumulates across many cut boundaries when audio is fractionally
+   shorter than video.
+3. Concatenate using the FFmpeg concat demuxer with `-reset_timestamps 1`, which
+   resets PTS at each segment boundary so the joined output has clean, monotonic
+   timestamps and stays in sync.
 
-This avoids the A/V drift problem that occurs with naive FFmpeg -filter_complex
-approaches. The concat demuxer with reset_timestamps resets both audio and video
-timestamps at each segment boundary, preventing cumulative drift.
+Note: extraction re-encodes (not stream copy) so that `-ss`/`-t` cuts are
+frame-accurate; stream copy would snap to keyframes and misplace cut boundaries.
 """
 
 import subprocess

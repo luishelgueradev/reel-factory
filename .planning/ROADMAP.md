@@ -253,7 +253,13 @@ Plans:
   3. ffprobe sobre la salida del ffmpeg-finalizer reporta un bitrate de 5,000–8,000 kbps para un clip de 60s de talking-head, confirmando que CRF ~18 produce calidad objetivo sin bloating
   4. El video final conserva la duracion exacta del silence-cutter output (dentro de ±33ms) y el audio esta sincronizado cuadro a cuadro — ENC-05 verificado
   5. No hay halos visibles alrededor del texto de subtítulos en la salida del ffmpeg-finalizer tras aplicar el filtro unsharp
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — silence-cutter stream-copy concat + validate_concat_mode (ENC-01, ENC-05)
+- [ ] 13-02-PLAN.md — ffmpeg-finalizer CRF 18 + Lanczos + unsharp + BT.709 + ffprobe validators (ENC-02, ENC-03, ENC-04)
+- [ ] 13-03-PLAN.md — Test sweep + new test_encode_quality.py + validate_concat_mode test wiring (ENC-01, ENC-02, ENC-03, ENC-04, ENC-05)
+- [ ] 13-04-PLAN.md — Visual A/B render + 13-UAT.md + human-verify checkpoint (ENC-02, ENC-03, ENC-04, ENC-05)
 
 ### Phase 14: Remotion Supersampling + quality-finalizer
 **Goal**: Los subtítulos y overlays salen nítidos via render a 2x densidad de pixel, y la salida final sigue siendo 1080x1920 entregable via un nuevo step Docker quality-finalizer
@@ -287,5 +293,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
 | 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
-| 13. Encode Quality | 0/TBD | Not started | - |
+| 13. Encode Quality | 0/4 | Planned | - |
 | 14. Remotion Supersampling + quality-finalizer | 0/TBD | Not started | - |

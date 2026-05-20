@@ -1,209 +1,217 @@
 # Feature Research
 
-**Domain:** Video processing pipeline for social media (containerized, self-hosted)
-**Researched:** 2026-05-05
-**Confidence:** HIGH
+**Domain:** Video quality/definition improvements for short-form vertical social video (9:16 talking-head reels)
+**Researched:** 2026-05-20
+**Milestone:** v1.1 "Calidad de video" — additive improvements to the existing pipeline
+**Confidence:** HIGH (render/encode specifics), HIGH (platform specs), MEDIUM (AI upscaling tradeoffs)
+
+---
+
+## Context: What "Good" Looks Like to a Creator
+
+A creator's quality bar is set by the native Instagram/TikTok reels they scroll past — filmed natively on a modern iPhone at 4K/60fps, edited in CapCut or Premiere, exported at high bitrate, and uploaded over Wi-Fi. Key perceptual markers:
+
+- **Subtitle text is razor-sharp**: no pixel blur, clear outline, no ringing artifacts on letterforms.
+- **Faces look detailed**: skin texture visible, no compression blocking or washed-out pixels.
+- **Motion is clean**: no macro-blocking during movement, no ghosting from over-denoising.
+- **High-contrast edges are crisp**: no aliasing stairstepping on diagonal lines or text strokes.
+- **After platform upload, video still looks good**: no soft glow or flat look introduced by Instagram/TikTok re-compression.
+
+The gap between this bar and the pipeline's current output has three causes confirmed by the 2026-05-20 audit:
+
+1. `renderMedia` called without `scale` — Remotion renders subtitles at 1:1 pixel density (effectively half-res text on a headless Chromium canvas).
+2. Triple re-encode chain: silence-cutter segments → silence-cutter concat → ffmpeg-finalizer → remotion-renderer, each a lossy H.264 pass.
+3. CRF and bitrate never tuned to platform delivery targets. Remotion defaults to CRF 18 (confirmed in Remotion docs); ffmpeg-finalizer uses CRF 20 (confirmed in `services/ffmpeg-finalizer/src/config.py`).
+
+---
 
 ## Feature Landscape
 
 ### Table Stakes (Users Expect These)
 
-Features users assume exist. Missing these = product feels incomplete or unusable.
+Features that must be correct before the output can be called "quality". Missing any of these and the output looks worse than amateur phone footage. These are the non-negotiable fixes for v1.1.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **MP4 input acceptance** | The entire product premise starts with "upload a video." No input = no pipeline. | LOW | FFmpeg handles this trivially. Validate format early, reject gracefully. |
-| **Automated transcription with timestamps** | Every competitor (OpusClip, Descript, Vizard) does this. It's the foundation for silence detection + subtitles. Without it, the pipeline is just FFmpeg. | MEDIUM | Whisper (openai/whisper) or faster-whisper. Word-level timestamps critical for word-by-word subtitles. Use `word_timestamps=True`. |
-| **Silence detection and removal** | The #1 reason creators use pipeline tools: dead air kills engagement on short-form. Every SaaS competitor does this automatically. | MEDIUM | FFmpeg `silencedetect` filter → parse periods → FFmpeg `atrim` + `asetpts` to cut. No transitions (hard cuts per PROJECT.md). |
-| **9:16 vertical output** | The entire target market (Reels, TikTok, Shorts) requires vertical format. Horizontal input → vertical output is the core transformation. | MEDIUM | Remotion re-renders at 1080x1920. Subject tracking/reframing is the hard part; simple crop-center is easy but low quality; smart reframing is a differentiator (see below). |
-| **Word-by-word animated subtitles** | This IS the differentiator for short-form video. Static subtitles feel dead. Kinetic captions = engagement. OpusClip, CapCut, Vizard all do this. | MEDIUM | Remotion `@remotion/captions` package with `TikTokPage` tokens. Each token has `fromMs`/`toMs`. Highlight active word via `useCurrentFrame()`. Built-in support. |
-| **Synchronous REST API (single video)** | API-first product with no UI means the API IS the interface. If you can't submit a video and get a result, there's nothing. | MEDIUM | Express/Fastify endpoint. Input: MP4 file/multipart. Output: processed video URL or stream. Must handle timeouts for long videos. |
-| **Intermediate output inspection** | Core design decision in PROJECT.md. Each pipeline step must produce inspectable artifacts. This is what separates a "black box" from a "debuggable pipeline." | LOW | Each container writes to shared volume. Expose artifacts via API or file serving. JSON metadata per step. |
+| **Remotion `scale: 2` supersampling** | Without it, Remotion renders text at device pixel density 1x in headless Chromium — each CSS pixel maps to a single video pixel, producing visibly blurry, aliased subtitle letterforms. Remotion's own docs explicitly call this out for high-density displays and server-side rendering. With `scale: 2`, frames are rendered at 2160x3840 and the composite is downsampled to 1080x1920, making text as sharp as native-device rendering. Videos and WebGL inside Remotion are unaffected by scale. | LOW | Single parameter in `renderMedia({ scale: 2 })`. Current `render.ts` calls `renderMedia` with no `scale` argument. This is the single highest-impact change for subtitle sharpness. |
+| **Eliminate one lossy re-encode in silence-cutter concat** | Each H.264→H.264 transcode degrades quality: DCT quantization noise accumulates, fine detail (hair, text edges) gets progressively smeared. The silence-cutter currently runs: (1) extract each segment with `-c:v libx264`, then (2) concatenate with `-c:v libx264` again. The concat step can use `-c:v copy` (stream copy, no decode/re-encode) since all segments are already H.264 with compatible stream parameters. This eliminates encode pass 2 of 4. | LOW | Change `_concatenate_segments()` in `services/silence-cutter/src/cut_video.py` to use `-c:v copy -c:a copy` in the concat command. Stream copy with concat demuxer is safe when all segments share the same codec and timebase — which they do since they all come from the same source. |
+| **CRF floor for the final Remotion encode** | Remotion's default CRF for H.264 is 18 (confirmed in Remotion encoding docs). The ffmpeg-finalizer already uses CRF 20. Neither is explicitly set to guarantee a minimum bitrate floor. For a 1080x1920 final output headed to Instagram/TikTok, CRF 17 provides headroom to survive the platform's own re-compression pass. Instagram recommends 3.5–10 Mbps upload; TikTok recommends 8–15 Mbps. CRF alone at CRF 17–18 on talking-head content typically produces 6–12 Mbps, which sits in the right range. | LOW | Pass `crf: 17` to `renderMedia()` in `render.ts`. Also explicitly set `H264_CRF = 17` in ffmpeg-finalizer `config.py` (currently 20). |
+| **Upload bitrate floor via maxrate** | CRF alone does not guarantee a minimum bitrate. If a scene is visually simple (static talking head, few colors), libx264 at CRF 17 may produce only 2–3 Mbps for that segment. Instagram's transcoder then has less data to work with and compresses aggressively. Setting `-maxrate 10M -bufsize 20M` alongside CRF ensures a bitrate floor that gives the platform's compressor room to breathe. | LOW | Add x264 options to Remotion's render call or use Remotion's `videoBitrate` param (note: `videoBitrate` and `crf` are mutually exclusive in Remotion). Use `-maxrate` via `encoderOptions` if available, or run a post-render FFmpeg passthrough to apply maxrate on the final file. |
+| **Output at 1080x1920, H.264 High Profile, 30fps** | Instagram and TikTok both specify 1080x1920 @ 30fps H.264 as the primary target. Uploading at this exact spec causes the platform's transcoder to make the least-degrading pass possible. 4K uploads get re-encoded to 1080p anyway; 720p uploads trigger a quality-flag downgrade on TikTok. | LOW | Already correct in ffmpeg-finalizer (`VERTICAL_WIDTH=1080`, `VERTICAL_HEIGHT=1920`, `H264_PROFILE=high`, `FPS_OUTPUT=30`). Must verify Remotion output also matches 30fps and uses H.264 High Profile. |
+| **bt709 color space tags on final output** | Phones that record in HDR (HLG or PQ) produce files that Instagram converts to SDR incorrectly, resulting in washed-out or over-bright output. Explicitly tagging bt709 ensures Instagram's SDR processing path is triggered cleanly. Remotion's docs note that bt709 will become the default in v5; currently it must be requested. | LOW | Add `-colorspace bt709 -color_primaries bt709 -color_trc bt709` to ffmpeg-finalizer's ffmpeg command (after the `-pix_fmt yuv420p` flag already present). Pass `colorSpace: 'bt709'` to `renderMedia()` in `render.ts` if Remotion exposes this. |
+| **JPEG quality 95 for Remotion intermediate frames** | Remotion captures each composition frame as JPEG at quality 80 by default (confirmed in Remotion docs) before FFmpeg stitches them to video. JPEG quality 80 introduces DCT artifacts at high-contrast edges — specifically around the bright yellow active-word highlights and black outline text — before the final video encode pass. Raising to 95 measurably reduces these intermediate artifacts. | LOW | `renderMedia({ jpegQuality: 95 })` in `render.ts`. Adds ~30% render time. Measurably better text edge quality. Preferred over PNG for production (PNG is 2–4x slower). |
+| **Text outline/shadow legibility for subtitle text** | White text on any background becomes illegible without visual separation. Black outline (stroke) + drop shadow is the minimum standard for platform-native captions. | LOW | Already implemented in `pipeline-config.ts` defaults: `outlineColor: "#000000"`, `outlineWidth: 3`. Verify this survives at `scale: 2` supersampling and that CSS `-webkit-text-stroke` or equivalent is rendering in headless Chromium. |
+
+---
 
 ### Differentiators (Competitive Advantage)
 
-Features that set the product apart. Not required, but create significant value.
+Features that move the pipeline's output quality above generic FFmpeg-based tools. Not required for baseline quality, but visible improvements for creators.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Self-hosted / Docker-native** | SaaS competitors (OpusClip $19/mo+, Descript $24/mo+) charge per minute. Self-hosted = no per-minute fees, no data leaving your infrastructure, no vendor lock-in. This is THE differentiator for the product. | LOW | Architecture advantage, not a feature to build. Use Docker Compose for orchestration. |
-| **Extensible pipeline steps** | Add new processing steps as containers without refactoring the pipeline. SaaS tools are closed boxes; this is open and programmable. | MEDIUM | Shared volumes + step contracts (JSON schema for inputs/outputs). Orchestrator reads config, launches containers in sequence. |
-| **Smart reframing (subject tracking)** | Simple center-crop for 9:16 loses the speaker when they move. AI reframing keeps the talking head centered. OpusClip calls this "ReframeAnything." | HIGH | Requires face/person detection (MediaPipe, YOLO, or similar). Map bounding boxes to crop region. Fallback to center-crop if no subject detected. |
-| **Automatic zoom/jump cuts** | Visual dynamism: zoom into speaker on emphasis, jump cuts on silence removal. Makes output feel edited, not just trimmed. OpusClip does this implicitly; Descript has "AutoZoom." | HIGH | Use Whisper confidence + silence boundaries as triggers. Remotion `<Series>` + `<Zoom>` components. Requires timestamp-driven logic. |
-| **Batch processing queue (async)** | Process multiple videos without babysitting. Queues are essential for content creators repurposing full podcasts (30+ clips per episode). | MEDIUM | BullMQ or similar Redis-backed queue. POST /batch → job IDs → poll/webhook for results. Rate limit and concurrency management needed. |
-| **Intro/outro animated templates** | Brand consistency: every video starts/ends the same way. OpusClip calls this "Brand Templates." Important for agencies and creators with consistent branding. | MEDIUM | Remotion compositions parameterized with brand props (logo, colors, text). Template store with default + custom uploads. |
-| **B-roll placeholder overlay system** | Infrastructure for B-roll insertion ready from v1, even if actual clips are placeholders. Allows incremental enhancement without architecture changes. | LOW | Remotion `<Img>` or `<Video>` components with placeholder assets. Overlay timing from metadata JSON. Swap placeholders → real clips later. |
-| **SRT/VTT subtitle export** | Not just burned-in subs — export sidecar files for platforms that support them (YouTube, Vimeo). Also enables manual editing in other tools. | LOW | Whisper/faster-whisper already produces segment data. Convert to SRT format with timestamp formatting. Straightforward. |
-| **Progress tracking / status API** | Long-running videos (5-30 min input) need progress reporting. Users won't wait blindly. Essential for async/batch processing. | LOW | WebSocket or SSE for real-time. Poll endpoint (`GET /status/{jobId}`) as fallback. Report per-step progress: "Transcribing... 45%", "Removing silence...", etc. |
+| **Mild hqdn3d denoise in ffmpeg-finalizer** | Phone cameras in sub-optimal lighting produce luminance grain that H.264 encodes poorly — the encoder wastes bits on noise rather than signal. A conservative hqdn3d pass (`hqdn3d=1.5:1.5:6:6`) before the final encode reduces noise without visible ghosting, effectively raising perceived sharpness at the same bitrate. Creators notice "cleaner" faces even without knowing why. | LOW | Add to ffmpeg-finalizer's filter chain before scale: `-vf "hqdn3d=1.5:1.5:6:6,scale=1080:1920"`. Keep luma_spatial <= 2 to avoid banding/ghosting artifacts. Parameters must be conservative — see anti-features for over-denoising risks. |
+| **AI upscaling via Real-ESRGAN (source video enhancement)** | If the input camera footage is 720p, shot in poor lighting, or from an older device, `RealESRGAN_x4plus` can recover detail that encoding and platform compression would otherwise flatten. Perceptually, faces gain skin texture, hair gains definition. The model is trained on real-world photos (not anime) — it is the correct model for talking heads. With `--face_enhance` flag, GFPGAN is applied specifically to detected faces for additional restoration. | HIGH | Processing speed: ~1 fps on CPU (unusable for production), 10–30x faster on NVIDIA GPU. Workflow: FFmpeg extract frames → Real-ESRGAN per-frame → FFmpeg reassemble with audio copy. Adds a new Docker service step. Requires GPU-enabled container. Must run BEFORE Remotion compositing step — upscaling happens on raw video; subtitles are composited on top of the upscaled frame. |
+| **PNG frame format for Remotion (maximum text quality)** | Switching from JPEG to PNG for intermediate frames eliminates all intermediate compression artifacts before the final video encode. Produces the absolute sharpest possible text edges. | LOW | `renderMedia({ imageFormat: 'png' })`. Trade-off: 2–4x slower render time. Acceptable for offline batch; unacceptable for interactive preview. Should be opt-in via environment variable or `PipelineConfig` field. |
+| **Configurable per-platform export bitrate profile** | Creators delivering to multiple platforms benefit from a single config that sets the target encode quality per delivery destination (Instagram: CRF 17 + 8 Mbps floor, TikTok: CRF 16 + 12 Mbps floor, archive: CRF 14). | LOW | Extend `PipelineConfig` with an optional `encode` object: `{ crf?: number, maxrateMbps?: number, preset?: string }`. Falls back to sensible defaults. |
+
+---
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem good but create problems. Deliberately NOT building these.
-
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **Web UI / Editor** | "Can't I just see and tweak the video in a browser?" | Massive scope expansion. A web editor is a separate product (see Kapwing, Canva). It requires timeline UI, drag-and-drop, real-time preview — weeks of frontend work that doesn't improve the pipeline. v1 is API-only per PROJECT.md. | API-first with intermediate artifact inspection. Users download artifacts, edit locally, re-upload. Or use Remotion Studio locally for preview. |
-| **Smooth transitions on silence cuts** | "Hard cuts feel jarring." | Crossfades/dissolves require decoding overlapping segments, compositing, re-encoding. Adds significant FFmpeg pipeline complexity. Contradicts PROJECT.md explicit scope: "se elimina y junta directo." Hard cuts are the intended style — they're the viral format. | Hard cuts. This is a deliberate creative choice, not a limitation. Jump cuts are the standard in short-form content. |
-| **Multi-format output (16:9, 1:1)** | "I need landscape and square too." | Each aspect ratio requires different reframing logic, subtitle positioning, safe zones. Doubles QA and template maintenance. 9:16 is the highest-demand format for the target market (TikTok, Reels, Shorts). | 9:16 only in v1. Add formats as separate pipeline steps when there's demand. The extensible architecture supports adding this later. |
-| **Real-time processing** | "I want the result immediately." | Real-time video processing requires streaming architectures (WebRTC, media servers), GPU provisioning, and fundamentally different architecture. The target use case is batch repurposing of pre-recorded content, not live streaming. | Synchronous API for short inputs (< 2 min), async queue for longer. Progress tracking keeps users informed. |
-| **AI clip selection / "viral moment" detection** | "OpusClip finds the best clips automatically." | This requires training ML models on engagement data or building complex heuristics. OpusClip spent years on this. It's a full ML problem, not a pipeline feature. Our pipeline processes ALL content — clip selection is orthogonal. | Pipeline processes the full video. User can trim input to desired segments, or future ML step can be added as an extensible pipeline container. |
-| **AI voice-over / TTS** | "Generate narration automatically." | TTS is a completely separate domain requiring voice models, prosody, language support. Descript and OpusClip have invested heavily here. Not our pipeline's job. | Accept pre-recorded audio as input. If users need TTS, they can use ElevenLabs/WhisperSpeech separately and feed the result. |
-| **Embedded media library (Pexels, Pixabay)** | "Auto-generate B-roll from stock footage." | API dependencies on third-party services. Licensing complexity. Search relevance is an unsolved ML problem. High latency. Per PROJECT.md: "B-roll con biblioteca propia o APIs externas — v1 usa placeholders." | Placeholder overlay system. Swap in real clips manually or via future pipeline step. |
-| **Multi-speaker diarization** | "Handle interviews and podcasts with multiple speakers." | Speaker diarization is a hard ML problem. Whisper doesn't do it natively. Requires pyannote-audio or similar. Adds significant complexity for a secondary use case. | Support single-speaker talking-head input (per PROJECT.md constraint). Multi-speaker can be a future pipeline step. |
+| **Upscaling output to 4K before upload** | Creators assume higher resolution = better quality on Instagram. | Instagram playback caps at 1080p regardless of upload resolution. A 4K upload gets re-encoded to 1080p, adding zero perceptual quality while massively increasing upload time and file size. The platform may also apply a heavier compression pass on unexpectedly large files. Search results confirm: "4K, 1080p, or even 720p often end up looking remarkably similar after Instagram's upload." | Ensure the source is shot at 1080p or natively 4K (then downscale to 1080p for export). Do not upscale the rendered output beyond 1080x1920. |
+| **Aggressive sharpening filter (unsharp strength > 1.5)** | Sharpening feels like it adds detail. | Over-sharpening creates halos (ringing) at high-contrast edges — especially around subtitle text and against the speaker's face/hair boundary. These halos survive platform re-encoding and look worse than no sharpening. Also exacerbates aliasing on diagonal text strokes. The correct approach is to eliminate re-encode loss and set correct bitrate so the encoder preserves real detail — then no artificial sharpening is needed. | Use `unsharp=5:5:0.8:5:5:0.0` (luma strength 0.8 max) if any sharpening is applied, or skip sharpening entirely and rely on correct CRF + supersampling. |
+| **60fps output** | Looks smoother in theory for talking-head content. | TikTok and Instagram compress 60fps more aggressively than 30fps (more frames = more data for the same bitrate cap). Talking-head content has minimal motion; 60fps provides no perceptual benefit. The pipeline already uses 30fps (`FPS_OUTPUT = 30`) which is correct. | Keep 30fps. 60fps is only valid for sports or high-motion content where motion blur reduction matters. |
+| **Multiple AI upscaling passes** | Seems like it would further refine detail across multiple iterations. | Each generative upscaling pass hallucinates new high-frequency detail. Running Real-ESRGAN twice on the same content produces over-synthesized texture that looks plastic and artificial on real faces. The second pass synthesizes detail on top of already-synthesized detail. | Single upscaling pass only. |
+| **Real-time AI upscaling on CPU** | Desire to avoid GPU dependency in Docker. | Real-ESRGAN on CPU processes approximately 1 frame/second. A 60-second video at 30fps = 1,800 frames = 30 minutes of processing minimum. This scales linearly with content length and is unusable in any production context. | Defer AI upscaling to GPU-enabled environments only. On CPU-only deployments, rely on correct CRF + supersampling, which costs zero additional compute time. |
+| **HEVC (H.265) encoding for smaller files** | H.265 achieves similar quality at ~50% the bitrate of H.264. | TikTok explicitly recommends H.264 High Profile. Instagram accepts H.265 but its transcoder path for H.265 is less battle-tested and occasionally produces artifacts. Approximately 15–20% of US iOS devices on poor networks still encounter H.265 playback issues. | Stick with H.264 High Profile for maximum platform compatibility. |
+| **Over-aggressive hqdn3d denoise (luma_spatial > 3)** | More denoising = cleaner image. | Strong hqdn3d values produce temporal ghosting (movement trails on fast head motion), banding in smooth skin gradients, and blocking in shadow areas. These artifacts are worse than the original noise they replaced and survive platform re-encoding. | Keep `hqdn3d=1.5:1.5:6:6` (luma_spatial=1.5, chroma_spatial=1.5, luma_tmp=6, chroma_tmp=6) as the conservative ceiling. |
+
+---
 
 ## Feature Dependencies
 
 ```
-MP4 Input
-    └──requires──> Pipeline Orchestrator (API entry point)
-                        └──requires──> REST API (synchronous)
+[Remotion scale:2 supersampling]
+    └──requires──> [renderMedia() call in render.ts — already exists, add scale param]
+    └──enhances──> [JPEG quality 95 — sharpness compounded]
+    └──enhances──> [outlineWidth / textShadow styling — pixel-level detail now preserved]
 
-Whisper Transcription
-    └──requires──> MP4 Input (audio extraction)
-    └──enables──> Silence Detection (timestamps + no_speech threshold)
-    └──enables──> Word-by-Word Subtitles (word_token timestamps)
+[Eliminate silence-cutter concat re-encode]
+    └──requires──> [silence-cutter concat step uses -c:v copy]
+    └──enhances──> [Final CRF — fewer encode passes means CRF target is preserved]
 
-Silence Detection & Removal
-    └──requires──> Whisper Transcription (or standalone FFmpeg silencedetect)
-    └──enables──> Clean Output Video (trimmed segments)
+[CRF 17 in Remotion + CRF 17 in ffmpeg-finalizer]
+    └──requires──> [Remaining encode passes are minimal — CRF is meaningless if upstream re-encodes override it]
+    └──enhances──> [Upload bitrate floor — CRF generates the quality level for maxrate to enforce]
 
-9:16 Vertical Output
-    └──requires──> Silence-removed Video (or original if no silence)
-    └──requires──> Smart Reframing (or falls back to center-crop)
+[JPEG quality 95]
+    └──requires──> [scale:2 — at scale:1, intermediate frame quality difference is minor]
+    └──conflicts──> [PNG imageFormat — mutually exclusive options in renderMedia]
 
-Word-by-Word Subtitles
-    └──requires──> Whisper Transcription (word-level timestamps)
-    └──requires──> Remotion Rendering Pipeline
-    └──enhances──> 9:16 Output (burned-in captions)
+[PNG imageFormat (batch-only)]
+    └──conflicts──> [JPEG quality 95 — pick one]
+    └──conflicts──> [fast render time — 2-4x slower than JPEG]
 
-Batch Processing Queue
-    └──requires──> REST API (single video processing)
-    └──requires──> Progress Tracking
+[bt709 color space tags]
+    └──requires──> [ffmpeg-finalizer cmd modification — -pix_fmt yuv420p already present, add color flags]
 
-Smart Reframing
-    └──enhances──> 9:16 Output (better subject centering)
-    └──conflicts─── Simple center-crop (replaces fallback)
+[hqdn3d mild denoise]
+    └──requires──> [ffmpeg-finalizer filter chain modification]
+    └──conflicts──> [Aggressive unsharp — denoise + strong sharpening compounds ghosting/haloing]
 
-Intro/Outro Templates
-    └──requires──> Remotion Rendering Pipeline
-    └──requires──> Brand template data (logo, colors, font)
-
-B-roll Placeholders
-    └──requires──> Remotion Rendering Pipeline
-    └──requires──> Overlay timing metadata
-
-Progress Tracking
-    └──requires──> Pipeline Orchestrator (step status reporting)
+[AI upscaling (Real-ESRGAN)]
+    └──requires──> [GPU-enabled Docker container]
+    └──requires──> [New pipeline step BEFORE remotion-renderer]
+    └──requires──> [Input video available before Remotion compositing]
+    └──conflicts──> [CPU-only deployment — unusable speed]
+    └──enhances──> [Final CRF — more input detail = more for encoder to preserve]
 ```
 
 ### Dependency Notes
 
-- **Whisper Transcription enables everything:** It's the foundational step. Silence detection uses `no_speech_threshold` from Whisper. Subtitles use `word_timestamps`. The entire pipeline quality depends on transcription accuracy.
-- **Silence Detection can be independent:** FFmpeg `silencedetect` works without Whisper, but Whisper's `no_speech_threshold` gives more intelligent silence detection (distinguishes pauses from ambient noise). Recommended: use both, Whisper as primary.
-- **9:16 Output requires rendering pipeline:** Simply cropping FFmpeg output creates low-quality crops (loses speaker, misaligns subtitles). Remotion re-renders the full composition with proper layout, ensuring subtitles and overlays are positioned correctly in vertical format.
-- **Smart Reframing conflicts with center-crop:** These are alternative strategies for the same step. Smart reframing replaces center-crop where a subject is detected. Center-crop is the safe fallback. Must implement fallback before implementing smart reframing.
-- **Batch Processing requires stable single-video API:** Can't build a batch queue on top of an unreliable single-video endpoint. The synchronous API must be rock-solid first.
+- **scale:2 is independent and highest priority**: No other change required. Single line in `render.ts`. Fixes the most visible quality defect.
+- **Stream-copy in concat requires compatible segments**: Safe here because all segments extracted by silence-cutter share the same codec (libx264), pixel format (yuv420p), and timebase. The concat demuxer with `-c:v copy` preserves timestamps without decode/re-encode.
+- **AI upscaling must precede Remotion compositing**: Upscaling happens on the raw video track. Subtitles/overlays are composited on top of the upscaled frame in Remotion. Upscaling after subtitle compositing would blur the composited text.
+- **PNG and JPEG quality are mutually exclusive**: Choose one per render. PNG for maximum quality archive renders; JPEG 95 for production batch.
 
-## MVP Definition
+---
 
-### Launch With (v1)
+## MVP Definition for v1.1
 
-Minimum viable product — what's needed to validate "upload MP4 → get processed 9:16 video via API."
+### Launch With (P1 batch — close the quality gap)
 
-- [x] **MP4 input acceptance** — No pipeline without input. Basic validation, reject non-MP4 early.
-- [x] **Whisper transcription with word-level timestamps** — Foundation for subtitles and silence detection. Use faster-whisper for speed.
-- [x] **Silence detection and removal (hard cuts)** — Core value proposition. FFmpeg silencedetect → trim. No transitions.
-- [x] **9:16 vertical output with center-crop** — Minimum viable reframing. Loses subject if off-center, but works for talking-head centered content.
-- [x] **Word-by-word animated subtitles (burned-in)** — The killer feature for short-form. Remotion `@remotion/captions` with token highlighting.
-- [x] **Synchronous REST API (single video)** — `POST /process` with multipart upload → wait → get video. The core interface.
-- [x] **Intermediate artifact inspection** — `GET /artifacts/{jobId}/{step}` to download Whisper JSON, trimmed video, subtitle data. Core to pipeline transparency.
+All low-complexity, no new dependencies. Combined, these close the majority of the perceptual quality gap with Instagram-native content.
 
-### Add After Validation (v1.x)
+- [ ] **`scale: 2` in renderMedia** — fixes subtitle blurriness, the most visible quality defect. Single parameter change in `render.ts`.
+- [ ] **`jpegQuality: 95` in renderMedia** — raises intermediate frame quality; ~30% slower render but measurably sharper text edges before final encode.
+- [ ] **`crf: 17` in renderMedia** — explicit CRF override to match target platform bitrate range.
+- [ ] **`-c:v copy` in silence-cutter concat step** — eliminates one lossy H.264 re-encode with zero quality cost. Change in `services/silence-cutter/src/cut_video.py`.
+- [ ] **bt709 color space flags in ffmpeg-finalizer** — prevents washed-out output from HDR→SDR mishandling by Instagram.
+- [ ] **CRF 17 in ffmpeg-finalizer config** — consistent CRF target across the encode chain (currently CRF 20).
 
-Features to add once the core pipeline works end-to-end and users validate the concept.
+### Add After P1 Validation (v1.1.x)
 
-- [ ] **Progress tracking API** — Trigger: first user complaint about long waits with no feedback. `GET /status/{jobId}` returning step-level progress.
-- [ ] **Batch processing queue (async)** — Trigger: users want to process multiple videos. `POST /batch` → job IDs → webhook/poll results. Requires BullMQ + Redis.
-- [ ] **Smart reframing (subject tracking)** — Trigger: center-crop loses the speaker in common input videos. MediaPipe or YOLO for face detection → dynamic crop region.
-- [ ] **SRT/VTT subtitle export** — Trigger: users want subtitles for YouTube upload or manual editing. Straightforward format conversion from Whisper data.
+- [ ] **hqdn3d mild denoise in ffmpeg-finalizer** — trigger: creator reports noisy/grainy source footage producing blocky output after platform compression.
+- [ ] **`imageFormat: 'png'` opt-in flag in renderMedia** — trigger: creator feedback that text is still not sharp enough after scale:2 and JPEG 95; worth the slower render time.
 
-### Future Consideration (v2+)
+### Future Consideration (v1.2+)
 
-Features to defer until product-market fit is established.
+- [ ] **Real-ESRGAN AI upscaling step** — trigger: GPU-enabled deployment environment available; creator demand for enhancement of low-quality source material (720p, noisy lighting).
+- [ ] **Configurable per-platform export bitrate profile** — trigger: creators delivering to 3+ platforms with different bitrate specs.
 
-- [ ] **Automatic zoom/jump cuts** — Requires careful timing logic and may disorient viewers if poorly tuned. Validate basic pipeline first.
-- [ ] **Intro/outro animated templates** — Requires template management, brand data storage. Nice-to-have but not essential for "process a video."
-- [ ] **B-roll placeholder overlay system** — Infrastructure is easy; content isn't. Defer until core pipeline is validated and people are asking "how do I add B-roll?"
-- [ ] **Multi-format output (16:9, 1:1)** — Each format doubles QA surface. Add when specific platform demand is validated (e.g., YouTube thumbnails need 16:9).
-- [ ] **Webhook notifications** — Trigger: batch users need push notifications instead of polling. Low effort but depends on batch processing existing.
+---
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| MP4 input acceptance | HIGH | LOW | P1 |
-| Whisper transcription + word timestamps | HIGH | MEDIUM | P1 |
-| Silence detection & removal | HIGH | MEDIUM | P1 |
-| 9:16 vertical output (center-crop) | HIGH | MEDIUM | P1 |
-| Word-by-word animated subtitles | HIGH | MEDIUM | P1 |
-| Synchronous REST API | HIGH | MEDIUM | P1 |
-| Intermediate artifact inspection | MEDIUM | LOW | P1 |
-| Progress tracking API | MEDIUM | LOW | P2 |
-| Batch processing queue | HIGH | MEDIUM | P2 |
-| Smart reframing (subject tracking) | HIGH | HIGH | P2 |
-| SRT/VTT subtitle export | LOW | LOW | P2 |
-| Automatic zoom/jump cuts | MEDIUM | HIGH | P3 |
-| Intro/outro templates | MEDIUM | MEDIUM | P3 |
-| B-roll placeholder system | LOW | LOW | P3 |
-| Multi-format output | LOW | MEDIUM | P3 |
+| Remotion scale:2 supersampling | HIGH — fixes most visible defect | LOW — one param | P1 |
+| JPEG quality 95 in renderMedia | HIGH — subtitle edge quality | LOW — one param | P1 |
+| CRF 17 in Remotion render | HIGH — survives platform compression | LOW — one param | P1 |
+| Silence-cutter concat stream copy | MEDIUM — removes one lossy step | LOW — flag change | P1 |
+| bt709 color space tags | MEDIUM — prevents HDR blowout | LOW — ffmpeg flags | P1 |
+| CRF 17 in ffmpeg-finalizer | MEDIUM — consistent encode target | LOW — constant | P1 |
+| hqdn3d mild denoise | MEDIUM — better bitrate efficiency on noisy footage | LOW — filter chain | P2 |
+| PNG frame format (batch opt-in) | LOW — marginal after scale:2 + JPEG 95 | LOW — param flag | P2 |
+| AI upscaling (Real-ESRGAN) | HIGH for low-quality sources | HIGH — GPU, new container | P3 |
+| Per-platform bitrate profile config | LOW — nice to have | LOW — config extension | P3 |
 
 **Priority key:**
-- P1: Must have for launch — the pipeline is non-functional without these
-- P2: Should have, add after v1 validation — significant value but not required for first working version
-- P3: Nice to have, future consideration — incremental value, high effort, or needs validated demand
+- P1: Must have for v1.1 launch — closes the quality gap, no new infrastructure required
+- P2: Should have, add once P1 validated
+- P3: Future consideration — requires new infrastructure (GPU) or validated demand
 
-## Competitor Feature Analysis
+---
 
-| Feature | OpusClip (SaaS) | Descript (SaaS/Desktop) | Vizard (SaaS) | Our Approach |
-|---------|------------------|------------------------|---------------|--------------|
-| **Transcription** | Automatic, multi-language | Automatic, "industry-leading accuracy" | Automatic, multi-language | Whisper/faster-whisper, self-hosted, word-level timestamps |
-| **Silence removal** | Implicit in clip selection | "Edit for clarity" AI feature | Implicit in AI clipping | Explicit step with FFmpeg silencedetect + Whisper no_speech_threshold. Hard cuts, no transitions. |
-| **Animated subtitles** | Built-in, multiple styles | Built-in, click-to-add | Built-in, auto-captioned | Remotion @remotion/captions with token highlighting. Fully programmable React styles. |
-| **9:16 output** | Automatic + "ReframeAnything" | Manual or AI-assisted | AI reframing | Center-crop (v1) → Smart reframing with face tracking (v1.x). Extensible step. |
-| **API** | REST API (paid plans) | API early access | API available | REST API first-class. Synchronous + async batch. |
-| **Self-hosted** | No (cloud only) | No (desktop + cloud) | No (cloud only) | Docker-native, fully self-hosted. Zero per-minute fees. |
-| **Extensibility** | Closed platform | Plugin ecosystem (limited) | Closed platform | Pipeline steps as Docker containers. Add any step without refactoring. |
-| **B-roll** | "AI B-Roll" from stock library | "Generate media" AI images | Limited | Placeholder overlay system (v1) → real clip integration later |
-| **Clip selection** | AI-powered "ClipAnything" | Manual + AI suggestions | AI-powered clipping | Not our job — pipeline processes full input. Clip selection is orthogonal. |
-| **Pricing** | $9.99-29.99/mo + per-minute | $24-40/mo | $20-32/mo | Free (self-hosted) + compute costs only. Remotion Company License required if >3 employees. |
+## Platform Delivery Reference
 
-### Competitor Pattern Analysis
+| Platform | Resolution | Codec | Recommended upload bitrate | Frame rate | Key notes |
+|----------|------------|-------|---------------------------|------------|-----------|
+| Instagram Reels | 1080x1920 | H.264 | 3.5–10 Mbps | 30 fps | Enable "Upload at Highest Quality" in app settings (off by default). Turn off "Data Saver." Platform delivers ~1.5–3 Mbps to viewers. |
+| TikTok | 1080x1920 | H.264 High Profile | 8–15 Mbps VBR | 30 fps constant | Upload from web uploader (10 GB limit) vs mobile (287 MB limit). 4K accepted but resized to 1080p internally. Below 5 Mbps triggers a quality-flag downgrade. |
 
-**What SaaS competitors have that we deliberately skip:**
-- Clip selection / "viral moment detection" — ML-heavy, orthogonal to pipeline processing
-- Web editor / timeline UI — Separate product category
-- AI voice-over / TTS — Separate domain
-- Stock media library — Third-party API dependency, licensing complexity
-- Real-time processing — Fundamentally different architecture
+Both platforms re-encode every upload. The strategy is to upload at enough quality (8–10 Mbps, produced by CRF 17 on talking-head content) that their transcoder's lossy pass leaves the content still looking clean at its delivery bitrate (~1.5–3 Mbps to the viewer).
 
-**What we have that SaaS competitors can't offer:**
-- Self-hosted = no data leaves your infrastructure
-- No per-minute pricing = process 1,000 videos for the cost of compute
-- Extensible pipeline = add any processing step as a Docker container
-- Intermediate inspection = every step's output is visible and debuggable
-- Full programmatic control = Remotion React components, not drag-and-drop
+---
+
+## What the Existing Pipeline Already Does Right
+
+Documenting this to avoid re-researching or accidentally breaking correct behavior:
+
+| Setting | Location | Value | Notes |
+|---------|----------|-------|-------|
+| Output resolution | ffmpeg-finalizer config.py | 1080x1920 | Correct for all target platforms |
+| H.264 High Profile | ffmpeg-finalizer config.py | `H264_PROFILE = "high"` | Correct for platform compatibility |
+| Output frame rate | ffmpeg-finalizer config.py | `FPS_OUTPUT = 30` | Correct — 30fps is optimal for talking-head social |
+| `-movflags +faststart` | ffmpeg-finalizer crop.py | Present | Correct — enables platform to start processing immediately |
+| Audio normalization | ffmpeg-finalizer config.py | loudnorm -14 LUFS, TP=-1 | Correct — follows EBU R128 / social platform standard |
+| AAC audio 128k | ffmpeg-finalizer config.py | `AUDIO_BITRATE = "128k"` | Meets platform minimum |
+| Text outline defaults | pipeline-config.ts | `outlineColor: "#000000"`, `outlineWidth: 3` | Correct starting point for legibility |
+| Hard cuts (no transitions) | silence-cutter/cut_video.py | Explicit design decision | Correct for short-form style |
+
+---
 
 ## Sources
 
-- **Context7 (HIGH confidence):** OpenAI Whisper docs (/openai/whisper) — word-level timestamps API confirmed
-- **Context7 (HIGH confidence):** faster-whisper docs (/systran/faster-whisper) — batched inference, VAD filter, word timestamps
-- **Context7 (HIGH confidence):** Remotion docs (/remotion-dev/remotion) — SSR rendering, @remotion/captions with TikTokPage tokens
-- **Context7 (HIGH confidence):** ffmpeg-python docs (/kkroening/ffmpeg-python) — atrim, asetpts filters for silence removal
-- **Official site (HIGH confidence):** OpusClip (opus.pro) — feature list analyzed: ClipAnything, ReframeAnything, AI B-Roll, brand templates, API
-- **Official site (HIGH confidence):** Descript (descript.com) — feature list analyzed: transcription, captions, edit for clarity, eye contact, API
-- **Official site (MEDIUM confidence):** Vizard (vizard.ai) — JS-rendered, feature extraction from landing page only
-- **Official GitHub (HIGH confidence):** Remotion license (github.com/remotion-dev/remotion) — Free for ≤3 employees, Company License otherwise
+- Remotion quality guide: https://www.remotion.dev/docs/quality
+- Remotion output scaling: https://www.remotion.dev/docs/scaling
+- Remotion renderMedia API: https://www.remotion.dev/docs/renderer/render-media
+- Remotion encoding guide: https://www.remotion.dev/docs/encoding
+- Instagram Reels specs (Sprout Social): https://sproutsocial.com/insights/social-media-video-specs-guide/
+- Instagram blur causes/solutions: https://en.androidsis.com/Blurry-or-poor-quality-Instagram-reels-causes-and-solutions/
+- TikTok high-quality upload guide: https://rendercut.io/high-quality-upload-on-tiktok/
+- TikTok upload specs 2025: https://stackinfluence.com/tiktok-video-sizes-the-ultimate-2025-guide/
+- CRF guide (slhck.info, definitive reference): https://slhck.info/video/2017/02/24/crf-guide.html
+- Real-ESRGAN GitHub (xinntao/Real-ESRGAN): https://github.com/xinntao/Real-ESRGAN
+- FFmpeg filters documentation (hqdn3d, unsharp): https://ffmpeg.org/ffmpeg-filters.html
+- 4K vs 1080p for Instagram — diminishing returns: https://creativecow.net/forums/thread/upload-4k-vs-1080p-for-social-media-vertical-videos/
+- Over-sharpening halo artifacts: https://thevideoproguys.com/how-to-remove-sharpening-halo-artifacts/
+- Real-ESRGAN vs Topaz comparison: https://wavespeed.ai/blog/posts/real-esrgan-vs-topaz/
 
 ---
-*Feature research for: Video Pipeline Docker (self-hosted video processing pipeline for social media)*
-*Researched: 2026-05-05*
+
+*Feature research for: v1.1 "Calidad de video" — video quality/definition improvements*
+*Researched: 2026-05-20*

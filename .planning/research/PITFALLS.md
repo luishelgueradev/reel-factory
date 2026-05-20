@@ -1,327 +1,447 @@
 # Pitfalls Research
 
-**Domain:** Docker-based video processing pipeline (Whisper + FFmpeg + Remotion)
-**Researched:** 2026-05-05
-**Confidence:** MEDIUM-HIGH (official docs + community evidence; Docker volume perf data partially training-based)
+**Domain:** Video quality / definition improvements on a Docker pipeline (Remotion 4.x + FFmpeg 7.x, 1080x1920 9:16 H.264)
+**Researched:** 2026-05-20
+**Confidence:** HIGH
 
-## Critical Pitfalls
-
-### Pitfall 1: Whisper Hallucinations in Silent Sections
-
-**What goes wrong:**
-Whisper generates text that was never spoken in the audio, especially during silent or low-volume sections. The model "fills in" silence with transcribed text from its training data (repeated phrases, random words, or trailing repetitions). This produces phantom subtitles and incorrect silence detection boundaries — your pipeline thinks someone is speaking when they aren't, so silence cuts are placed wrong or missing entirely.
-
-**Why it happens:**
-Whisper's sequence-to-sequence architecture predicts the next word based on general language knowledge while simultaneously transcribing audio. In silent sections, the audio signal is weak and the model falls back on its language model prior, inventing plausible-sounding text. The official model card explicitly documents this: "the predictions may include texts that are not actually spoken in the audio input (i.e. hallucination)."
-
-**How to avoid:**
-- Always set `--hallucination_silence_threshold` (CLI) or `hallucination_silence_threshold` (API) to ~2.0 seconds. This is a dedicated parameter specifically for this problem.
-- Set `no_speech_threshold` to 0.6 (default is 0.6, but verify it's not lowered).
-- Use `condition_on_previous_text=True` carefully — it helps continuity but can propagate hallucinations forward. For talking-head content, it's usually fine, but validate.
-- After transcription, post-process segments: flag any segment where the text repeats or the confidence (logprob) is unusually low.
-- Cross-reference Whisper's silence segments with FFmpeg's `silencedetect` filter output. If Whisper reports speech where FFmpeg detects silence, that's a hallucination.
-
-**Warning signs:**
-- Subtitles appear during visible pauses in the video
-- Whisper output contains repeated phrases ("Thank you. Thank you. Thank you.")
-- Silence cuts seem wrong (too short or absent)
-- Transcription has more segments than expected for the video duration
-
-**Phase to address:**
-Phase 1 (Whisper integration) — this must be handled at transcription time, not fixed downstream. Build hallucination filtering into the Whisper step's post-processing from day one.
+> Pitfalls are organized first by path (lightweight encode-settings vs AI-upscaling), then by integration concerns shared by both.
 
 ---
 
-### Pitfall 2: Whisper Word-Level Timestamp Drift
+## PATH A — Lightweight Encode-Settings Pitfalls
 
-**What goes wrong:**
-Word-level timestamps from Whisper drift from actual speech timing, especially at segment boundaries. Words may be timestamped 100-500ms off from where they actually occur. For word-by-word subtitles (the core use case), this means subtitles highlight before or after the speaker says the word — creating a visibly "off" experience that audiences immediately notice.
-
-**Why it happens:**
-Whisper processes audio in 30-second sliding windows. Word-level timestamps are derived from cross-attention weights aligned via dynamic time warping (DTW), which is a heuristic approximation — not frame-accurate alignment. Timestamp accuracy degrades at window boundaries and for fast speech. The `.en` models (English-only) are slightly better but still not perfect.
-
-**How to avoid:**
-- Use `medium.en` or `large` model for word-level timestamps — smaller models (`tiny`, `base`) have significantly worse alignment.
-- Consider `whisper-timestamped` or `whisperx` as drop-in alternatives that add forced alignment (aligning predicted text back to the audio using a secondary alignment model). These provide significantly better word-level timing than vanilla Whisper.
-- If using vanilla Whisper, increase `max_initial_timestamp` to 1.0 to reduce the model's tendency to start timestamps too early.
-- Implement a small timing offset adjustment in the subtitle renderer: add a configurable delay (typically 50-150ms) so users can tune subtitle sync per-video if needed.
-- Validate timestamps against the audio's actual waveform energy (VAD) as a sanity check.
-
-**Warning signs:**
-- Subtitles highlight noticeably before/after the speaker says the word
-- Last words of a segment are timestamped at the segment end (clumped at boundary)
-- Timestamps for consecutive words have identical start/end times (collapsed)
-- Manual review of sample videos shows visible subtitle-audio desync
-
-**Phase to address:**
-Phase 1 (Whisper integration) — choose the right model and alignment approach before building the subtitle system on top of bad timestamps. Re-doing timestamps later means re-processing all videos.
+These apply when the approach is: tune CRF/bitrate, reduce re-encode steps, add Remotion `scale`, sharpen with FFmpeg `unsharp`. No AI model required.
 
 ---
 
-### Pitfall 3: Remotion Docker Container Missing Chrome Dependencies
+### Pitfall A-1: Generation Loss from the Existing Triple Re-Encode Chain
 
 **What goes wrong:**
-The Remotion render container crashes immediately on startup with cryptic errors about shared libraries being missing. The container builds fine, but when `renderMedia()` or `npx remotion render` executes, Chrome Headless Shell cannot launch because required OS-level libraries are not installed in the Docker image.
+The current pipeline re-encodes video to H.264 three times before the final output: once in `silence-cutter/_extract_segments` (libx264, no CRF flag — defaults to CRF 23), once in `_concatenate_segments` (libx264, again default CRF), and once in `ffmpeg-finalizer` (libx264, CRF 20). Each lossy encode compounds DCT quantization error. Text edges, fine fabric texture, and hair detail accumulate blockiness and ringing with every pass. Remotion `renderMedia` then composites subtitles over a video that has already lost sharpness twice before it even enters Chromium.
 
 **Why it happens:**
-Chrome Headless Shell requires ~15 specific shared libraries (libnss3, libgbm, libasound2, libatk1.0-0, etc.) that are not included in slim Node.js Docker images. Developers assume `npm install` is sufficient since Remotion installs its own Chrome binary (`npx remotion browser ensure`), but Chrome still depends on OS-level shared libraries.
+The silence-cutter uses `libx264` for segment extraction (not `-c copy`) because frame-accurate cuts require re-encoding — stream copy snaps to keyframes. The concat pass also re-encodes to reset timestamps. These are architecturally necessary but their CRF values are not tuned; both currently inherit libx264's default CRF 23.
 
 **How to avoid:**
-Use Remotion's official Docker template exactly. The required packages are:
-```
-libnss3 libdbus-1-3 libatk1.0-0 libgbm-dev libasound2
-libxrandr2 libxkbcommon-dev libxfixes3 libxcomposite1
-libxdamage1 libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2
-```
-On Ubuntu 24.04+, use `libasound2t64` instead of `libasound2`.
-Always install Chrome via `npx remotion browser ensure` — do NOT rely on system Chromium.
-Use `node:22-bookworm-slim` as base image (Debian-based) — NOT Alpine.
+- Use a lossless or near-lossless intermediate format for silence-cutter output (e.g., `-c:v libx264 -crf 0` or `-c:v ffv1`) when the downstream step will do a final lossy encode anyway.
+- Alternatively, collapse the two silence-cutter passes into one: extract segments and concat in a single filtergraph command so the video is encoded exactly once at that step.
+- Ensure ffmpeg-finalizer CRF is set intentionally (currently 20 — fine) and is the last and only lossy encode before Remotion.
+- Remotion's own encode (via `renderMedia`) is the final encode and must use a sufficiently low CRF or high bitrate.
 
 **Warning signs:**
-- Container exits immediately with "error while loading shared libraries" messages
-- Chrome process never starts, Remotion timeout waiting for browser
-- Works locally (macOS/Windows) but fails in Docker (Linux)
+- ffprobe shows CRF field absent or "23" in the silence-cutter output segments.
+- Visual blocking visible in static areas (background wall) after silence-cutter but before Remotion.
+- `remotion-info.json` does not log the CRF used by Remotion — absence of this field means the default was assumed.
 
 **Phase to address:**
-Phase 2 (Remotion renderer container) — this is the very first blocker you'll hit when containerizing Remotion. Get the Dockerfile right on day one.
+Research phase (v1.1 Phase 1 — audit). Implementation in the encode-settings phase. Verify with per-step VMAF or SSIM measurements comparing input to each step's output.
 
 ---
 
-### Pitfall 4: Remotion Single-Process Mode Killing Render Performance in Docker
+### Pitfall A-2: Remotion `scale` Multiplies Chromium Memory and Render Time Non-Linearly
 
 **What goes wrong:**
-Remotion renders are painfully slow in Docker (2-5x slower than expected for the CPU resources allocated). The container has 8 CPUs but render concurrency doesn't help. One frame at a time processes despite setting concurrency. GPU-accelerated content (shadows, transforms, gradients used in subtitles/intros) renders at a crawl.
+Remotion's `scale` parameter in `renderMedia` multiplies each frame's pixel dimensions. `scale: 2` on 1080x1920 output produces 2160x3840 frames internally — four times the pixel count. Each Chromium tab renders at this resolution before encoding. In Docker with the default 64 MB `/dev/shm`, Chromium OOMs and crashes mid-render with no useful error message. Even with `--disable-dev-shm-usage` (which the current config routes via `--gl=angle-egl`), render time grows roughly as `scale^2` and memory as `scale^2`.
+
+Crucially: `scale` improves text and SVG sharpness (they are re-rasterized at the higher resolution), but it does NOT improve the sharpness of the source video frames. The `<OffthreadVideo>` element decodes at the video's native resolution. So `scale: 2` sharpens subtitle text but not the talking-head footage.
 
 **Why it happens:**
-On Linux (which Docker uses), Chromium defaults to `--single-process` mode for sandboxing/stability reasons. This prevents Remotion from using multiple renderer processes in parallel, effectively negating the `--concurrency` setting. Additionally, headless Chromium disables GPU by default, so effects like `box-shadow`, `text-shadow`, `filter: blur()`, `transform`, and CSS gradients — all likely used in animated subtitles and intros — fall back to CPU-only rendering.
+Developers see "scale = higher quality" and set `scale: 2` expecting improved video detail. The actual benefit is limited to vector/CSS elements. The cost is quadrupled rendering work.
 
 **How to avoid:**
-- Enable multi-process mode: `chromiumOptions: { enableMultiProcessOnLinux: true }` in `renderMedia()`, or `--enable-multi-process-on-linux` CLI flag. **This is now default from Remotion v4.0.137+**, but verify it's not disabled if you override chromium options.
-- Enable GPU rendering with `--gl=angle-egl` for Docker Linux + GPU. Without GPU: use `--gl=swangle` (software OpenGL).
-- **Critical**: `angle` renderer has known memory leaks. Split long renders (>3 min video) into segment renders and combine with FFmpeg afterward.
-- Allocate proper CPU resources: use `--cpus` and `--cpuset-cpus` flags on `docker run` to ensure the container can use available cores.
-- Set Remotion `--concurrency` to match available CPU cores.
-- If memory is tight, use `--disallow-parallel-encoding` to prevent frame rendering and encoding happening simultaneously.
+- Use `scale: 1` as default; only raise it if text rendering artifacts (aliased edges on letters at 1x) are confirmed by visual inspection on target device.
+- If text sharpness needs improvement, prefer higher `fontSize` + `outlineWidth` tuned values over raising `scale`.
+- If `scale: 1.5` is chosen, increase `timeoutInMilliseconds` beyond the current 120000 ms (the current render often finishes in ~30-60s but a 1.5x scale can push individual frame rendering over the per-frame timeout).
+- Set Docker memory limits explicitly (`--shm-size=512m`) when testing scale > 1.
 
 **Warning signs:**
-- Render time per frame >1 second for composition with visual effects
-- `--concurrency=8` produces no speed improvement over `--concurrency=1`
-- Container CPU usage stays at ~100% of a single core despite multi-core allocation
-- GPU-accelerated effects (shadows, gradients) are visibly slower in Docker than in Studio preview
+- Chromium process killed mid-render with exit code 137 (OOM).
+- `timeoutInMilliseconds` exception: "A delayRender() call was not resolved after 120000ms".
+- Render time doubles or triples with no noticeable improvement in video (background) sharpness.
 
 **Phase to address:**
-Phase 2 (Remotion renderer container) — this determines whether rendering is viable at all. Test render performance with the actual subtitle/intro compositions in Docker before building any more pipeline steps on top.
+Research phase (v1.1 Phase 1). Document the distinction between text-sharpness gains and video-sharpness gains before encoding `scale` into the implementation plan. Test with scale 1 → 1.25 → 1.5 and measure render time + output quality side-by-side.
 
 ---
 
-### Pitfall 5: Docker Bind Mount I/O Bottleneck on Large Video Files
+### Pitfall A-3: CRF Too High (Visible Blocking on Subtitle Text Areas)
 
 **What goes wrong:**
-The pipeline becomes extremely slow when processing video files through Docker bind mounts. A 500MB video that processes in 30 seconds natively takes 3-5 minutes in the container. FFmpeg operations, Whisper audio extraction, and Remotion frame reads all crawl because every disk read/write crosses the host↔container filesystem boundary via the bind mount.
+H.264 CRF controls quality; higher values mean lower quality. At CRF 23+ (libx264 default), sharp edges in high-contrast text overlays — white/yellow subtitle letters on a dark background — produce DCT blocking and ringing at macroblock boundaries. The blocking is especially visible when text is static (constant across frames) because the encoder cannot distribute the error across motion.
+
+The current `ffmpeg-finalizer` uses CRF 20, which is decent, but the upstream silence-cutter uses default CRF 23 twice. The final Remotion encode uses no explicit CRF (the `renderMedia` call has no `videoBitrate` or quality parameter set — it uses Remotion's internal default, which varies by codec).
 
 **Why it happens:**
-Docker bind mounts (`-v /host/path:/container/path`) on Linux use the `overlay2` storage driver with virtual filesystem translation. For large sequential I/O (video files, frame extraction), the overhead is significant — especially on macOS with Docker Desktop (which adds a VM layer). Each I/O syscall goes through the Docker proxy, and for frame-by-frame processing (Remotion extracting thousands of frames), the overhead multiplies.
+No explicit quality flag was set in `renderMedia`. Remotion's internal default for `h264` codec is CRF 18 (confirmed in Remotion v4 docs), but this is not documented in the codebase and could change between Remotion upgrades.
 
 **How to avoid:**
-- **Use Docker volumes (not bind mounts) for working data**: Named volumes (`docker volume create`) live inside Docker's storage and avoid the bind mount translation layer. They're significantly faster for sequential I/O.
-- **Stage data into the container**: For the input step, `docker cp` the input video into a named volume, process everything inside the container, then `docker cp` the output back. This avoids repeated bind-mount reads.
-- **Use `/tmp` inside the container**: For intermediate files between pipeline steps, write to the container's `/tmp` (tmpfs if possible) instead of a mounted volume.
-- **On macOS specifically**: Docker Desktop's VirtioFS is a significant improvement over the classic gRPC FUSE driver (available since Docker Desktop 4.x). Ensure VirtioFS is enabled in Docker Desktop settings.
-- **Architecture pattern**: Use an internal shared Docker volume between pipeline containers. Input comes in via bind mount or API upload (one-time read), all intermediate processing uses the shared named volume, final output goes out.
+- Add explicit `videoBitrate` or check Remotion's `crf` option in `renderMedia` call for h264. Target CRF 17-18 for the Remotion encode (final encode, text-heavy content).
+- Raise ffmpeg-finalizer CRF from 20 to 18 for the pre-Remotion video pass.
+- For Instagram Reels/TikTok: target output bitrate 5,000–8,000 kbps for 1080x1920. At 30fps, CRF 18 typically lands in this range for talking-head content.
 
 **Warning signs:**
-- `time ffmpeg -i input.mp4 ...` is 5-10x slower inside container vs. host
-- Remotion render log shows excessive time on "Fetching frames" vs. "Rendering"
-- `iostat` or `iotop` shows low throughput on the bind mount path
-- Whisper audio loading takes longer than the transcription itself
+- Visible 16x16 px blocks around subtitle letter edges visible at 1:1 zoom in VLC.
+- FFprobe shows bitrate below 3,000 kbps on the final output for 1080x1920 talking-head content.
+- Platforms re-compress the upload (Instagram shows the "processing" spinner for > 15 min).
 
 **Phase to address:**
-Phase 1 (pipeline infrastructure/Docker compose) — volume strategy must be designed before building individual step containers. Changing volume strategy later means touching every container's mount config.
+Encode-settings implementation phase. Use FFprobe to measure per-step bitrate and VMAF to compare CRF 20 vs 18 vs 16 on a representative clip.
 
 ---
 
-### Pitfall 6: Audio-Video Desync After Silence Removal
+### Pitfall A-4: CRF Too Low (File Too Large, Platform Re-Compression Defeats the Work)
 
 **What goes wrong:**
-After cutting silence segments from the video with FFmpeg, the audio and video tracks gradually drift out of sync. By the end of a 5-minute video, audio could be 0.5-2 seconds ahead or behind the video. Subtitles (timed to the original audio) also desync from the remaining audio.
+Setting CRF below 15 for 1080x1920 30fps produces files of 80+ MB per minute of video. Instagram and TikTok impose upload size limits and silently re-compress uploads that exceed their internal bitrate ceiling (Instagram stores at ~3.5 Mbps, TikTok at ~2.5 Mbps). The platform's re-compression then applies a second lossy encode, undoing the quality investment and often producing worse results than a well-tuned single encode at CRF 18.
 
 **Why it happens:**
-FFmpeg's `-af silencedetect` and `-vf select` operate on different timeline models. When you cut silence from both audio and video streams independently — even with the same timestamp filter — the two streams can accumulate micro-drift because:
-1. Audio and video frames don't align perfectly (audio is continuous, video is discrete at 30fps).
-2. FFmpeg's concat filter (`-f concat`) doesn't re-sync streams at segment boundaries by default — it concatenates raw packets.
-3. Variable bitrate audio (AAC) uses windowed encoding with priming/padding samples that get lost at cut boundaries.
-4. The `asegment`/`vsegment` filters may not produce frame-accurate cuts at identical timestamps for both streams.
+"Lower CRF = better quality" is true in isolation but ignores the platform's ingest pipeline. Creators upload lossless or near-lossless files expecting preservation; platforms always transcode.
 
 **How to avoid:**
-- Use FFmpeg's segment+concat approach with `reset_timestamps` and explicitly re-sync: after concatenating, apply `setpts=PTS-STARTPTS` for video and `asetpts=PTS-STARTPTS` for audio to reset both timelines from zero.
-- Use the `-shortest` flag in the final mux to trim the longer stream to the shorter one.
-- After silence removal, always validate A/V sync by checking the output with `ffprobe -show_frames` — compare audio and video PTS values for drift.
-- Consider using the Python library `ffmpeg-python` which handles stream synchronization more carefully than raw command-line invocations.
-- **Most reliable approach**: Extract audio to WAV (uncompressed), perform silence detection on WAV, get cut timestamps, apply cuts to both streams using the exact same timestamps, then re-encode. This eliminates AAC priming sample issues.
-- After cutting, re-mux with `-map 0:v:0 -map 0:a:0` explicitly to avoid stream selection issues.
+- Target output bitrate 5,000–8,000 kbps (CRF 17-18 typically achieves this for 30fps 1080x1920 talking-head).
+- Add a final `-maxrate 8M -bufsize 16M` constraint to ffmpeg-finalizer or a post-Remotion FFmpeg pass to cap bitrate.
+- Verify file size: for a 60-second clip, 5–8 Mbps = 37–60 MB. Files above 100 MB for a 60-second clip are a warning sign.
 
 **Warning signs:**
-- `ffprobe` shows growing PTS difference between audio and video streams
-- Lip sync is visibly off after the first silence cut
-- Audio ends noticeably before or after video track
-- In Remotion, `<OffthreadVideo>` audio and subtitle overlays seem to drift apart in longer videos
+- Output file larger than 100 MB for a 60-second 1080p clip.
+- Platform shows "processing" for unusually long time after upload.
+- Downloaded platform copy looks visibly worse than the local file.
 
 **Phase to address:**
-Phase 1 (silence detection + cutting step) — this is the core value of the pipeline. If silence cuts break A/V sync, the entire pipeline output is unusable. Validate sync on every test video.
+Same as A-3. Bitrate floor and ceiling should both be tested and documented as acceptance criteria.
 
 ---
 
-### Pitfall 7: Using Alpine Linux for Remotion Docker Image
+### Pitfall A-5: FFmpeg Sharpening Produces Haloing Artifacts on Text Edges and Skin Tone
 
 **What goes wrong:**
-The Remotion container builds and starts but has severe issues: Rust-based parts of Remotion take 10+ seconds extra per render, Chrome may crash on startup or fail mysteriously, and you can't pin package versions because Alpine removes old packages from repos when new ones release.
+FFmpeg's `unsharp` filter (the standard sharpening tool) works by subtracting a blurred version of the image from the original. Applied with too high a strength or too large a radius on video that already has subtitle text burned in, it creates bright halos around letter edges. On skin tones, it amplifies pores and stubble into distracting texture. On jump-cut boundaries, it creates a "pop" of exaggerated sharpness on the first frame after the cut.
 
 **Why it happens:**
-Alpine uses musl libc instead of glibc. Remotion ships with pre-compiled binaries (Chrome, FFmpeg) built against glibc. The musl compatibility layer introduces performance overhead and subtle incompatibilities. Remotion's official docs explicitly recommend against Alpine: "There are two known issues with it when used in conjunction with Remotion" (slow Rust startup, Chrome version pinning).
+Developers use `unsharp=lx:ly:la` values tuned for photography (amount 1.0–2.0) rather than video (amount 0.3–0.6). Larger radius values (5x5 and above) produce visible halos. The filter is applied globally without masking edges vs. flat areas.
 
 **How to avoid:**
-Use `node:22-bookworm-slim` (Debian-based) as the Docker base image. This is the officially recommended and tested base. Debian doesn't remove old packages from repos, so version pinning works reliably.
+- Use conservative values: `unsharp=3:3:0.4:3:3:0.0` (luma amount 0.4, no chroma sharpening to avoid color fringing).
+- Apply sharpening BEFORE subtitle burn-in (i.e., to the background video before Remotion composites text), not after. This means sharpening in the ffmpeg-finalizer step, not in a post-Remotion pass.
+- Test on a still frame extracted with FFmpeg (`-vframes 1`) before running full render.
+- Consider luminance-only sharpening to avoid skin tone artifacts.
 
 **Warning signs:**
-- Container start time is >10 seconds before rendering begins
-- Chrome crashes with glibc/musl-related errors
-- Dockerfile builds break intermittently when Alpine packages update
+- Bright white outlines visible around high-contrast edges when zoomed to 100%.
+- Subtitle text appears to have a second glow border outside the designed outline.
+- Skin takes on a textured, over-processed look.
 
 **Phase to address:**
-Phase 2 (Remotion renderer container) — use Debian base image from the start. If you've already built on Alpine, switch immediately.
+Encode-settings implementation phase. Visual QA must include zoomed-in frame inspection at 1:1 pixel ratio, not just playback at full-screen distance.
 
 ---
 
-### Pitfall 8: FFmpeg Version Mismatch Between Pipeline Steps
+### Pitfall A-6: Wrong Color Space / Pixel Format Causes Washed-Out or Green-Shifted Output
 
 **What goes wrong:**
-Different pipeline containers ship different FFmpeg versions (one has 4.x, another 6.x). This causes subtle failures: files produced by one FFmpeg version can't be read by another, codec flags differ, filter options are renamed, and output quality varies unpredictably. Specifically, the `libx264` CRF values produce different results across versions, and the `silencedetect` filter output format changed between FFmpeg 4 and 6.
+The current `ffmpeg-finalizer` outputs `-pix_fmt yuv420p` without explicitly tagging BT.709 metadata (`-colorspace bt709 -color_primaries bt709 -color_trc bt709`). FFmpeg defaults to BT.601 matrix assumptions when color metadata is absent, and many players/platforms interpret untagged 1080p video as BT.709. The mismatch between actual matrix (BT.601) and assumed matrix (BT.709) causes saturation and luminance shifts — typically a slight green cast and desaturated skin tones.
+
+Additionally, Remotion renders in sRGB (browser color space), and the subsequent H.264 encode converts to YUV limited range. If this conversion is done with the wrong input transfer function, the result is faded highlights and crushed shadows. Critically: adding `-colorspace bt709` metadata tag does NOT perform the conversion — it only labels the stream. The actual pixel transform requires the FFmpeg `colorspace` filter.
 
 **Why it happens:**
-Each Docker container pulls FFmpeg from its base image's package manager, and different base images ship different versions. Python containers (Whisper step) might have FFmpeg 4.x from `apt`, Node.js containers (Remotion step) have their own FFmpeg bundled by Remotion. When pipeline steps pass files between containers, they implicitly depend on format compatibility.
+- The current `apply_finalizer` in `crop.py` emits no `-colorspace`, `-color_primaries`, or `-color_trc` flags. The video is tagged as unspecified and treated as BT.601 by default (FFmpeg's fallback for SD-and-below resolutions) or BT.709 for HD — inconsistently across players.
+- Remotion's Chromium renderer works in sRGB; its output frames are sRGB. The FFmpeg encode inside Remotion uses libx264 which converts from the intermediate format to YUV limited range. If the color profile flags are not set on the Remotion output, downstream tools guess.
 
 **How to avoid:**
-- Pin FFmpeg version explicitly in every container's Dockerfile.
-- Use the same FFmpeg major version across all containers (6.x recommended).
-- Remotion v4+ bundles its own FFmpeg — don't install a system FFmpeg in the Remotion container.
-- For the Whisper and silence-detection containers, install FFmpeg from a PPA or download the static binary directly from `johnvansickle.com/ffmpeg/` (official static builds) to control the exact version.
-- Add a "version check" step at pipeline startup: each container reports its FFmpeg version, and the orchestrator validates they're compatible before starting the pipeline.
-- Define a shared "pipeline contract" document: codec, container format, pixel format, sample rate, and channel layout that all steps must use.
+- Add explicit BT.709 tags to `ffmpeg-finalizer` output: `-colorspace 1 -color_primaries 1 -color_trc 1` (numeric values for bt709).
+- Do NOT use just metadata flags to perform conversion. If the source is sRGB (e.g., from Chromium), use the `colorspace` filter to correctly transform: `-vf "colorspace=all=bt709:iall=bt709:itrc=srgb"`.
+- Verify with FFprobe: `ffprobe -show_streams output.mp4 | grep color` should show `color_space=bt709`, `color_primaries=bt709`, `color_transfer=bt709`.
+- Test: side-by-side comparison of a color checker or skin tone reference on a calibrated display.
 
 **Warning signs:**
-- FFmpeg in one container can't decode files produced by another
-- `silencedetect` output format differs between containers' logs
-- CRF quality varies inexplicably between processing runs
-- `ffprobe` shows different metadata for the "same" encoding parameters
+- FFprobe shows `color_space=unknown` or `color_space=smpte170m` (BT.601) on HD output.
+- Slight green tint or desaturated pastels compared to the original camera footage.
+- Colors shift when comparing output in VLC vs Chrome vs iPhone.
 
 **Phase to address:**
-Phase 1 (pipeline infrastructure) — define the shared format contract and pin FFmpeg versions before building individual step containers.
+Research phase (v1.1 Phase 1, confirm current tags). Fix in encode-settings phase. Verification: FFprobe color metadata check as an automated test.
 
 ---
 
-## Technical Debt Patterns
+### Pitfall A-7: loudnorm Internal Resampling Introduces Subtle Audio Duration Drift
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Using Whisper `base` model instead of `medium`/`large` | 4-7x faster transcription | Garbage word-level timestamps → subtitles visibly off, hallucination in silent sections → wrong silence cuts | Never — word-by-word subtitles depend on accurate alignment |
-| Using bind mounts for all video I/O | Simpler Docker compose setup | 5-10x I/O penalty on large files, pipeline becomes unusably slow at scale | MVP prototyping only with small (<100MB) files |
-| Processing audio as AAC throughout pipeline | No re-encoding needed, faster | AAC priming samples cause A/V desync at every cut point | Only if no cutting occurs (but this pipeline explicitly cuts silence) |
-| Skipping post-cut A/V sync validation | Faster iteration, simpler code | Desync accumulates — by end of 5-min video, 1-2 second drift | Never — this is the core value proposition |
-| Using `<Html5Video>` in Remotion instead of `<OffthreadVideo>` | Simpler code, works in preview | Frame-accurate rendering fails — Html5Video can't guarantee exact frame extraction, video seeks are approximate | Preview only — must switch to OffthreadVideo for production renders |
-| Hardcoding concurrency/timeout values in render config | Quick setup, works on dev machine | Fails on different hardware, OOM on low-memory containers, underutilizes high-core machines | Never — read from runtime environment |
+**What goes wrong:**
+FFmpeg's `loudnorm` filter (used in the current `apply_finalizer`) internally upsamples audio to 192 kHz for accurate true-peak detection, then resamples back. The current command sets `-ar 44100` which forces the final sample rate, but if the resampling path introduces fractional sample rounding, the audio stream can end up fractionally longer or shorter than the video stream. Across 60+ silence cuts, these sub-millisecond drifts accumulate into a noticeable A/V sync offset at the end of long clips.
+
+**Why it happens:**
+Single-pass `loudnorm` is a best-effort estimate. Two-pass loudnorm (first pass measures, second applies) is more accurate but the current implementation does not use it. Additionally, the `apad` filter used in `_extract_segments` pads audio to video duration per-segment, which helps with per-segment sync but the concat step then re-encodes without `apad`, potentially re-introducing fractional drift.
+
+**How to avoid:**
+- Implement two-pass `loudnorm` in the ffmpeg-finalizer (measure pass then apply pass).
+- After all re-encodes, verify A/V sync with: `ffprobe -show_entries stream=codec_type,duration output.mp4` and confirm video and audio durations agree within ±16ms (one frame at 60fps).
+- Add `-async 1` to the final encode to correct minor drift during AAC encoding.
+
+**Warning signs:**
+- Audio duration and video duration differ by more than 33ms (one frame at 30fps) in ffprobe output.
+- Lip sync appears correct at the start of a long video but drifts out of sync near the end.
+- Platform video upload shows audio offset warning.
+
+**Phase to address:**
+Encode-settings implementation phase. Add a post-render A/V duration check as a mandatory verification step in the pipeline manifest.
+
+---
+
+## PATH B — AI Upscaling Pitfalls
+
+These apply when the approach includes a super-resolution step (Real-ESRGAN or equivalent) as a Docker service inserted after the ffmpeg-finalizer or before Remotion.
+
+---
+
+### Pitfall B-1: Real-ESRGAN on CPU is Prohibitively Slow (1–3 fps)
+
+**What goes wrong:**
+Real-ESRGAN (PyTorch or NCNN) runs at 1–3 fps on CPU for 1080p frames. A 60-second video at 30fps = 1,800 frames. At 2 fps CPU throughput, that is 15 minutes per video. On a GPU-less Docker host (WSL2 on a machine without GPU passthrough), this blocks the pipeline completely.
+
+**Why it happens:**
+Real-ESRGAN uses convolutional neural networks with millions of parameters. Inference without GPU acceleration falls back to CPU BLAS, which is orders of magnitude slower than CUDA or Vulkan inference.
+
+**How to avoid:**
+- Before implementing the AI-upscaling path, verify GPU availability in the Docker environment: `nvidia-smi` inside the container. If unavailable, do not implement this path.
+- Use Real-ESRGAN-ncnn-vulkan as the CPU/GPU-agnostic fallback — it uses Vulkan compute and can run on integrated GPUs at 5–15 fps.
+- Set processing timeout in the Docker container to 20 minutes and alert when exceeded.
+- Consider frame skipping (upscale 1 in N frames, blend) to reduce load — but this introduces the temporal coherence pitfall (B-3).
+- Provide a `ENABLE_AI_UPSCALING=false` env var to skip the step when GPU is absent.
+
+**Warning signs:**
+- Container health check timeout hit before processing completes.
+- CPU utilization at 100% for >5 minutes on a video that should take <3 minutes.
+- No `nvidia-smi` output inside the container.
+
+**Phase to address:**
+AI-upscaling research phase (v1.1, before any implementation). GPU availability must be confirmed as a hard prerequisite.
+
+---
+
+### Pitfall B-2: GPU OOM Crash for 1080x1920 Tiles Without Tiling Configuration
+
+**What goes wrong:**
+Real-ESRGAN upscaling a full 1080x1920 frame in one pass requires 4–8 GB VRAM for the standard x4 model. Consumer GPUs (RTX 3060: 12 GB, RTX 3070: 8 GB) may fit, but Docker containers without explicit `--gpus all` and `--shm-size` settings crash with cryptic CUDA OOM errors that look like process exits rather than GPU memory errors.
+
+**Why it happens:**
+The ESRGAN model allocates the full frame as a tensor in GPU memory. Without tiling, a 1080x1920 input produces a 4320x7680 output tensor. At fp32, this is ~400 MB just for the output, plus intermediate activations.
+
+**How to avoid:**
+- Always enable tiling: `--tile 256` or `--tile 512` in the Real-ESRGAN CLI. Tiling divides each frame into smaller patches, processes them individually, and stitches the output. Memory usage drops to 1–2 GB VRAM.
+- Tiling introduces seam artifacts if the tile overlap (`--tile-pad`) is too small. Use `--tile-pad 16` minimum.
+- Start Docker with `--gpus all --shm-size=4g`.
+- Test with the smallest model first: `realesr-general-wdn-x4v3` (lighter than `RealESRGAN_x4plus`).
+
+**Warning signs:**
+- Process exits with code 1 and "CUDA error: out of memory" in logs.
+- Container killed by Docker OOM killer (check `docker inspect` for `OOMKilled: true`).
+- Tiling not configured — all production runs must verify `--tile` is set.
+
+**Phase to address:**
+AI-upscaling implementation phase. Docker Compose for the AI service must include explicit GPU flags and shm-size.
+
+---
+
+### Pitfall B-3: Temporal Flickering Between Upscaled Frames
+
+**What goes wrong:**
+Real-ESRGAN (and most single-frame super-resolution models) processes each frame independently. For a static background (wall, gradient), the model hallucinates slightly different texture detail in each frame — a patch of plaster that appears slightly smoother in frame N and slightly coarser in frame N+1. At 30fps, this manifests as a shimmering, flickering noise that is highly visible on smooth areas and makes the video look unstable or AI-processed.
+
+**Why it happens:**
+Single-image SR models have no temporal loss term — they optimize for perceptual quality of one frame at a time without considering frame-to-frame consistency. The hallucinated detail is non-deterministic across frames even for identical pixel regions.
+
+**How to avoid:**
+- Use a video-native SR model (e.g., `realesr-animevideov3`) rather than the photo-oriented `RealESRGAN_x4plus`. Video models incorporate temporal consistency losses.
+- Apply a light temporal denoise filter after upscaling: FFmpeg `hqdn3d=0:0:3:3` (spatial=0, temporal=3) to smooth inter-frame variation without blurring spatial detail.
+- Test by extracting 100 consecutive frames and inspecting a flat region (wall background) frame-by-frame.
+- If flickering persists, reconsider whether AI upscaling is the right tool for talking-head footage where the background is nearly static.
+
+**Warning signs:**
+- Shimmering or "boiling" visible in smooth background areas during playback.
+- Skin texture changes frame-to-frame on a static subject.
+- VBR bitrate spikes to maximum on "unchanged" frames because the encoder detects motion from flickering texture.
+
+**Phase to address:**
+AI-upscaling research phase. Temporal flickering test on a representative clip must pass before committing to this path.
+
+---
+
+### Pitfall B-4: AI Hallucination of Detail That Does Not Exist in Source
+
+**What goes wrong:**
+Super-resolution models are trained to produce plausible high-frequency texture where none exists in the low-resolution input. For a mobile camera talking-head, this means the model may synthesize facial pores, fabric weave, and background text that was never captured. The result looks "over-sharpened" or "painted" — artificial detail that degrades trust in the footage's authenticity.
+
+Additionally, hallucinated detail in face regions can produce uncanny-valley skin texture. In extreme cases, facial features (eyes, teeth) take on slight distortions as the model tries to reconstruct sub-pixel information.
+
+**Why it happens:**
+The model's prior (what it learned plausible HD texture looks like) is applied where the source provides no real information. Modern mobile cameras at 1080p are sharp enough that x4 upscaling to 4320x7680 is almost entirely hallucination — there is no real detail at that scale from a mobile sensor.
+
+**How to avoid:**
+- Do not upscale more than x2 for talking-head mobile footage. At x2 (1080p → 2160p), some real detail recovery is plausible; at x4, it is predominantly synthesis.
+- Keep the output resolution at 1080x1920 (do not upscale above the target output resolution). Use Real-ESRGAN only as a sharpness enhancement pass, not a resolution increase: upscale to 2160x3840 then downscale back to 1080x1920 in FFmpeg. This uses the model's detail generation but keeps the resolution constant, acting as a perceptual sharpener.
+- Compare source frame vs. upscaled frame on a still subject. If fine details (individual hairs, fabric threads) appear that were absent in source, the model is hallucinating.
+
+**Warning signs:**
+- Background elements (text on a whiteboard, fabric patterns) appear sharper in the output than in the original and at a different scale.
+- Facial features look "painted" or artificially textured.
+- VMAF score is high but SSIM is low — VMAF rewards perceptual appeal while SSIM penalizes structural deviations from the reference.
+
+**Phase to address:**
+AI-upscaling research phase. Establish reference frame comparisons before deciding on upscaling ratio.
+
+---
+
+### Pitfall B-5: Upscaling After Subtitle Burn-In Softens and Distorts Subtitle Text
+
+**What goes wrong:**
+In the current pipeline, Remotion burns subtitles into the video as rendered pixels. If a Real-ESRGAN step is added after Remotion, the SR model processes subtitle text as image content. The model was trained on natural image content, not on typography. It will attempt to "restore" the sub-pixel structure of letters, producing subtly blurry, incorrectly kerned, or color-fringed subtitle text. The crisp subtitle rendering that Remotion produces is degraded.
+
+**Why it happens:**
+The pipeline order matters critically. Subtitles that are already burned in are opaque pixels to the upscaler — it has no semantic knowledge that they are text.
+
+**How to avoid:**
+- If using AI upscaling, insert the upscaler step BEFORE Remotion (upscale the background video, then let Remotion render sharp subtitles on top of the upscaled background).
+- Pipeline order with AI upscaling: `silence-cutter → ffmpeg-finalizer → AI-upscaler → remotion-renderer`.
+- If the upscaler must go after Remotion (e.g., to upscale the composited output), use a 1:1 pass that sharpens without upscaling resolution (upscale x2, downscale x2 in the same FFmpeg filter chain).
+- The SRT file exporter step is unaffected because SRT timestamps do not embed in pixels — only ensure timestamps remain accurate after any resolution changes.
+
+**Warning signs:**
+- Subtitle text appears softer or has color fringing when inspected at 1:1 pixel ratio after the upscaling step.
+- Letter edges show ringing or halos that were absent in the Remotion output.
+- Text outlines blur into the text fill color.
+
+**Phase to address:**
+AI-upscaling architecture phase. Pipeline step ordering must be decided before any implementation work begins.
+
+---
+
+### Pitfall B-6: Diminishing Returns — Mobile Camera Already at Sensor Resolution Limit
+
+**What goes wrong:**
+Modern mobile cameras (iPhone 14+, Pixel 7+) record at 1080p or 4K with optical-quality lenses that approach their diffraction limit at the sensor resolution. The ffmpeg-finalizer already outputs 1080x1920 — the same resolution as the source. Running Real-ESRGAN x4 on this content and then downscaling back to 1080x1920 costs significant compute time for marginal visible improvement. The improvement is primarily perceptual sharpness (not resolution), which can be achieved more cheaply with FFmpeg `unsharp` at a fraction of the cost.
+
+**Why it happens:**
+AI upscaling was developed for upscaling low-resolution sources (240p → 1080p, old DVD content). Applied to already-HD mobile footage, it offers diminishing returns.
+
+**How to avoid:**
+- Benchmark: run the lightweight path (FFmpeg `unsharp` + CRF tuning) first. Measure VMAF and perceptual quality. Only add AI upscaling if the gap to the target quality level remains after the lightweight path is fully optimized.
+- Define "target quality" visually (side-by-side with a reference Instagram Reel from a professional creator) before choosing tools.
+- AI upscaling is worth the cost for: 720p input content, old recordings, screen recordings with compression artifacts. It offers minimal ROI for high-quality 1080p mobile footage.
+
+**Warning signs:**
+- Lightweight path (CRF 17, `unsharp` 3:3:0.4) achieves indistinguishable perceptual quality from the AI path in a blind comparison.
+- AI processing time exceeds 5 minutes for a 60-second clip on the available hardware.
+
+**Phase to address:**
+Research phase (v1.1 Phase 1). Establish a quality baseline with lightweight settings before evaluating AI upscaling feasibility.
+
+---
 
 ## Integration Gotchas
 
+Common mistakes when connecting quality-improvement steps to the existing pipeline services.
+
 | Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Whisper → Silence Detection | Using Whisper's segment timestamps as silence boundaries | Use FFmpeg's `silencedetect` for silence detection (it operates on actual audio energy); use Whisper timestamps only for subtitle alignment |
-| Whisper → Remotion | Passing raw Whisper JSON directly as subtitle props | Transform Whisper output into Remotion's expected format: `{startFrame, endFrame, text}` using the composition's FPS to convert seconds → frames |
-| FFmpeg → Remotion | Assuming Remotion can read any FFmpeg output format | Remotion's `<OffthreadVideo>` supports: H.264, H.265, VP8, VP9, AV1, ProRes. Ensure FFmpeg outputs one of these. Use H.264 for widest compatibility. |
-| Docker containers (inter-step) | Passing video files via filesystem paths that differ per container | Use a shared named Docker volume mounted at the same path in every container (e.g., `/pipeline/data/`) |
-| Remotion → FFmpeg final mux | Letting Remotion handle final audio/video muxing | If silence cuts modified the audio, render video-only in Remotion (muted), then mux with the FFmpeg-processed audio track separately using FFmpeg concat |
+|-------------|----------------|-----------------|
+| silence-cutter → ffmpeg-finalizer | silence-cutter uses default CRF 23 (undocumented), finalizer uses CRF 20 — the worst encode is the first one | Set silence-cutter extraction to CRF 0 (lossless) or use a single re-encode and concat pass |
+| ffmpeg-finalizer + colorspace | Adding `-colorspace bt709` metadata tag without the `colorspace` filter — tags the stream but pixels remain in wrong matrix | Use `colorspace=all=bt709:iall=bt709:itrc=srgb` filter OR verify the source is already BT.709 before tagging |
+| loudnorm single-pass | Internal 192 kHz upsampling without explicit `-ar` flag produces 192 kHz output | Always pair loudnorm with `-ar 44100` (current config does this correctly — verify it stays in place after any audio chain changes) |
+| AI upscaler → Remotion | Inserting upscaler after Remotion degrades burned-in subtitles | Insert upscaler before Remotion; Remotion renders fresh crisp text on top |
+| FFmpeg re-encode after Remotion | Adding a "quality fix" pass after Remotion is a 4th lossy encode | Eliminate upstream re-encodes; do not add post-Remotion encodes for quality — only for container format changes |
+| Docker GPU + Real-ESRGAN | Running Real-ESRGAN without `--gpus all` in docker-compose — silent fallback to CPU | Explicitly configure GPU resources in docker-compose; add health check that verifies CUDA availability at container start |
+| SRT exporter after upscaling | Upscaling does not change timestamps — SRT remains valid | No change needed; verify by comparing silence-cutter timestamps against the final output duration |
+
+---
 
 ## Performance Traps
 
+Patterns that work at small scale but fail as video count or length grows.
+
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Remotion rendering without GPU flag in Docker | 3-5x slower renders for any composition with shadows/gradients/blurs | Set `--gl=angle-egl` (GPU available) or `--gl=swangle` (no GPU) | Any non-trivial composition |
-| Processing 1GB+ video files through Docker bind mounts | Pipeline takes 10x longer than expected, I/O wait dominates | Use Docker named volumes or copy data into container first | Files >200MB on Linux, >50MB on macOS Docker Desktop |
-| Remotion `angle` renderer for long videos | OOM crash mid-render, or silent memory leak causing gradual slowdown | Split renders >3 min into segments, use `--disallow-parallel-encoding` if memory constrained | Videos >3 minutes with visual effects |
-| Whisper `large` model without GPU | Transcription takes 30+ minutes for 10-minute video | Use `turbo` model (6GB VRAM, 8x faster than large) or `medium` (5GB VRAM, 2x slower) | Any real-time or batch processing at scale |
-| Running multiple pipeline instances without resource limits | Containers fight for CPU/RAM, all slow down, OOM kills | Set `--cpus` and `--memory` limits per container, limit concurrent pipeline runs | 3+ simultaneous processing jobs |
+| No lossless intermediate in silence-cutter | Quality degrades across 3 encodes; tuning last encode does not help | Use lossless (-crf 0) for silence-cutter output | Immediately — even one video |
+| Remotion scale 2 without concurrency limit | OOM kills container after 50% of frames rendered | Set scale max to 1.5; test Docker memory with 512 MB shm-size | At ~500 frames (17s of video) |
+| Real-ESRGAN without tiling | GPU OOM on first frame at 1080p | Always pass --tile 256 | At 1080p+ resolution with standard x4 model |
+| No per-step VMAF/SSIM check | Quality regressions invisible until user report | Add ffmpeg-quality-metrics or vmaf filter after each encode step in CI | Not a scale issue — quality always matters |
+| Bitrate uncapped for batch jobs | One long video produces a 300 MB file; platform rejects or re-encodes | Add -maxrate 8M to final encode | At ~8 minutes of content at CRF 16 |
 
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Accepting arbitrary video URLs as pipeline input | SSRF — internal network scanning via crafted URLs | Accept only uploaded files or pre-signed URLs from trusted storage |
-| Running FFmpeg on untrusted input without sandboxing | FFmpeg has had RCE vulnerabilities (CVE-2024-3147, etc.) | Run FFmpeg in isolated container with no network access, use `--network=none` in Docker |
-| Exposing Remotion Studio to public internet | Arbitrary code execution — Studio can run any React component | Studio is for dev only; production API should only accept safe serialized props, not arbitrary code |
-| Storing intermediate video files on shared volumes without cleanup | Disk exhaustion from accumulated temp files | Implement mandatory cleanup after each pipeline run, set volume size limits |
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Word-by-word subtitles that are 200ms+ off from speech | Feels broken, viewers notice immediately | Use forced-alignment (whisperx/whisper-timestamped) + configurable offset adjustment per video |
-| Silence cuts that create micro-pops (audio clicks) | Audio sounds unprofessional, jarring | Apply 10-30ms crossfade at cut points via FFmpeg `acrossfade` after silence removal |
-| Pipeline takes 10+ minutes with no progress feedback | User doesn't know if it's working or broken | Stream step-by-step progress via API (Whisper: segments done; FFmpeg: % complete; Remotion: frames rendered) |
-| Output video has wrong aspect ratio (not 9:16) | Video looks wrong on social media | Explicitly validate output dimensions with `ffprobe` before accepting pipeline output |
+---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Whisper transcription:** Often missing hallucination filtering — verify `--hallucination_silence_threshold 2.0` is set and that silent sections return empty, not invent text
-- [ ] **Silence removal:** Often missing A/V sync verification — verify with `ffprobe -show_frames` that audio and video PTS stay aligned after cutting
-- [ ] **Remotion Docker render:** Often missing `enableMultiProcessOnLinux: true` — verify render concurrency actually uses multiple cores (check CPU usage during render)
-- [ ] **Remotion frame-accurate video:** Often using `<Html5Video>` instead of `<OffthreadVideo>` — verify the component can seek to exact frames by testing with a known video at specific timestamps
-- [ ] **FFmpeg in Docker:** Often wrong version — verify `ffmpeg -version` output matches expected version across all containers
-- [ ] **9:16 output:** Often outputs incorrect resolution — verify output is exactly 1080x1920 (or 720x1280) with `ffprobe`
-- [ ] **Audio clicks at cuts:** Often missing crossfades — listen to output at every cut point for audio pops/clicks
-- [ ] **Word-by-word subtitle timing:** Often timestamps visibly off — manually verify 5+ random words' timestamps against actual speech in the video
+Things that appear complete but are missing critical verification.
+
+- [ ] **Color space:** Output plays correctly in VLC AND in Chrome AND on iPhone — verify all three, not just the development machine player.
+- [ ] **CRF tuning:** ffprobe confirms final output bitrate is in the 5,000–8,000 kbps range, not just "lower CRF was set."
+- [ ] **Remotion scale:** Text sharpness visually confirmed on a 1:1 pixel crop screenshot — not just full-screen playback.
+- [ ] **A/V sync:** `ffprobe` audio duration and video duration differ by < 33ms after all processing steps, not just "sounds OK on playback."
+- [ ] **AI upscaling temporal coherence:** 5-second clip of a static background inspected frame-by-frame at 100% zoom — not just watched at real-time speed.
+- [ ] **Subtitle integrity after upscaling:** Subtitle text from Remotion output compared to upscaled output at 1:1 pixel crop — crispness confirmed.
+- [ ] **GPU availability:** `nvidia-smi` runs inside the Docker container in the actual deployment environment, not just the developer's machine.
+- [ ] **Re-encode count:** ffprobe `codec_name` and generation count verified for each intermediate file — not just "the final output looks good."
+
+---
 
 ## Recovery Strategies
 
+When pitfalls occur despite prevention, how to recover.
+
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Whisper hallucinations not filtered | LOW | Re-run transcription with `hallucination_silence_threshold`; add post-processing filter to existing results |
-| Word-level timestamp drift | MEDIUM | Switch to whisperx/whisper-timestamped and re-process; requires re-running Whisper step for all videos |
-| Docker Chrome dependencies missing | LOW | Add missing packages to Dockerfile, rebuild image |
-| Single-process rendering mode | LOW | Add `enableMultiProcessOnLinux: true` to render config; immediate improvement |
-| A/V desync after silence cuts | HIGH | Re-encode all affected videos with proper `reset_timestamps` and sync verification; may need to re-derive cut points |
-| Bind mount I/O bottleneck | MEDIUM | Change Docker compose to use named volumes; update pipeline step container mount configs |
-| Alpine base image issues | MEDIUM | Rebuild Dockerfile with Debian base image; requires re-testing all Chrome/FFmpeg functionality |
-| FFmpeg version mismatch | MEDIUM | Pin FFmpeg versions in all containers, rebuild, re-validate pipeline contract |
+| Triple re-encode already shipped to production | HIGH | Introduce lossless intermediate; requires silence-cutter change and re-test of full pipeline |
+| Wrong colorspace on existing outputs | LOW | Re-run ffmpeg-finalizer with corrected flags; outputs are re-generated per job |
+| Remotion scale OOM crash | LOW | Remove `scale` parameter (default 1); re-render affected jobs |
+| Real-ESRGAN temporal flickering | MEDIUM | Switch to video-native model (realesr-animevideov3) + hqdn3d post-filter; no pipeline architecture change |
+| Subtitles softened by post-Remotion upscaler | HIGH | Reorder pipeline (upscaler before Remotion); requires new step ordering, re-test of full integration |
+| A/V sync drift discovered after deploy | MEDIUM | Add two-pass loudnorm and `-async 1` to ffmpeg-finalizer; re-process flagged jobs |
+
+---
 
 ## Pitfall-to-Phase Mapping
 
+How roadmap phases should address these pitfalls.
+
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Whisper hallucinations in silence | Phase 1: Whisper step | Transcribe 3 test videos with known silent sections; verify no phantom text in output |
-| Word-level timestamp drift | Phase 1: Whisper step | Manually check 10 random word timestamps against audio; verify <100ms average offset |
-| Chrome dependencies missing | Phase 2: Remotion container | Docker build + test render on clean machine (no cached layers) |
-| Single-process rendering mode | Phase 2: Remotion container | Compare render time with `--concurrency=1` vs `--concurrency=N` in Docker; should see proportional improvement |
-| Docker bind mount I/O bottleneck | Phase 1: Pipeline infrastructure | Benchmark FFmpeg read speed inside container vs. host; verify <2x overhead |
-| A/V desync after silence cuts | Phase 1: Silence detection step | Run `ffprobe -show_frames` on output; verify audio/video PTS difference stays <1 frame throughout |
-| Alpine base image | Phase 2: Remotion container | Not applicable if using Debian from start |
-| FFmpeg version mismatch | Phase 1: Pipeline infrastructure | Each container logs `ffmpeg -version` at startup; orchestrator validates compatibility |
+| A-1: Triple re-encode generation loss | Phase 1 (audit) + Phase 2 (encode settings) | ffprobe CRF on each step's output; per-step VMAF |
+| A-2: Remotion scale memory/timeout | Phase 1 (audit) + Phase 2 (encode settings) | Render time benchmark at scale 1 vs 1.25 vs 1.5; Docker memory check |
+| A-3: CRF too high (blocking on text) | Phase 2 (encode settings) | ffprobe bitrate on final output; visual inspection at 1:1 |
+| A-4: CRF too low (platform re-compress) | Phase 2 (encode settings) | File size per minute measurement; post-platform download comparison |
+| A-5: Over-sharpening haloing | Phase 2 (encode settings) | Frame screenshot at 100% zoom; unsharp amount <= 0.5 |
+| A-6: Wrong color space | Phase 1 (audit) + Phase 2 (encode settings) | ffprobe `color_space=bt709` on all outputs |
+| A-7: loudnorm A/V drift | Phase 2 (encode settings) | ffprobe duration comparison audio vs video +/- 33ms |
+| B-1: Real-ESRGAN CPU too slow | Phase 3 (AI upscaling research) | Benchmark fps on target hardware before implementing |
+| B-2: GPU OOM without tiling | Phase 3 (AI upscaling implementation) | Test with --tile 256 on 1080p frame; Docker OOMKilled=false |
+| B-3: Temporal flickering | Phase 3 (AI upscaling research) | Frame-by-frame flat-region inspection on 5-second clip |
+| B-4: AI hallucination | Phase 3 (AI upscaling research) | Side-by-side source vs output comparison on face region |
+| B-5: Subtitles softened by upscaler | Phase 3 (AI upscaling architecture decision) | Pipeline order confirmed: upscaler before Remotion |
+| B-6: Diminishing returns on mobile 1080p | Phase 3 (AI upscaling research) | Blind A/B test: lightweight path vs AI path at same output resolution |
+
+---
 
 ## Sources
 
-- OpenAI Whisper model card: https://github.com/openai/whisper/blob/main/model-card.md (official — hallucination and repetition limitations)
-- OpenAI Whisper README: https://github.com/openai/whisper (official — model sizes, VRAM requirements, turbo model)
-- Remotion Docker docs: https://www.remotion.dev/docs/docker (official — Dockerfile, Chrome deps, Alpine warning)
-- Remotion Linux multi-process docs: https://www.remotion.dev/docs/miscellaneous/linux-single-process (official — single-process default, enableMultiProcessOnLinux)
-- Remotion GPU docs: https://www.remotion.dev/docs/gpu (official — GPU-disabled in headless, content types accelerated)
-- Remotion GL options: https://www.remotion.dev/docs/gl-options (official — angle memory leak warning, renderer backend options)
-- Remotion OffthreadVideo: https://www.remotion.dev/docs/offthreadvideo (official — frame extraction outside browser via FFmpeg, supported codecs)
-- Remotion hardware acceleration: https://www.remotion.dev/docs/hardware-acceleration (official — macOS-only, not Lambda/Cloud Run)
-- Remotion render CLI: https://www.remotion.dev/docs/cli/render (official — all render flags)
-- FFmpeg adelay/cue/setpts docs: https://ffmpeg.org/ffmpeg-all.html (official — audio delay, PTS manipulation, sync)
-- Docker Desktop VirtioFS: https://docs.docker.com/desktop/settings/ (official — filesystem performance settings)
-- Context7 Whisper documentation (verified 2026-05-05)
-- Context7 Remotion documentation (verified 2026-05-05)
-- Context7 FFmpeg documentation (verified 2026-05-05)
+- Canva Engineering: A journey through colour space with FFmpeg — https://www.canva.dev/blog/engineering/a-journey-through-colour-space-with-ffmpeg/
+- sRGB vs REC709 FFmpeg implementations — https://www.pixelsham.com/2025/08/07/srgb-vs-rec709-an-introduction/
+- InVideo: Talking About Colorspaces and FFmpeg — https://medium.com/invideo-io/talking-about-colorspaces-and-ffmpeg-f6d0b037cc2f
+- Kdenlive: Color Hell — FFmpeg Transcoding and Preserving BT.601 — https://kdenlive.org/en/project/color-hell-ffmpeg-transcoding-and-preserving-bt-601/
+- Remotion renderMedia docs — https://www.remotion.dev/docs/renderer/render-media
+- Remotion scaling docs — https://www.remotion.dev/docs/scaling
+- Remotion Chromium flags — https://www.remotion.dev/docs/chromium-flags
+- Headless Chromium at scale (OOM in Docker) — https://rendershot.io/blog/headless-chromium-fleet-memory
+- goughlui: x264 CRF generational loss testing — https://goughlui.com/2016/11/22/video-compression-x264-crf-generational-loss-testing/
+- slhck: CRF Guide (x264, x265) — https://slhck.info/video/2017/02/24/crf-guide.html
+- Best Bitrate for Instagram Reels — https://www.freevisuals.net/post/best-bitrate-for-instagram-reels
+- Best Instagram Reels Export Settings 2026 — https://www.stayabundant.com/blog/best-instagram-reels-export-settings
+- FFmpeg loudnorm guide — https://32blog.com/en/ffmpeg/ffmpeg-audio-normalization-loudnorm
+- Real-ESRGAN GitHub — https://github.com/xinntao/Real-ESRGAN
+- Video2X AI upscaling review — https://www.videoproc.com/resource/video2x.htm
+- Runpod: Upscaling Videos Using VSGAN and TensorRT — https://www.runpod.io/blog/upscaling-videos-vsgan-tensorrt
+- Hedra: Fix Glitchy AI Video (temporal coherence) — https://www.hedra.com/blog/how-to-fix-glitchy-ai-video-consistency-upscaling
+- Perceptual Video Super Resolution with Enhanced Temporal Consistency — https://arxiv.org/pdf/1807.07930
+- Digital Anarchy: Sharpening Video Footage — https://digitalanarchy.com/blog/video-editing-plugins/sharpening-video-footage/
+- John Paul Caponigro: How To Avoid Over-Sharpening Artifacts — https://www.johnpaulcaponigro.com/blog/16833/how-to-avoid-common-over-sharpening-artifacts/
+- Mux: Your browser and my browser see different colors — https://www.mux.com/blog/your-browser-and-my-browser-see-different-colors
 
 ---
-*Pitfalls research for: Docker-based video processing pipeline (Whisper + FFmpeg + Remotion)*
-*Researched: 2026-05-05*
+*Pitfalls research for: video quality / definition improvements (reel-factory v1.1 Calidad de video)*
+*Researched: 2026-05-20*

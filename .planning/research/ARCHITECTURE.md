@@ -1,459 +1,528 @@
 # Architecture Research
 
-**Domain:** Docker-based video processing pipeline (MP4 → optimized 9:16 social video)
-**Researched:** 2026-05-05
-**Confidence:** HIGH
+**Domain:** Video quality/definition improvements in a Docker step pipeline
+**Researched:** 2026-05-20
+**Confidence:** HIGH (code audit + verified docs)
 
 ## Standard Architecture
 
-### System Overview
+### Existing Pipeline — Verified State
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        API Gateway Layer                            │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
-│  │  REST API         │  │  Job Queue       │  │  Status/Progress │   │
-│  │  (Express/Fastify)│  │  (BullMQ+Redis)  │  │  Webhook/WS      │   │
-│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘   │
-├───────────┴──────────────────────┴─────────────────────┴────────────┤
-│                     Pipeline Orchestrator                            │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Step Runner: reads step config → invokes containers        │   │
-│  │  in sequence, persists artifacts to shared volume            │   │
-│  └───────────────────────────┬──────────────────────────────────┘   │
-├───────────────────────────────┴─────────────────────────────────────┤
-│                     Processing Containers                            │
-│  ┌─────────┐  ┌──────────────┐  ┌─────────────┐  ┌──────────────┐  │
-│  │ Whisper │  │ Silence      │  │ Remotion    │  │ FFmpeg       │  │
-│  │ (Python)│→ │ Cutter       │→ │ Renderer    │→ │ Finalizer    │  │
-│  │         │  │ (Python)     │  │ (Node.js)   │  │ (Python/Node)│  │
-│  └────┬────┘  └──────┬───────┘  └──────┬──────┘  └──────┬───────┘  │
-│       │              │                 │                │           │
-├───────┴──────────────┴─────────────────┴────────────────┴──────────┤
-│                     Shared Artifact Storage                         │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Docker Named Volume: /pipeline/artifacts/{jobId}/           │   │
-│  │  ├── 01_transcription.json     (Whisper output)              │   │
-│  │  ├── 02_silence_markers.json  (Silence detection output)     │   │
-│  │  ├── 03_cut_video.mp4         (After silence removal)        │   │
-│  │  ├── 04_subtitled_video.mp4   (After Remotion render)       │   │
-│  │  ├── 05_final_9_16.mp4        (Final output)                 │   │
-│  │  └── input.mp4                (Original upload)              │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────────────┤
-│                     Infrastructure                                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────┐                       │
-│  │ Docker    │  │ Redis    │  │ Shared Vol   │                       │
-│  │ Engine    │  │ (queue+  │  │ (artifacts)  │                       │
-│  │           │  │  state)  │  │              │                       │
-│  └──────────┘  └──────────┘  └──────────────┘                       │
-└─────────────────────────────────────────────────────────────────────┘
+input/video.mp4 (raw mobile talking-head)
+    │
+    ▼
+┌───────────────────────────────────────────────────────────────┐
+│ Step 1: whisper                                               │
+│   CUDA GPU (DeviceRequests: nvidia, count=-1)                 │
+│   Reads: input/video.mp4                                      │
+│   Writes: whisper/transcript.json                             │
+│   Codec: no video encode (audio extraction only)              │
+└───────────────────────────────────────────────────────────────┘
+    │ transcript.json (timestamps on ORIGINAL timeline)
+    ▼
+┌───────────────────────────────────────────────────────────────┐
+│ Step 2: silence-cutter                                        │
+│   Reads: input/video.mp4 + transcript.json                    │
+│   Writes: silence-cutter/output.mp4 + silence-cuts.json       │
+│   Codec: RE-ENCODE #1 — libx264 (no CRF specified = default   │
+│          23) for per-segment extraction; libx264 again for    │
+│          concat output (no CRF = default 23)                  │
+│   Note: TWO libx264 passes inside this single step            │
+└───────────────────────────────────────────────────────────────┘
+    │ output.mp4 (H.264, CRF 23 x2, original resolution)
+    ▼
+┌───────────────────────────────────────────────────────────────┐
+│ Step 3: ffmpeg-finalizer                                      │
+│   Reads: silence-cutter/output.mp4                            │
+│   Writes: ffmpeg-finalizer/output.mp4 + finalizer-info.json   │
+│   Codec: RE-ENCODE #2 — libx264 CRF 20, preset medium         │
+│          scale+crop to 1080x1920, loudnorm audio              │
+└───────────────────────────────────────────────────────────────┘
+    │ output.mp4 (H.264 CRF 20, 1080x1920, 30fps)
+    ▼
+┌───────────────────────────────────────────────────────────────┐
+│ Step 4: remotion-renderer                                      │
+│   Reads: ffmpeg-finalizer/output.mp4 + transcript + cuts      │
+│   Writes: remotion-renderer/output.mp4                        │
+│   Codec: RE-ENCODE #3 — Remotion renderMedia codec:h264       │
+│          scale: NOT SET (defaults to 1, no supersampling)      │
+│          imageFormat: jpeg (default, lossy frame capture)      │
+│          Chromium --disable-gpu (CPU-only headless render)     │
+│   Time: ~693s observed for short clip                         │
+└───────────────────────────────────────────────────────────────┘
+    │ output.mp4 (H.264, third encode, subtitle burn-in)
+    ▼
+┌───────────────────────────────────────────────────────────────┐
+│ Step 5: srt-exporter (parallel-capable)                        │
+│   Reads: input/video.mp4 + transcript + cuts                  │
+│   Writes: srt-exporter/output.vtt                             │
+│   No video encode                                             │
+└───────────────────────────────────────────────────────────────┘
 ```
+
+### Step Contract (shared/schemas/)
+
+Every step receives `INPUT_PATH`, `OUTPUT_PATH`, `PIPELINE_JOB_ID` via environment variables.
+Every step writes `manifest.json` with `{status, output_files, duration_seconds}`.
+The orchestrator (api-server) reads `manifest.json` after each container exits to detect failure.
+New steps are added by inserting a container into the STEPS array in `orchestrator.ts` — no existing step code changes.
+
+---
+
+## Diagnosed Quality Problems
+
+### Problem 1: Triple H.264 Re-encode
+
+The video is re-encoded with H.264 (lossy) three times:
+- silence-cutter: segments extracted at CRF 23, then concatenated at CRF 23 (two passes, one step)
+- ffmpeg-finalizer: encoded at CRF 20
+- remotion-renderer: encoded again at Remotion's default CRF
+
+Each lossy encode compounds generation loss (blocking artifacts, detail smearing).
+The silence-cutter double-encode is the largest source of loss because CRF 23 (default, no explicit setting) runs twice.
+
+### Problem 2: Remotion scale Not Set
+
+`renderMedia()` is called with no `scale` parameter, defaulting to `1`.
+The composition renders at exactly 1080x1920. Vector elements (fonts, SVG-based subtitles) render at 1x density.
+On high-DPI mobile screens, the subtitle text appears soft because there is no supersampling.
+
+Verified from Remotion docs: `scale` sets `deviceScaleFactor` in headless Chromium. A value of `2` renders at 2160x3840 (then ffmpeg muxes that as the output resolution). The scale factor directly corresponds to Chromium's device pixel ratio, so text is rendered at 2x sharpness. The output resolution IS the scaled resolution — Remotion does not auto-downscale.
+
+Therefore, using `scale: 2` with a 1080x1920 composition produces a 2160x3840 final MP4 — which is too large for Instagram Reels. The correct workflow is: render at `scale: 2` to get 2160x3840, then a post-render ffmpeg pass downscales to 1080x1920. This is the supersampling pattern: render at 2x, output at 1x, keep the sharpness gained from higher-density rendering.
+
+### Problem 3: imageFormat Defaults to jpeg
+
+`renderMedia()` default `imageFormat` is `jpeg`. Each frame is captured as a JPEG (lossy) before being muxed into the video. Switching to `imageFormat: 'png'` captures lossless PNG frames — higher quality but slower render time.
+
+### Problem 4: No Upscaling Step
+
+The mobile camera source (typically 1080p or 720p) is cropped/scaled to 1080x1920 with bilinear/bicubic interpolation only. No AI-based super-resolution is applied. The finalizer scales smaller inputs up to 1080x1920 (`force_original_aspect_ratio=increase`) using standard ffmpeg scaling — which adds blur rather than detail.
+
+---
+
+## Integration Architecture for v1.1
+
+### Constraint: No Refactoring
+
+The step contract (INPUT_PATH → process → OUTPUT_PATH + manifest.json) must be honored.
+Existing steps (whisper, silence-cutter, ffmpeg-finalizer, remotion-renderer, srt-exporter) must not be modified.
+New steps are new Docker containers inserted into the STEPS array in `orchestrator.ts`.
+
+### Clarification on "No Refactor"
+
+Two categories of changes are acceptable:
+- **New step (NEW container):** Always allowed by constraint.
+- **Config extension (add env var to existing step):** Allowed because the step contract — manifest.json schema, input/output paths — does not change. The step's behavior is made configurable, not restructured.
+- **Structural refactor (change data flow, split steps, change manifest schema):** Not allowed.
+
+### Option Analysis: Where to Eliminate Generation Loss
+
+#### Option A: Visually-Lossless Intermediate Between silence-cutter and finalizer
+
+Change silence-cutter's output codec to CRF 17 (visually lossless H.264) or FFV1. This is a pure config change (replace CRF default in `_extract_segments()` and `_concatenate_segments()`). **FFV1 in MKV** produces ~5-10x larger intermediate files. **CRF 17 H.264** is visually indistinguishable from lossless at ~20-30% larger files than CRF 23. Keeps MP4 container. No step contract changes.
+
+**Verdict:** CRF 17 H.264 for silence-cutter output. A config change, not a refactor.
+
+#### Option B: Reduce Silence-Cutter to One Encode Pass
+
+The silence-cutter currently does: encode each segment (CRF 23) → concat demuxer → encode again (CRF 23). The double-encode is the single largest source of generation loss. The second encode exists because `-c:v copy` after concat demuxer loses timestamps in some scenarios.
+
+Using CRF 17 for both passes is the safe fix. Attempting stream-copy for the concat pass would require verifying timestamp behavior — it is a code change, not a config change, and is riskier.
+
+**Verdict:** Apply CRF 17 to both passes within silence-cutter (2-line config change). Consider single-pass optimization later with proper testing.
+
+#### Option C: Post-render Downscale Step (NEW step)
+
+Insert a new `quality-finalizer` container after `remotion-renderer`.
+It receives the 2x-scaled Remotion output and downscales to 1080x1920 with Lanczos filter, applies final CRF 18 encoding, and is effectively the one high-quality encode for the deliverable. This is a **new step** — fully compliant with the constraint.
+
+### Recommended Architecture: Layered Quality Improvements
+
+```
+input/video.mp4
+    │
+    ▼
+[whisper]                       UNCHANGED
+    │ transcript.json
+    ▼
+[silence-cutter]                CONFIG CHANGE: CRF 17 on both encode passes
+    │ output.mp4  (H.264 CRF 17, near-lossless, original resolution)
+    ▼
+[ffmpeg-finalizer]              CONFIG CHANGE: CRF 17 output (was CRF 20)
+    │ output.mp4  (H.264 CRF 17, 1080x1920, 30fps)
+    ▼
+[remotion-renderer]             CONFIG EXTENSION: REMOTION_SCALE + REMOTION_CRF env vars
+    │                           scale=2 → renders at 2160x3840 with 2x text sharpness
+    │                           imageFormat='png' → lossless frame capture
+    │ output.mp4  (H.264 at 2160x3840, subtitle-burned with sharp text)
+    ▼
+[quality-finalizer]             NEW STEP: downscale 2160x3840 → 1080x1920 Lanczos
+    │                           CRF 18, preset slow (FINAL encode, deliverable)
+    │ output.mp4  (H.264 CRF 18, 1080x1920, final deliverable)
+    ▼
+[upscaler]                      NEW STEP (optional, heavy): Real-ESRGAN 4x on final video
+    │                           GPU: CUDA (same NVIDIA runtime as whisper)
+    │                           input: quality-finalizer/output.mp4
+    │ output.mp4  (4K AI-upscaled)
+    ▼
+[srt-exporter]                  UNCHANGED (reads original input + transcript)
+```
+
+---
+
+## Component Details
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **API Gateway** | Accept uploads, validate input, return job status, serve processing results | Express.js or Fastify REST server |
-| **Job Queue** | Decouple API from processing, manage concurrency, handle retries | BullMQ backed by Redis |
-| **Pipeline Orchestrator** | Execute step sequence, manage container lifecycle, track progress per-step | Node.js service that invokes Docker containers in order |
-| **Whisper Container** | Transcribe audio → JSON with word-level timestamps | faster-whisper Python service, reads MP4 audio track |
-| **Silence Cutter Container** | Detect silence segments, generate cut list, remove silent sections | Python service using FFmpeg `silencedetect` + `silenceremove` |
-| **Remotion Renderer Container** | Render dynamic subtitles, intros/outros, zooms as video overlay | Node.js container with Chrome headless, @remotion/renderer |
-| **FFmpeg Finalizer Container** | Crop to 9:16, encode final H.264, normalize audio | FFmpeg CLI or ffmpeg-python for format conversion |
-| **Shared Volume** | Persist intermediate artifacts between container steps | Docker named volume mounted at `/pipeline/artifacts/{jobId}/` |
-| **Redis** | Job queue state, pipeline progress tracking, job metadata | BullMQ requires Redis; also stores step completion status |
+| Component | Type | Responsibility | Change for v1.1 |
+|-----------|------|----------------|-----------------|
+| whisper | Existing | Speech-to-text, timestamps | None |
+| silence-cutter | Existing | Remove silent segments | Config: CRF 17 for both encode passes |
+| ffmpeg-finalizer | Existing | 9:16 crop + scale + audio normalize | Config: CRF 17 output |
+| remotion-renderer | Existing | Burn subtitles via headless Chromium | Config extension: REMOTION_SCALE=2, REMOTION_CRF, imageFormat |
+| quality-finalizer | NEW | Downscale 2x Remotion output to 1080x1920 final encode | New Docker container |
+| upscaler | NEW (optional) | AI super-resolution on final video | New Docker container, GPU required |
+| srt-exporter | Existing | VTT/SRT sidecar | None |
+| api-server | Existing | Orchestration via Docker socket | Add new steps to STEPS array |
+
+### Intermediate Format Strategy
+
+| Boundary | Current | v1.1 Recommended | Rationale |
+|----------|---------|-------------------|-----------|
+| silence-cutter → finalizer | H.264 CRF 23 | H.264 CRF 17 | Near-lossless, no container change |
+| finalizer → remotion-renderer | H.264 CRF 20 | H.264 CRF 17 | Better input quality for renderer |
+| remotion-renderer → quality-finalizer | (new boundary) | H.264 2160x3840 | 2x supersampled, not deliverable size |
+| quality-finalizer → output | (new) | H.264 CRF 18, 1080x1920 Lanczos | Final deliverable, one quality encode |
+| quality-finalizer → upscaler | (optional) | H.264 CRF 17 | High-quality input for AI upscaling |
+| upscaler → output | (optional) | H.264 CRF 18, 4K | AI-upscaled deliverable |
+
+**Why not FFV1 between steps?**
+FFV1 in MKV would eliminate all intermediate quality loss but produces files 5-10x larger than H.264 CRF 17 and requires longer encode/decode times. For a local pipeline, CRF 17 H.264 provides visually indistinguishable quality with acceptable file size and the existing MP4 container. FFV1 is the right choice only if disk space is unlimited and archival-grade intermediates are required.
+
+---
 
 ## Recommended Project Structure
 
 ```
-video-pipeline/
-├── docker-compose.yml              # All services + shared volumes
-├── services/
-│   ├── api/                        # API Gateway
-│   │   ├── src/
-│   │   │   ├── routes/             # REST endpoints
-│   │   │   ├── queue/             # BullMQ job producers
-│   │   │   └── index.ts
-│   │   ├── Dockerfile
-│   │   └── package.json
-│   ├── orchestrator/               # Pipeline Step Runner
-│   │   ├── src/
-│   │   │   ├── steps/             # Step definitions (config per container)
-│   │   │   ├── runner.ts          # Container invocation logic
-│   │   │   └── index.ts
-│   │   ├── Dockerfile
-│   │   └── package.json
-│   ├── whisper/                    # Transcription step
-│   │   ├── src/
-│   │   │   ├── transcribe.py      # faster-whisper logic
-│   │   │   └── main.py            # Entry: reads input, writes JSON
-│   │   ├── Dockerfile              # Python + faster-whisper + CUDA
-│   │   └── requirements.txt
-│   ├── silence-cutter/             # Silence detection + cut step
-│   │   ├── src/
-│   │   │   ├── detect.py          # FFmpeg silencedetect analysis
-│   │   │   ├── cut.py            # Apply silence removal
-│   │   │   └── main.py
-│   │   ├── Dockerfile              # Python + ffmpeg-python
-│   │   └── requirements.txt
-│   ├── remotion-renderer/          # Subtitle/overlay rendering step
-│   │   ├── src/
-│   │   │   ├── compositions/      # Remotion React components
-│   │   │   │   ├── Subtitles.tsx  # Word-by-word subtitle comp
-│   │   │   │   ├── IntroOutro.tsx # Intro/outro templates
-│   │   │   │   └── ZoomCut.tsx    # Zoom/jump-cut comp
-│   │   │   ├── Root.tsx           # Remotion root with <Composition>
-│   │   │   ├── render.ts          # SSR render script
-│   │   │   └── index.ts
-│   │   ├── Dockerfile              # Node + Chrome + Remotion (Debian)
-│   │   └── package.json
-│   └── ffmpeg-finalizer/           # 9:16 crop + final encode
-│       ├── src/
-│       │   ├── finalize.py        # Crop, encode, normalize
-│       │   └── main.py
-│       ├── Dockerfile              # Python + ffmpeg-python
-│       └── requirements.txt
-├── shared/
-│   ├── types/                      # Shared TypeScript/JSON schemas
-│   │   ├── transcript.ts          # Transcription output schema
-│   │   ├── silence-markers.ts     # Silence detection output schema
-│   │   └── pipeline.ts            # Job/step status types
-│   └── constants.ts                # Volume paths, container names
-├── tests/
-│   ├── integration/               # End-to-end pipeline tests
-│   └── fixtures/                   # Sample MP4 files
-└── docs/
-    └── pipeline-steps.md           # Step contract documentation
+services/
+├── whisper/                    # Existing — unchanged
+├── silence-cutter/             # Existing — 2-line CRF config change
+├── ffmpeg-finalizer/           # Existing — 1-line CRF config change
+├── remotion-renderer/          # Existing — 5-line env var extension
+│   └── src/render.ts           # Add scale/crf/imageFormat env var support
+├── quality-finalizer/          # NEW — ffmpeg Lanczos downscale + final encode
+│   ├── Dockerfile              # Inherits video-pipeline-base-python
+│   ├── main.py
+│   └── src/
+│       ├── config.py           # OUTPUT_CRF, OUTPUT_WIDTH, OUTPUT_HEIGHT
+│       └── downscale.py        # ffmpeg Lanczos + -c:a copy
+├── upscaler/                   # NEW (optional) — Real-ESRGAN GPU step
+│   ├── Dockerfile              # nvidia/cuda base image
+│   ├── main.py
+│   └── src/
+│       ├── config.py           # UPSCALE_FACTOR, MODEL_NAME, TILE_SIZE
+│       ├── extract_frames.py   # ffmpeg PNG frame extraction
+│       ├── upscale.py          # Real-ESRGAN inference
+│       └── reassemble.py       # ffmpeg frame → MP4 + audio copy
+└── api-server/
+    └── src/orchestrator.ts     # Add quality-finalizer + upscaler to STEPS array
 ```
 
 ### Structure Rationale
 
-- **`services/`**: Each pipeline step is a fully self-contained Docker service with its own Dockerfile, deps, and entry point. This matches the project requirement that "any new step can be added as a Docker container in the sequence."
-- **`shared/types/`**: Step contracts (input/output schemas) live outside any single service. Each container reads/writes JSON per a shared contract, enabling independent evolution.
-- **`orchestrator/` as a separate service**: Decouples pipeline execution from the API. The orchestrator only knows the step sequence and how to invoke containers — it doesn't know what they do internally.
-- **`remotion-renderer/src/compositions/`**: Remotion requires a specific project structure with `Root.tsx` and `<Composition>` components per official docs. This follows the documented pattern.
+- **quality-finalizer/:** Follows exact pattern of ffmpeg-finalizer (Python + ffmpeg). Same base image, same step contract. Lowest friction to build.
+- **upscaler/:** Requires CUDA base image separate from base-python. Cannot reuse base-python. Isolates heavy ML deps (torch, basicsr, facexlib).
+- **shared schemas unchanged:** Both new steps honor the existing `PipelineManifest` interface.
+
+---
 
 ## Architectural Patterns
 
-### Pattern 1: Sequential Step Pipeline with Shared Volume
+### Pattern 1: Config Extension for Existing Step
 
-**What:** Each processing step runs inside its own Docker container. Steps execute in sequence. They communicate exclusively through files on a shared Docker volume — never via network calls between containers. Each step reads an input artifact from a well-known path and writes an output artifact to the next well-known path.
+**What:** Add env var support to `renderMedia()` in remotion-renderer without changing the step contract.
+**When to use:** When an existing step needs tunable parameters that were previously hardcoded.
+**Trade-offs:** Small code change inside existing step, but no structural change. Backward compatible when env var has a safe default.
 
-**When to use:** This is the core pattern for the entire pipeline. Use it for every step.
-
-**Trade-offs:**
-- ✅ Full isolation: each step has its own runtime (Python vs Node.js), dependencies, and failure domain
-- ✅ Inspectability: intermediate artifacts are files you can download/view between steps
-- ✅ Extensibility: a new step just needs a container + a contract for its input/output files
-- ❌ Latency: each container startup adds overhead (~2-5s per step)
-- ❌ Storage: intermediate artifacts consume disk; needs cleanup strategy
-
-**Example:**
-```yaml
-# docker-compose.yml — step container pattern
-services:
-  whisper:
-    build: ./services/whisper
-    volumes:
-      - pipeline-artifacts:/pipeline/artifacts
-    # Step reads: /pipeline/artifacts/{jobId}/input.mp4
-    # Step writes: /pipeline/artifacts/{jobId}/01_transcription.json
-    environment:
-      - JOB_ID=${JOB_ID}
-      - INPUT_PATH=/pipeline/artifacts/${JOB_ID}/input.mp4
-      - OUTPUT_PATH=/pipeline/artifacts/${JOB_ID}/01_transcription.json
-```
-
-### Pattern 2: Job Queue + Async Processing for Batch
-
-**What:** The API Gateway enqueues processing jobs via BullMQ. The orchestrator dequeues and runs them. Progress updates are written to Redis, queryable via the API.
-
-**When to use:** For batch/multi-video processing. Single-video synchronous processing can skip the queue and run the pipeline directly.
-
-**Trade-offs:**
-- ✅ Backpressure: prevents GPU/CPU overload when many requests arrive
-- ✅ Resilience: failed jobs can be retried from the last completed step
-- ✅ Observability: job state is queryable at any point
-- ❌ Complexity: adds Redis, BullMQ, job state management
-- ❌ Eventual consistency: status queries may lag reality slightly
-
-**Example:**
 ```typescript
-// API Gateway — enqueue a job
-import { Queue } from 'bullmq';
-const pipelineQueue = new Queue('video-pipeline', { connection: redis });
-
-app.post('/api/process', upload.single('video'), async (req, res) => {
-  const jobId = crypto.randomUUID();
-  // Save uploaded file to shared volume
-  await saveUpload(req.file, `/pipeline/artifacts/${jobId}/input.mp4`);
-  // Enqueue
-  await pipelineQueue.add('process', { jobId, steps: defaultSteps });
-  res.json({ jobId, status: 'queued' });
-});
-
-// Orchestrator — dequeue and run
-worker.on('completed', async (job) => {
-  await updateJobStatus(job.id, 'completed');
+// In render.ts — add to renderMedia() call:
+await renderMedia({
+  composition,
+  serveUrl: bundleLocation,
+  codec: "h264",
+  outputLocation: outputPath,
+  inputProps,
+  scale: Number(process.env.REMOTION_SCALE ?? "1"),
+  crf: Number(process.env.REMOTION_CRF ?? "18"),
+  imageFormat: (process.env.REMOTION_IMAGE_FORMAT as "jpeg" | "png") ?? "jpeg",
+  // existing options unchanged...
 });
 ```
 
-### Pattern 3: Step Contract Interface
+The orchestrator passes `REMOTION_SCALE=2` and `REMOTION_IMAGE_FORMAT=png`. Default `"1"` preserves behavior if env var is absent.
 
-**What:** Each step container adheres to a uniform interface: it reads input from `INPUT_PATH` env var, writes output to `OUTPUT_PATH` env var, and exits with code 0 on success or non-zero on failure. The orchestrator doesn't need to know the internal language or logic of the step.
+**Critical:** When `scale: 2`, the output MP4 from remotion-renderer is 2160x3840. The quality-finalizer step must always follow when scale > 1.
 
-**When to use:** For every pipeline step container. This is the extensibility contract.
+### Pattern 2: New Step Insertion
 
-**Trade-offs:**
-- ✅ Language-agnostic: Whisper can be Python, Remotion can be Node.js
-- ✅ Replaceable: swap whisper step with a different ASR with zero orchestrator changes
-- ✅ Testable: test a step in isolation by mounting test data and running the container
-- ❌ File-format coupling: step contracts must define exact JSON schemas for artifacts
-- ❌ No streaming: data passes through files, not pipes — limits real-time processing
+**What:** A new Python+FFmpeg container that downscales and applies final encode.
+**When to use:** When post-processing must not modify the step that produced the data.
 
-**Example:**
 ```python
-# services/whisper/src/main.py — Step Contract Implementation
-import os, json
-from faster_whisper import WhisperModel
-
-input_path = os.environ["INPUT_PATH"]    # MP4 file
-output_path = os.environ["OUTPUT_PATH"]   # Where to write JSON
-
-model = WhisperModel("large-v3", device="cuda", compute_type="float16")
-segments, info = model.transcribe(input_path, word_timestamps=True)
-
-result = {
-    "language": info.language,
-    "duration": info.duration,
-    "segments": [
-        {
-            "start": seg.start,
-            "end": seg.end,
-            "text": seg.text,
-            "words": [
-                {"start": w.start, "end": w.end, "word": w.word, "probability": w.probability}
-                for w in seg.words
-            ]
-        }
-        for seg in segments
-    ]
-}
-
-with open(output_path, "w") as f:
-    json.dump(result, f, indent=2)
-# Exit 0 = success. Orchestrator reads next step's input from this file.
+# quality-finalizer/src/downscale.py
+cmd = [
+    "ffmpeg", "-y",
+    "-i", input_path,                          # 2160x3840 from remotion-renderer
+    "-vf", "scale=1080:1920:flags=lanczos",    # High-quality downscale
+    "-c:v", "libx264",
+    "-crf", str(config.OUTPUT_CRF),            # 18 — final deliverable quality
+    "-preset", "slow",                          # Better compression for final
+    "-profile:v", "high",
+    "-pix_fmt", "yuv420p",
+    "-c:a", "copy",                            # Audio already normalized — copy only
+    "-movflags", "+faststart",
+    output_path
+]
 ```
 
-### Pattern 4: Remotion Compositions as Overlay Templates
+The quality-finalizer reads `INPUT_PATH` (remotion output) and writes `OUTPUT_PATH` (deliverable). It writes `manifest.json`. Insertable into STEPS array with zero changes to surrounding steps.
 
-**What:** Remotion uses React components as video compositions. Each visual effect (subtitles, intro, zoom) is a `<Composition>` that receives `inputProps` with transcript/marker data. The render script bundles the project once, then renders each composition with different props.
+### Pattern 3: GPU-Accelerated Upscaler Step
 
-**When to use:** For any visual overlay on the video — subtitles, intros, outros, zoom indicators, B-roll placeholders.
+**What:** Docker container running Real-ESRGAN with NVIDIA runtime for AI super-resolution.
+**When to use:** When target quality requires exceeding the source camera's native resolution.
+**Trade-offs:** Requires NVIDIA GPU, 10-60 minutes per video depending on length and GPU.
 
-**Trade-offs:**
-- ✅ Full programmatic control over visual effects via React
-- ✅ Remotion Studio for live preview during development
-- ✅ Reusable compositions with different props for different videos
-- ❌ Chrome headless required in Docker (large image: ~1.5GB with dependencies)
-- ❌ Render speed bound by Chrome; 1min video ~ 30-60s render time
-- ❌ Must use Debian-based Docker image (Alpine causes >10s Rust launch delays per Remotion docs)
-
-**Example:**
-```tsx
-// services/remotion-renderer/src/compositions/Subtitles.tsx
-import {useCurrentFrame, useVideoConfig, AbsoluteFill} from 'remotion';
-
-export const Subtitles: React.FC<{words: Word[], videoSrc: string}> = ({words, videoSrc}) => {
-  const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
-  const currentTime = frame / fps;
-
-  // Find the currently spoken word
-  const activeWord = words.find(w => currentTime >= w.start && currentTime < w.end);
-
-  return (
-    <AbsoluteFill>
-      <video src={videoSrc} />
-      {activeWord && (
-        <div style={{
-          position: 'absolute',
-          bottom: 80,
-          textAlign: 'center',
-          fontSize: 48,
-          fontWeight: 800,
-          color: 'white',
-          textShadow: '2px 2px 4px black',
-        }}>
-          {activeWord.word}
-        </div>
-      )}
-    </AbsoluteFill>
-  );
-};
+Real-ESRGAN video pipeline (frame-extract → AI-upscale → reassemble):
 ```
+1. ffprobe input → get fps, duration, audio streams
+2. ffmpeg → extract all frames as PNG sequence (lossless)
+3. realesrgan-ncnn-vulkan OR inference_realesrgan.py → upscale each PNG
+   Model: RealESRGAN_x4plus (photorealistic, not anime variant)
+   Scale: 4x (1080x1920 → 4320x7680, then downscale in reassembly)
+4. ffmpeg → reassemble frames + -map 1:a:0 -c:a copy (audio from original)
+```
+
+Audio is never re-encoded. Audio comes from the quality-finalizer output (already normalized).
+
+### Pattern 4: Supersampling for Subtitle Sharpness
+
+**What:** Render Remotion at 2x scale, then downscale via quality-finalizer.
+**When to use:** When subtitle text appears blurry on high-DPI mobile screens.
+**Trade-offs:** 4x the pixel count to render (Chromium renders 2160x3840), ~4x slower Remotion render, requires quality-finalizer step.
+
+```
+composition dimensions: 1080x1920 (unchanged — layout CSS still works at 1080px widths)
+renderMedia scale: 2
+actual Chromium viewport: 2160x3840 at deviceScaleFactor=2
+Chromium renders text at 2x sharpness (vector elements scale perfectly)
+output file from Remotion: 2160x3840 MP4
+
+→ quality-finalizer downscales to 1080x1920 using Lanczos
+→ final file: 1080x1920 with 2x more detail in text rendering
+```
+
+**Confirmed limitation from Remotion docs:** `scale` affects vector elements (text, SVGs) but NOT the background video element — `<Video>` components in Remotion cannot be scaled up by Chromium's deviceScaleFactor. Video quality improvement for the background clip comes from CRF improvements (steps 1-3) and optionally the AI upscaler step.
+
+---
 
 ## Data Flow
 
-### Request Flow (Synchronous Single Video)
+### Request Flow (v1.1 Final)
 
 ```
-[Client POST /api/process with MP4]
-    ↓
-[API Gateway] → Save file to shared volume → Run pipeline directly
-    ↓
-[Orchestrator] → Step 1: docker run whisper --env JOB_ID,INPUT_PATH,OUTPUT_PATH
-    ↓                 reads input.mp4 → writes 01_transcription.json
-[Orchestrator] → Step 2: docker run silence-cutter --env ...
-    ↓                 reads 01_transcription.json + input.mp4 → writes 02_silence_markers.json + 03_cut_video.mp4
-[Orchestrator] → Step 3: docker run remotion-renderer --env ...
-    ↓                 reads 01_transcription.json + 03_cut_video.mp4 → writes 04_subtitled_video.mp4
-[Orchestrator] → Step 4: docker run ffmpeg-finalizer --env ...
-    ↓                 reads 04_subtitled_video.mp4 → writes 05_final_9_16.mp4
-[API Gateway] ← Return {jobId, outputUrl, artifacts: [...]}
+POST /process {videoPath}
+    │
+    ▼
+api-server orchestrator (Docker socket)
+    │
+    ├─ [1] whisper ─────────────────────── GPU (CUDA) — transcript.json
+    │
+    ├─ [2] silence-cutter ──────────────── CPU (ffmpeg) — CRF 17
+    │
+    ├─ [3] ffmpeg-finalizer ────────────── CPU (ffmpeg) — CRF 17, 1080x1920
+    │
+    ├─ [4] remotion-renderer ───────────── CPU (Chromium) — scale=2, PNG frames
+    │         output: 2160x3840 H.264
+    │
+    ├─ [5] quality-finalizer (NEW) ─────── CPU (ffmpeg) — Lanczos 1080x1920, CRF 18
+    │         output: 1080x1920 H.264 (final deliverable)
+    │
+    ├─ [6] upscaler (NEW, optional) ────── GPU (CUDA) — Real-ESRGAN 4x
+    │         output: 4K AI-upscaled MP4
+    │
+    └─ [7] srt-exporter ────────────────── CPU — VTT sidecar
 ```
 
-### Request Flow (Async Batch)
+### GPU Sharing Pattern
 
+whisper and upscaler both require GPU. They run sequentially in the serial pipeline — no simultaneous GPU use. The NVIDIA container runtime allows multiple containers to share a GPU sequentially. Both containers use the same `DeviceRequests: [{Driver: "nvidia", Count: -1, Capabilities: [["gpu"]]}]` pattern.
+
+NVIDIA MPS (Multi-Process Service) is not needed for a serial pipeline. The GPU is idle between whisper completion and upscaler start (steps 3-5 are CPU-only).
+
+The GPU VRAM concern: Whisper medium model in float16 uses ~3-5 GB VRAM. Real-ESRGAN RealESRGAN_x4plus on 1080x1920 frames requires ~6-8 GB VRAM. Sequential use is fine; simultaneous is not (pipeline is serial by design). If VRAM < 6 GB, use tile mode: `--tile 256` in realesrgan-ncnn-vulkan.
+
+---
+
+## Build Order (Recommended)
+
+Ordered from highest impact / lowest risk to highest impact / highest risk:
+
+### Phase 1: Encode Quality Wins (Config-Only, Lowest Risk)
+
+1. **silence-cutter CRF 17** — Change `"-c:v", "libx264"` lines in `_extract_segments()` and `_concatenate_segments()` to add `"-crf", "17"`. Two-line change. Eliminates the single largest source of generation loss (double CRF 23 encode).
+2. **ffmpeg-finalizer CRF 17** — Change `H264_CRF = 20` to `H264_CRF = 17` in `src/config.py`. One-line change.
+3. **Verify** on real test video. Compare output sharpness. Intermediate file sizes increase ~20-30% — acceptable.
+
+### Phase 2: Remotion Supersampling (Config Extension + New Step)
+
+4. **remotion-renderer env var extension** — Add `scale`, `crf`, `imageFormat` reading from env vars in `render.ts`. Five-line change. Default `scale=1` preserves existing behavior.
+5. **quality-finalizer new container** — New Python/FFmpeg container following the ffmpeg-finalizer pattern. Reads INPUT_PATH, downscales to 1080x1920 Lanczos, writes OUTPUT_PATH + manifest.json.
+6. **Update orchestrator STEPS** — Add quality-finalizer after remotion-renderer. Set `REMOTION_SCALE=2` for remotion-renderer step. Update `videoUrl` field to point to `quality-finalizer/output.mp4`.
+7. **Verify** text sharpness improvement. Remotion render time increases ~4x (expected trade-off). quality-finalizer adds ~30-60s.
+
+### Phase 3: AI Upscaling (New Step, GPU, Heaviest)
+
+8. **upscaler new container** — Python container with Real-ESRGAN PyTorch + CUDA. Runs after quality-finalizer. Frame-extract → AI upscale → reassemble pattern. Model: `RealESRGAN_x4plus`.
+9. **GPU config in orchestrator** — Add NVIDIA DeviceRequests to upscaler step identical to whisper.
+10. **Benchmark** on representative clip. Real-ESRGAN at 4x is ~10-60 min per video depending on GPU and length. Consider making upscaler an opt-in step per job request (add `enableUpscaling: boolean` to the job payload) rather than always-on.
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Using FFV1 Between All Steps
+
+**What people do:** Replace all H.264 intermediates with FFV1 in MKV for "true lossless" pipeline.
+**Why it's wrong:** FFV1 files are 5-10x larger than H.264 CRF 17. Pipeline steps consume and produce huge files, slowing every step and exceeding disk space on long videos. MKV containers require downstream tool verification.
+**Do this instead:** H.264 CRF 17 for intermediates — visually indistinguishable from lossless at manageable sizes.
+
+### Anti-Pattern 2: Applying scale=2 Without a Downscale Step
+
+**What people do:** Set `REMOTION_SCALE=2` and use the Remotion output directly as the deliverable.
+**Why it's wrong:** The output is 2160x3840. Instagram Reels maximum resolution is 1080x1920 — 4K outputs are rejected or re-compressed with quality loss by the platform.
+**Do this instead:** Always pair `scale=2` with quality-finalizer. The quality-finalizer is the mandatory companion step.
+
+### Anti-Pattern 3: Applying AI Upscaling Before ffmpeg-finalizer
+
+**What people do:** Insert the upscaler early (after silence-cutter) so subsequent steps work at upscaled resolution.
+**Why it's wrong:** ffmpeg-finalizer would crop/rescale the AI-upscaled frames back to 1080x1920 using standard bilinear interpolation, destroying all the AI upscaling work. Remotion's `<Video>` component cannot superscale the background clip. Total processing time explodes for zero net benefit.
+**Do this instead:** Apply AI upscaling as the LAST video-processing step, on the final deliverable.
+
+### Anti-Pattern 4: Using scale=2 With imageFormat='jpeg'
+
+**What people do:** Enable supersampling via scale but keep jpeg frame capture (the default).
+**Why it's wrong:** The sharpness gain from 2x scale is partially undone by JPEG compression artifacts in the frame capture. Text edge quality degrades visibly.
+**Do this instead:** When `scale >= 2`, use `imageFormat: 'png'`. The render is already slower at 2x; the additional cost of PNG vs JPEG is minor relative to the overall render time. PNG eliminates frame-capture lossy compression entirely.
+
+### Anti-Pattern 5: Re-encoding Audio in quality-finalizer
+
+**What people do:** quality-finalizer applies loudnorm or re-encodes audio.
+**Why it's wrong:** Audio was already normalized by ffmpeg-finalizer (EBU R128, I=-14 LUFS, TP=-1). A third audio encode adds noise and no benefit.
+**Do this instead:** quality-finalizer uses `-c:a copy` to pass audio through unchanged.
+
+### Anti-Pattern 6: Simultaneous GPU Containers
+
+**What people do:** Try to run whisper and upscaler in parallel for speed.
+**Why it's wrong:** The pipeline is serial by design (each step depends on the previous step's output). Parallelism is not possible without structural changes. Forcing simultaneous GPU use risks VRAM exhaustion.
+**Do this instead:** Accept sequential GPU use. The GPU sits idle between steps 1 and 6 — this is fine. If throughput matters, run multiple jobs with different job IDs, not multiple steps of the same job.
+
+---
+
+## Integration Points
+
+### Existing Steps: What Changes
+
+| Step | Change | File | Lines |
+|------|--------|------|-------|
+| silence-cutter | CRF 17 in both encode calls | `src/cut_video.py` | 2 |
+| ffmpeg-finalizer | CRF 17 output | `src/config.py` | 1 |
+| remotion-renderer | Add scale/crf/imageFormat env var support | `src/render.ts` | ~5 |
+| api-server orchestrator | Add quality-finalizer (+ upscaler) to STEPS, update videoUrl | `src/orchestrator.ts` | ~20 |
+
+### New Steps: What to Build
+
+**quality-finalizer** (NEW container, LOW complexity):
+- Base image: `video-pipeline-base-python` (already has ffmpeg)
+- Language: Python (consistent with ffmpeg-finalizer)
+- Contract: `INPUT_PATH` → ffmpeg Lanczos → `OUTPUT_PATH` + `manifest.json`
+- Key ffmpeg flags: `-vf scale=1080:1920:flags=lanczos`, `-crf 18`, `-preset slow`, `-c:a copy`
+- Env vars: `INPUT_PATH`, `OUTPUT_PATH`, `PIPELINE_JOB_ID`, `OUTPUT_WIDTH` (default 1080), `OUTPUT_HEIGHT` (default 1920), `OUTPUT_CRF` (default 18)
+
+**upscaler** (NEW container, HIGH complexity, GPU):
+- Base image: `nvidia/cuda:11.8-runtime-ubuntu22.04` — separate from base-python (heavy ML deps)
+- Language: Python with Real-ESRGAN PyTorch deps (basicsr, facexlib, gfpgan)
+- Contract: `INPUT_PATH` → frame extract → AI upscale → reassemble → `OUTPUT_PATH` + `manifest.json`
+- Env vars: `INPUT_PATH`, `OUTPUT_PATH`, `PIPELINE_JOB_ID`, `UPSCALE_FACTOR` (default 4), `MODEL_NAME` (default `RealESRGAN_x4plus`), `TILE_SIZE` (default 0 = auto)
+- GPU: `DeviceRequests: [{Driver: "nvidia", Count: -1, Capabilities: [["gpu"]]}]`
+
+### Orchestrator STEPS Array Additions
+
+```typescript
+// quality-finalizer — insert after remotion-renderer (index 4)
+{
+  name: "quality-finalizer",
+  image: "reel-factory-quality-finalizer",
+  envVars: {
+    INPUT_PATH: "/data/pipeline/{jobId}/remotion-renderer/output.mp4",
+    OUTPUT_PATH: "/data/pipeline/{jobId}/quality-finalizer/output.mp4",
+    PIPELINE_JOB_ID: "{jobId}",
+    OUTPUT_WIDTH: "1080",
+    OUTPUT_HEIGHT: "1920",
+    OUTPUT_CRF: "18",
+  },
+},
+
+// upscaler — insert after quality-finalizer (optional, GPU)
+{
+  name: "upscaler",
+  image: "reel-factory-upscaler",
+  envVars: {
+    INPUT_PATH: "/data/pipeline/{jobId}/quality-finalizer/output.mp4",
+    OUTPUT_PATH: "/data/pipeline/{jobId}/upscaler/output.mp4",
+    PIPELINE_JOB_ID: "{jobId}",
+    UPSCALE_FACTOR: "4",
+    MODEL_NAME: "RealESRGAN_x4plus",
+    TILE_SIZE: "256",
+  },
+},
 ```
-[Client POST /api/batch with MP4s]
-    ↓
-[API Gateway] → Save files → Enqueue jobs to BullMQ → Return {jobIds}
-    ↓
-[Orchestrator Worker] → Dequeue job → Run pipeline steps sequentially
-    ↓                                    (same as above)
-[Redis] ← Progress updated after each step completes
-    ↓
-[Client GET /api/status/{jobId}] → Read from Redis → Return step-level progress
-    ↓
-[Webhook/WS] → Notify on completion
-```
 
-### State Management
+The orchestrator's `videoUrl` field currently points to `remotion-renderer/output.mp4`. After quality-finalizer: `videoUrl: /artifacts/{jobId}/quality-finalizer/output.mp4`. After upscaler: `videoUrl: /artifacts/{jobId}/upscaler/output.mp4`.
 
-```
-[Redis]
-    ├── bull:video-pipeline:{jobId}   — BullMQ job data
-    ├── pipeline:{jobId}:status       — Current step, % complete
-    ├── pipeline:{jobId}:artifacts    — List of artifact file paths
-    └── pipeline:{jobId}:errors       — Step failures with stack traces
-```
-
-### Key Data Flows
-
-1. **Video file flow:** `input.mp4 → [Whisper extracts audio internally] → 01_transcription.json → [Silence Cutter re-encodes] → 03_cut_video.mp4 → [Remotion overlays] → 04_subtitled_video.mp4 → [FFmpeg crops] → 05_final_9_16.mp4`. The full video file only moves between silence-cutter, remotion-renderer, and ffmpeg-finalizer. Whisper only needs the audio track (it extracts it internally via PyAV).
-
-2. **Metadata flow:** `Whisper produces transcript JSON → Silence cutter reads transcript + detects silence → produces silence_markers.json → Remotion reads transcript JSON + silence markers (for zoom/cut animations) → produces final render with props`. Metadata flows forward through the pipeline via JSON files on the shared volume.
-
-3. **Progress flow:** Each step container writes a `_status.json` file to the artifact directory upon completion. The orchestrator reads this to update Redis. The API reads Redis to report progress to clients.
+---
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 0-10 concurrent jobs | Single Docker Compose setup, 1 GPU (if available), serial pipeline execution. All containers on one host. |
-| 10-100 concurrent jobs | Add BullMQ concurrency limits (e.g., max 3 GPU-bound jobs). Run multiple orchestrator workers. Consider separate GPU and CPU node pools (Whisper + Remotion need GPU; silence-cutter and finalizer are CPU-only). |
-| 100+ concurrent jobs | Move to Docker Swarm or Kubernetes. Artifact storage moves from Docker volumes to S3/MinIO. Add horizontal scaling for orchestrator workers. Pre-warm Whisper model containers (model loading takes ~5-10s). |
+| 1-5 jobs | Current serial Docker pipeline is sufficient |
+| 5-20 jobs | `MAX_CONCURRENT_JOBS=2` already in place; upscaler becomes bottleneck |
+| 20+ jobs | Upscaler needs dedicated GPU job queue; consider opt-in per job request |
 
 ### Scaling Priorities
 
-1. **First bottleneck — GPU memory:** Both Whisper and Remotion render need GPU. They cannot run concurrently on the same GPU without OOM. **Fix:** Queue GPU-bound steps, serialize Whisper → Remotion on each GPU. Add a second GPU for parallel job processing.
-2. **Second bottleneck — Remotion render time:** Chrome-rendered video is ~30-60s per minute of output. **Fix:** Run multiple Remotion containers on separate CPU cores. Use `--concurrency` flag in `renderMedia()` for parallel frame rendering within a single render.
+1. **First bottleneck at scale=2:** Remotion render time (~700s at scale=1, estimated ~2800s at scale=2). This is a Chromium CPU bottleneck. Remotion supports `concurrency` option in `renderMedia()` — increase to use all CPU cores.
+2. **Second bottleneck:** AI upscaler GPU time. 10-60 min per video. Make it opt-in (`enableUpscaling: boolean` in job request) rather than always-on. Users who don't need AI upscaling shouldn't pay the time cost.
 
-## Anti-Patterns
-
-### Anti-Pattern 1: Containers Talking to Each Other Over HTTP
-
-**What people do:** Each step container exposes an HTTP endpoint, and the orchestrator calls them via REST.
-**Why it's wrong:** Couples step lifecycle to network availability. Container startup → HTTP ready is unreliable. Adds authentication, retry, and error handling complexity that file-based contracts avoid entirely.
-**Do this instead:** Use the Step Contract pattern — containers exit when done, communicate via files on a shared volume. The orchestrator checks `docker run` exit code.
-
-### Anti-Pattern 2: Processing the Entire Video in Memory
-
-**What people do:** Load the full MP4 into memory, process it, return bytes.
-**Why it's wrong:** A 10-minute 1080p video is ~500MB. Multiple concurrent jobs = OOM killers. Also prevents inspectability of intermediate outputs.
-**Do this instead:** Stream through files. Each step reads from disk, writes to disk. Shared volume artifacts are the processing interface. Clean up old artifacts with a TTL or post-completion sweep.
-
-### Anti-Pattern 3: Monolithic Docker Image with All Tools
-
-**What people do:** Build one giant Docker image with Whisper, FFmpeg, Remotion, Chrome, Node, Python.
-**Why it's wrong:** Image is 5-8GB, rebuilds take 20+ minutes. Can't scale GPU steps separately from CPU steps. Fails the extensibility requirement (new steps require rebuilding the monolith).
-**Do this instead:** Separate Dockerfile per service. Whisper image: Python + CUDA + faster-whisper (~3GB). Remotion image: Node + Chrome headless + Debian (~2GB). Silence-cutter / finalizer: Python + FFmpeg (~500MB each). Rebuild only what changes.
-
-### Anti-Pattern 4: Alpine Linux for Remotion Container
-
-**What people do:** Use `node:XX-alpine` for smaller Remotion image size.
-**Why it's wrong:** Remotion's official docs explicitly warn against Alpine: Rust parts launch >10s slower per render, and Chrome version pinning is impossible because Alpine doesn't keep old package versions.
-**Do this instead:** Use `node:22-bookworm-slim` (Debian-based) per official Remotion Docker guide. It's well-tested and faster for video rendering workloads.
-
-### Anti-Pattern 5: Skipping Word-Level Timestamps in Whisper
-
-**What people do:** Use segment-level timestamps from Whisper (30s chunks) and try to time subtitles from that.
-**Why it's wrong:** Segment timestamps are too coarse for word-by-word subtitle animation. Each segment covers many seconds and multiple sentences.
-**Do this instead:** Always use `word_timestamps=True` with faster-whisper. This provides per-word start/end times, which is the data source for Remotion's word-by-word subtitle composition. This is a first-class feature of both openai/whisper and faster-whisper.
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| FFmpeg (native) | CLI invocation from Python container | Use `ffmpeg-python` bindings; ensure FFmpeg binary is in container PATH |
-| faster-whisper | Python library in container | No FFmpeg needed — PyAV bundles FFmpeg libs. CUDA 12 + cuDNN 9 for GPU |
-| Remotion | Node.js SSR APIs: `bundle()` → `selectComposition()` → `renderMedia()` | Requires Chrome Headless Shell. Use `npx remotion browser ensure` to install |
-| Docker Engine | Container lifecycle via `docker run` (or Docker API) | Orchestrator invokes steps as `docker run --rm -v ... --env ...` |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| API ↔ Orchestrator | BullMQ job queue + Redis state | Async: API enqueues, Orchestrator dequeues. Sync: API invokes Runner directly |
-| Orchestrator ↔ Step Containers | Docker run (exit code) + shared volume files | Orchestrator reads exit code. Success = 0. Reads artifact files from volume. |
-| Whisper ↔ Silence Cutter | JSON file on shared volume | Contract: `01_transcription.json` with word-level timestamps |
-| Silence Cutter ↔ Remotion | 2 files: `03_cut_video.mp4` + `02_silence_markers.json` | Remotion reads both — video for source, markers for cut-point animations |
-| Remotion ↔ FFmpeg Finalizer | Single MP4 file on shared volume | `04_subtitled_video.mp4` — Remotion output is the finalizer's input |
-
-## Build Order (Dependencies Between Components)
-
-This is the recommended implementation sequence, ordered by what other components depend on:
-
-```
-1. Shared Volume + Step Contract Schema
-   ↑ (all steps depend on this)
-2. FFmpeg Finalizer (simplest step, validates end-to-end with test video)
-   ↑ (validates shared volume pattern works)
-3. Whisper Container (independent — only needs an MP4)
-   ↑ (produces transcript data needed by silence cutter + Remotion)
-4. Silence Cutter (depends on transcript + video)
-   ↑ (produces cut video needed by Remotion)
-5. Remotion Renderer (depends on cut video + transcript)
-   ↑ (most complex — Chrome, compositions, SSR rendering)
-6. Pipeline Orchestrator (composes steps 2-5 into sequence)
-   ↑ (needs all steps working individually first)
-7. API Gateway + Job Queue (exposes pipeline to external clients)
-   ↑ (needs orchestrator running)
-8. Batch Processing + Status (builds on single-job foundation)
-```
-
-**Rationale:**
-- **Step contracts first** because every container depends on the I/O contract being stable
-- **FFmpeg Finalizer before Whisper** because it's the simplest container to build and validates that the Docker+volume pattern works end-to-end
-- **Whisper before Silence Cutter** because the cutter needs transcript data
-- **Silence Cutter before Remotion** because Remotion needs the cut video as input
-- **Remotion last among processing steps** because it's the most complex (Chrome + React + SSR)
-- **Orchestrator after all steps** because it composes working containers into a sequence
-- **API Gateway last** because it needs the orchestrator running
+---
 
 ## Sources
 
-- Remotion Docker documentation: https://remotion.dev/docs/docker (HIGH confidence — official docs, verified 2024+)
-- Remotion SSR rendering APIs: Context7 /remotion-dev/remotion — `bundle()`, `selectComposition()`, `renderMedia()` (HIGH confidence)
-- faster-whisper word timestamps + Docker GPU requirements: Context7 /systran/faster-whisper + GitHub README (HIGH confidence)
-- FFmpeg filter documentation — `silencedetect`, `silenceremove`: Context7 /kkroening/ffmpeg-python + https://ffmpeg.org/ffmpeg-filters.html (HIGH confidence)
-- Remotion Linux dependencies (Debian required, Alpine unsupported): https://remotion.dev/docs/miscellaneous/linux-dependencies (HIGH confidence)
-- faster-whisper GPU Docker base image: `nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04` (MEDIUM confidence — from GitHub README)
+- Remotion renderMedia() docs: https://www.remotion.dev/docs/renderer/render-media
+- Remotion Output Scaling: https://www.remotion.dev/docs/scaling
+- Remotion Quality Guide: https://www.remotion.dev/docs/quality
+- Real-ESRGAN GitHub (xinntao): https://github.com/xinntao/Real-ESRGAN
+- Real-ESRGAN Docker (gdagil): https://github.com/gdagil/Real-ESRGAN-docker
+- Real-ESRGAN Docker Hub (nuvic): https://hub.docker.com/r/nuvic/real-esrgan
+- FFV1 Wikipedia: https://en.wikipedia.org/wiki/FFV1
+- FFmpeg CRF Guide: https://shotstack.io/learn/ffmpegcrf/
+- Docker GPU docs: https://docs.docker.com/engine/containers/gpu/
+- NVIDIA GPU sharing: https://github.com/NVIDIA/nvidia-container-toolkit/issues/1534
+- Code audit: `services/silence-cutter/src/cut_video.py`, `services/ffmpeg-finalizer/src/crop.py`, `services/ffmpeg-finalizer/src/config.py`, `services/remotion-renderer/src/render.ts`, `services/api-server/src/orchestrator.ts`
 
 ---
-*Architecture research for: Docker-based video processing pipeline*
-*Researched: 2026-05-05*
+*Architecture research for: Video quality/definition improvements in Docker step pipeline*
+*Researched: 2026-05-20*

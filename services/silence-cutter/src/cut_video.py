@@ -200,9 +200,16 @@ def _write_concat_list(segment_files: List[str], concat_list_path: str) -> None:
 def _concatenate_segments(concat_list_path: str, output_path: str) -> None:
     """Concatenate segments using FFmpeg concat demuxer with A/V sync reset.
 
-    Per SILC-03: reset_timestamps + setpts=PTS-STARTPTS preserves A/V sync
-    after concatenation. Without these flags, timestamps would drift across
-    segment boundaries, causing visible and audible sync issues.
+    Per SILC-03: reset_timestamps preserves A/V sync after concatenation.
+    Without this flag, timestamps would drift across segment boundaries,
+    causing visible and audible sync issues.
+
+    ENC-01 / D-01: Stream-copy (-c copy) eliminates one full lossy H.264 pass.
+    Concatenation no longer re-encodes — generation loss is eliminated here
+    and the finalizer becomes the only pre-Remotion lossy encode (D-02).
+    Stream-copy is safe at the concat stage because we are joining whole
+    pre-cut segment files, not seeking to byte offsets; the per-segment
+    extraction step in _extract_segments already produced frame-accurate cuts.
 
     Args:
         concat_list_path: Path to concat demuxer list file.
@@ -219,9 +226,8 @@ def _concatenate_segments(concat_list_path: str, output_path: str) -> None:
         "-i", concat_list_path,                   # Input from concat list
         "-map", "0:v:0",
         "-map", "0:a:0?",
-        "-c:v", "libx264",                        # Re-encode video for clean timestamps
-        "-c:a", "aac",                            # Re-encode audio for clean timestamps
-        "-reset_timestamps", "1",                 # Reset timestamps at each segment (SILC-03)
+        "-c", "copy",                             # ENC-01 / D-01: stream-copy eliminates one full lossy H.264 pass
+        "-reset_timestamps", "1",                 # SILC-03 invariant preserved (D-02)
         output_path
     ]
 

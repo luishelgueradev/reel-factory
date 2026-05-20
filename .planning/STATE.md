@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Calidad de video
 status: Defining requirements
-last_updated: "2026-05-20T20:22:52.889Z"
+last_updated: "2026-05-20T21:23:09.310Z"
 last_activity: 2026-05-20 — Milestone v1.1 started
 progress:
   total_phases: 14

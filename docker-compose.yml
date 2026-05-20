@@ -41,6 +41,10 @@ services:
   # Step 1: Whisper Transcription (Phase 2)
   whisper:
     <<: *pipeline-common
+    # Pinned so the build output matches the name the api-server orchestrator
+    # uses (reel-factory-*), independent of the compose project / directory name
+    # (a git worktree checkout has a different dir name).
+    image: reel-factory-whisper:latest
     build:
       context: ./services/whisper
       dockerfile: Dockerfile
@@ -70,6 +74,7 @@ services:
   # TRANSCRIPT_PATH is optional — if not set, uses FFmpeg-only mode.
   silence-cutter:
     <<: *pipeline-common
+    image: reel-factory-silence-cutter:latest
     build:
       context: ./services/silence-cutter
     depends_on:
@@ -92,6 +97,7 @@ services:
   # Remotion Renderer: adds TikTok-style animated subtitles to video
   remotion-renderer:
     <<: *pipeline-common
+    image: reel-factory-remotion-renderer:latest
     build:
       context: ./services/remotion-renderer
     depends_on:
@@ -191,18 +197,24 @@ services:
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID:-}
       - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-600000}
       - PIPELINE_NETWORK=${PIPELINE_NETWORK:-reel-factory_pipeline-net}
-      - HOST_PIPELINE_DIR=${HOST_PIPELINE_DIR:-/home/luis/proyectos/reel-factory/pipeline}
+      # Host-side absolute path to ./pipeline — the orchestrator bind-mounts it
+      # into sibling containers via the Docker socket, so it must be the HOST
+      # path, not a container path. Defaults to $PWD/pipeline (compose is run
+      # from the repo root); set HOST_PIPELINE_DIR in .env to override.
+      - HOST_PIPELINE_DIR=${HOST_PIPELINE_DIR:-${PWD}/pipeline}
       - REDIS_URL=redis://redis:6379
       - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-2}
       - MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-10}
       - PORT=3000
       - NODE_ENV=production
+    restart: unless-stopped
 
   # SRT/VTT Exporter: generates sidecar subtitle files with remapped timestamps
   # Per D-01, D-02: Node.js service following pipeline step contract
   # Per D-12: Runs in parallel with remotion-renderer (both consume transcript + silence-cuts)
   srt-exporter:
     <<: *pipeline-common
+    image: reel-factory-srt-exporter:latest
     build:
       context: ./services/srt-exporter
     depends_on:
@@ -228,6 +240,7 @@ services:
   # FFmpeg Finalizer: converts to 9:16 vertical (1080x1920) with center-crop
   ffmpeg-finalizer:
     <<: *pipeline-common
+    image: reel-factory-ffmpeg-finalizer:latest
     build:
       context: ./services/ffmpeg-finalizer
     depends_on:

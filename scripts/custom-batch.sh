@@ -55,6 +55,8 @@ done
 echo ""
 
 cp "$ENV_FILE" "$BACKUP_ENV"
+# Always restore the user's .env on exit (incl. Ctrl-C / errors).
+trap 'mv -f "$BACKUP_ENV" "$ENV_FILE" 2>/dev/null || true' EXIT INT TERM
 
 SUCCESS=0
 FAIL=0
@@ -144,7 +146,7 @@ EOF
   # Write pipeline-config.json before remotion-renderer step
   mkdir -p "$job_dir/remotion-renderer"
   CONFIG_JSON=$(cat <<EOJ
-{"subtitle":{"layout":"sentence","fontFamily":"$FONT","fontSize":45,"letterSpacing":0,"lineHeight":1.4,"activeColor":"$ACTIVE_COLOR","backgroundHighlight":{"enabled":true,"color":"rgba(0, 0, 0, 0.6)","padding":8,"borderRadius":8}}}
+{"subtitle":{"layout":"sentence","fontFamily":"$FONT","fontSize":45,"letterSpacing":-1,"lineHeight":1.4,"activeColor":"$ACTIVE_COLOR","backgroundHighlight":{"enabled":true,"color":"rgba(0, 0, 0, 0.6)","padding":8,"borderRadius":8}}}
 EOJ
 )
   echo "[$job_id] Config: layout=sentence font=$FONT size=45 activeColor=$ACTIVE_COLOR bg=dark-semi"

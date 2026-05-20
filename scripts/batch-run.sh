@@ -9,16 +9,21 @@ COMPOSE="docker compose"
 VIDEOS_DIR="$PROJECT_DIR/videos"
 ENV_FILE="$PROJECT_DIR/.env"
 BACKUP_ENV="$PROJECT_DIR/.env.batch-backup"
-UID=$(id -u)
+# bash's $UID is a readonly builtin already equal to `id -u` (reassigning it
+# errors under `set -e`). Compute GID and export both so docker compose's
+# `user: "${UID:-1000}:${GID:-1000}"` actually picks them up.
 GID=$(id -g)
+export UID GID
 
 echo "=== Batch Pipeline Run ==="
 echo "Project dir: $PROJECT_DIR"
 echo "UID:GID = $UID:$GID"
 echo ""
 
-# Backup original .env
+# Backup original .env, and ALWAYS restore it on exit (incl. Ctrl-C / errors) so
+# an interrupted run never leaves the user's .env clobbered.
 cp "$ENV_FILE" "$BACKUP_ENV"
+trap 'mv -f "$BACKUP_ENV" "$ENV_FILE" 2>/dev/null || true' EXIT INT TERM
 
 # Find all MP4 files
 mapfile -t VIDEOS < <(find "$VIDEOS_DIR" -maxdepth 1 -name '*.mp4' -type f | sort)

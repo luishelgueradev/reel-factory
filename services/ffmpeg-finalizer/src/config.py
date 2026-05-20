@@ -21,9 +21,12 @@ CROP_STRATEGY = "center"
 
 CROP_STRATEGY_ENV = "CROP_STRATEGY"
 
-# D-08: H.264 CRF 20 for quality/filesize balance.
-# Good visual quality for 1080x1920 talking-head social content without excessive file sizes.
-H264_CRF = 20
+# Phase 4 D-08 (superseded by Phase 13 D-03 / ENC-02): H.264 CRF tuned down
+# from 20 → 18. Lands in the 5,000–8,000 kbps target band for a 60s
+# talking-head fixture, eliminating bloating without slowing the medium
+# preset perceptibly. CRF 17 considered and rejected — marginal gain
+# given Remotion re-encodes downstream in Phase 14.
+H264_CRF = 18
 
 # D-09: Encoding preset `medium` — good balance of encoding speed vs compression
 # efficiency for pipeline processing. ~2x realtime on modern CPUs.

@@ -11,7 +11,7 @@
 
 import fs from "fs";
 import path from "path";
-import { remapWordTimestamps, areTimestampsAlreadyRemapped } from "./timestamp-remap";
+import { areTimestampsAlreadyRemapped } from "./timestamp-remap";
 import { buildCuesFromTranscript, generateSrt, generateVtt } from "./formats";
 import type { WhisperTranscript, SilenceCutList } from "./types";
 
@@ -94,26 +94,29 @@ async function main() {
     console.warn("WARN: SILENCE_CUTS_PATH set but file not found:", silenceCutsPath);
   }
 
-  // Detect if timestamps are already on silence-removed timeline
-  if (silenceCuts && transcript.words && transcript.words.length > 0) {
-    const alreadyRemapped = areTimestampsAlreadyRemapped(transcript.words, silenceCuts);
-    if (alreadyRemapped) {
-      console.log("[srt-exporter] Detected timestamps already on silence-removed timeline — skipping remap");
-    } else {
-      console.log("[srt-exporter] Timestamps on original timeline — applying remap");
-    }
-  }
-
-  // Determine effective silence cuts (skip remap if timestamps already on target timeline)
+  // Determine effective silence cuts (skip remap if timestamps already on the
+  // silence-removed timeline). NOTE: areTimestampsAlreadyRemapped is a heuristic
+  // (max word end vs new_duration + tolerance) and can misfire on short videos —
+  // see timestamp-remap.ts. In this pipeline whisper runs on the ORIGINAL video,
+  // so remap is generally required; the auto-detect guards the (rare) cut-video case.
   const alreadyRemapped = silenceCuts && transcript.words && transcript.words.length > 0
     ? areTimestampsAlreadyRemapped(transcript.words, silenceCuts)
     : false;
+  if (silenceCuts) {
+    console.log(
+      alreadyRemapped
+        ? "[srt-exporter] Detected timestamps already on silence-removed timeline — skipping remap"
+        : "[srt-exporter] Timestamps on original timeline — applying remap"
+    );
+  }
   const effectiveSilenceCuts = alreadyRemapped ? null : silenceCuts;
 
-  // Remap word timestamps
-  const remappedWords = remapWordTimestamps(transcript.words || [], effectiveSilenceCuts);
-
-  // Build cues from transcript using segments per D-04
+  // Build cues from transcript using segment boundaries per D-04. Cue timing is
+  // remapped at the segment level inside buildCuesFromTranscript.
+  // KNOWN LIMITATION (D-06): cue *text* comes from segment.text verbatim, so
+  // words Whisper may have hallucinated inside a silence cut are not stripped
+  // from the text — only segment timing is remapped. Word-level cue rebuilding
+  // would fix this but is a larger change; deferred.
   const cues = buildCuesFromTranscript(transcript, effectiveSilenceCuts);
 
   // Generate SRT and VTT output per D-07, D-08

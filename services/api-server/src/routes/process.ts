@@ -125,9 +125,20 @@ processRouter.post("/process", upload.single("video"), async (req: Request, res:
     await updateJobProgress(jobId, { status: "active", currentStep: stepName, completedSteps });
   };
 
+  // Enforce the timeout for real: race the pipeline against a timer so a hung
+  // step returns 408 instead of blocking the request indefinitely. NOTE: losing
+  // the race does not cancel the underlying containers — they keep running.
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(
+      () => reject(new Error(`Pipeline processing timeout after ${timeoutMs}ms`)),
+      timeoutMs
+    );
+  });
+
   try {
-    // Run the entire pipeline with progress tracking
-    const result = await runPipeline(jobId, { onStepStart });
+    // Run the entire pipeline with progress tracking, bounded by the timeout
+    const result = await Promise.race([runPipeline(jobId, { onStepStart }), timeoutPromise]);
 
     // Mark job as completed in Redis
     await updateJobProgress(jobId, { status: "completed", currentStep: "completed" });
@@ -203,5 +214,7 @@ processRouter.post("/process", upload.single("video"), async (req: Request, res:
         message: err instanceof Error ? err.message : "Internal server error",
       },
     });
+  } finally {
+    clearTimeout(timeoutHandle);
   }
 });

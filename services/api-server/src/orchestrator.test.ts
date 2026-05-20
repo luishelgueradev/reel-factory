@@ -168,10 +168,14 @@ describe("runPipeline", () => {
       );
     }
 
-    // Also create output files in step directories for artifact collection
+    // Create each step's DECLARED output file (orchestrator now verifies the
+    // OUTPUT_PATH exists before treating the step as successful).
     for (const step of STEPS) {
-      const stepDir = path.join(pipelineDir, jobId, step.name);
-      await fs.writeFile(path.join(stepDir, "output.mp4"), "fake");
+      const outputOnHost = step.envVars.OUTPUT_PATH
+        .replace("/data/pipeline", pipelineDir)
+        .replace(/\{jobId\}/g, jobId);
+      await fs.mkdir(path.dirname(outputOnHost), { recursive: true });
+      await fs.writeFile(outputOnHost, "fake");
     }
 
     return docker;

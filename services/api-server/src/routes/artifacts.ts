@@ -53,20 +53,22 @@ artifactsRouter.get(
   async (req: Request, res: Response) => {
     const { jobId, stepName, filename } = req.params;
 
-    // Construct the file path
-    const filePath = path.join(PIPELINE_DATA_DIR, jobId, stepName, filename);
-    const normalizedPath = path.normalize(filePath);
+    // Resolve against the base and confirm the result stays inside it. Using a
+    // trailing path separator prevents sibling-prefix escapes (e.g. a sibling
+    // directory like "/data/pipeline-evil" passing a bare startsWith check), and
+    // resolving collapses any "../" in the user-supplied params.
+    const base = path.resolve(PIPELINE_DATA_DIR);
+    const resolvedPath = path.resolve(base, jobId, stepName, filename);
 
-    // Path traversal protection: ensure the path starts with /data/pipeline/
-    if (!normalizedPath.startsWith(PIPELINE_DATA_DIR)) {
+    if (resolvedPath !== base && !resolvedPath.startsWith(base + path.sep)) {
       res.status(403).json({ error: "Access denied", jobId, stepName, filename });
       return;
     }
 
     // Check if file exists and send it
     try {
-      await fs.access(filePath);
-      res.sendFile(filePath);
+      await fs.access(resolvedPath);
+      res.sendFile(resolvedPath);
     } catch {
       res
         .status(404)

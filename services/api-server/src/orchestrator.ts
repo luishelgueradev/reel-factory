@@ -117,6 +117,28 @@ export const STEPS: PipelineStepConfig[] = [
 ];
 
 /**
+ * Demultiplex Docker's non-TTY log stream framing into plain text.
+ * Each frame is an 8-byte header [streamType(1), 0,0,0, size(4, big-endian)]
+ * followed by the payload. Falls back to a raw UTF-8 decode if the buffer is
+ * not framed (e.g. a TTY container or an already-decoded string).
+ */
+function demuxDockerLogs(buf: Buffer): string {
+  if (!buf || buf.length === 0) return "";
+  let out = "";
+  let offset = 0;
+  while (offset + 8 <= buf.length) {
+    const streamType = buf[offset];
+    const size = buf.readUInt32BE(offset + 4);
+    if (streamType > 2 || offset + 8 + size > buf.length) {
+      return buf.toString("utf8"); // not framed — decode as-is
+    }
+    out += buf.subarray(offset + 8, offset + 8 + size).toString("utf8");
+    offset += 8 + size;
+  }
+  return out || buf.toString("utf8");
+}
+
+/**
  * Resolves env vars for a step, replacing {jobId} placeholders with actual jobId.
  * This allows the STEPS config to contain path templates that are resolved at runtime.
  */
@@ -189,7 +211,9 @@ export async function runPipeline(
       HostConfig: {
         Binds: [`${hostPipelineDir}:/data/pipeline`],
         NetworkMode: options.pipelineNetwork || PIPELINE_NETWORK,
-        AutoRemove: true,
+        // AutoRemove off: we must wait(), read logs, and inspect the exit code
+        // BEFORE the container disappears. We remove it explicitly afterwards.
+        AutoRemove: false,
       },
     };
 
@@ -207,27 +231,26 @@ export async function runPipeline(
 
     const container = await docker.createContainer(containerConfig);
 
-    // Start container
-    await container.start();
+    // Start the container, wait for it to finish, capture its logs while it
+    // still exists, then always remove it (AutoRemove is off to avoid the
+    // race where the container vanishes before wait()/logs() resolve).
+    let exitCode = 1;
+    try {
+      await container.start();
 
-    // Stream logs with step prefix
-    const stream = await container.logs({
-      follow: false,
-      stdout: true,
-      stderr: true,
-    });
-    if (stream && stream.length > 0) {
-      const logOutput = stream.toString("utf8").trim();
+      const exitResult = await container.wait();
+      exitCode = typeof exitResult === "object" && "StatusCode" in exitResult
+        ? (exitResult as { StatusCode: number }).StatusCode
+        : 1;
+
+      const rawLogs = await container.logs({ follow: false, stdout: true, stderr: true });
+      const logOutput = demuxDockerLogs(rawLogs as unknown as Buffer).trim();
       if (logOutput) {
         console.log(`[${step.name}] ${logOutput}`);
       }
+    } finally {
+      await container.remove({ force: true }).catch(() => { /* already gone */ });
     }
-
-    // Wait for container completion
-    const exitResult = await container.wait();
-    const exitCode = typeof exitResult === "object" && "StatusCode" in exitResult
-      ? (exitResult as { StatusCode: number }).StatusCode
-      : 1;
 
     // Read manifest.json from the step's output directory
     const manifestFilePath = path.join(
@@ -254,12 +277,29 @@ export async function runPipeline(
       );
     }
 
-    if (exitCode !== 0 && !manifest) {
+    if (exitCode !== 0) {
       throw new PipelineStepError(
         step.name,
         exitCode,
-        `Container exited with code ${exitCode} and no manifest found`
+        manifest?.error_message || `Container exited with code ${exitCode}`
       );
+    }
+
+    // Guard against silent failure: a step can exit 0 yet not produce its
+    // declared output, which would otherwise only surface as a confusing
+    // missing-input error in the NEXT step. Verify the output file exists.
+    const declaredOutput = envVars.OUTPUT_PATH;
+    if (declaredOutput) {
+      const outputOnHost = declaredOutput.replace("/data/pipeline", pipelineDir);
+      try {
+        await fs.access(outputOnHost);
+      } catch {
+        throw new PipelineStepError(
+          step.name,
+          exitCode,
+          `Step exited 0 but its declared output is missing: ${declaredOutput}`
+        );
+      }
     }
 
     // Collect step results

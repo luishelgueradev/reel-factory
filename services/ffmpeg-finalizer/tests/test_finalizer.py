@@ -2,6 +2,7 @@
 
 Follows the silence-cutter/tests/test_silence_cutter.py pattern with pytest.
 Tests validate VERT-01/02/03 requirements and D-01/D-02/D-03/D-04/D-06/D-08/D-09/D-10/D-11 decisions.
+Phase 13 extensions cover ENC-01, ENC-02, ENC-03, ENC-04, ENC-05.
 
 Referenced requirements:
 - VERT-01: Output is 9:16 vertical format (1080x1920)
@@ -9,13 +10,19 @@ Referenced requirements:
 - VERT-03: Safe zone metadata for Phase 5 subtitle positioning
 - D-01: Center-crop only (no smart reframing in v1)
 - D-02: Pure center crop anchor (geometric center)
-- D-03: Conditional crop path (skip crop for 9:16 inputs)
+- D-03 (Phase 4): Conditional crop path (skip crop for 9:16 inputs)
+- D-03 (Phase 13): H.264 CRF 18 — see ENC-02 / D-03 for Phase 13 update to 18
 - D-04: Uniform 1080x1920 output regardless of input
 - D-06: Safe zone values (top=100, bottom=230, left=54, right=54)
-- D-08: H.264 CRF 20
+- D-08 (superseded): originally H.264 CRF 20 — see ENC-02 / D-03 for Phase 13 update to 18
 - D-09: Encoding preset medium
 - D-10: Loudnorm audio normalization (I=-14, TP=-1, LRA=11)
 - D-11: Force 30fps output
+- ENC-01: Stream-copy in silence-cutter concat (Phase 13)
+- ENC-02: CRF 18 enforcement (Phase 13)
+- ENC-03: BT.709 color tag validation (Phase 13)
+- ENC-04: Lanczos scaling + unsharp filter (Phase 13)
+- ENC-05: Duration parity ±33ms (Phase 13)
 """
 
 import pytest
@@ -51,7 +58,7 @@ def valid_finalizer_info_dict() -> dict:
         "crop_y": 0,
         "crop_width": 1080,
         "crop_height": 1920,
-        "h264_crf": 20,
+        "h264_crf": 18,
         "h264_preset": "medium",
         "audio_normalization": True,
         "safe_zone": {
@@ -79,7 +86,7 @@ def no_crop_info_dict() -> dict:
         "crop_y": 0,
         "crop_width": 1080,
         "crop_height": 1920,
-        "h264_crf": 20,
+        "h264_crf": 18,
         "h264_preset": "medium",
         "audio_normalization": True,
         "safe_zone": {
@@ -111,8 +118,8 @@ class TestConfig:
         assert config.SAFE_ZONE_RIGHT == 54
 
     def test_encoding_params(self):
-        """H264_CRF=20 (D-08), H264_PRESET='medium' (D-09)."""
-        assert config.H264_CRF == 20  # D-08
+        """H264_CRF=18 (ENC-02 / D-03), H264_PRESET='medium' (D-04 / Phase 4 D-09 preserved)."""
+        assert config.H264_CRF == 18  # ENC-02 / D-03
         assert config.H264_PRESET == "medium"  # D-09
 
     def test_audio_params(self):
@@ -208,7 +215,7 @@ class TestSchema:
             crop_y=0,
             crop_width=1080,
             crop_height=1920,
-            h264_crf=20,
+            h264_crf=18,
             h264_preset="medium",
             audio_normalization=True,
             safe_zone=SafeZone(top=100, bottom=230, left=54, right=54),
@@ -231,7 +238,7 @@ class TestSchema:
             crop_y=0,
             crop_width=1080,
             crop_height=1920,
-            h264_crf=20,
+            h264_crf=18,
             h264_preset="medium",
             audio_normalization=True,
             safe_zone=SafeZone(top=100, bottom=230, left=54, right=54),
@@ -265,7 +272,7 @@ class TestSchema:
                 crop_y=0,
                 crop_width=1080,
                 crop_height=1920,
-                h264_crf=20,
+                h264_crf=18,
                 h264_preset="medium",
                 audio_normalization=True,
                 safe_zone=SafeZone(top=100, bottom=230, left=54, right=54),
@@ -291,7 +298,7 @@ class TestValidation:
             "output_height": 1280,
             "crop_strategy": "center",
             "crop_applied": False,
-            "h264_crf": 20,
+            "h264_crf": 18,
             "audio_normalization": True,
             "safe_zone": {"top": 100, "bottom": 230, "left": 54, "right": 54},
         }
@@ -305,7 +312,7 @@ class TestValidation:
             "output_height": 1920,
             "crop_strategy": "smart",
             "crop_applied": False,
-            "h264_crf": 20,
+            "h264_crf": 18,
             "audio_normalization": True,
             "safe_zone": {"top": 100, "bottom": 230, "left": 54, "right": 54},
         }
@@ -319,7 +326,7 @@ class TestValidation:
             "output_height": 1920,
             "crop_strategy": "center",
             "crop_applied": False,
-            "h264_crf": 20,
+            "h264_crf": 18,
             "audio_normalization": True,
         }
         errors = validate_finalizer_info(data)

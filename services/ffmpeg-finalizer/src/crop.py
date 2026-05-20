@@ -125,14 +125,25 @@ def apply_finalizer(input_path: str, output_path: str, target_width: int, target
 
     if crop_applied:
         # Input is not 9:16 — apply full scale+crop filter chain
+        # ENC-04 / D-08: Lanczos scaling (~+10% VMAF vs default bicubic on downscale)
+        # ENC-04 / D-05, D-06, D-13: mild unsharp after scale+crop and setsar=1, before encode —
+        #   sharpens the final 1080×1920 pixels; minimizes halo risk on subtitle text
+        #   (Remotion burns subtitles downstream, so unsharp runs first).
         filter_chain = (
-            f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
+            f"scale={target_width}:{target_height}:force_original_aspect_ratio=increase:flags=lanczos,"
             f"crop={target_width}:{target_height},"
-            f"setsar=1"
+            f"setsar=1,"
+            f"unsharp=5:5:0.5:5:5:0.3"
         )
     else:
         # D-03: Input is already 9:16 — scale only, no crop
-        filter_chain = f"scale={target_width}:{target_height},setsar=1"
+        # ENC-04 / D-08, D-13: Lanczos + mild unsharp applied unconditionally (D-07).
+        #   No-audio (-an) branch also inherits these via the shared cmd — see D-13.
+        filter_chain = (
+            f"scale={target_width}:{target_height}:flags=lanczos,"
+            f"setsar=1,"
+            f"unsharp=5:5:0.5:5:5:0.3"
+        )
 
     cmd = [
         "ffmpeg", "-y",
@@ -143,6 +154,14 @@ def apply_finalizer(input_path: str, output_path: str, target_width: int, target
         "-preset", config.H264_PRESET,
         "-profile:v", config.H264_PROFILE,
         "-pix_fmt", "yuv420p",
+        # ENC-03 / D-09: BT.709 metadata tags ONLY (not the colorspace filter).
+        # Source frames are already YUV from silence-cutter; metadata tagging is
+        # the safe fix for the "Instagram lavado de color" symptom. PITFALLS.md A-6
+        # documents why the colorspace filter would re-interpret luminance and
+        # cause a global brightness/saturation shift — metadata-only is correct here.
+        "-colorspace", "bt709",
+        "-color_primaries", "bt709",
+        "-color_trc", "bt709",
         "-r", str(config.FPS_OUTPUT),
         "-movflags", "+faststart",
         "-map_metadata", "-1",
@@ -192,6 +211,11 @@ def apply_finalizer(input_path: str, output_path: str, target_width: int, target
         "crop_height": crop_h,
         "h264_crf": config.H264_CRF,
         "h264_preset": config.H264_PRESET,
+        "lanczos_scaling": True,
+        "unsharp_filter": "5:5:0.5:5:5:0.3",
+        "color_space": "bt709",
+        "color_primaries": "bt709",
+        "color_transfer": "bt709",
         "audio_normalization": probe_info["has_audio"],
         "safe_zone": {
             "top": config.SAFE_ZONE_TOP,

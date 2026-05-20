@@ -129,8 +129,8 @@ const SentencePage: React.FC<{
         ? interpolate(frame, [fadeOutStartFrame, fadeOutEndFrame], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
         : 1;
 
-  const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
   const subtitleWidth = config.subtitleWidth ?? DEFAULT_SUBTITLE_CONFIG.subtitleWidth;
+  const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
   const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" as const } : {};
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
   const sentenceDefaultBg = !config.backgroundHighlight?.enabled

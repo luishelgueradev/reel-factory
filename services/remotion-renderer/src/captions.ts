@@ -257,7 +257,7 @@ export function transcriptToCaptionPages(
     combineTokensWithinMilliseconds,
   });
 
-  const PROPER_NOUNS = new Set([]);
+  const PROPER_NOUNS = new Set<string>([]);
 
   for (const page of pages) {
     for (let i = 0; i < page.tokens.length; i++) {

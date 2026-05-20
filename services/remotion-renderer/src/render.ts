@@ -23,7 +23,9 @@ function getVideoDimensions(videoPath: string): { width: number; height: number;
     videoPath,
   ], { encoding: "utf-8" });
   const data = JSON.parse(probeOut);
-  const videoStream = data.streams.find((s: any) => s.codec_name !== undefined && s.width !== undefined);
+  // ffprobe was invoked with `-show_entries stream=width,height`, so codec_name
+  // is never present — the video stream is simply the one carrying a width.
+  const videoStream = data.streams.find((s: any) => s.width !== undefined && s.height !== undefined);
   const width = videoStream?.width ?? 1080;
   const height = videoStream?.height ?? 1920;
   const duration = parseFloat(data.format?.duration ?? "10");

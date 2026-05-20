@@ -7,8 +7,8 @@ import type { TransitionEvent } from "./JumpCutTransition";
 import { computeZoomScale } from "./ZoomContainer";
 import type { ZoomEvent } from "../zoom-detection";
 import { computeCombinedTransitionEffect } from "./ZoomContainer";
-import type { SilenceCutList } from "./captions";
-import type { TransitionConfig } from "./pipeline-config";
+import type { SilenceCutList } from "../captions";
+import type { TransitionConfig } from "../pipeline-config";
 import {
   TRANSITION_PRE_CUT_MS,
   ZOOM_TRANSITION_SCALE,

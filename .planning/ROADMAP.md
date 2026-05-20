@@ -7,6 +7,7 @@ Build a self-hosted Docker pipeline that transforms talking-head MP4 videos into
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -35,18 +36,22 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Pipeline Infrastructure
+
 **Goal**: Pipeline foundation with Docker step contracts is operational — containers communicate via shared volumes
 **Depends on**: Nothing (first phase)
 **Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05
 **Success Criteria** (what must be TRUE):
+
   1. An MP4 file placed in the shared Docker volume is accessible by a processing container via INPUT_PATH environment variable
   2. A container can process a file and write output artifacts to OUTPUT_PATH on the shared named volume
   3. Intermediate artifacts from any step are inspectable as files on the shared volume
   4. A new container step can be added to docker-compose.yml and the pipeline sequence without modifying existing step container configurations
   5. FFmpeg --version returns 7.1.1 (the pinned version) across all containers in the pipeline
+
 **Plans**: 6 plans
 
 Plans:
+
 - [x] 01-01: Docker Compose project scaffolding with shared volumes, env vars, and directory conventions
 - [x] 01-02: Step contract schema — env vars, exit codes, manifest.json artifact, and documentation
 - [x] 01-03: Base Docker images with pinned FFmpeg + pipeline service chain in Compose
@@ -55,64 +60,80 @@ Plans:
 - [x] 01-06: [GAP CLOSURE] Compile FFmpeg 7.1.1 from source in both base Dockerfiles (PIPE-05)
 
 ### Phase 2: Whisper Transcription
+
 **Goal**: Audio is extracted from MP4 and transcribed with word-level Spanish timestamps — the data foundation for all downstream steps
 **Depends on**: Phase 1
 **Requirements**: TRAN-01, TRAN-02, TRAN-03, TRAN-04
 **Success Criteria** (what must be TRUE):
+
   1. An MP4 input produces a JSON transcript file with word-level timestamps (start/end per word)
   2. Timestamps correctly map each spoken word to its time position in the audio
   3. Phantom text from Whisper hallucinations is filtered out — no spurious words appear during silent sections
   4. Transcription is configured for Spanish language explicitly (language="es", non-.en model used)
+
 **Plans:** 3 plans
 
 Plans:
+
 - [x] 02-01-PLAN.md — Whisper container infrastructure + audio extraction (TRAN-01)
 - [x] 02-02-PLAN.md — Transcription engine + hallucination filter + transcript.json schema (TRAN-02, TRAN-03)
 - [x] 02-03-PLAN.md — Spanish language config + validation + E2E Docker test (TRAN-04)
 
 ### Phase 3: Silence Detection & Removal
+
 **Goal**: Silent sections are detected and removed with hard cuts — A/V sync is preserved after every cut
 **Depends on**: Phase 1, Phase 2 (cross-references Whisper no_speech data)
 **Requirements**: SILC-01, SILC-02, SILC-03, SILC-04
 **Success Criteria** (what must be TRUE):
+
   1. Pipeline identifies silent sections by cross-referencing FFmpeg silencedetect with Whisper no_speech data — no silence is missed or false-positive detected
   2. Silent sections are removed with hard cuts (no transition effects between remaining segments)
   3. Audio and video remain perfectly synchronized after all silence cuts — no visible or audible drift
   4. A JSON cut list artifact is produced documenting every silence removal with timestamps and durations
+
 **Plans**: 4 plans
 
 Plans:
+
 - [x] 03-01-PLAN.md — Container infrastructure + silencedetect module + cross-reference engine + silence-cuts schema (SILC-01, SILC-04)
 - [x] 03-02-PLAN.md — Hard-cut video assembly with A/V sync + main.py pipeline entry point (SILC-02, SILC-03)
 - [x] 03-03-PLAN.md — Validation module + unit tests + E2E Docker test (SILC-01, SILC-02, SILC-03, SILC-04)
 - [x] 03-06-PLAN.md — [GAP CLOSURE] Fix unit test import errors
 
 ### Phase 4: 9:16 Vertical Output
+
 **Goal**: Video output is rendered in 9:16 vertical format with center-crop reframing optimized for social media
 **Depends on**: Phase 1, Phase 3 (operates on silence-removed video)
 **Requirements**: VERT-01, VERT-02, VERT-03
 **Success Criteria** (what must be TRUE):
+
   1. Final output video file is 1080x1920 pixels (9:16 aspect ratio)
   2. Center-crop strategy is applied by default — the speaker's face remains centered in frame
   3. The 9:16 frame preserves safe zone boundaries — no critical content is clipped at edges where subtitles/overlays will be placed
+
 **Plans**: 3 plans
 
 Plans:
+
 - [x] 04-01-PLAN.md — Conditional crop logic + config refactor + schema update (VERT-01, VERT-02)
 - [x] 04-02-PLAN.md — Validation module + unit tests (VERT-01, VERT-02, VERT-03)
 - [x] 04-03-PLAN.md — E2E Docker test + health check + human verification (VERT-01, VERT-02, VERT-03)
 
 ### Phase 5: Remotion + Animated Subtitles
+
 **Goal**: Word-by-word animated subtitles are burned into the 9:16 video — the killer feature for short-form content
 **Depends on**: Phase 1, Phase 2 (transcript JSON), Phase 3 (cut video), Phase 4 (9:16 framing)
 **Requirements**: SUBT-01, SUBT-02, SUBT-03
 **Success Criteria** (what must be TRUE):
+
   1. Output video has subtitles that animate word-by-word, appearing in sync with the speaker's voice
   2. The currently spoken word is visually highlighted TikTok-style (stands out from surrounding words)
   3. Subtitle timing matches audio with no visible lag — words highlight precisely when spoken
+
 **Plans**: 6 plans
 
 Plans:
+
 - [x] 05-01-PLAN.md — Docker infrastructure + pipeline reordering (D-05, D-07, D-12, SUBT-01, SUBT-03)
 - [x] 05-02-PLAN.md — Timestamp remapping + safe zone positioning + render integration (D-01-D-04, D-08, D-10, D-11, SUBT-01, SUBT-02, SUBT-03)
 - [x] 05-03-PLAN.md — Validation module + E2E Docker test (SUBT-01, SUBT-02, SUBT-03)
@@ -121,18 +142,22 @@ Plans:
 - [x] 05-06-PLAN.md — [GAP CLOSURE] Remove SILENCE_CUTS_PATH from remotion-renderer
 
 ### Phase 6: Subtitle Enhancements, Titles & Web Config
+
 **Goal**: Configurable subtitle styles (4 layout modes), timed title overlays, and a web-based Remotion Studio for live preview and configuration — all driven by pipeline-config.json
 **Depends on**: Phase 5 (Remotion container and rendering pipeline working)
 **Requirements**: VISU-01, VISU-02
 **Success Criteria** (what must be TRUE):
+
   1. Video starts with an animated intro title card when pipeline-config has titles with startTimeMs=0 (VISU-01)
   2. Video ends with an animated outro title card when pipeline-config has titles near video end (VISU-02)
   3. Intro and outro templates accept configurable brand parameters (text, colors, entrance animation)
   4. Users can select subtitle layout mode (TikTok, Sentence, Bar, Karaoke) via pipeline-config.json
   5. Config editor web UI allows live preview and configuration of subtitles and titles
+
 **Plans**: 5 plans
 
 Plans:
+
 - [x] 06-01-PLAN.md — Pipeline config schema & config-driven composition architecture (D-01, D-02, D-03, D-05, D-12, D-17)
 - [x] 06-02-PLAN.md — Subtitle layout modes: TikTok, Sentence, Bar, Karaoke + LayoutDispatcher (D-04, D-06, D-08, D-09)
 - [x] 06-03-PLAN.md — Title overlays with entrance animations & curated font infrastructure (D-07, D-10, D-11, D-13, VISU-01, VISU-02)
@@ -140,16 +165,20 @@ Plans:
 - [x] 06-05-PLAN.md — Config editor SPA + validation module + E2E test (D-16, D-20, VISU-01, VISU-02)
 
 ### Phase 7: Visual Cuts & Zooms
+
 **Goal**: Jump cuts feel intentional and emphasis moments get visual zoom treatment — cuts are visually polished
 **Depends on**: Phase 5 (Remotion rendering), Phase 2 (Whisper confidence data)
 **Requirements**: VISU-03, VISU-04
 **Success Criteria** (what must be TRUE):
+
   1. During emphasis moments (triggered by Whisper confidence dips and silence boundaries), the video automatically zooms in on the speaker
   2. Jump cuts have visible zoom or crop-shift transitions — cuts appear intentional rather than raw splices
   3. Zoom and transition effects are timed to audio cues derived from transcript/silence data
+
 **Plans:** 7 plans
 
 Plans:
+
 - [x] 07-01: Zoom trigger logic from Whisper confidence scores and silence boundaries
 - [x] 07-02: Remotion zoom composition (smooth scale animation on speaker)
 - [x] 07-03: Jump cut transition composition (zoom or crop shift between cut segments)
@@ -159,70 +188,88 @@ Plans:
 - [x] 07-07: [GAP CLOSURE] Fix Signal 2 break bug and merge mutability in zoom-detection.ts
 
 ### Phase 8: SRT/VTT Subtitle Export
+
 **Goal**: SRT and VTT sidecar subtitle files are generated alongside the burned-in video for platform upload
 **Depends on**: Phase 2 (transcript data), Phase 3 (silence-removed timestamps)
 **Requirements**: SRTE-01
 **Success Criteria** (what must be TRUE):
+
   1. An SRT subtitle file is generated alongside the processed video output
   2. A VTT subtitle file is generated alongside the processed video output
   3. Sidecar timestamps are aligned with the silence-processed video (not the original input timestamps)
+
 **Plans**: 2 plans
 
 Plans:
+
 - [x] 08-01-PLAN.md — SRT/VTT format generation service with timestamp remapping (SRTE-01)
 - [x] 08-02-PLAN.md — Docker Compose integration and E2E validation (SRTE-01)
 
 ### Phase 9: Synchronous API
+
 **Goal**: Users can submit a single video via REST API and receive a fully processed result synchronously
 **Depends on**: Phases 1-8 (all processing steps working)
 **Requirements**: APIS-01, APIS-02, APIS-03
 **Success Criteria** (what must be TRUE):
+
   1. POST /process accepts an MP4 via multipart upload and returns the processed video in the response
   2. API response includes URLs to all intermediate artifacts (transcript, cut list, intermediate videos) for inspection
   3. Long videos complete without timeout — timeout handling returns a meaningful status rather than hanging
+
 **Plans:** 3 plans
 
 Plans:
+
 - [x] 09-01-PLAN.md — API server scaffolding, Zod schemas, Multer upload, artifact serving (APIS-01, APIS-02)
 - [x] 09-02-PLAN.md — Pipeline orchestration via Dockerode, POST /process handler, timeout handling (APIS-01, APIS-02, APIS-03)
 - [x] 09-03-PLAN.md — Docker integration, health endpoint, E2E validation (APIS-01, APIS-02, APIS-03)
 
 ### Phase 10: Async Batch + Orchestrator
+
 **Goal**: Users can submit multiple videos for queued batch processing with concurrent execution and rate limiting
 **Depends on**: Phase 9 (stable single-video synchronous endpoint)
 **Requirements**: APIA-01, APIA-02, APIA-03
 **Success Criteria** (what must be TRUE):
+
   1. POST /batch accepts multiple video files and returns unique job IDs for each
   2. BullMQ + Redis job queue manages concurrent processing with configurable rate limiting — no resource contention crashes
   3. Pipeline orchestrator executes the full step sequence per job, starting and stopping containers in order
+
 **Plans:** 4/4 plans complete
 
 Plans:
+
 - [x] 10-01-PLAN.md — Redis + BullMQ queue infrastructure and batch schemas
 - [x] 10-02-PLAN.md — POST /batch endpoint and GET /batch/{batchId} status
 - [x] 10-03-PLAN.md — BullMQ worker with progress tracking and retry handling
 - [x] 10-04-PLAN.md — Concurrency configuration and E2E batch validation
 
 ### Phase 11: Progress Tracking
+
 **Goal**: Users can check real-time progress of processing jobs per pipeline step
 **Depends on**: Phase 10 (job queue and orchestrator tracking progress)
 **Requirements**: PROG-01, PROG-02
 **Success Criteria** (what must be TRUE):
+
   1. GET /status/{jobId} returns which pipeline step is currently executing (transcribing, removing silence, rendering, etc.)
   2. Progress response includes current step name and completion percentage where available
   3. Status updates reflect actual step transitions — not stuck on a stale step name
+
 **Plans:** 3/3 plans complete
 
 Plans:
+
 - [x] 11-01-PLAN.md — Progress data layer: extend progress.ts with completed steps, progress %, stepInfo, and status Zod schema (PROG-01, PROG-02)
 - [x] 11-02-PLAN.md — Status endpoint: GET /status/:jobId route, POST /process progress extension, router mounting (PROG-01, PROG-02)
 - [x] 11-03-PLAN.md — E2E validation: comprehensive status endpoint tests and progress flow simulation (PROG-01, PROG-02)
 
 ### Phase 12: Subtitle Preview Lab
+
 **Goal**: Interactive web page for live subtitle style preview with all tunable parameters, rendering fonts exactly as they appear in the final video output over a sample background
 **Depends on**: Phase 5 (Remotion rendering), Phase 6 (config editor infrastructure)
 **Requirements**: PREV-01, PREV-02, PREV-03
 **Success Criteria** (what must be TRUE):
+
   1. A web page at `/preview` shows a 9:16 viewport with a sample video/image background and subtitle text rendered on top
   2. All 18 available fonts render with the same engine used in production (Remotion's font loading), so preview exactly matches final output
   3. Every subtitle parameter is adjustable in real-time: layout mode, fontFamily, fontSize, activeColor, inactiveColor, letterSpacing, lineHeight, backgroundHighlight, outlineColor, outlineWidth, position, bottomOffset, pastWordOpacity
@@ -233,6 +280,7 @@ Plans:
 ### Phase 12 Details
 
 Plans:
+
 - [x] 12-01-PLAN.md — Add pastWordOpacity to SubtitleConfig and all 4 layout components, extend StyleControls with lineHeight + pastWordOpacity sliders (PREV-03)
 - [x] 12-02-PLAN.md — Build /preview SPA with @remotion/player, React Router, textToCaptionPages, font grid, Express routing (PREV-01, PREV-02, PREV-03)
 - [x] 12-03-SUMMARY.md — Post-phase hot-fixes: font CSS family name resolution (BF-01), TitleOverlay temporal dead zone (BF-02), player visibility (BF-03), aspect-ratio fix (BF-04), word highlight overlap (BF-06), fontWeight shift (BF-07), config persistence (BF-08). Feature enhancements: title style editor (FE-01), 8 new fonts (FE-02), dual font loading (FE-03), smooth highlight fade (FE-04).
@@ -244,33 +292,44 @@ Plans:
 **Goal:** Mejorar considerablemente la calidad y definicion de los videos de salida, cerrando la brecha visual con los reels de Instagram.
 
 ### Phase 13: Encode Quality
+
 **Goal**: El pipeline produce video nítido sin degradacion acumulada — encode tunado, color correcto, y sin re-encodes redundantes en los pasos existentes
 **Depends on**: Phase 12 (milestone v1.0 complete)
 **Requirements**: ENC-01, ENC-02, ENC-03, ENC-04, ENC-05
 **Success Criteria** (what must be TRUE):
+
   1. El video producido por silence-cutter muestra bitrate consistente con stream-copy (sin timestamp de nuevo encode), verificable con ffprobe — la perdida de generacion del concat desaparece
   2. ffprobe sobre la salida del ffmpeg-finalizer reporta `color_space=bt709`, `color_primaries=bt709`, `color_transfer=bt709` — el lavado de color en Instagram desaparece
   3. ffprobe sobre la salida del ffmpeg-finalizer reporta un bitrate de 5,000–8,000 kbps para un clip de 60s de talking-head, confirmando que CRF ~18 produce calidad objetivo sin bloating
   4. El video final conserva la duracion exacta del silence-cutter output (dentro de ±33ms) y el audio esta sincronizado cuadro a cuadro — ENC-05 verificado
   5. No hay halos visibles alrededor del texto de subtítulos en la salida del ffmpeg-finalizer tras aplicar el filtro unsharp
+
 **Plans:** 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 13-01-PLAN.md — silence-cutter stream-copy concat + validate_concat_mode (ENC-01, ENC-05)
 - [ ] 13-02-PLAN.md — ffmpeg-finalizer CRF 18 + Lanczos + unsharp + BT.709 + ffprobe validators (ENC-02, ENC-03, ENC-04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 13-03-PLAN.md — Test sweep + new test_encode_quality.py + validate_concat_mode test wiring (ENC-01, ENC-02, ENC-03, ENC-04, ENC-05)
 - [ ] 13-04-PLAN.md — Visual A/B render + 13-UAT.md + human-verify checkpoint (ENC-02, ENC-03, ENC-04, ENC-05)
 
 ### Phase 14: Remotion Supersampling + quality-finalizer
+
 **Goal**: Los subtítulos y overlays salen nítidos via render a 2x densidad de pixel, y la salida final sigue siendo 1080x1920 entregable via un nuevo step Docker quality-finalizer
 **Depends on**: Phase 13 (encode quality upstream must be solid before supersampling)
 **Requirements**: RENDER-01, RENDER-02, RENDER-03, RENDER-04
 **Success Criteria** (what must be TRUE):
+
   1. El texto de subtítulos en el video final se ve visualmente mas nítido que la baseline de Phase 12 — el anti-aliasing de Remotion a 2x escala es perceptible sin zoom digital
   2. La salida del remotion-renderer es un MP4 de 2160x3840, y la salida del quality-finalizer es 1080x1920 — la resolucion entregable no cambia para el usuario
   3. El quality-finalizer es un container Docker independiente que recibe INPUT_PATH (2160x3840) y emite OUTPUT_PATH (1080x1920) via Lanczos en un unico encode — no modifica ningun step existente
   4. El tiempo de render con scale:2 esta medido en un clip representativo; si supera el umbral aceptable, se evalua scale:1.5 y el valor final queda documentado en el plan
   5. La paridad A/V se preserva en la salida del quality-finalizer — duracion y sincronía de audio identicas a la entrada
+
 **Plans**: TBD
 **UI hint**: no
 

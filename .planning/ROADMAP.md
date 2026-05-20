@@ -304,13 +304,13 @@ Plans:
   4. El video final conserva la duracion exacta del silence-cutter output (dentro de ±33ms) y el audio esta sincronizado cuadro a cuadro — ENC-05 verificado
   5. No hay halos visibles alrededor del texto de subtítulos en la salida del ffmpeg-finalizer tras aplicar el filtro unsharp
 
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 13-01-PLAN.md — silence-cutter stream-copy concat + validate_concat_mode (ENC-01, ENC-05)
-- [ ] 13-02-PLAN.md — ffmpeg-finalizer CRF 18 + Lanczos + unsharp + BT.709 + ffprobe validators (ENC-02, ENC-03, ENC-04)
+- [x] 13-01-PLAN.md — silence-cutter stream-copy concat + validate_concat_mode (ENC-01, ENC-05)
+- [x] 13-02-PLAN.md — ffmpeg-finalizer CRF 18 + Lanczos + unsharp + BT.709 + ffprobe validators (ENC-02, ENC-03, ENC-04)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -352,5 +352,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
 | 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
-| 13. Encode Quality | 0/4 | Planned | - |
+| 13. Encode Quality | 2/4 | In Progress|  |
 | 14. Remotion Supersampling + quality-finalizer | 0/TBD | Not started | - |

@@ -14,6 +14,10 @@ Un pipeline de procesamiento de video containerizado en Docker que toma un MP4 c
 - **Output Format**: 9:16 vertical como mínimo en v1
 - **Video Input**: MP4, talking head, una persona hablando
 - **Extensibility**: Cualquier nuevo paso debe poder incorporarse como container Docker en la secuencia sin refactorizar el pipeline
+- **UI/frontend work — REQUIRED tooling (no-negociable)**: Toda fase o tarea que toque el frontend (remotion-studio editor/preview, componentes, layout, estilos, UX) DEBE invocar al inicio del plan o execute (no como afterthought):
+  1. La skill `impeccable` — disponible en Claude Code y opencode
+  2. El plugin `frontend-design` de Claude Code — usar cuando se trabaja en Claude Code; en opencode usar equivalente disponible o documentar el skip
+  Esto es la garantía de calidad visual del proyecto: ninguna decisión de UI improvisada.
 
 ### Development Conventions
 

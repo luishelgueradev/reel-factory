@@ -50,20 +50,20 @@ Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENC-01 | TBD (roadmap) | Pending |
-| ENC-02 | TBD (roadmap) | Pending |
-| ENC-03 | TBD (roadmap) | Pending |
-| ENC-04 | TBD (roadmap) | Pending |
-| ENC-05 | TBD (roadmap) | Pending |
-| RENDER-01 | TBD (roadmap) | Pending |
-| RENDER-02 | TBD (roadmap) | Pending |
-| RENDER-03 | TBD (roadmap) | Pending |
-| RENDER-04 | TBD (roadmap) | Pending |
+| ENC-01 | Phase 13 (Encode Quality) | Pending |
+| ENC-02 | Phase 13 (Encode Quality) | Pending |
+| ENC-03 | Phase 13 (Encode Quality) | Pending |
+| ENC-04 | Phase 13 (Encode Quality) | Pending |
+| ENC-05 | Phase 13 (Encode Quality) | Pending |
+| RENDER-01 | Phase 14 (Remotion Supersampling + quality-finalizer) | Pending |
+| RENDER-02 | Phase 14 (Remotion Supersampling + quality-finalizer) | Pending |
+| RENDER-03 | Phase 14 (Remotion Supersampling + quality-finalizer) | Pending |
+| RENDER-04 | Phase 14 (Remotion Supersampling + quality-finalizer) | Pending |
 
 **Coverage:**
 - v1.1 requirements: 9 total
-- Mapped to phases: 0 (assigned during roadmap)
-- Unmapped: 9 ⚠️ (roadmapper will assign)
+- Mapped to phases: 9 (Phase 13 × 5, Phase 14 × 4) ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-20*

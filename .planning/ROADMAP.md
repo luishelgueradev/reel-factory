@@ -12,6 +12,8 @@ Build a self-hosted Docker pipeline that transforms talking-head MP4 videos into
 
 Decimal phases appear between their surrounding integers in numeric order.
 
+### Milestone v1.0 — Pipeline completo
+
 - [x] **Phase 1: Pipeline Infrastructure** - Docker Compose foundation with shared volumes and step contracts (completed 2026-05-05)
 - [x] **Phase 2: Whisper Transcription** - Audio extraction and Spanish transcription with word-level timestamps (completed 2026-05-06)
 - [x] **Phase 3: Silence Detection & Removal** - Cross-referenced silence detection and hard-cut removal preserving A/V sync (completed 2026-05-11)
@@ -23,6 +25,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 9: Synchronous API** - POST /process endpoint for single-video on-demand processing (completed 2026-05-13)
 - [x] **Phase 10: Async Batch + Orchestrator** - BullMQ queue, Redis, and pipeline orchestrator for batch jobs (completed 2026-05-13)
 - [x] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId} (completed 2026-05-13)
+- [x] **Phase 12: Subtitle Preview Lab** - Interactive web UI for live subtitle style preview with all tunable parameters (completed 2026-05-18)
+
+### Milestone v1.1 — Calidad de video
+
+- [ ] **Phase 13: Encode Quality** - Config-only encode tuning across existing containers: stream-copy in silence-cutter, CRF/Lanczos/unsharp/BT.709 in ffmpeg-finalizer
+- [ ] **Phase 14: Remotion Supersampling + quality-finalizer** - scale:2 supersampling in remotion-renderer and new quality-finalizer Docker step that downscales 4K output to deliverable 1080x1920
 
 ## Phase Details
 
@@ -229,10 +237,41 @@ Plans:
 - [x] 12-02-PLAN.md — Build /preview SPA with @remotion/player, React Router, textToCaptionPages, font grid, Express routing (PREV-01, PREV-02, PREV-03)
 - [x] 12-03-SUMMARY.md — Post-phase hot-fixes: font CSS family name resolution (BF-01), TitleOverlay temporal dead zone (BF-02), player visibility (BF-03), aspect-ratio fix (BF-04), word highlight overlap (BF-06), fontWeight shift (BF-07), config persistence (BF-08). Feature enhancements: title style editor (FE-01), 8 new fonts (FE-02), dual font loading (FE-03), smooth highlight fade (FE-04).
 
+---
+
+## Milestone v1.1 — Calidad de video
+
+**Goal:** Mejorar considerablemente la calidad y definicion de los videos de salida, cerrando la brecha visual con los reels de Instagram.
+
+### Phase 13: Encode Quality
+**Goal**: El pipeline produce video nítido sin degradacion acumulada — encode tunado, color correcto, y sin re-encodes redundantes en los pasos existentes
+**Depends on**: Phase 12 (milestone v1.0 complete)
+**Requirements**: ENC-01, ENC-02, ENC-03, ENC-04, ENC-05
+**Success Criteria** (what must be TRUE):
+  1. El video producido por silence-cutter muestra bitrate consistente con stream-copy (sin timestamp de nuevo encode), verificable con ffprobe — la perdida de generacion del concat desaparece
+  2. ffprobe sobre la salida del ffmpeg-finalizer reporta `color_space=bt709`, `color_primaries=bt709`, `color_transfer=bt709` — el lavado de color en Instagram desaparece
+  3. ffprobe sobre la salida del ffmpeg-finalizer reporta un bitrate de 5,000–8,000 kbps para un clip de 60s de talking-head, confirmando que CRF ~18 produce calidad objetivo sin bloating
+  4. El video final conserva la duracion exacta del silence-cutter output (dentro de ±33ms) y el audio esta sincronizado cuadro a cuadro — ENC-05 verificado
+  5. No hay halos visibles alrededor del texto de subtítulos en la salida del ffmpeg-finalizer tras aplicar el filtro unsharp
+**Plans**: TBD
+
+### Phase 14: Remotion Supersampling + quality-finalizer
+**Goal**: Los subtítulos y overlays salen nítidos via render a 2x densidad de pixel, y la salida final sigue siendo 1080x1920 entregable via un nuevo step Docker quality-finalizer
+**Depends on**: Phase 13 (encode quality upstream must be solid before supersampling)
+**Requirements**: RENDER-01, RENDER-02, RENDER-03, RENDER-04
+**Success Criteria** (what must be TRUE):
+  1. El texto de subtítulos en el video final se ve visualmente mas nítido que la baseline de Phase 12 — el anti-aliasing de Remotion a 2x escala es perceptible sin zoom digital
+  2. La salida del remotion-renderer es un MP4 de 2160x3840, y la salida del quality-finalizer es 1080x1920 — la resolucion entregable no cambia para el usuario
+  3. El quality-finalizer es un container Docker independiente que recibe INPUT_PATH (2160x3840) y emite OUTPUT_PATH (1080x1920) via Lanczos en un unico encode — no modifica ningun step existente
+  4. El tiempo de render con scale:2 esta medido en un clip representativo; si supera el umbral aceptable, se evalua scale:1.5 y el valor final queda documentado en el plan
+  5. La paridad A/V se preserva en la salida del quality-finalizer — duracion y sincronía de audio identicas a la entrada
+**Plans**: TBD
+**UI hint**: no
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -248,3 +287,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
 | 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
+| 13. Encode Quality | 0/TBD | Not started | - |
+| 14. Remotion Supersampling + quality-finalizer | 0/TBD | Not started | - |

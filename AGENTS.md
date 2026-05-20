@@ -19,7 +19,12 @@ Un pipeline de procesamiento de video containerizado en Docker que toma un MP4 c
 
 - **remotion-studio port**: ALWAYS port **3123**. Never use any other port. Start with `cd services/remotion-studio && setsid env PORT=3123 EDITOR_DIST=$(pwd)/dist/editor npx tsx src/server.ts > /tmp/remotion-server.log 2>&1 &` — use `setsid` so the process survives shell termination.
 - **remotion-studio build**: `npm run build:editor` from `services/remotion-studio/`
-- **Renderer sync pattern**: After modifying compositions or shared files in remotion-studio, copy to remotion-renderer: `cp src/compositions/*.tsx src/pipeline-config.ts src/fonts.ts src/SubtitledVideo.tsx ../remotion-renderer/src/`
+- **Renderer sync pattern**: After modifying compositions or shared files in remotion-studio, copy to remotion-renderer. Component files live in `compositions/` in BOTH services; shared logic modules live at `src/` root in both. From `services/remotion-studio/`:
+  ```bash
+  cp src/compositions/* ../remotion-renderer/src/compositions/        # layouts, shared-styles, tests
+  cp src/pipeline-config.ts src/fonts.ts src/captions.ts src/zoom-detection.ts ../remotion-renderer/src/
+  ```
+  Do NOT copy `*.tsx` into `../remotion-renderer/src/` root — that creates dead orphan copies, since `LayoutDispatcher` imports layouts from `./compositions/`. Do NOT sync `Root.tsx` or `SubtitledVideo.tsx`: the renderer's `Root.tsx` registers a `<Composition>` for CLI rendering (studio's drives a `<Player>`), and the renderer defines `SubtitledVideo` inline in `Root.tsx`.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:research/STACK.md -->

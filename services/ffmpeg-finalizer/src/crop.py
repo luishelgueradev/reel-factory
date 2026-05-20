@@ -19,6 +19,19 @@ from . import config
 ASPECT_RATIO_TOLERANCE = 0.005
 
 
+def is_already_target_ratio(input_width: int, input_height: int, target_width: int, target_height: int) -> bool:
+    """True if the input is already at the target ratio within tolerance (D-03).
+
+    Single source of truth for the "skip crop" decision, shared by compute_crop
+    and apply_finalizer so the metadata and the chosen filter chain never diverge.
+    """
+    if input_height == 0 or target_height == 0:
+        return False
+    input_ratio = input_width / input_height
+    target_ratio = target_width / target_height
+    return abs(input_ratio - target_ratio) / target_ratio <= ASPECT_RATIO_TOLERANCE
+
+
 def probe_video(input_path: str) -> dict:
     """Probe video metadata using ffprobe."""
     cmd = [
@@ -41,11 +54,14 @@ def probe_video(input_path: str) -> dict:
             info["width"] = int(stream.get("width", 0))
             info["height"] = int(stream.get("height", 0))
             fps_str = stream.get("r_frame_rate", "30/1")
-            if "/" in fps_str:
-                num, den = fps_str.split("/")
-                info["fps"] = round(int(num) / int(den)) if int(den) > 0 else 30
-            else:
-                info["fps"] = int(fps_str)
+            try:
+                if "/" in fps_str:
+                    num, den = fps_str.split("/")
+                    info["fps"] = round(int(num) / int(den)) if int(den) > 0 else 30
+                else:
+                    info["fps"] = round(float(fps_str))
+            except (ValueError, ZeroDivisionError):
+                info["fps"] = 30  # fps is informational only; output rate is forced via config.FPS_OUTPUT
         elif stream.get("codec_type") == "audio":
             info["has_audio"] = True
 
@@ -68,7 +84,7 @@ def compute_crop(input_width: int, input_height: int, target_width: int, target_
     target_ratio = target_width / target_height
 
     # D-03: If already 9:16 (within 0.5% tolerance), no crop needed
-    if abs(input_ratio - target_ratio) / target_ratio <= ASPECT_RATIO_TOLERANCE:
+    if is_already_target_ratio(input_width, input_height, target_width, target_height):
         return 0, 0, input_width - (input_width % 2), input_height - (input_height % 2)
 
     if input_ratio > target_ratio:
@@ -103,10 +119,9 @@ def apply_finalizer(input_path: str, output_path: str, target_width: int, target
     g = gcd(input_w, input_h)
     input_ratio_str = f"{input_w // g}:{input_h // g}"
 
-    # D-03: Conditional crop path based on input aspect ratio
-    input_ratio_val = input_w / input_h
-    target_ratio_val = target_width / target_height
-    crop_applied = abs(input_ratio_val - target_ratio_val) / target_ratio_val > ASPECT_RATIO_TOLERANCE
+    # D-03: Conditional crop path based on input aspect ratio (single source of
+    # truth shared with compute_crop, so metadata and filter chain agree)
+    crop_applied = not is_already_target_ratio(input_w, input_h, target_width, target_height)
 
     if crop_applied:
         # Input is not 9:16 — apply full scale+crop filter chain
@@ -129,18 +144,24 @@ def apply_finalizer(input_path: str, output_path: str, target_width: int, target
         "-profile:v", config.H264_PROFILE,
         "-pix_fmt", "yuv420p",
         "-r", str(config.FPS_OUTPUT),
-        "-c:a", "aac",
-        "-b:a", config.AUDIO_BITRATE,
-        "-ar", str(config.AUDIO_SAMPLE_RATE),
-        "-af", f"loudnorm=I={config.LOUDNORM_TARGET}:TP={config.LOUDNORM_TP}:LRA={config.LOUDNORM_LRA}",
         "-movflags", "+faststart",
         "-map_metadata", "-1",
+        "-map", "0:v:0",
     ]
 
-    if not probe_info["has_audio"]:
-        cmd.extend(["-map", "0:v:0"])
+    # Audio options must only be emitted when an audio stream exists. Otherwise
+    # the audio codec flags and -af loudnorm reference an unmapped stream and
+    # FFmpeg aborts — a silent/no-audio clip (which whisper supports) would crash.
+    if probe_info["has_audio"]:
+        cmd.extend([
+            "-map", "0:a:0",
+            "-c:a", "aac",
+            "-b:a", config.AUDIO_BITRATE,
+            "-ar", str(config.AUDIO_SAMPLE_RATE),
+            "-af", f"loudnorm=I={config.LOUDNORM_TARGET}:TP={config.LOUDNORM_TP}:LRA={config.LOUDNORM_LRA}",
+        ])
     else:
-        cmd.extend(["-map", "0:v:0", "-map", "0:a:0"])
+        cmd.append("-an")
 
     cmd.append(output_path)
 

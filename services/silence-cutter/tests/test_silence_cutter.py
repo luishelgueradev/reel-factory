@@ -2,6 +2,7 @@
 
 Follows the whisper/tests/test_transcription.py pattern with pytest.
 Tests validate SILC-01/02/03/04 requirements and D-01/D-03/D-07 decisions.
+Phase 13 extensions cover ENC-01 (stream-copy concat validation) and D-01 / D-14 (-c copy edge cases).
 
 Referenced requirements:
 - SILC-01: Cross-referenced silence detection (FFmpeg + Whisper)
@@ -11,10 +12,14 @@ Referenced requirements:
 - D-01: Intersection approach (both sources)
 - D-03: ANY-word threshold for Whisper confirmation
 - D-07: Detailed schema with cumulative_shift
+- ENC-01: Stream-copy in silence-cutter concat (Phase 13)
+- D-14: -c copy edge cases — variable keyframe spacing and audio-shorter-than-video (Phase 13)
 """
 
 import pytest
 import json
+import subprocess
+import shutil
 import sys
 import os
 
@@ -25,7 +30,7 @@ from src.schema import SilenceCut, SilenceCutList, SilenceSource
 from src.silencedetect import _parse_silencedetect_output, SilenceSegment
 from src.cross_reference import _check_silence
 from src.cut_video import _compute_keep_segments
-from src.validate import validate_silence_cuts, validate_cross_reference_logic
+from src.validate import validate_silence_cuts, validate_cross_reference_logic, validate_concat_mode
 from src import config
 
 
@@ -502,3 +507,285 @@ class TestValidation:
             confirmed_source="ffmpeg",
         )
         assert len(errors) == 0
+
+
+# ─────────────────────────────────────────────────────────
+# Module-level helpers (used by TestConcatMode and TestConcatEdgeCases)
+# ─────────────────────────────────────────────────────────
+
+def _synth_clip(path, duration=2, seed=0):
+    """Synthesize a small audio+video lavfi clip for concat testing.
+
+    Uses 320x240 to keep tests fast. Includes an audio stream (sine wave)
+    so the concat demuxer can map both video and audio streams.
+    """
+    result = subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", f"testsrc=duration={duration}:size=320x240:rate=30:decimals=2",
+            "-f", "lavfi", "-i", f"sine=frequency={440 + seed * 55}:duration={duration}",
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, f"ffmpeg clip synthesis failed: {result.stderr}"
+
+
+def _synth_clip_with_gop(path, duration=3, gop=30, seed=0):
+    """Synthesize a lavfi clip with an explicit keyframe interval (GOP size).
+
+    Used by TestConcatEdgeCases to produce clips with deliberately mismatched
+    keyframe intervals (e.g. `-g 15` vs `-g 60`) for the variable-keyframe D-14 test.
+    """
+    result = subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", f"testsrc=duration={duration}:size=320x240:rate=30",
+            "-f", "lavfi", "-i", f"sine=frequency={440 + seed * 55}:duration={duration}",
+            "-c:v", "libx264",
+            "-g", str(gop),
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, f"ffmpeg GOP clip synthesis failed: {result.stderr}"
+
+
+def _synth_clip_audio_short(path, video_duration=5, audio_duration=4, seed=0):
+    """Synthesize a clip where audio is shorter than video.
+
+    Emulates a Whisper-cut-silent-tail clip shape. The `-shortest 0` flag disables
+    the default "stop at shortest stream" behaviour so the video stream runs its full
+    duration even after the audio stream ends.
+    """
+    result = subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", f"testsrc=duration={video_duration}:size=320x240:rate=30",
+            "-f", "lavfi", "-i", f"sine=frequency={440 + seed * 55}:duration={audio_duration}",
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-shortest", "0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, f"ffmpeg audio-short clip synthesis failed: {result.stderr}"
+
+
+def _ffprobe_duration(path) -> float:
+    """Return video duration in seconds via ffprobe."""
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "quiet",
+            "-show_entries", "format=duration",
+            "-of", "csv=p=0",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, f"ffprobe duration failed: {result.stderr}"
+    return float(result.stdout.strip())
+
+
+def _concat_stream_copy(list_path, out_path):
+    """Concat clips via the EXACT ffmpeg shape from cut_video.py::_concatenate_segments (post Plan 01).
+
+    Uses `-c copy -reset_timestamps 1` (ENC-01 / D-01 stream-copy shape).
+    """
+    result = subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", str(list_path),
+            "-map", "0:v:0",
+            "-map", "0:a:0?",
+            "-c", "copy",
+            "-reset_timestamps", "1",
+            str(out_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, f"ffmpeg stream-copy concat failed: {result.stderr}"
+
+
+# ─────────────────────────────────────────────────────────
+# Test 6: validate_concat_mode — stream-copy vs re-encode (ENC-01 / D-01)
+# ─────────────────────────────────────────────────────────
+
+class TestConcatMode:
+    """Verify validate_concat_mode against real ffmpeg stream-copy and re-encode outputs (ENC-01 / D-01)."""
+
+    def test_validate_concat_mode_stream_copy(self, tmp_path):
+        """ENC-01 / D-01: stream-copied concat output has no fresh libx264/Lavc encoder tag,
+        so the validator passes."""
+        if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
+            pytest.skip("ffmpeg/ffprobe not on PATH")
+
+        clip_a = tmp_path / "a.mp4"
+        clip_b = tmp_path / "b.mp4"
+        _synth_clip(clip_a, duration=2, seed=0)
+        _synth_clip(clip_b, duration=2, seed=1)
+
+        list_file = tmp_path / "list.txt"
+        list_file.write_text(
+            f"file '{str(clip_a)}'\nfile '{str(clip_b)}'\n"
+        )
+
+        out_path = tmp_path / "concat_copy.mp4"
+        # Exact ffmpeg argv from cut_video.py::_concatenate_segments (post Plan 01)
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", str(list_file),
+                "-map", "0:v:0",
+                "-map", "0:a:0?",
+                "-c", "copy",
+                "-reset_timestamps", "1",
+                str(out_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, f"ffmpeg stream-copy concat failed: {result.stderr}"
+
+        errors = validate_concat_mode(str(out_path))
+        assert errors == [], (
+            f"validate_concat_mode returned errors for stream-copy concat: {errors}"
+        )
+
+    def test_validate_concat_mode_detects_reencode(self, tmp_path):
+        """ENC-01: a re-encoded concat output carries a fresh encoder tag,
+        so the validator flags it."""
+        if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
+            pytest.skip("ffmpeg/ffprobe not on PATH")
+
+        clip_a = tmp_path / "a.mp4"
+        clip_b = tmp_path / "b.mp4"
+        _synth_clip(clip_a, duration=2, seed=0)
+        _synth_clip(clip_b, duration=2, seed=1)
+
+        list_file = tmp_path / "list.txt"
+        list_file.write_text(
+            f"file '{str(clip_a)}'\nfile '{str(clip_b)}'\n"
+        )
+
+        out_path = tmp_path / "concat_reencode.mp4"
+        # Re-encode with libx264 — the pre-Phase-13 concat shape; validator must flag it
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", str(list_file),
+                "-map", "0:v:0",
+                "-map", "0:a:0?",
+                "-c:v", "libx264",
+                "-c:a", "aac",
+                "-reset_timestamps", "1",
+                str(out_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, f"ffmpeg re-encode concat failed: {result.stderr}"
+
+        errors = validate_concat_mode(str(out_path))
+        assert any("ENC-01" in e for e in errors), (
+            f"validate_concat_mode should flag a re-encoded concat but returned: {errors}"
+        )
+
+
+# ─────────────────────────────────────────────────────────
+# Test 7: -c copy edge cases (D-14 / ENC-05)
+# ─────────────────────────────────────────────────────────
+
+class TestConcatEdgeCases:
+    """Verify -c copy concat preserves duration parity on edge cases: variable keyframe spacing
+    and audio-shorter-than-video (D-14 / ENC-05)."""
+
+    def test_concat_variable_keyframe_spacing_preserves_duration(self, tmp_path):
+        """D-14 / ENC-05: -c copy concat preserves duration even when source clips have different
+        GOP/keyframe intervals (`-g 15` vs `-g 60`). Tolerance: ±33ms (one frame at 30fps)."""
+        if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
+            pytest.skip("ffmpeg/ffprobe not on PATH")
+
+        clip_a = tmp_path / "a.mp4"
+        clip_b = tmp_path / "b.mp4"
+        _synth_clip_with_gop(clip_a, duration=3, gop=15, seed=0)
+        _synth_clip_with_gop(clip_b, duration=3, gop=60, seed=1)
+
+        dur_a = _ffprobe_duration(clip_a)
+        dur_b = _ffprobe_duration(clip_b)
+
+        list_file = tmp_path / "list.txt"
+        list_file.write_text(
+            f"file '{str(clip_a)}'\nfile '{str(clip_b)}'\n"
+        )
+
+        out_path = tmp_path / "concat_gop.mp4"
+        _concat_stream_copy(list_file, out_path)
+
+        concat_dur = _ffprobe_duration(out_path)
+        delta_ms = abs(concat_dur - (dur_a + dur_b)) * 1000
+        assert delta_ms <= 33, (
+            f"Duration delta {delta_ms:.1f}ms exceeds ±33ms tolerance. "
+            f"clip_a={dur_a:.3f}s, clip_b={dur_b:.3f}s, concat={concat_dur:.3f}s, "
+            f"expected sum≈{dur_a + dur_b:.3f}s"
+        )
+
+    def test_concat_audio_shorter_than_video_preserves_duration(self, tmp_path):
+        """D-14 / ENC-05: -c copy concat preserves video duration even when each source clip has
+        audio one second shorter than video (the Whisper-cut-silent-tail shape).
+
+        Tolerance: ±100ms — relaxed slightly because mismatched A/V can produce small
+        concat-rounding artifacts; the production ±33ms gate runs against the real
+        talking-head clip in Plan 04.
+        """
+        if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
+            pytest.skip("ffmpeg/ffprobe not on PATH")
+
+        clip_a = tmp_path / "a.mp4"
+        clip_b = tmp_path / "b.mp4"
+        _synth_clip_audio_short(clip_a, video_duration=5, audio_duration=4, seed=0)
+        _synth_clip_audio_short(clip_b, video_duration=5, audio_duration=4, seed=1)
+
+        dur_a = _ffprobe_duration(clip_a)
+        dur_b = _ffprobe_duration(clip_b)
+
+        list_file = tmp_path / "list.txt"
+        list_file.write_text(
+            f"file '{str(clip_a)}'\nfile '{str(clip_b)}'\n"
+        )
+
+        out_path = tmp_path / "concat_ashort.mp4"
+        _concat_stream_copy(list_file, out_path)
+
+        concat_dur = _ffprobe_duration(out_path)
+        delta_ms = abs(concat_dur - (dur_a + dur_b)) * 1000
+        assert delta_ms <= 100, (
+            f"Duration delta {delta_ms:.1f}ms exceeds ±100ms tolerance. "
+            f"clip_a={dur_a:.3f}s, clip_b={dur_b:.3f}s, concat={concat_dur:.3f}s, "
+            f"expected sum≈{dur_a + dur_b:.3f}s"
+        )

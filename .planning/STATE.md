@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: complete
-stopped_at: Phase 12 complete + post-phase hot-fixes
-last_updated: "2026-05-19T18:00:00.000Z"
-last_activity: 2026-05-19
+milestone: v1.1
+milestone_name: Calidad de video
+status: planning
+last_updated: "2026-05-20T19:34:29.218Z"
+last_activity: 2026-05-20
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 48
-  completed_plans: 48
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,16 +24,15 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 12 (subtitle-preview-lab) — COMPLETE + POST-PHASE FIXES
-Plan: 3 (post-phase hot-fix session)
-Status: Post-phase bug fixes verified
-Last activity: 2026-05-19
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-20 — Milestone v1.1 started
 
 ## Post-Phase Fixes (2026-05-19)
 
 ### Critical Bugs Fixed
+
 1. **Font CSS family name mismatch** — Module names (e.g., `DancingScript`) don't match CSS `fontFamily` strings (e.g., `Dancing Script`). Added `getFontFamilyCSS()` to resolve. Affects 10 of 26 fonts.
 2. **TitleOverlay temporal dead zone** — `const` declarations used before initialization caused Remotion Player ⚠️ error. Reordered declarations.
 3. **Player controls invisible** — Added white color override CSS for dark background.
@@ -45,12 +43,14 @@ Progress: [██████████] 100%
 8. **PIPELINE_CONFIG_PATH missing** — Added `resolveConfigPath()` local fallback.
 
 ### Feature Enhancements
+
 1. **Title style editor** — 6 new controls: titleFontSize, subtitleFontSize, titleColor, subtitleColor, titleFontFamily, subtitleFontFamily, topOffset.
 2. **8 new Google Fonts** — Sora, DancingScript, CormorantGaramond, DMSans, JosefinSans, Righteous, TitanOne.
 3. **Smooth word highlight fade** — HIGHLIGHT_FADE_MS = 80ms transition.
 4. **Dual font loading in TitleOverlay** — delayRender/continueRender for title + subtitle fonts.
 
 ### Key Files
+
 - `services/remotion-studio/src/fonts.ts` → `services/remotion-renderer/src/fonts.ts`
 - `services/remotion-studio/src/compositions/TitleOverlay.tsx` → `services/remotion-renderer/src/compositions/TitleOverlay.tsx`
 - `services/remotion-studio/src/SubtitledVideo.tsx` → `services/remotion-renderer/src/SubtitledVideo.tsx`

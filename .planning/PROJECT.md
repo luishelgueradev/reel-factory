@@ -8,6 +8,17 @@ Un pipeline de procesamiento de video containerizado en Docker que toma un MP4 c
 
 Transformar un video crudo de una persona hablando en un video dinámico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automáticamente.
 
+## Current Milestone: v1.1 Calidad de video
+
+**Goal:** Mejorar considerablemente la calidad y definición de los videos de salida, cerrando la brecha visual con los reels de Instagram.
+
+**Target features:**
+- Investigación (research-first): causas de baja nitidez del render (Remotion `scale`/supersampling, re-encode H.264 múltiple, bitrate/CRF, anti-aliasing de texto) y opciones de super-resolución/upscaling (Real-ESRGAN u otros, denoise, sharpening, tradeoffs)
+- Mejoras de nitidez del render de subtítulos y video, guiadas por la investigación
+- Aumento de definición más allá de la cámara del móvil vía upscaling
+
+**Key context:** v1.0 completo (12 fases). Auditoría 2026-05-20 detectó causas probables de baja nitidez: `renderMedia` sin `scale`, triple re-encode (silence-cutter→finalizer→renderer), bitrate/CRF sin tunear. Arrancar por la fase de investigación antes de implementar.
+
 ## Requirements
 
 ### Validated
@@ -98,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-12 after Phase 07 completion*
+*Last updated: 2026-05-20 — started milestone v1.1 Calidad de video*

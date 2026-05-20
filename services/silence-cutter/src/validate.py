@@ -1,10 +1,12 @@
-"""Silence-cuts validation — checks output against SILC requirements and D-XX decisions.
+"""Silence-cuts validation — checks output against SILC, ENC requirements and D-XX decisions.
 
 Per the whisper/validate.py pattern: validate functions return a list of
-error strings referencing specific requirement IDs (SILC-XX) and decision
+error strings referencing specific requirement IDs (SILC-XX, ENC-XX) and decision
 IDs (D-XX) for traceability.
 """
 
+import subprocess
+import json
 from typing import List
 
 
@@ -145,5 +147,59 @@ def validate_cross_reference_logic(
             "D-03: Silence confirmed as 'both' but no word has "
             f"no_speech_prob > {threshold}"
         )
+
+    return errors
+
+
+def validate_concat_mode(concat_output_path: str) -> List[str]:
+    """Validate that silence-cutter concat output was produced via stream-copy (ENC-01, D-01).
+
+    Uses ffprobe to confirm no fresh libx264 encoder tag was written to the
+    concat output — a re-encode would write a fresh encoder tag, making the
+    stream-copy invariant test-enforceable. Returns [] for a stream-copied MP4
+    and a non-empty list referencing ENC-01 when a re-encode tag is detected.
+    """
+    errors: List[str] = []
+
+    cmd = [
+        "ffprobe",
+        "-v", "quiet",
+        "-show_entries", "format_tags=encoder",
+        "-show_entries", "stream_tags=encoder",
+        "-of", "json",
+        concat_output_path,
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+    if result.returncode != 0:
+        errors.append(
+            f"ENC-01: ffprobe failed on concat output: {result.stderr.strip()}"
+        )
+        return errors
+
+    data = json.loads(result.stdout)
+
+    # Check format-level encoder tag
+    format_tags = data.get("format", {}).get("tags", {})
+    format_encoder = format_tags.get("encoder", "")
+
+    # Check video-stream-level encoder tag (first video stream)
+    stream_encoder = ""
+    for stream in data.get("streams", []):
+        stream_tags = stream.get("tags", {})
+        candidate = stream_tags.get("encoder", "")
+        if candidate:
+            stream_encoder = candidate
+            break
+
+    # ENC-01 assertion: fresh encode leaves libx264 or Lavc (libavcodec) marker
+    for tag_label, tag_value in [("format_tags.encoder", format_encoder),
+                                  ("stream_tags.encoder", stream_encoder)]:
+        if "libx264" in tag_value or "Lavc" in tag_value:
+            errors.append(
+                f"ENC-01: concat output carries a fresh encoder tag '{tag_value}' "
+                f"in {tag_label} — expected stream-copy, no re-encode (D-01)"
+            )
 
     return errors

@@ -192,7 +192,7 @@ export function TitleEditor({ titles, onChange, onPreviewChange, onSave }: Title
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* ── Title list ─────────────────────────────────────────────────── */}
-      {titles.length === 0 && !addingNew && !editingIndex !== null && (
+      {titles.length === 0 && !addingNew && editingIndex === null && (
         <p style={{ fontSize: 13, color: "#666", fontStyle: "italic" }}>No title overlays configured. Click "Add Title" to create one.</p>
       )}
 

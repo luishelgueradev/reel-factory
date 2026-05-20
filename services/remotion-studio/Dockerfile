@@ -32,6 +32,12 @@ RUN cp -r /app/remotion-renderer-src/compositions/* /app/src/compositions/ 2>/de
 COPY public/ /app/public/
 RUN chmod -R 777 /app/public
 
+# Build the editor/preview SPA so the server can serve /editor and /preview.
+# Without this the image has no dist/editor and those routes 404 in the container.
+# vite.config.ts is required (it registers the React plugin and publicDir).
+COPY vite.config.ts ./
+RUN npm run build:editor
+
 EXPOSE 3123
 
 # Start the config API server (Remotion Studio is started via 'npx remotion studio' separately)

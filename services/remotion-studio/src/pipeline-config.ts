@@ -89,7 +89,7 @@ export type TransitionType = "zoom" | "crop-shift" | "none";
 
 /** Zoom effect configuration (D-11, VISU-03) */
 export interface ZoomConfig {
-  enabled?: boolean;            // default: true
+  enabled?: boolean;            // default: false (see DEFAULT_ZOOM_CONFIG)
   confidenceThreshold?: number;  // default: 0.6 (lower = more zooms)
   maxScale?: number;             // default: 1.15
   rampMs?: number;               // default: 300 (zoom ramp duration in ms)

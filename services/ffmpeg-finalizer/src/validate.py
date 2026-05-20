@@ -1,10 +1,16 @@
-"""FFmpeg finalizer validation — checks output against VERT requirements and D-XX decisions.
+"""FFmpeg finalizer validation — checks output against VERT, ENC-02/ENC-03/ENC-05 requirements and D-XX decisions.
 
 Per the silence-cutter/validate.py pattern: validate functions return a list of
-error strings referencing specific requirement IDs (VERT-XX) and decision
+error strings referencing specific requirement IDs (VERT-XX, ENC-XX) and decision
 IDs (D-XX) for traceability. Empty list means all checks passed.
+
+Phase 13 extensions: ENC-02 (CRF 18 enforcement), ENC-03 (BT.709 color tag
+validation), ENC-05 (duration parity ±33ms). New validators: validate_color_tags,
+validate_bitrate_range, validate_duration_parity.
 """
 
+import subprocess
+import json
 from typing import List
 
 
@@ -84,11 +90,11 @@ def validate_finalizer_info(info_data: dict) -> List[str]:
         if "right" in safe_zone and safe_zone["right"] != 54:
             errors.append(f"D-06: safe_zone.right is {safe_zone['right']}, expected 54")
 
-    # D-08: H264 CRF must be 20
+    # ENC-02 / D-03: H264 CRF must be 18 (Phase 4 D-08 superseded; tightened for sharper output)
     if "h264_crf" not in info_data:
-        errors.append("D-08: Missing 'h264_crf' field")
-    elif info_data["h264_crf"] != 20:
-        errors.append(f"D-08: h264_crf is {info_data['h264_crf']}, expected 20")
+        errors.append("ENC-02: Missing 'h264_crf' field")
+    elif info_data["h264_crf"] != 18:
+        errors.append(f"ENC-02: h264_crf is {info_data['h264_crf']}, expected 18 (D-03)")
 
     # D-10: Audio normalization present (when audio exists)
     if "audio_normalization" not in info_data:
@@ -176,5 +182,169 @@ def validate_crop_logic(info_data: dict) -> List[str]:
                 f"D-01: crop_y ({crop_y}) + crop_height ({crop_height}) = {crop_y + crop_height} "
                 f"exceeds input_height ({input_h})"
             )
+
+    return errors
+
+
+def validate_color_tags(output_mp4_path: str) -> List[str]:
+    """Validate BT.709 color tags on the finalizer output (ENC-03 / D-10).
+
+    Invokes ffprobe to check that color_space, color_primaries, and color_transfer
+    are all 'bt709' on the first video stream. Returns an empty list when all three
+    fields equal 'bt709', otherwise returns error strings prefixed 'ENC-03:'.
+    On ffprobe failure, returns a single error string rather than raising an exception.
+
+    Args:
+        output_mp4_path: Path to the ffmpeg-finalizer output MP4.
+
+    Returns:
+        List of error strings (ENC-03: ...) or empty list if all tags are correct.
+    """
+    errors: List[str] = []
+    cmd = [
+        "ffprobe", "-v", "quiet",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=color_space,color_primaries,color_transfer",
+        "-of", "json",
+        output_mp4_path,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except Exception as exc:
+        errors.append(f"ENC-03: ffprobe failed: {exc}")
+        return errors
+
+    if result.returncode != 0:
+        errors.append(f"ENC-03: ffprobe failed: {result.stderr.strip()}")
+        return errors
+
+    try:
+        data = json.loads(result.stdout)
+    except (json.JSONDecodeError, ValueError) as exc:
+        errors.append(f"ENC-03: ffprobe output could not be parsed as JSON: {exc}")
+        return errors
+
+    streams = data.get("streams", [])
+    if not streams:
+        errors.append("ENC-03: ffprobe returned no video streams (D-10)")
+        return errors
+
+    stream = streams[0]
+    for field in ["color_space", "color_primaries", "color_transfer"]:
+        actual = stream.get(field)
+        if actual != "bt709":
+            errors.append(f"ENC-03: {field} is '{actual}', expected 'bt709' (D-10)")
+
+    return errors
+
+
+def validate_bitrate_range(output_mp4_path: str, min_kbps: int = 5000, max_kbps: int = 8000) -> List[str]:
+    """Validate that the finalizer output bitrate is within the expected band (ENC-02 / D-11).
+
+    Invokes ffprobe to check that format.bit_rate / 1000 is in [min_kbps, max_kbps].
+    Returns an empty list when the bitrate is in range, otherwise returns an error
+    string prefixed 'ENC-02:'. On ffprobe failure, returns a single error string.
+
+    Args:
+        output_mp4_path: Path to the ffmpeg-finalizer output MP4.
+        min_kbps: Minimum acceptable bitrate in kbps (default 5000).
+        max_kbps: Maximum acceptable bitrate in kbps (default 8000).
+
+    Returns:
+        List of error strings (ENC-02: ...) or empty list if bitrate is in range.
+    """
+    errors: List[str] = []
+    cmd = [
+        "ffprobe", "-v", "quiet",
+        "-show_entries", "format=bit_rate",
+        "-of", "json",
+        output_mp4_path,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except Exception as exc:
+        errors.append(f"ENC-02: ffprobe failed: {exc}")
+        return errors
+
+    if result.returncode != 0:
+        errors.append(f"ENC-02: ffprobe failed: {result.stderr.strip()}")
+        return errors
+
+    try:
+        data = json.loads(result.stdout)
+    except (json.JSONDecodeError, ValueError) as exc:
+        errors.append(f"ENC-02: ffprobe output could not be parsed as JSON: {exc}")
+        return errors
+
+    bit_rate_str = data.get("format", {}).get("bit_rate")
+    if bit_rate_str is None:
+        errors.append("ENC-02: ffprobe did not report format.bit_rate")
+        return errors
+
+    try:
+        kbps = int(bit_rate_str) // 1000
+    except (ValueError, TypeError):
+        errors.append(f"ENC-02: format.bit_rate value '{bit_rate_str}' is not an integer")
+        return errors
+
+    if not (min_kbps <= kbps <= max_kbps):
+        errors.append(
+            f"ENC-02: bitrate is {kbps} kbps, expected [{min_kbps}, {max_kbps}] (D-11)"
+        )
+
+    return errors
+
+
+def validate_duration_parity(silence_cutter_output: str, finalizer_output: str, tolerance_ms: int = 33) -> List[str]:
+    """Validate that silence-cutter and finalizer outputs have matching duration (ENC-05 / D-11, D-14).
+
+    Invokes ffprobe on both files and checks that abs(d1 - d2) * 1000 <= tolerance_ms.
+    Returns an empty list when within tolerance, otherwise returns an error string
+    prefixed 'ENC-05:'. On ffprobe failure for either file, returns a single error.
+
+    Args:
+        silence_cutter_output: Path to the silence-cutter output MP4.
+        finalizer_output: Path to the ffmpeg-finalizer output MP4.
+        tolerance_ms: Maximum acceptable duration delta in milliseconds (default 33ms).
+
+    Returns:
+        List of error strings (ENC-05: ...) or empty list if duration parity holds.
+    """
+    errors: List[str] = []
+
+    def _get_duration(path: str):
+        """Return duration as float seconds, or an error string on failure."""
+        cmd = [
+            "ffprobe", "-v", "quiet",
+            "-show_entries", "format=duration",
+            "-of", "csv=p=0",
+            path,
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        except Exception as exc:
+            return None, f"ENC-05: ffprobe failed on {path}: {exc}"
+        if result.returncode != 0:
+            return None, f"ENC-05: ffprobe failed on {path}: {result.stderr.strip()}"
+        try:
+            return float(result.stdout.strip()), None
+        except (ValueError, TypeError):
+            return None, f"ENC-05: could not parse duration from ffprobe output for {path}"
+
+    d1, err1 = _get_duration(silence_cutter_output)
+    if err1:
+        errors.append(err1)
+        return errors
+
+    d2, err2 = _get_duration(finalizer_output)
+    if err2:
+        errors.append(err2)
+        return errors
+
+    delta_ms = abs(d1 - d2) * 1000
+    if delta_ms > tolerance_ms:
+        errors.append(
+            f"ENC-05: duration delta {delta_ms:.1f}ms exceeds tolerance {tolerance_ms}ms (D-11, D-14)"
+        )
 
     return errors

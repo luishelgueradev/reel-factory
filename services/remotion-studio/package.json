@@ -8,7 +8,8 @@
     "server": "npx tsx src/server.ts",
     "dev": "npx tsx src/server.ts",
     "build:editor": "vite build src/editor --outDir ../../dist/editor",
-    "dev:editor": "vite src/editor --port 5174"
+    "dev:editor": "vite src/editor --port 5174",
+    "start": "PORT=3123 npx tsx src/server.ts"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.457",

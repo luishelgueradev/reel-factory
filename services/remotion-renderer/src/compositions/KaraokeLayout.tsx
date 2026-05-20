@@ -12,6 +12,7 @@ import {
   FADE_IN_MS,
   FADE_OUT_MS,
   PAGE_OVERLAP_GUARD_MS,
+  HIGHLIGHT_FADE_MS,
   getPositionStyles,
   getBackgroundHighlightStyle,
   getPastWordOpacity,
@@ -23,6 +24,8 @@ const KaraokeWord: React.FC<{
   token: TikTokToken;
   isActive: boolean;
   wasActive: boolean;
+  framesSinceActive: number;
+  framesSinceActivated: number;
   frame: number;
   fps: number;
   pageFromFrame: number;
@@ -35,10 +38,15 @@ const KaraokeWord: React.FC<{
   letterSpacing?: number;
   lineHeight?: number;
   pastWordOpacity: number;
+  highlightColor?: string;
+  highlightDurationMs?: number;
+  highlightTransition?: "fade" | "instant";
 }> = ({
   token,
   isActive,
   wasActive,
+  framesSinceActive,
+  framesSinceActivated,
   frame,
   fps,
   pageFromFrame,
@@ -51,6 +59,9 @@ const KaraokeWord: React.FC<{
   letterSpacing,
   lineHeight,
   pastWordOpacity,
+  highlightColor,
+  highlightDurationMs,
+  highlightTransition,
 }) => {
   // Calculate fill progress for the active word
   const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
@@ -69,6 +80,21 @@ const KaraokeWord: React.FC<{
   // For upcoming word: 0% fill
   const clipPercent = isActive ? fillProgress : wasActive ? 100 : 0;
 
+  const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
+  const pastOpacity = wasActive
+    ? interpolate(
+        Math.min(framesSinceActive, fadeFrames),
+        [0, fadeFrames],
+        [1, pastWordOpacity],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+      )
+    : 1;
+
+  const showHighlight = isActive && !!highlightColor && (highlightDurationMs ?? 0) > 0;
+  const hlFrames = showHighlight ? Math.round((highlightDurationMs ?? 0) * (fps / 1000)) : 0;
+  const isHighlighting = showHighlight && framesSinceActivated < hlFrames;
+  const fillColor = isHighlighting ? highlightColor! : activeColor;
+
   return (
     <span
       style={{
@@ -86,8 +112,8 @@ const KaraokeWord: React.FC<{
         style={{
           fontSize,
           color: inactiveColor,
-          fontWeight: 600,
-          opacity: wasActive ? pastWordOpacity : 1,
+          fontWeight: 700,
+          opacity: wasActive ? pastOpacity : 1,
           WebkitTextStroke: outlineWidth,
           WebkitTextStrokeColor: outlineColor,
           paintOrder: "stroke fill",
@@ -104,8 +130,8 @@ const KaraokeWord: React.FC<{
           overflow: "hidden",
           width: `${clipPercent}%`,
           fontSize,
-          color: activeColor,
-          fontWeight: 800,
+          color: fillColor,
+          fontWeight: 700,
           WebkitTextStroke: outlineWidth,
           WebkitTextStrokeColor: outlineColor,
           paintOrder: "stroke fill",
@@ -142,6 +168,9 @@ const KaraokePage: React.FC<{
   const letterSpacing = config.letterSpacing;
   const lineHeight = config.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight;
   const pastWordOpacity = getPastWordOpacity(config);
+  const highlightColorVal = config.highlightColor ?? DEFAULT_SUBTITLE_CONFIG.highlightColor;
+  const highlightDurationMsVal = config.highlightDurationMs ?? DEFAULT_SUBTITLE_CONFIG.highlightDurationMs;
+  const highlightTransitionVal = config.highlightTransition ?? DEFAULT_SUBTITLE_CONFIG.highlightTransition;
 
   const tokens = page.tokens;
   let currentTokenIdx = -1;
@@ -149,7 +178,7 @@ const KaraokePage: React.FC<{
     const t = tokens[i];
     const fromFrame = Math.round(t.fromMs * (fps / 1000)) - pageFromFrame;
     const toFrame = Math.round(t.toMs * (fps / 1000)) - pageFromFrame;
-    if (frame >= fromFrame && frame <= toFrame) {
+    if (frame >= fromFrame && frame < toFrame) {
       currentTokenIdx = i;
       break;
     }
@@ -169,13 +198,16 @@ const KaraokePage: React.FC<{
         ? interpolate(frame, [fadeOutStartFrame, fadeOutEndFrame], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
         : 1;
 
-  const positionStyles = getPositionStyles(position, bottomOffset);
+  const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
+  const subtitleWidth = config.subtitleWidth ?? DEFAULT_SUBTITLE_CONFIG.subtitleWidth;
+  const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" as const } : {};
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
 
   return (
     <div
       style={{
         ...positionStyles,
+        ...maxWidthStyle,
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         opacity,
@@ -186,6 +218,10 @@ const KaraokePage: React.FC<{
       {tokens.map((token, i) => {
         const isActive = i === currentTokenIdx;
         const wasActive = i < currentTokenIdx;
+        const toFrame = Math.round(token.toMs * (fps / 1000)) - pageFromFrame;
+        const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
+        const framesSinceActive = wasActive ? Math.max(0, frame - toFrame) : 0;
+        const framesSinceActivated = isActive ? Math.max(0, frame - tokenFromFrame) : 0;
 
         return (
           <KaraokeWord
@@ -193,6 +229,8 @@ const KaraokePage: React.FC<{
             token={token}
             isActive={isActive}
             wasActive={wasActive}
+            framesSinceActive={framesSinceActive}
+            framesSinceActivated={framesSinceActivated}
             frame={frame}
             fps={fps}
             pageFromFrame={pageFromFrame}
@@ -205,6 +243,9 @@ const KaraokePage: React.FC<{
             letterSpacing={letterSpacing}
             lineHeight={lineHeight}
             pastWordOpacity={pastWordOpacity}
+            highlightColor={isActive ? highlightColorVal : undefined}
+            highlightDurationMs={isActive ? highlightDurationMsVal : undefined}
+            highlightTransition={isActive ? highlightTransitionVal : undefined}
           />
         );
       })}

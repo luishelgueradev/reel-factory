@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remotion Studio</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+    #root { min-height: 100vh; }
+  </style>
+  <script type="module" crossorigin src="/assets/index-DtDnmOty.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      fetch('/api/diag', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'error', msg, url, line, col, stack: err ? err.stack : null}) }).catch(function(){});
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      fetch('/api/diag', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'promise', msg: e.reason ? e.reason.message || String(e.reason) : 'unknown'}) }).catch(function(){});
+    });
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        fetch('/api/diag', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'loaded', rootChildren: root ? root.children.length : -1, rootHTML: root ? root.innerHTML.substring(0, 500) : 'no root', url: window.location.href}) }).catch(function(){});
+      }, 3000);
+    });
+  </script>
+</body>
+</html>

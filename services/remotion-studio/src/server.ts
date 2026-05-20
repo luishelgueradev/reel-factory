@@ -45,23 +45,20 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", service: "remotion-studio", port: PORT });
 });
 
+// ─── Diagnostics endpoint ──────────────────────────────────────────────────
+
+app.post("/api/diag", express.json({ limit: "10kb" }), (req, res) => {
+  console.log("[diag] Browser errors:", JSON.stringify(req.body, null, 2));
+  res.json({ received: true });
+});
+
 // ─── GET /api/config — Read pipeline-config.json (D-19, D-03) ──────────────
 
 app.get("/api/config", (_req, res) => {
   const configPath = resolveConfigPath();
 
-  if (!configPath) {
-    // No config path configured — return defaults (D-03: graceful fallback)
-    return res.json({
-      subtitle: { layout: "tiktok" },
-      titles: [],
-      _meta: { source: "defaults", reason: "no PIPELINE_CONFIG_PATH set" },
-    });
-  }
-
   try {
     if (!fs.existsSync(configPath)) {
-      // Config file doesn't exist yet — return defaults (D-03)
       return res.json({
         subtitle: { layout: "tiktok" },
         titles: [],
@@ -103,13 +100,6 @@ app.get("/api/config", (_req, res) => {
 
 app.put("/api/config", (req, res) => {
   const configPath = resolveConfigPath();
-
-  if (!configPath) {
-    return res.status(400).json({
-      error: "PIPELINE_CONFIG_PATH not configured",
-      message: "Set PIPELINE_CONFIG_PATH env var to enable config writes",
-    });
-  }
 
   const body = req.body;
 
@@ -172,10 +162,7 @@ app.use(express.static(PUBLIC_DIR));
 
 const EDITOR_DIST = path.resolve(process.env.EDITOR_DIST || "dist/editor");
 
-app.use("/editor", express.static(EDITOR_DIST));
-
-// SPA fallback: serve index.html for any /editor route that doesn't match a static file
-app.get("/editor/{*splat}", (_req, res) => {
+function serveSpa(_req: express.Request, res: express.Response) {
   const indexHtml = path.join(EDITOR_DIST, "index.html");
   if (fs.existsSync(indexHtml)) {
     res.sendFile(indexHtml);
@@ -185,39 +172,36 @@ app.get("/editor/{*splat}", (_req, res) => {
       message: "Run 'npm run build:editor' to build the config editor SPA",
     });
   }
-});
+}
+
+app.use("/editor", express.static(EDITOR_DIST));
+
+// Serve SPA static assets at /assets for all SPA routes (/editor, /preview, /preview/fonts)
+app.use("/assets", express.static(path.join(EDITOR_DIST, "assets")));
+
+// SPA fallback: serve index.html for any /editor route that doesn't match a static file
+// Express 5 {*splat} doesn't match empty segments like "/editor/", so we need both
+app.get("/editor", serveSpa);
+app.get("/editor/", serveSpa);
+app.get("/editor/{*splat}", serveSpa);
 
 // ─── Serve preview SPA at /preview (D-01, D-02) ──────────────────────────────
 // Per D-02: Single SPA with routing — /preview shares the same Vite build as /editor.
 // Both routes serve the same index.html; React Router handles client-side routing.
 
-app.get("/preview", (_req, res) => {
-  const indexHtml = path.join(EDITOR_DIST, "index.html");
-  if (fs.existsSync(indexHtml)) {
-    res.sendFile(indexHtml);
-  } else {
-    res.status(404).json({
-      error: "Preview SPA not built",
-      message: "Run 'npm run build:editor' to build the SPA",
-    });
-  }
-});
+app.get("/preview", serveSpa);
+app.get("/preview/", serveSpa);
+app.get("/preview/{*splat}", serveSpa);
 
-app.get("/preview/{*splat}", (_req, res) => {
-  const indexHtml = path.join(EDITOR_DIST, "index.html");
-  if (fs.existsSync(indexHtml)) {
-    res.sendFile(indexHtml);
-  } else {
-    res.status(404).json({
-      error: "Preview SPA not built",
-      message: "Run 'npm run build:editor' to build the SPA",
-    });
-  }
+// ─── Root route: redirect to /editor (D-02) ──────────────────────────────────
+
+app.get("/", (_req, res) => {
+  res.redirect("/editor");
 });
 
 // ─── Helper: Resolve config file path ──────────────────────────────────────
 
-function resolveConfigPath(): string | null {
+function resolveConfigPath(): string {
   // PIPELINE_CONFIG_PATH takes precedence (D-19)
   if (PIPELINE_CONFIG_PATH) {
     return PIPELINE_CONFIG_PATH;
@@ -231,7 +215,8 @@ function resolveConfigPath(): string | null {
     return path.join(inputDir, "pipeline-config.json");
   }
 
-  return null;
+  // Local dev fallback: save to a local config file
+  return path.join(process.cwd(), "pipeline-config.json");
 }
 
 // ─── Start server ───────────────────────────────────────────────────────────
@@ -243,8 +228,9 @@ export const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`  POST /api/render  — Render trigger (not yet implemented)`);
   console.log(`  GET  /editor      — Config Editor SPA`);
   console.log(`  GET  /preview     — Subtitle Preview SPA`);
-  console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set)"}`);
+  console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);
   console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
+  console.log(`  Config file: ${resolveConfigPath()}`);
 });
 
 export default app;

@@ -7,15 +7,16 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import type { SubtitleConfig } from "../../pipeline-config";
-import { DEFAULT_SUBTITLE_CONFIG } from "../../pipeline-config";
+import type { SubtitleConfig, TitleConfig } from "../pipeline-config";
+import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 import { PreviewPlayer } from "./PreviewPlayer";
 import { TextareaInput } from "./TextareaInput";
 import { textToCaptionPages, deriveTotalDurationMs, DEFAULT_SAMPLE_TEXT } from "./textToCaptions";
 import { LayoutSelector } from "../editor/components/LayoutSelector";
 import { StyleControls } from "../editor/components/StyleControls";
+import { TitleEditor } from "../editor/components/TitleEditor";
 import type { TikTokPage } from "@remotion/captions";
-import { loadFont } from "../../fonts";
+import { loadFont } from "../fonts";
 
 const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
   layout: "tiktok",
@@ -35,6 +36,8 @@ export function PreviewApp() {
     };
   });
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
+  const [titles, setTitles] = useState<TitleConfig[]>([]);
+  const [previewTitles, setPreviewTitles] = useState<TitleConfig[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -58,8 +61,26 @@ export function PreviewApp() {
     });
   }, []);
 
-  // ── Save config to API (PUT /api/config) ───────────────────────────────────
-  const handleSave = useCallback(async () => {
+  // ── Load saved config from API on mount ─────────────────────────────────────
+  useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.subtitle) {
+          setSubtitleConfig((prev) => ({ ...prev, ...data.subtitle }));
+        }
+        if (data && data.titles) {
+          setTitles(data.titles);
+          setPreviewTitles(data.titles);
+        }
+      })
+      .catch(() => {
+        /* use defaults */
+      });
+  }, []);
+
+  // ── Save config to API (PUT /api/config) — manual save button ──────────────
+  const handleSave = useCallback(async (updatedTitles?: TitleConfig[]) => {
     try {
       setSaving(true);
       setSaveError(null);
@@ -67,7 +88,7 @@ export function PreviewApp() {
 
       const payload = {
         subtitle: subtitleConfig,
-        titles: [],
+        titles: updatedTitles ?? titles,
       };
 
       const res = await fetch("/api/config", {
@@ -82,13 +103,17 @@ export function PreviewApp() {
       }
 
       setSaveSuccess(true);
+      if (updatedTitles) {
+        setTitles(updatedTitles);
+        setPreviewTitles(updatedTitles);
+      }
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save config");
     } finally {
       setSaving(false);
     }
-  }, [subtitleConfig]);
+  }, [subtitleConfig, titles]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#1a1a2e" }}>
@@ -134,7 +159,7 @@ export function PreviewApp() {
             Font Grid
           </Link>
           <button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving}
             style={{
               padding: "8px 20px",
@@ -183,6 +208,7 @@ export function PreviewApp() {
             subtitleConfig={subtitleConfig}
             captionPages={captionPages}
             totalDurationMs={totalDurationMs}
+            titles={previewTitles}
           />
         </div>
 
@@ -211,6 +237,13 @@ export function PreviewApp() {
           <section>
             <CollapsibleSection title="Subtitle Style" defaultOpen={true}>
               <StyleControls config={subtitleConfig} onChange={updateSubtitle} />
+            </CollapsibleSection>
+          </section>
+
+          {/* Title overlays */}
+          <section>
+            <CollapsibleSection title="Title Overlays" defaultOpen={false}>
+              <TitleEditor titles={titles} onChange={setTitles} onPreviewChange={setPreviewTitles} onSave={handleSave} />
             </CollapsibleSection>
           </section>
 

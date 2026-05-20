@@ -6,22 +6,24 @@
 
 import React, { useMemo, useEffect, useState } from "react";
 import { Player } from "@remotion/player";
-import { SubtitledVideo } from "../../Root";
-import { loadFont } from "../../fonts";
-import type { SubtitleConfig } from "../../pipeline-config";
+import { SubtitledVideo } from "../SubtitledVideo";
+import { loadFont } from "../fonts";
+import type { SubtitleConfig, TitleConfig } from "../pipeline-config";
 import type { TikTokPage } from "@remotion/captions";
-import { RemotionProps } from "../../Root";
+import type { RemotionProps } from "../SubtitledVideo";
 
 interface PreviewPlayerProps {
   subtitleConfig: SubtitleConfig;
   captionPages: TikTokPage[];
   totalDurationMs: number;
+  titles?: TitleConfig[];
 }
 
 export function PreviewPlayer({
   subtitleConfig,
   captionPages,
   totalDurationMs,
+  titles,
 }: PreviewPlayerProps) {
   const [fontLoaded, setFontLoaded] = useState(false);
 
@@ -49,16 +51,46 @@ export function PreviewPlayer({
       captionPages,
       subtitleLayout: subtitleConfig.layout,
       subtitleConfig,
-      titles: [],
+      titles: titles ?? [],
       zoomEvents: [],
       transitionEvents: [],
       totalDurationMs: totalDurationMs || 10000,
     }),
-    [captionPages, subtitleConfig, totalDurationMs]
+    [captionPages, subtitleConfig, totalDurationMs, titles]
   );
+
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDimensions({ width: rect.width, height: rect.height });
+      }
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  const videoFit = useMemo(() => {
+    const containerAR = dimensions.width / dimensions.height;
+    const videoAR = 1080 / 1920;
+    if (containerAR > videoAR) {
+      const h = dimensions.height;
+      const w = h * videoAR;
+      return { width: w, height: h };
+    } else {
+      const w = dimensions.width;
+      const h = w / videoAR;
+      return { width: w, height: h };
+    }
+  }, [dimensions.width, dimensions.height]);
 
   return (
     <div
+      ref={containerRef}
       style={{
         display: "flex",
         justifyContent: "center",
@@ -67,29 +99,40 @@ export function PreviewPlayer({
         height: "100%",
       }}
     >
-      <div
-        style={{
-          aspectRatio: "1080 / 1920",
-          maxHeight: "100%",
-          maxWidth: "100%",
-          background: "#000",
-          borderRadius: 8,
-          overflow: "hidden",
-        }}
-      >
-        <Player
-          component={SubtitledVideo}
-          durationInFrames={durationInFrames}
-          compositionWidth={1080}
-          compositionHeight={1920}
-          fps={30}
-          controls={true}
-          loop={true}
-          initiallyMuted={true}
-          inputProps={inputProps}
-          style={{ width: "100%" }}
-        />
-      </div>
+      {dimensions.width > 0 && (
+        <div
+          style={{
+            width: videoFit.width,
+            height: videoFit.height,
+            background: "#000",
+            borderRadius: 8,
+            overflow: "hidden",
+            position: "relative",
+          }}
+          className="preview-player-override"
+        >
+          <style>{`
+            .preview-player-override button,
+            .preview-player-override svg,
+            .preview-player-override path {
+              color: white !important;
+              fill: currentColor !important;
+            }
+          `}</style>
+          <Player
+            component={SubtitledVideo}
+            durationInFrames={durationInFrames}
+            compositionWidth={1080}
+            compositionHeight={1920}
+            fps={30}
+            controls={true}
+            loop={true}
+            initiallyMuted={true}
+            inputProps={inputProps}
+            style={{ width: "100%", height: "100%" }}
+          />
+        </div>
+      )}
     </div>
   );
 }

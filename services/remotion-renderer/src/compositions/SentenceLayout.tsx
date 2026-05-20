@@ -13,6 +13,7 @@ import {
   FADE_IN_MS,
   FADE_OUT_MS,
   PAGE_OVERLAP_GUARD_MS,
+  HIGHLIGHT_FADE_MS,
   getPositionStyles,
   getBackgroundHighlightStyle,
   getPastWordOpacity,
@@ -94,7 +95,8 @@ const SentencePage: React.FC<{
   page: TikTokPage;
   currentTokenIdxInSentence: number;
   config: SubtitleConfig;
-}> = ({ page, currentTokenIdxInSentence, config }) => {
+  pageFromFrame: number;
+}> = ({ page, currentTokenIdxInSentence, config, pageFromFrame }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -109,6 +111,9 @@ const SentencePage: React.FC<{
   const letterSpacing = config.letterSpacing;
   const lineHeight = config.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight;
   const pastWordOpacity = getPastWordOpacity(config);
+  const highlightColorVal = config.highlightColor ?? DEFAULT_SUBTITLE_CONFIG.highlightColor;
+  const highlightDurationMsVal = config.highlightDurationMs ?? DEFAULT_SUBTITLE_CONFIG.highlightDurationMs;
+  const highlightTransitionVal = config.highlightTransition ?? DEFAULT_SUBTITLE_CONFIG.highlightTransition;
 
   // Fade logic
   const fadeInEndFrame = Math.round(FADE_IN_MS * (fps / 1000));
@@ -124,7 +129,9 @@ const SentencePage: React.FC<{
         ? interpolate(frame, [fadeOutStartFrame, fadeOutEndFrame], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
         : 1;
 
-  const positionStyles = getPositionStyles(position, bottomOffset);
+  const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
+  const subtitleWidth = config.subtitleWidth ?? DEFAULT_SUBTITLE_CONFIG.subtitleWidth;
+  const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" as const } : {};
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
   const sentenceDefaultBg = !config.backgroundHighlight?.enabled
     ? { backgroundColor: "rgba(0, 0, 0, 0.6)", padding: "8px 16px", borderRadius: "8px" }
@@ -136,6 +143,7 @@ const SentencePage: React.FC<{
     <div
       style={{
         ...positionStyles,
+        ...maxWidthStyle,
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         opacity,
@@ -150,13 +158,29 @@ const SentencePage: React.FC<{
       {page.tokens.map((token, i) => {
         const isTokenActive = i === currentTokenIdxInSentence;
         const isTokenPast = i < currentTokenIdxInSentence;
+        const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
+        const tokenToFrame = Math.round(token.toMs * (fps / 1000)) - pageFromFrame;
+        const framesSinceActive = isTokenPast ? Math.max(0, frame - tokenToFrame) : 0;
+        const framesSinceActivated = isTokenActive ? Math.max(0, frame - tokenFromFrame) : 0;
+        const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
 
-        const color = isTokenActive
-          ? activeColor
+        const wordOpacity = isTokenPast
+          ? interpolate(
+              Math.min(framesSinceActive, fadeFrames),
+              [0, fadeFrames],
+              [1, pastWordOpacityVal],
+              { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+            )
+          : 1;
+
+        const showHighlight = isTokenActive && !!highlightColorVal && highlightDurationMsVal > 0;
+        const hlFrames = showHighlight ? Math.round(highlightDurationMsVal * (fps / 1000)) : 0;
+        const isHighlighting = showHighlight && framesSinceActivated < hlFrames;
+        const wordColor = isTokenActive
+          ? isHighlighting ? highlightColorVal : activeColor
           : isTokenPast
             ? inactiveColor
             : inactiveColor;
-        const wordOpacity = isTokenPast ? pastWordOpacityVal : 1;
 
         return (
           <span
@@ -164,7 +188,7 @@ const SentencePage: React.FC<{
             style={{
               display: "inline-block",
               fontSize,
-              color,
+              color: wordColor,
               opacity: wordOpacity,
               fontWeight: 700,
               fontFamily: fontFamily || undefined,
@@ -256,7 +280,7 @@ const SentencePageForLayout: React.FC<{
     const t = tokens[i];
     const fromFrame = Math.round(t.fromMs * (fps / 1000)) - pageFromFrame;
     const toFrame = Math.round(t.toMs * (fps / 1000)) - pageFromFrame;
-    if (frame >= fromFrame && frame <= toFrame) {
+    if (frame >= fromFrame && frame < toFrame) {
       currentTokenIdx = i;
       break;
     }
@@ -267,6 +291,7 @@ const SentencePageForLayout: React.FC<{
       page={page}
       currentTokenIdxInSentence={currentTokenIdx}
       config={config}
+      pageFromFrame={pageFromFrame}
     />
   );
 };

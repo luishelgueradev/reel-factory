@@ -12,6 +12,20 @@
 </head>
 <body>
   <div id="root"></div>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      fetch('/api/diag', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'error', msg, url, line, col, stack: err ? err.stack : null}) }).catch(function(){});
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      fetch('/api/diag', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'promise', msg: e.reason ? e.reason.message || String(e.reason) : 'unknown'}) }).catch(function(){});
+    });
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        fetch('/api/diag', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'loaded', rootChildren: root ? root.children.length : -1, rootHTML: root ? root.innerHTML.substring(0, 500) : 'no root', url: window.location.href}) }).catch(function(){});
+      }, 3000);
+    });
+  </script>
   <script type="module" src="./index.tsx"></script>
 </body>
 </html>

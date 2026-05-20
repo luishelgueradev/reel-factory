@@ -4,7 +4,7 @@
 // Per D-20: Render trigger button sends request to start production render.
 
 import React, { useState, useEffect, useCallback } from "react";
-import type { PipelineConfig, SubtitleConfig, TitleConfig } from "../../pipeline-config.js";
+import type { PipelineConfig, SubtitleConfig, TitleConfig } from "../pipeline-config.js";
 import { LayoutSelector } from "./components/LayoutSelector.js";
 import { StyleControls } from "./components/StyleControls.js";
 import { TitleEditor } from "./components/TitleEditor.js";

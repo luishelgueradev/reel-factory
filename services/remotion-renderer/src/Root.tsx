@@ -8,7 +8,7 @@ import type { TikTokPage } from "@remotion/captions";
 import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
 import type { ZoomEvent } from "./zoom-detection";
-import { loadFont } from "./fonts";
+import { loadFont, getFontFamilyCSS } from "./fonts";
 
 export interface RemotionProps {
   videoSrc: string;
@@ -60,10 +60,16 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
     lineHeight: subtitleConfig?.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight,
     bottomOffset: subtitleConfig?.bottomOffset ?? DEFAULT_SUBTITLE_CONFIG.bottomOffset,
     pastWordOpacity: subtitleConfig?.pastWordOpacity ?? DEFAULT_SUBTITLE_CONFIG.pastWordOpacity,
+    highlightColor: subtitleConfig?.highlightColor ?? DEFAULT_SUBTITLE_CONFIG.highlightColor,
+    highlightDurationMs: subtitleConfig?.highlightDurationMs ?? DEFAULT_SUBTITLE_CONFIG.highlightDurationMs,
+    highlightTransition: subtitleConfig?.highlightTransition ?? DEFAULT_SUBTITLE_CONFIG.highlightTransition,
   };
 
   // Load Google Font for subtitles — delay render until font is available (D-07, T-06-07)
   const fontFamily = config.fontFamily || "Inter";
+  // Resolve module name to CSS fontFamily (e.g., "DancingScript" → "Dancing Script")
+  const fontFamilyCSS = getFontFamilyCSS(fontFamily);
+
   React.useEffect(() => {
     if (fontFamily === "monospace" || fontFamily === "") return;
     const handle = delayRender(`Loading subtitle font: ${fontFamily}`);
@@ -71,6 +77,9 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
       .then(() => continueRender(handle))
       .catch(() => continueRender(handle));
   }, [fontFamily]);
+
+  // Build config with resolved CSS fontFamily for layout components
+  const resolvedConfig: SubtitleConfig = { ...config, fontFamily: fontFamilyCSS };
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -83,7 +92,7 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
         {videoSrc && <OffthreadVideo src={rawVideoSrc ?? staticFile(videoSrc)} />}
       </ZoomContainer>
       {/* Subtitles on top of video — not affected by zoom */}
-      <SubtitleLayoutRenderer captionPages={captionPages} config={config} totalDurationMs={totalDurationMs} />
+      <SubtitleLayoutRenderer captionPages={captionPages} config={resolvedConfig} totalDurationMs={totalDurationMs} />
       {/* Title overlays on top of subtitles — not affected by zoom */}
       {(titles ?? []).map((title, i) => {
         const fps = 30; // matches composition fps

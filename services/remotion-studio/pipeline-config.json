@@ -1,0 +1,61 @@
+{
+  "subtitle": {
+    "layout": "bar",
+    "fontSize": 60,
+    "activeColor": "#ffffff",
+    "inactiveColor": "#646464",
+    "outlineColor": "#000000",
+    "outlineWidth": 5,
+    "position": "bottom-center",
+    "lineHeight": 1,
+    "bottomOffset": 550,
+    "pastWordOpacity": 1,
+    "highlightColor": "#4dff00",
+    "highlightDurationMs": 300,
+    "highlightTransition": "fade",
+    "subtitleWidth": 710,
+    "letterSpacing": 0,
+    "fontFamily": "Inter"
+  },
+  "titles": [
+    {
+      "text": "Inboxer",
+      "startTimeMs": 2000,
+      "durationMs": 10000,
+      "style": {
+        "entranceAnimation": "slide-down",
+        "backgroundColor": "rgba(170, 0, 0, 0.7)",
+        "textColor": "#FFFFFF",
+        "titleFontSize": 60,
+        "subtitleFontSize": 42,
+        "titleColor": "#ffffff",
+        "subtitleColor": "#FFFFFF",
+        "titleFontFamily": "Inter",
+        "subtitleFontFamily": "Inter",
+        "topOffset": 10,
+        "lineHeight": 1.2,
+        "padding": 23
+      }
+    },
+    {
+      "text": "WhatsApp",
+      "subtitle": "Fin ventana de gracia 24hs",
+      "startTimeMs": 3000,
+      "durationMs": 9000,
+      "style": {
+        "entranceAnimation": "slide-up",
+        "backgroundColor": "rgba(0, 0, 0, 0.7)",
+        "textColor": "#FFFFFF",
+        "titleFontSize": 72,
+        "subtitleFontSize": 55,
+        "titleColor": "#ffc23d",
+        "subtitleColor": "#FFFFFF",
+        "titleFontFamily": "Inter",
+        "subtitleFontFamily": "Inter",
+        "topOffset": 18,
+        "lineHeight": 0.9,
+        "padding": 39
+      }
+    }
+  ]
+}

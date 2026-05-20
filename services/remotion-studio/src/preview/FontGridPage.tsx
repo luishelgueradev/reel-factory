@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AVAILABLE_FONTS, loadFont } from "../../fonts";
+import { AVAILABLE_FONTS, loadFont, getFontFamilyCSS } from "../fonts";
 
 const SAMPLE_TEXT = "Hola mundo ¿Cómo estás?";
 
@@ -17,6 +17,7 @@ function FontCard({
   onSelect: (font: string) => void;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const cssFamily = getFontFamilyCSS(fontName);
 
   useEffect(() => {
     loadFont(fontName)
@@ -48,7 +49,7 @@ function FontCard({
         {fontName}
       </div>
       {loaded ? (
-        <div style={{ fontSize: 24, fontFamily: fontName, color: "#e0e0e0" }}>
+        <div style={{ fontSize: 24, fontFamily: cssFamily, color: "#e0e0e0" }}>
           {SAMPLE_TEXT}
         </div>
       ) : (

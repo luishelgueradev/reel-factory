@@ -5,8 +5,8 @@
 // Per D-16: Config editor UI for style controls
 
 import React from "react";
-import type { SubtitleConfig, SubtitlePosition, BackgroundHighlight } from "../../../pipeline-config.js";
-import { AVAILABLE_FONTS } from "../../../fonts.js";
+import type { SubtitleConfig, SubtitlePosition, BackgroundHighlight } from "../../pipeline-config.js";
+import { AVAILABLE_FONTS } from "../../fonts.js";
 
 interface StyleControlsProps {
   config: SubtitleConfig;
@@ -35,6 +35,11 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
           label="Active Color"
           value={config.activeColor ?? "#FFFF00"}
           onChange={(v) => onChange({ activeColor: v })}
+        />
+        <ColorControl
+          label="Highlight Color"
+          value={config.highlightColor ?? "#FFFFFF"}
+          onChange={(v) => onChange({ highlightColor: v })}
         />
         <ColorControl
           label="Inactive Color"
@@ -191,6 +196,65 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
         </div>
       </div>
 
+      {/* ── Highlight Duration ─────────────────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Highlight Duration: <strong style={{ color: "#fff" }}>{config.highlightDurationMs ?? 200}ms</strong>
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={500}
+          step={10}
+          value={config.highlightDurationMs ?? 200}
+          onChange={(e) => onChange({ highlightDurationMs: Number(e.target.value) })}
+          style={{ width: "100%", accentColor: "#4CAF50" }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+          <span>0ms (off)</span>
+          <span>500ms</span>
+        </div>
+      </div>
+
+      {/* ── Highlight Transition ───────────────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Highlight Transition
+        </label>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={() => onChange({ highlightTransition: "fade" })}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              border: `1px solid ${(config.highlightTransition ?? "fade") === "fade" ? "#4CAF50" : "#444"}`,
+              borderRadius: 4,
+              background: (config.highlightTransition ?? "fade") === "fade" ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+              color: (config.highlightTransition ?? "fade") === "fade" ? "#a5d6a7" : "#ccc",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Fade
+          </button>
+          <button
+            onClick={() => onChange({ highlightTransition: "instant" })}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              border: `1px solid ${config.highlightTransition === "instant" ? "#4CAF50" : "#444"}`,
+              borderRadius: 4,
+              background: config.highlightTransition === "instant" ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+              color: config.highlightTransition === "instant" ? "#a5d6a7" : "#ccc",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Instant
+          </button>
+        </div>
+      </div>
+
       {/* ── Bottom Offset (PREV-03) ────────────────────────────────────── */}
       <div>
         <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
@@ -208,6 +272,26 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
           <span>0px</span>
           <span>960px</span>
+        </div>
+      </div>
+
+      {/* ── Subtitle Width ────────────────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Subtitle Width: <strong style={{ color: "#fff" }}>{(config.subtitleWidth ?? 0) || "auto"}</strong>
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={1080}
+          step={10}
+          value={config.subtitleWidth ?? 0}
+          onChange={(e) => onChange({ subtitleWidth: Number(e.target.value) })}
+          style={{ width: "100%", accentColor: "#4CAF50" }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+          <span>0 (auto)</span>
+          <span>1080px</span>
         </div>
       </div>
 

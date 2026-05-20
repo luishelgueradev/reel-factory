@@ -227,6 +227,7 @@ Plans:
 Plans:
 - [x] 12-01-PLAN.md — Add pastWordOpacity to SubtitleConfig and all 4 layout components, extend StyleControls with lineHeight + pastWordOpacity sliders (PREV-03)
 - [x] 12-02-PLAN.md — Build /preview SPA with @remotion/player, React Router, textToCaptionPages, font grid, Express routing (PREV-01, PREV-02, PREV-03)
+- [x] 12-03-SUMMARY.md — Post-phase hot-fixes: font CSS family name resolution (BF-01), TitleOverlay temporal dead zone (BF-02), player visibility (BF-03), aspect-ratio fix (BF-04), word highlight overlap (BF-06), fontWeight shift (BF-07), config persistence (BF-08). Feature enhancements: title style editor (FE-01), 8 new fonts (FE-02), dual font loading (FE-03), smooth highlight fade (FE-04).
 
 ## Progress
 
@@ -246,4 +247,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 9. Synchronous API | 3/3 | Complete | 2026-05-13 |
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
-| 12. Subtitle Preview Lab | 2/2 | Complete   | 2026-05-18 |
+| 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |

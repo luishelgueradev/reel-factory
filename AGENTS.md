@@ -14,6 +14,12 @@ Un pipeline de procesamiento de video containerizado en Docker que toma un MP4 c
 - **Output Format**: 9:16 vertical como mínimo en v1
 - **Video Input**: MP4, talking head, una persona hablando
 - **Extensibility**: Cualquier nuevo paso debe poder incorporarse como container Docker en la secuencia sin refactorizar el pipeline
+
+### Development Conventions
+
+- **remotion-studio port**: ALWAYS port **3123**. Never use any other port. Start with `cd services/remotion-studio && setsid env PORT=3123 EDITOR_DIST=$(pwd)/dist/editor npx tsx src/server.ts > /tmp/remotion-server.log 2>&1 &` — use `setsid` so the process survives shell termination.
+- **remotion-studio build**: `npm run build:editor` from `services/remotion-studio/`
+- **Renderer sync pattern**: After modifying compositions or shared files in remotion-studio, copy to remotion-renderer: `cp src/compositions/*.tsx src/pipeline-config.ts src/fonts.ts src/SubtitledVideo.tsx ../remotion-renderer/src/`
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:research/STACK.md -->

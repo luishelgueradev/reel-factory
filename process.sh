@@ -65,12 +65,23 @@ for VIDEO in "$@"; do
     export TRANSCRIPT_PATH="/data/pipeline/$NAME/whisper/transcript.json"
     export FINALIZER_INFO_PATH="/data/pipeline/$NAME/ffmpeg-finalizer/finalizer-info.json"
 
+    # Copy pipeline config from remotion-studio to renderer job dir
+    STUDIO_CONFIG="$SCRIPT_DIR/services/remotion-studio/pipeline-config.json"
+    if [ -f "$STUDIO_CONFIG" ]; then
+        mkdir -p "$JOB_DIR/remotion-renderer"
+        cp "$STUDIO_CONFIG" "$JOB_DIR/remotion-renderer/pipeline-config.json"
+        export PIPELINE_CONFIG_PATH="/data/pipeline/$NAME/remotion-renderer/pipeline-config.json"
+        echo "  Using config from remotion-studio"
+    else
+        unset PIPELINE_CONFIG_PATH
+    fi
+
     # NOTE: SILENCE_CUTS_PATH intentionally not passed — Whisper runs on the cut video
     # so transcript timestamps are already on the silence-removed timeline.
     # The detection logic in areTimestampsAlreadyRemapped handles this automatically.
     docker compose run --rm \
         -e PIPELINE_JOB_ID -e INPUT_PATH -e OUTPUT_PATH -e TRANSCRIPT_PATH \
-        -e FINALIZER_INFO_PATH \
+        -e FINALIZER_INFO_PATH -e PIPELINE_CONFIG_PATH \
         remotion-renderer 2>&1 | grep -E '\[remotion-renderer\]|Completed|ERROR|Render:' || true
 
     # Copy output

@@ -13,6 +13,7 @@ import {
   FADE_IN_MS,
   FADE_OUT_MS,
   PAGE_OVERLAP_GUARD_MS,
+  HIGHLIGHT_FADE_MS,
   getPositionStyles,
   getBackgroundHighlightStyle,
   getPastWordOpacity,
@@ -24,6 +25,8 @@ const CaptionWord: React.FC<{
   text: string;
   isActive: boolean;
   wasActive: boolean;
+  framesSinceActive: number;
+  framesSinceActivated: number;
   fontSize: number;
   color: string;
   outlineColor: string;
@@ -32,10 +35,16 @@ const CaptionWord: React.FC<{
   letterSpacing?: number;
   lineHeight?: number;
   pastWordOpacity: number;
+  highlightColor?: string;
+  highlightDurationMs?: number;
+  highlightTransition?: "fade" | "instant";
+  fps: number;
 }> = ({
   text,
   isActive,
   wasActive,
+  framesSinceActive,
+  framesSinceActivated,
   fontSize,
   color,
   outlineColor,
@@ -44,18 +53,36 @@ const CaptionWord: React.FC<{
   letterSpacing,
   lineHeight,
   pastWordOpacity,
+  highlightColor,
+  highlightDurationMs,
+  highlightTransition,
+  fps,
 }) => {
-  // Opacity: active/current word = 1, wasActive (past) word = pastWordOpacity, upcoming word = 1
-  const wordOpacity = isActive ? 1 : wasActive ? pastWordOpacity : 1;
+  const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
+  const wordOpacity = isActive
+    ? 1
+    : wasActive
+      ? interpolate(
+          Math.min(framesSinceActive, fadeFrames),
+          [0, fadeFrames],
+          [1, pastWordOpacity],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+        )
+      : 1;
+
+  const showHighlight = isActive && !!highlightColor && (highlightDurationMs ?? 0) > 0;
+  const highlightFrames = showHighlight ? Math.round((highlightDurationMs ?? 0) * (fps / 1000)) : 0;
+  const isHighlighting = showHighlight && framesSinceActivated < highlightFrames;
+  const wordColor = isHighlighting ? highlightColor! : color;
 
   return (
     <span
       style={{
         display: "inline-block",
         fontSize,
-        color,
+        color: wordColor,
         opacity: wordOpacity,
-        fontWeight: isActive ? 800 : wasActive ? 700 : 600,
+        fontWeight: 700,
         fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
         lineHeight: lineHeight ?? 1.3,
@@ -92,6 +119,9 @@ const CaptionPage: React.FC<{
   const letterSpacing = config.letterSpacing;
   const lineHeight = config.lineHeight ?? DEFAULT_SUBTITLE_CONFIG.lineHeight;
   const pastWordOpacity = getPastWordOpacity(config);
+  const highlightColor = config.highlightColor ?? DEFAULT_SUBTITLE_CONFIG.highlightColor;
+  const highlightDurationMs = config.highlightDurationMs ?? DEFAULT_SUBTITLE_CONFIG.highlightDurationMs;
+  const highlightTransition = config.highlightTransition ?? DEFAULT_SUBTITLE_CONFIG.highlightTransition;
 
   const tokens = page.tokens;
   let currentTokenIdx = -1;
@@ -99,7 +129,7 @@ const CaptionPage: React.FC<{
     const t = tokens[i];
     const fromFrame = Math.round(t.fromMs * (fps / 1000)) - pageFromFrame;
     const toFrame = Math.round(t.toMs * (fps / 1000)) - pageFromFrame;
-    if (frame >= fromFrame && frame <= toFrame) {
+    if (frame >= fromFrame && frame < toFrame) {
       currentTokenIdx = i;
       break;
     }
@@ -119,13 +149,16 @@ const CaptionPage: React.FC<{
         ? interpolate(frame, [fadeOutStartFrame, fadeOutEndFrame], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
         : 1;
 
-  const positionStyles = getPositionStyles(position, bottomOffset);
+  const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
+  const subtitleWidth = config.subtitleWidth ?? DEFAULT_SUBTITLE_CONFIG.subtitleWidth;
+  const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" as const } : {};
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
 
   return (
     <div
       style={{
         ...positionStyles,
+        ...maxWidthStyle,
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         opacity,
@@ -136,6 +169,10 @@ const CaptionPage: React.FC<{
       {tokens.map((token, i) => {
         const isActive = i === currentTokenIdx;
         const wasActive = i < currentTokenIdx;
+        const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
+        const toFrame = Math.round(token.toMs * (fps / 1000)) - pageFromFrame;
+        const framesSinceActive = wasActive ? Math.max(0, frame - toFrame) : 0;
+        const framesSinceActivated = isActive ? Math.max(0, frame - tokenFromFrame) : 0;
 
           return (
             <CaptionWord
@@ -143,6 +180,8 @@ const CaptionPage: React.FC<{
               text={token.text}
               isActive={isActive}
               wasActive={wasActive}
+              framesSinceActive={framesSinceActive}
+              framesSinceActivated={framesSinceActivated}
               fontSize={fontSize}
               color={isActive ? activeColor : inactiveColor}
               outlineColor={outlineColor}
@@ -151,6 +190,10 @@ const CaptionPage: React.FC<{
               letterSpacing={letterSpacing}
               lineHeight={lineHeight}
               pastWordOpacity={pastWordOpacity}
+              highlightColor={isActive ? highlightColor : undefined}
+              highlightDurationMs={isActive ? highlightDurationMs : undefined}
+              highlightTransition={isActive ? highlightTransition : undefined}
+              fps={fps}
             />
           );
       })}

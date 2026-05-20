@@ -283,6 +283,11 @@ async function main() {
         position: pipelineConfig?.subtitle?.position || "bottom-center",
         lineHeight: pipelineConfig?.subtitle?.lineHeight,
         bottomOffset: pipelineConfig?.subtitle?.bottomOffset || bottomOffset,
+        pastWordOpacity: pipelineConfig?.subtitle?.pastWordOpacity,
+        highlightColor: pipelineConfig?.subtitle?.highlightColor,
+        highlightDurationMs: pipelineConfig?.subtitle?.highlightDurationMs,
+        highlightTransition: pipelineConfig?.subtitle?.highlightTransition,
+        subtitleWidth: pipelineConfig?.subtitle?.subtitleWidth,
       } satisfies SubtitleConfig,
       titles: pipelineConfig?.titles || [],
       // Phase 7: Visual effects (D-08, D-10)
@@ -308,6 +313,7 @@ async function main() {
           console.log(`  Render: ${Math.round(progress * 100)}%`);
         }
       },
+      timeoutInMilliseconds: 120000,
       chromiumOptions: {
         enableMultiProcessOnLinux: true,
         args: ['--gl=angle-egl', '--disable-gpu'],

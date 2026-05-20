@@ -67,13 +67,15 @@ def transcribe(
     start_time = time.time()
 
     # Try whisperx first (D-01: primary engine)
+    whisperx_error: Optional[str] = None
     try:
         result = _transcribe_whisperx(audio_path, model_name, lang, dev, comp_type)
         elapsed = time.time() - start_time
         print(f"[transcribe] whisperx transcription completed in {elapsed:.2f}s")
         return result
     except Exception as e:
-        print(f"[transcribe] whisperx failed: {e}")
+        whisperx_error = f"{type(e).__name__}: {e}"
+        print(f"[transcribe] whisperx failed: {whisperx_error}")
         print(f"[transcribe] Falling back to faster-whisper (D-01)")
 
     # Fallback: faster-whisper (D-01)
@@ -83,10 +85,9 @@ def transcribe(
         print(f"[transcribe] faster-whisper transcription completed in {elapsed:.2f}s")
         return result
     except Exception as e:
-        elapsed = time.time() - start_time
         raise RuntimeError(
             f"Both whisperx and faster-whisper failed. "
-            f"whisperx error was logged above. faster-whisper error: {e}"
+            f"whisperx error: {whisperx_error}. faster-whisper error: {e}"
         ) from e
 
 
@@ -118,6 +119,18 @@ def _transcribe_whisperx(
     # Transcribe with language set explicitly per D-10
     result = whisperx_model.transcribe(audio_path, language=language)
 
+    # whisperx.align() restructures segments and drops segment-level
+    # no_speech_prob. Capture it here so it can be propagated onto aligned
+    # words (D-09) — otherwise the silence cross-reference loses this signal.
+    pre_align_segments = [
+        {
+            "start": s.get("start", 0.0),
+            "end": s.get("end", 0.0),
+            "no_speech_prob": s.get("no_speech_prob"),
+        }
+        for s in result.get("segments", [])
+    ]
+
     # Align for word-level timestamps (whisperx key advantage per D-01)
     print("[transcribe] Running whisperx forced alignment...")
     model_a, metadata = whisperx.load_align_model(language_code=language, device=device)
@@ -128,7 +141,7 @@ def _transcribe_whisperx(
     audio_duration = _get_audio_duration(audio_path)
 
     # Convert to Transcript schema
-    return _convert_whisperx_result(result, model_name, language, audio_duration)
+    return _convert_whisperx_result(result, model_name, language, audio_duration, pre_align_segments)
 
 
 def _transcribe_faster_whisper(
@@ -167,11 +180,26 @@ def _transcribe_faster_whisper(
     return _convert_faster_whisper_result(segments_list, info, model_name, language)
 
 
+def _lookup_no_speech_prob(time_sec: float, pre_align_segments: list) -> float:
+    """Find the segment-level no_speech_prob covering the given time, if any.
+
+    whisperx exposes no_speech_prob per segment (not per word). We propagate it
+    to each word by locating the pre-alignment segment that contains the word.
+    Returns 0.0 when unavailable.
+    """
+    for s in pre_align_segments:
+        nsp = s.get("no_speech_prob")
+        if nsp is not None and s.get("start", 0.0) <= time_sec <= s.get("end", 0.0):
+            return nsp
+    return 0.0
+
+
 def _convert_whisperx_result(
     result: dict,
     model_name: str,
     language: str,
     audio_duration: float = 0.0,
+    pre_align_segments: Optional[list] = None,
 ) -> Transcript:
     """Convert whisperx aligned result to Transcript schema.
 
@@ -197,6 +225,15 @@ def _convert_whisperx_result(
     Note: whisperx may not provide no_speech_prob. When absent,
     it defaults to 0.0 per the docstring contract.
     """
+    pre_align_segments = pre_align_segments or []
+    has_nsp = any(s.get("no_speech_prob") is not None for s in pre_align_segments)
+    if not has_nsp:
+        print(
+            "[transcribe] WARN: whisperx provided no per-segment no_speech_prob — "
+            "no_speech-based hallucination cross-referencing is disabled for this "
+            "run; silence detection falls back to FFmpeg silencedetect."
+        )
+
     all_words: list[TranscriptWord] = []
     transcript_segments: list[TranscriptSegment] = []
 
@@ -204,14 +241,17 @@ def _convert_whisperx_result(
         seg_words: list[TranscriptWord] = []
 
         for word_data in segment.get("words", []):
-            # whisperx word fields: word, start, end, score
-            # no_speech_prob is typically NOT in whisperx output — default to 0.0
+            # whisperx word fields: word, start, end, score. no_speech_prob is
+            # not per-word; propagate it from the pre-alignment segment (D-09).
             confidence = word_data.get("score", 0.0)
-            no_speech_prob = word_data.get("no_speech_prob", 0.0)
+            w_start = word_data.get("start", 0.0)
+            no_speech_prob = (
+                _lookup_no_speech_prob(w_start, pre_align_segments) if has_nsp else 0.0
+            )
 
             tw = TranscriptWord(
                 word=word_data.get("word", "").strip(),
-                start=word_data.get("start", 0.0),
+                start=w_start,
                 end=word_data.get("end", 0.0),
                 confidence=confidence,
                 no_speech_prob=no_speech_prob,

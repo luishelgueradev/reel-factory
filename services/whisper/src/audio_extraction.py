@@ -31,10 +31,11 @@ def extract_audio(input_path: str, output_path: str) -> str:
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    # Check if input has an audio stream before attempting extraction
+    # Check if input has an audio stream before attempting extraction.
+    # Use `-v error` (not quiet) so a real probe failure surfaces on stderr.
     probe_cmd = [
         "ffprobe",
-        "-v", "quiet",
+        "-v", "error",
         "-select_streams", "a",
         "-show_entries", "stream=codec_type",
         "-of", "csv=p=0",
@@ -42,6 +43,15 @@ def extract_audio(input_path: str, output_path: str) -> str:
     ]
 
     probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+
+    # Distinguish a probe failure (corrupt/unreadable container) from a file
+    # that simply has no audio track. Both yield empty stdout, but only the
+    # latter should be treated as "silent video" downstream.
+    if probe_result.returncode != 0:
+        raise RuntimeError(
+            f"ffprobe failed to read {input_path} (exit {probe_result.returncode}): "
+            f"{probe_result.stderr.strip()}"
+        )
 
     if not probe_result.stdout.strip():
         raise FileNotFoundError(

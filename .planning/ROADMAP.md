@@ -334,8 +334,13 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 14-01-PLAN.md — render.ts env-var params + 3h timeout (RENDER-01, RENDER-02)
 - [ ] 14-02-PLAN.md — quality-finalizer Docker container: Dockerfile + main.py + downscale logic + validators (RENDER-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 14-03-PLAN.md — orchestrator + docker-compose wiring + scale:2 benchmark checkpoint (RENDER-03, RENDER-04)
 
 **UI hint**: no

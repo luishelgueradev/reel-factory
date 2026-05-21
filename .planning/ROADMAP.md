@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### Milestone v1.1 — Calidad de video
 
-- [ ] **Phase 13: Encode Quality** - Config-only encode tuning across existing containers: stream-copy in silence-cutter, CRF/Lanczos/unsharp/BT.709 in ffmpeg-finalizer
+- [x] **Phase 13: Encode Quality** - Config-only encode tuning across existing containers: stream-copy in silence-cutter, CRF/Lanczos/unsharp/BT.709 in ffmpeg-finalizer (completed 2026-05-21)
 - [ ] **Phase 14: Remotion Supersampling + quality-finalizer** - scale:2 supersampling in remotion-renderer and new quality-finalizer Docker step that downscales 4K output to deliverable 1080x1920
 
 ## Phase Details
@@ -304,7 +304,7 @@ Plans:
   4. El video final conserva la duracion exacta del silence-cutter output (dentro de ±33ms) y el audio esta sincronizado cuadro a cuadro — ENC-05 verificado
   5. No hay halos visibles alrededor del texto de subtítulos en la salida del ffmpeg-finalizer tras aplicar el filtro unsharp
 
-**Plans:** 2/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -314,8 +314,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 13-03-PLAN.md — Test sweep + new test_encode_quality.py + validate_concat_mode test wiring (ENC-01, ENC-02, ENC-03, ENC-04, ENC-05)
-- [ ] 13-04-PLAN.md — Visual A/B render + 13-UAT.md + human-verify checkpoint (ENC-02, ENC-03, ENC-04, ENC-05)
+- [x] 13-03-PLAN.md — Test sweep + new test_encode_quality.py + validate_concat_mode test wiring (ENC-01, ENC-02, ENC-03, ENC-04, ENC-05)
+- [x] 13-04-PLAN.md — Visual A/B render + 13-UAT.md + human-verify checkpoint (ENC-02, ENC-03, ENC-04, ENC-05)
 
 ### Phase 14: Remotion Supersampling + quality-finalizer
 
@@ -330,7 +330,14 @@ Plans:
   4. El tiempo de render con scale:2 esta medido en un clip representativo; si supera el umbral aceptable, se evalua scale:1.5 y el valor final queda documentado en el plan
   5. La paridad A/V se preserva en la salida del quality-finalizer — duracion y sincronía de audio identicas a la entrada
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 14-01-PLAN.md — render.ts env-var params + 3h timeout (RENDER-01, RENDER-02)
+- [ ] 14-02-PLAN.md — quality-finalizer Docker container: Dockerfile + main.py + downscale logic + validators (RENDER-03)
+- [ ] 14-03-PLAN.md — orchestrator + docker-compose wiring + scale:2 benchmark checkpoint (RENDER-03, RENDER-04)
+
 **UI hint**: no
 
 ## Progress
@@ -352,5 +359,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
 | 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
-| 13. Encode Quality | 2/4 | In Progress|  |
-| 14. Remotion Supersampling + quality-finalizer | 0/TBD | Not started | - |
+| 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
+| 14. Remotion Supersampling + quality-finalizer | 0/3 | Not started | - |

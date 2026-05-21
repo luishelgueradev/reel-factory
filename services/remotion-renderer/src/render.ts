@@ -81,6 +81,17 @@ async function main() {
   const finalizerInfoPath = process.env.FINALIZER_INFO_PATH;
   const jobId = process.env.PIPELINE_JOB_ID;
 
+  // D-06 (Phase 14): Render quality params from env vars with safe backward-compatible defaults.
+  // D-07 (Phase 14): Defaults are scale=1 + imageFormat='jpeg' so direct runs of render.ts outside
+  // the orchestrator stay backward-compatible (no surprise 4K output). The orchestrator explicitly
+  // sets REMOTION_SCALE=2 + REMOTION_IMAGE_FORMAT=png for the supersampled pipeline path.
+  const remotionScale = parseFloat(process.env.REMOTION_SCALE || "1");
+  const remotionCrf = parseInt(process.env.REMOTION_CRF || "18", 10);
+  const remotionX264Preset = (process.env.REMOTION_X264_PRESET || "medium") as "medium" | "slow" | "fast";
+  const remotionColorSpace = (process.env.REMOTION_COLOR_SPACE || "bt709") as "bt709";
+  const remotionJpegQuality = parseInt(process.env.REMOTION_JPEG_QUALITY || "95", 10);
+  const remotionImageFormat = (process.env.REMOTION_IMAGE_FORMAT || "jpeg") as "jpeg" | "png";
+
   if (!inputPath || !outputPath || !jobId) {
     console.error("ERROR: INPUT_PATH, OUTPUT_PATH, and PIPELINE_JOB_ID must be set");
     process.exit(1);
@@ -310,12 +321,19 @@ async function main() {
       codec: "h264",
       outputLocation: outputPath,
       inputProps,
+      scale: remotionScale,                    // RENDER-01 / D-06 (Phase 14)
+      crf: remotionCrf,                        // RENDER-01 / D-06 (Phase 14)
+      x264Preset: remotionX264Preset,          // RENDER-01 / D-06 (Phase 14)
+      colorSpace: remotionColorSpace,          // D-11 (Phase 14): sRGB→BT.709 conversion at Chromium boundary
+      jpegQuality: remotionJpegQuality,        // RENDER-02 / D-05 (Phase 14): inert when imageFormat='png'
+      imageFormat: remotionImageFormat,        // RENDER-02 / D-04 (Phase 14): lossless PNG via env
       onProgress: ({ progress }) => {
         if (Math.round(progress * 100) % 10 === 0) {
           console.log(`  Render: ${Math.round(progress * 100)}%`);
         }
       },
-      timeoutInMilliseconds: 120000,
+      // D-03 (Phase 14): 3h ceiling; was 120000 — scale:2 render of a 60s clip takes ~47min
+      timeoutInMilliseconds: 10_800_000,
       chromiumOptions: {
         enableMultiProcessOnLinux: true,
         args: ['--gl=angle-egl', '--disable-gpu'],
@@ -336,6 +354,13 @@ async function main() {
       fps: 30,
       remotion_info: {
         use_angle_egl: true,
+        // Phase 14 (D-06): diagnostic mirror of the env-driven render params
+        scale: remotionScale,
+        image_format: remotionImageFormat,
+        crf: remotionCrf,
+        x264_preset: remotionX264Preset,
+        color_space: remotionColorSpace,
+        jpeg_quality: remotionJpegQuality,
       },
       // D-02: PipelineConfig info for debugging
       pipeline_config: pipelineConfig ? {

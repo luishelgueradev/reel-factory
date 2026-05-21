@@ -30,3 +30,27 @@ During Plan 14-01 execution, an erroneous `git stash --include-untracked` was in
 **Impact:** None to Phase 14 deliverables — all edits are in the working tree and committed. Other agents are explicitly prohibited from `git stash pop`/`apply`/`drop`, so the entry is inert. If a manual cleanup is desired, the human operator can run `git stash drop stash@{0}` from the main repo when no other agents are active.
 
 **Lesson:** The executor agent rules forbid `git stash` (any subcommand) inside a worktree because the stash list is global across worktrees. Recovery alternatives in the rules: commit WIP to a throwaway branch you own.
+
+---
+
+## Plan 14-03 — Pre-existing TypeScript errors in api-server (not introduced by Plan 14-03)
+
+The following `tsc --noEmit` errors in `services/api-server/` exist on the Phase 14 base commit `2bb8298` and are unrelated to Plan 14-03's pipeline-wiring + timeout changes. Verified by checking out the base versions of `orchestrator.ts` and `process.ts` (via `git show HEAD:…`) and re-running `tsc --noEmit` — the same 3 errors fire on the same files (line numbers shift only because my insertion added 13 lines to `orchestrator.ts`).
+
+In `src/orchestrator.ts` (the file I edited):
+- `src/orchestrator.ts(5,39)` — `Cannot find module '../../shared/schemas/manifest.js' or its corresponding type declarations.` The `shared` directory exists at the repo root but no `tsconfig` rootDirs / paths mapping points to it from `services/api-server`. Pre-existing module-resolution gap.
+- `src/orchestrator.ts(221,38)` (base: line 208) — `Namespace 'Dockerode' has no exported member 'CreateContainerOptions'.` The Dockerode v5 typings export `ContainerCreateOptions`, not `CreateContainerOptions`. Pre-existing name mismatch.
+
+In `src/routes/process.ts` (the file I edited):
+- `src/routes/process.ts(24,7)` — `Expected 2 arguments, but got 1.` (multer's filename callback signature). Pre-existing.
+
+Plus ~22 other errors in test files and other routes (`__tests__/*.test.ts`, `routes/artifacts.ts`, `routes/batch.ts`, `routes/status.ts`, `schemas/response.ts`) — all also pre-existing on the base commit.
+
+**Verification of zero new errors from Plan 14-03:** A side-by-side `tsc --noEmit` run (base files restored → typecheck → revert to my edited files → typecheck) showed identical error counts and identical messages on both files I touched. The `orchestrator.ts(221,38)` line shift from base line 208 to current line 221 is exactly +13 — matching the 13-line insertion (REMOTION_SCALE/IMAGE_FORMAT lines + the new quality-finalizer step block + its comment).
+
+**Recommended cleanup (out of scope for Phase 14):**
+- Add a `paths` mapping in `services/api-server/tsconfig.json` so `../../shared/schemas/manifest.js` resolves.
+- Replace `Dockerode.CreateContainerOptions` with `Dockerode.ContainerCreateOptions` (or import the type directly from the module's typings).
+- Fix the multer filename callback signature.
+
+None of these affect runtime behavior; the production pipeline runs via `tsx` (transpile-only) and skips strict typechecking.

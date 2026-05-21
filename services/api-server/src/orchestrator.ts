@@ -50,7 +50,7 @@ export class PipelineStepError extends Error {
  * Configuration for each pipeline step.
  * Matches docker-compose.yml exactly: order, image names, and env vars.
  *
- * Step order: whisper → silence-cutter → ffmpeg-finalizer → remotion-renderer → srt-exporter
+ * Step order: whisper → silence-cutter → ffmpeg-finalizer → remotion-renderer → quality-finalizer → srt-exporter
  * Per process.sh and D-02/D-10.
  */
 export const STEPS: PipelineStepConfig[] = [
@@ -101,6 +101,19 @@ export const STEPS: PipelineStepConfig[] = [
       ACTIVE_COLOR: "#FFFF00",
       INACTIVE_COLOR: "#FFFFFF",
       FONT_SIZE: "58",
+      // Phase 14 (D-06, D-07): Enable scale:2 supersampling + lossless PNG frame capture in the pipeline.
+      REMOTION_SCALE: "2",
+      REMOTION_IMAGE_FORMAT: "png",
+    },
+  },
+  // Phase 14 (RENDER-03): Lanczos-downscale 2160x3840 supersampled output to deliverable 1080x1920.
+  {
+    name: "quality-finalizer",
+    image: "reel-factory-quality-finalizer",
+    envVars: {
+      INPUT_PATH: "/data/pipeline/{jobId}/remotion-renderer/output.mp4",
+      OUTPUT_PATH: "/data/pipeline/{jobId}/quality-finalizer/output.mp4",
+      PIPELINE_JOB_ID: "{jobId}",
     },
   },
   {
@@ -328,6 +341,6 @@ export async function runPipeline(
     steps,
     artifacts,
     totalDurationSeconds,
-    videoUrl: `/artifacts/${jobId}/remotion-renderer/output.mp4`,
+    videoUrl: `/artifacts/${jobId}/quality-finalizer/output.mp4`,
   };
 }

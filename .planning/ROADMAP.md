@@ -336,8 +336,8 @@ Plans:
 
 **Wave 1**
 
-- [ ] 14-01-PLAN.md — render.ts env-var params + 3h timeout (RENDER-01, RENDER-02)
-- [ ] 14-02-PLAN.md — quality-finalizer Docker container: Dockerfile + main.py + downscale logic + validators (RENDER-03)
+- [x] 14-01-PLAN.md — render.ts env-var params + 3h timeout (RENDER-01, RENDER-02)
+- [x] 14-02-PLAN.md — quality-finalizer Docker container: Dockerfile + main.py + downscale logic + validators (RENDER-03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -365,4 +365,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
 | 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
 | 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
-| 14. Remotion Supersampling + quality-finalizer | 0/3 | Not started | - |
+| 14. Remotion Supersampling + quality-finalizer | 2/3 | In Progress|  |

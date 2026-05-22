@@ -115,6 +115,9 @@ services:
       - ACTIVE_COLOR=${ACTIVE_COLOR:-#FFFF00}
       - INACTIVE_COLOR=${INACTIVE_COLOR:-#FFFFFF}
       - FONT_SIZE=${FONT_SIZE:-58}
+      # Phase 14 (D-06, D-07): scale:2 supersampling + lossless PNG frame capture
+      - REMOTION_SCALE=${REMOTION_SCALE:-2}
+      - REMOTION_IMAGE_FORMAT=${REMOTION_IMAGE_FORMAT:-png}
       - PIPELINE_CONFIG_PATH=${PIPELINE_CONFIG_PATH:-}
     healthcheck:
       test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/manifest.json"]
@@ -122,6 +125,31 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # Quality Finalizer: probe-gated Lanczos downscale 2160x3840 → 1080x1920 (Phase 14, RENDER-03)
+  # Carries through BT.709 color tags (D-11), preserves A/V parity via -c:a copy (D-10),
+  # idempotent on inputs already at target resolution (D-08 stream-copy passthrough).
+  quality-finalizer:
+    profiles: ["pipeline"]
+    image: reel-factory-quality-finalizer:latest
+    build:
+      context: ./services/quality-finalizer
+    volumes:
+      - ./pipeline:/data/pipeline
+    networks:
+      - pipeline-net
+    environment:
+      - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/output.mp4
+      - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/quality-finalizer/output.mp4
+      - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
+    depends_on:
+      remotion-renderer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/quality-finalizer/manifest.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
 
   # Remotion Studio: interactive preview + config editor (Phase 6, Plan 04)
   # Serves Remotion Studio for live preview and REST API for config editing (D-14, D-15, D-18).
@@ -195,7 +223,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID:-}
-      - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-600000}
+      - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-10800000}  # 3h — Phase 14 D-03, matches render.ts timeoutInMilliseconds ceiling
       - PIPELINE_NETWORK=${PIPELINE_NETWORK:-reel-factory_pipeline-net}
       # Host-side absolute path to ./pipeline — the orchestrator bind-mounts it
       # into sibling containers via the Docker socket, so it must be the HOST

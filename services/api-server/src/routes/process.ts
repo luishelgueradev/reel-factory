@@ -74,10 +74,10 @@ export const upload = multer({
 });
 
 /**
- * Default timeout for pipeline processing (10 minutes).
+ * Default timeout for pipeline processing (3 hours).
  * Can be overridden via PROCESS_TIMEOUT_MS env var.
  */
-const DEFAULT_TIMEOUT_MS = 600000; // 10 minutes
+const DEFAULT_TIMEOUT_MS = 10800000; // 3 hours — accommodates scale:2 supersampled renders (Phase 14 D-03)
 
 export const processRouter = Router();
 

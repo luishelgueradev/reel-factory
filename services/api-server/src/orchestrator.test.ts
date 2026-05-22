@@ -30,16 +30,17 @@ function createMockDocker(options?: { exitCode?: number }) {
 }
 
 describe("STEPS configuration", () => {
-  it("should have exactly 5 steps", () => {
-    expect(STEPS).toHaveLength(5);
+  it("should have exactly 6 steps", () => {
+    expect(STEPS).toHaveLength(6);
   });
 
-  it("should have steps in correct order: whisper → silence-cutter → ffmpeg-finalizer → remotion-renderer → srt-exporter", () => {
+  it("should have steps in correct order: whisper → silence-cutter → ffmpeg-finalizer → remotion-renderer → quality-finalizer → srt-exporter", () => {
     expect(STEPS[0].name).toBe("whisper");
     expect(STEPS[1].name).toBe("silence-cutter");
     expect(STEPS[2].name).toBe("ffmpeg-finalizer");
     expect(STEPS[3].name).toBe("remotion-renderer");
-    expect(STEPS[4].name).toBe("srt-exporter");
+    expect(STEPS[4].name).toBe("quality-finalizer");
+    expect(STEPS[5].name).toBe("srt-exporter");
   });
 
   it("whisper step should have correct env vars", () => {
@@ -93,10 +94,26 @@ describe("STEPS configuration", () => {
     expect(step.envVars).toHaveProperty("ACTIVE_COLOR");
     expect(step.envVars).toHaveProperty("INACTIVE_COLOR");
     expect(step.envVars).toHaveProperty("FONT_SIZE");
+    // Phase 14: scale:2 supersampling + PNG frame capture
+    expect(step.envVars.REMOTION_SCALE).toBe("2");
+    expect(step.envVars.REMOTION_IMAGE_FORMAT).toBe("png");
+    // Config threading: studio pipeline-config.json takes precedence over inline color/font env
+    expect(step.envVars).toHaveProperty("PIPELINE_CONFIG_PATH");
+    expect(step.envVars.PIPELINE_CONFIG_PATH).toContain("/remotion-renderer/pipeline-config.json");
+  });
+
+  it("quality-finalizer step should downscale the supersampled renderer output (Phase 14)", () => {
+    const step = STEPS[4];
+    expect(step.image).toBe("reel-factory-quality-finalizer");
+    expect(step.envVars).toHaveProperty("INPUT_PATH");
+    expect(step.envVars.INPUT_PATH).toContain("/remotion-renderer/output.mp4");
+    expect(step.envVars).toHaveProperty("OUTPUT_PATH");
+    expect(step.envVars.OUTPUT_PATH).toContain("/quality-finalizer/output.mp4");
+    expect(step.envVars).toHaveProperty("PIPELINE_JOB_ID");
   });
 
   it("srt-exporter step should have correct env vars including TRANSCRIPT_PATH and SILENCE_CUTS_PATH", () => {
-    const step = STEPS[4];
+    const step = STEPS[5];
     expect(step.image).toBe("reel-factory-srt-exporter");
     expect(step.envVars).toHaveProperty("INPUT_PATH");
     expect(step.envVars.INPUT_PATH).toContain("/input/video.mp4");
@@ -192,9 +209,10 @@ describe("runPipeline", () => {
 
     expect(result).toHaveProperty("jobId", jobId);
     expect(result).toHaveProperty("videoUrl");
-    expect(result.videoUrl).toContain("/remotion-renderer/output.mp4");
+    // Phase 14: final deliverable is the quality-finalizer downscaled output, not the renderer's 4K
+    expect(result.videoUrl).toContain("/quality-finalizer/output.mp4");
     expect(result).toHaveProperty("steps");
-    expect(result.steps).toHaveLength(5);
+    expect(result.steps).toHaveLength(6);
     expect(result).toHaveProperty("totalDurationSeconds");
     expect(result.totalDurationSeconds).toBeGreaterThan(0);
     expect(result).toHaveProperty("artifacts");
@@ -209,8 +227,8 @@ describe("runPipeline", () => {
       docker: docker as any,
     });
 
-    // Should have been called 5 times (one per step)
-    expect(docker.createContainer).toHaveBeenCalledTimes(5);
+    // Should have been called 6 times (one per step — Phase 14 added quality-finalizer)
+    expect(docker.createContainer).toHaveBeenCalledTimes(6);
 
     // Check that the first call was for whisper
     const firstCall = docker.createContainer.mock.calls[0][0];

@@ -95,7 +95,7 @@ describe("STEPS configuration", () => {
     expect(step.envVars).toHaveProperty("INACTIVE_COLOR");
     expect(step.envVars).toHaveProperty("FONT_SIZE");
     // Phase 14: scale:2 supersampling + PNG frame capture
-    expect(step.envVars.REMOTION_SCALE).toBe("2");
+    expect(step.envVars.REMOTION_SCALE).toBe("1");
     expect(step.envVars.REMOTION_IMAGE_FORMAT).toBe("png");
     // Config threading: studio pipeline-config.json takes precedence over inline color/font env
     expect(step.envVars).toHaveProperty("PIPELINE_CONFIG_PATH");

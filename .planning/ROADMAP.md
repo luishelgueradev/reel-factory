@@ -36,7 +36,7 @@ Closed at 14 phases / 56 plans / 9 requirements complete. Phases 13–14 deliver
 
 ### Milestone v1.2 — Infrastructure / shared services
 
-- [ ] **Phase 15: Whisper externalization** - Replace embedded `services/whisper` container with HTTP calls to the standalone whisper-api at `/home/luis/proyectos/whisper`. Contract is drop-in (`profile=reels` bare body identical). See `.planning/contracts/whisper-service-integration.md`. Awaiting whisper standalone Phase 5 (deployment hardening) to start execution.
+- [ ] **Phase 15: Whisper externalization** - Replace embedded `services/whisper` container with HTTP calls to the standalone whisper-api at `/home/luis/proyectos/whisper`. Contract is drop-in (`profile=reels` bare body identical). See `.planning/contracts/whisper-service-integration.md`. **Plans:** 3 plans in 3 waves (planned 2026-05-22).
 
 ## Phase Details
 
@@ -289,6 +289,27 @@ Plans:
 - [x] 12-01-PLAN.md — Add pastWordOpacity to SubtitleConfig and all 4 layout components, extend StyleControls with lineHeight + pastWordOpacity sliders (PREV-03)
 - [x] 12-02-PLAN.md — Build /preview SPA with @remotion/player, React Router, textToCaptionPages, font grid, Express routing (PREV-01, PREV-02, PREV-03)
 - [x] 12-03-SUMMARY.md — Post-phase hot-fixes: font CSS family name resolution (BF-01), TitleOverlay temporal dead zone (BF-02), player visibility (BF-03), aspect-ratio fix (BF-04), word highlight overlap (BF-06), fontWeight shift (BF-07), config persistence (BF-08). Feature enhancements: title style editor (FE-01), 8 new fonts (FE-02), dual font loading (FE-03), smooth highlight fade (FE-04).
+
+### Phase 15: Whisper externalization
+
+**Goal**: The embedded GPU Whisper container is replaced by HTTP calls to the standalone whisper-api; the transcript.json contract is preserved drop-in and the highlight-sync drift fix is validated end-to-end on a real mid-speech-cut clip
+**Depends on**: Phases 1-14 (full pipeline); external whisper-api standalone (Phase 5 complete, live)
+**Requirements**: none formal (v1.2 single infra phase — must_haves derived from contract §6 + ROADMAP goal + locked decisions D-2/D-3/D-5/D-6)
+**Success Criteria** (what must be TRUE):
+
+  1. The pipeline's whisper step calls the external whisper-api and writes the bare reels body verbatim to pipeline/{jobId}/whisper/transcript.json (zero downstream change)
+  2. Sync/async routing, auth, limits, and error mapping honor the locked decisions; all error codes fail the step via the manifest contract
+  3. The external whisper-api emits timeline="original" and the renderer's deterministic remap fires (legacy heuristic retired to fallback)
+  4. Highlight-vs-audio sync holds on the back half of a mid-speech-cut clip (Spike 001 drift repro closed)
+  5. The embedded services/whisper container is retired after parity + e2e pass
+
+**Plans**: 3 plans
+
+Plans:
+
+- [ ] 15-01-PLAN.md — New services/whisper-http-step/ container: ffprobe duration gate + sync/async HTTP client + error mapping + mock-api unit tests
+- [ ] 15-02-PLAN.md — Orchestrator STEP swap (drop GPU/HF_HOME, add WHISPER_API_URL/KEY) + orchestrator tests + docker-compose wiring (host.docker.internal)
+- [ ] 15-03-PLAN.md — timeline marker on external whisper-api + e2e drift repro (human-verify) + parity test + retire services/whisper/
 
 ---
 

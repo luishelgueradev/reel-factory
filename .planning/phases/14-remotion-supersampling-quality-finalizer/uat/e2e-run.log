@@ -1,0 +1,740 @@
+[2026-05-22T02:47:24Z] >>> step: silence-cutter
+[silence-cutter] Overriding SILENCE_MIN_DURATION to 0.5
+[silence-cutter] Overriding SILENCE_CUT_SHRINK to 0.4
+[silence-cutter] Starting silence detection and removal for job: e2e-phase14
+  INPUT_PATH:      /data/pipeline/e2e-phase14/input/video.mp4
+  OUTPUT_PATH:     /data/pipeline/e2e-phase14/silence-cutter/output.mp4
+  TRANSCRIPT_PATH: /data/pipeline/e2e-phase14/whisper/transcript.json
+[silence-cutter] Step 1: Getting video duration
+  Video duration: 16.85s
+[silence-cutter] Step 2: Running FFmpeg silencedetect
+[silence-cutter] Running silencedetect on: /data/pipeline/e2e-phase14/input/video.mp4
+  Filter: noise=-30dB:d=0.5
+[silence-cutter] Detected 3 candidate silence segments
+  Found 3 candidate silence segments
+[silence-cutter] Step 3: Cross-referencing with Whisper transcript
+  Confirmed 1 silence segments (0.40s total silence)
+  New duration: 16.45s (was 16.85s)
+[silence-cutter] Step 4: Cutting silences from video
+[silence-cutter] Extracting 1 segments to keep
+  Extracting segment 1/1: start=0.000s duration=16.448s
+[silence-cutter] Concatenating 53 bytes of concat list
+[silence-cutter] Output video: 8041555 bytes
+  Output written to: /data/pipeline/e2e-phase14/silence-cutter/output.mp4
+[silence-cutter] Step 5: Remapping transcript timestamps
+  Remapped transcript: /data/pipeline/e2e-phase14/silence-cutter/transcript.json
+[silence-cutter] Step 6: Writing silence-cuts.json
+  Wrote silence-cuts.json: 395 bytes (1 cuts)
+  Wrote manifest: /data/pipeline/e2e-phase14/silence-cutter/manifest.json
+[silence-cutter] Completed successfully in 11.89s
+[2026-05-22T02:47:42Z] >>> step: ffmpeg-finalizer
+[ffmpeg-finalizer] Overriding VERTICAL_WIDTH to 1080
+[ffmpeg-finalizer] Overriding VERTICAL_HEIGHT to 1920
+[ffmpeg-finalizer] Starting 9:16 finalization for job: e2e-phase14
+  INPUT_PATH:  /data/pipeline/e2e-phase14/silence-cutter/output.mp4
+  OUTPUT_PATH: /data/pipeline/e2e-phase14/ffmpeg-finalizer/output.mp4
+[ffmpeg-finalizer] Step 1: Probing input video
+  1080x1920 duration=16.5s audio=True
+[ffmpeg-finalizer] Step 2: Applying 9:16 crop + encode
+[ffmpeg-finalizer] Running FFmpeg finalizer
+  Input: 1080x1920 (9:16)
+  Crop applied: False
+  Filter: scale=1080:1920,setsar=1
+  Output: 1080x1920 (9:16)
+[ffmpeg-finalizer] Step 3: Writing finalizer-info.json
+  Wrote finalizer-info.json
+  Wrote manifest: /data/pipeline/e2e-phase14/ffmpeg-finalizer/manifest.json
+[ffmpeg-finalizer] Completed successfully in 6.04s
+[2026-05-22T02:47:53Z] >>> step: remotion-renderer
+[remotion-renderer] Starting subtitle render for job: e2e-phase14
+  INPUT_PATH: /data/pipeline/e2e-phase14/ffmpeg-finalizer/output.mp4
+  TRANSCRIPT: /data/pipeline/e2e-phase14/whisper/transcript.json
+  OUTPUT: /data/pipeline/e2e-phase14/remotion-renderer/output.mp4
+  SILENCE_CUTS: /data/pipeline/e2e-phase14/silence-cutter/silence-cuts.json
+  FINALIZER_INFO: /data/pipeline/e2e-phase14/ffmpeg-finalizer/finalizer-info.json
+  Loaded 1 silence cuts
+  Loaded finalizer-info.json, safe_zone: { top: 100, bottom: 230, left: 54, right: 54 }
+  Loaded pipeline-config.json: "bar"
+  2 title overlay(s) configured
+  Visual effects: using defaults (zooms disabled, transitions: zoom)
+[remotion-renderer] Step 1: Probing input video dimensions
+  1080x1920 16.5s
+[remotion-renderer] Step 2: Loading transcript and creating caption pages
+Detected timestamps already on silence-removed timeline — skipping remap
+  31 words -> 8 caption pages
+  Timestamp timeline: already on silence-removed timeline (skipping remap)
+  0 zoom event(s) detected (threshold: 0.6)
+  1 transition event(s) at silence cut boundaries
+  Wrote caption-pages.json
+[remotion-renderer] Step 3: Copying video to Remotion public/ directory
+  Copied /data/pipeline/e2e-phase14/ffmpeg-finalizer/output.mp4 -> public/input-video.mp4
+[remotion-renderer] Step 4: Bundling Remotion project
+  Bundle ready: /tmp/remotion-webpack-bundle-XRebBs
+[remotion-renderer] Step 5: Selecting composition
+  inputProps: totalDurationMs=16500, videoSrc=input-video.mp4, captionPages=8 pages
+  Duration: 495 frames (16.5s)
+[remotion-renderer] Step 6: Rendering video with subtitles
+  Render: 0%
+[Tab 4, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 0, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 6, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 7, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 5, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 2, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 1, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 3, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 5, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 4, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 0, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 7, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 6, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 2, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 3, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 1, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+  Render: 0%
+  Render: 0%
+  Render: 0%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 90%
+  Render: 90%
+  Render: 90%
+  Render: 90%
+  Render: 100%
+  Render complete: /data/pipeline/e2e-phase14/remotion-renderer/output.mp4
+[remotion-renderer] Completed in 2149.10s
+[2026-05-22T03:24:13Z] >>> step: quality-finalizer
+[quality-finalizer] Starting probe-gated downscale for job: e2e-phase14
+  INPUT_PATH:  /data/pipeline/e2e-phase14/remotion-renderer/output.mp4
+  OUTPUT_PATH: /data/pipeline/e2e-phase14/quality-finalizer/output.mp4
+[quality-finalizer] Step 1: Probing input video
+  2160x3840 duration=16.5s audio=True
+[quality-finalizer] Step 2: Applying Lanczos downscale to 1080x1920
+[quality-finalizer] Lanczos downscale: 2160x3840 -> 1080x1920
+  Filter: scale=1080:1920:flags=lanczos,setsar=1
+[quality-finalizer] Step 3: Writing downscale-info.json
+  Wrote downscale-info.json
+  Wrote manifest: /data/pipeline/e2e-phase14/quality-finalizer/manifest.json
+[quality-finalizer] Completed successfully in 10.61s
+[2026-05-22T03:24:43Z] >>> step: srt-exporter
+[srt-exporter] Loaded transcript: 31 words, 3 segments
+[srt-exporter] Loaded 1 silence cuts
+[srt-exporter] Detected timestamps already on silence-removed timeline — skipping remap
+[srt-exporter] Wrote /data/pipeline/e2e-phase14/srt-exporter/output.srt (3 cues)
+[srt-exporter] Wrote /data/pipeline/e2e-phase14/srt-exporter/output.vtt (3 cues)
+[srt-exporter] Completed in 0.11s — 3 cues generated
+npm notice
+npm notice New major version of npm available! 10.9.7 -> 11.15.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.15.0
+npm notice To update run: npm install -g npm@11.15.0
+npm notice

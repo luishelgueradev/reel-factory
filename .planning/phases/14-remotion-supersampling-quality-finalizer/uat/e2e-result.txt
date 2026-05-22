@@ -1,0 +1,46 @@
+=========================================
+Phase 14 — real end-to-end run (jobId=e2e-phase14)
+started: 2026-05-22T02:47:23Z
+=========================================
+
+Input video:   videos/VID_20260518_114955.mp4
+Transcript:    pipeline/VID_20260518_114955/whisper/transcript.json (reused — matches this video's audio)
+Studio config: services/remotion-studio/pipeline-config.json (layout=bar, Inter, green highlight, 'Inboxer' title)
+whisper:       SKIPPED (no GPU; transcript reused)
+
+ok: silence-cutter (18s)
+ok: ffmpeg-finalizer (11s)
+
+>>> remotion-renderer at scale:2 — THIS IS THE ~33 MIN STEP (2026-05-22T02:47:53Z)
+ok: remotion-renderer (2180s)
+scale:2 render wall-clock: 2180s (00:36:20)
+ok: quality-finalizer (30s)
+ok: srt-exporter (39s)
+
+--- Output verification ---
+renderer output dims:        2160x3840   (expect 2160x3840)
+quality-finalizer dims:      1080x1920   (expect 1080x1920)
+renderer duration:           16.512000 s
+finalizer duration:          16.512000 s
+A/V duration delta:          0.000000 s  (expect <= 0.033)
+finalizer color_space:       bt709  (expect bt709)
+
+=========================================
+DONE — 2026-05-22T03:25:48Z
+
+FINAL DELIVERABLE (compare this for sharpness + studio match):
+  /home/luis/proyectos/reel-factory/pipeline/e2e-phase14/quality-finalizer/output.mp4   (Phase 14: scale:2 -> Lanczos 1080x1920)
+
+COMPARE AGAINST:
+  /home/luis/proyectos/reel-factory/pipeline/VID_20260518_114955/output/reel_with_subs.mp4   (prior scale:1 run, same video)
+
+What to check by eye:
+  1. Subtitle text edges: crisper / smoother anti-aliasing than the prior scale:1 output?
+  2. Captions match the audio words (correct transcript)?
+  3. Styling matches your studio design: 'bar' layout, Inter font, green (#4dff00) word highlight,
+     white active / gray inactive, 'Inboxer' title with red slide-down background?
+
+Then record your verdict (pass/fail + notes) and we re-run /gsd-verify-work 14.
+Result file: .planning/phases/14-remotion-supersampling-quality-finalizer/uat/e2e-result.txt
+Full log:    .planning/phases/14-remotion-supersampling-quality-finalizer/uat/e2e-run.log
+=========================================

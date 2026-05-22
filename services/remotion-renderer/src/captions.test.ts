@@ -631,3 +631,88 @@ describe("remapWordTimestamps: words inside silence cuts", () => {
     expect(result.length).toBe(0);
   });
 });
+// ─── Explicit timeline marker (deterministic remap decision) ──────────────
+// Spike 001 / whisper-service-integration: the maxWordEnd<=new_duration heuristic
+// silently skips the remap on mid-speech cuts where the last word ends before
+// new_duration, causing progressive highlight drift. An explicit transcript.timeline
+// field makes the decision deterministic.
+
+describe("explicit timeline marker", () => {
+  // A 60s video with a 5s MID-SPEECH cut (5s→10s). A word spoken at original 50s
+  // must remap to 45s. But maxWordEnd (50.5) <= new_duration (55) + tolerance (2),
+  // so the legacy heuristic WRONGLY classifies it as already-cut and skips the remap.
+  const midCutSilence: SilenceCutList = {
+    total_segments_removed: 1,
+    total_silence_removed: 5,
+    original_duration: 60,
+    new_duration: 55,
+    cuts: [
+      {
+        original_start: 5,
+        original_end: 10,
+        new_start: 5,
+        new_end: 5,
+        duration: 5,
+        source: "both",
+        cumulative_shift: 0,
+      },
+    ],
+  };
+  const wordAt50: WhisperWord = { word: "tarde", start: 50, end: 50.5, confidence: 0.9, no_speech_prob: 0.01 };
+
+  it("DOCUMENTS THE BUG: legacy heuristic wrongly skips remap on a mid-speech cut", () => {
+    // No timeline marker → falls back to heuristic → maxWordEnd(50.5) <= 55+2 → skip remap (WRONG)
+    expect(areTimestampsAlreadyRemapped([wordAt50], midCutSilence)).toBe(true);
+  });
+
+  it("timeline:'original' forces remap regardless of maxWordEnd (the fix)", () => {
+    const transcript = {
+      language: "es",
+      model: "whisperx-large-v3",
+      timeline: "original" as const,
+      segments: [],
+      words: [wordAt50],
+      duration: 60,
+    };
+    const pages = transcriptToCaptionPages(transcript, { silenceCuts: midCutSilence });
+    // word at original 50s, after the 5s cut → remapped to 45s (45000ms), NOT left at 50s
+    const firstToken = pages[0].tokens[0];
+    expect(firstToken.fromMs).toBeGreaterThanOrEqual(44000);
+    expect(firstToken.fromMs).toBeLessThanOrEqual(46000);
+  });
+
+  it("timeline:'silence-removed' skips remap even when maxWordEnd > new_duration", () => {
+    // Word on the cut timeline at 50s; without the marker the heuristic would remap it.
+    const transcript = {
+      language: "es",
+      model: "whisperx-large-v3",
+      timeline: "silence-removed" as const,
+      segments: [],
+      words: [wordAt50],
+      duration: 55,
+    };
+    const bigCut: SilenceCutList = { ...midCutSilence, new_duration: 20 }; // maxWordEnd 50.5 > 20+2
+    const pages = transcriptToCaptionPages(transcript, { silenceCuts: bigCut });
+    // marker says already-cut → no remap → token stays ~50000ms
+    const firstToken = pages[0].tokens[0];
+    expect(firstToken.fromMs).toBeGreaterThanOrEqual(49000);
+    expect(firstToken.fromMs).toBeLessThanOrEqual(51000);
+  });
+
+  it("absent timeline falls back to the heuristic (backward compatible)", () => {
+    const transcript = {
+      language: "es",
+      model: "large-v3",
+      segments: [],
+      words: [{ word: "Hola", start: 5, end: 5.5, confidence: 0.9, no_speech_prob: 0.01 }],
+      duration: 10,
+    };
+    const sc: SilenceCutList = {
+      total_segments_removed: 1, total_silence_removed: 3, original_duration: 10, new_duration: 2,
+      cuts: [{ original_start: 0, original_end: 3, new_start: 0, new_end: 0, duration: 3, source: "both", cumulative_shift: 0 }],
+    };
+    // maxWordEnd 5.5 > 2+2 → heuristic applies remap (unchanged legacy behavior)
+    const pages = transcriptToCaptionPages(transcript, { silenceCuts: sc });
+    expect(pages.length).toBeGreaterThan(0);
+  });
+});

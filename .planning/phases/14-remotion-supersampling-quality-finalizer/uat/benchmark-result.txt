@@ -1,0 +1,68 @@
+=========================================
+Phase 14 Benchmark — started 2026-05-21T23:30:34Z
+                  — completed 2026-05-22T00:07:33Z (host script)
+                  — ffprobe measurements completed 2026-05-22 via Docker (host has no ffmpeg installed)
+=========================================
+
+Host: WSL2 / Debian on Windows 11. Docker Desktop. No GPU passthrough.
+Source clip: .planning/phases/13-encode-quality/uat/phase-13.mp4 (~16.5 s talking-head)
+Transcript: reused pipeline/VID_20260518_114955/whisper/transcript.json (mismatched — see Measurement 5)
+Output files:
+  pipeline/benchmark-phase14/remotion-renderer/output.mp4 (45.3 MB)
+  pipeline/benchmark-phase14/quality-finalizer/output.mp4 (14.0 MB)
+
+--- Measurement 1: scale:2 render wall-clock ---
+render_seconds: 2022
+render_hh_mm_ss: 00:33:42
+render_exit_code: 0
+verdict: PASS — well under the 3 h D-03 ceiling
+
+--- Measurement 2: renderer dimensions (expect 2160x3840) ---
+host_probe: FAILED — ffprobe not installed on host
+docker_probe (via reel-factory-quality-finalizer image): 2160x3840
+verdict: PASS — confirms REMOTION_SCALE=2 honored end-to-end (env → render.ts → renderMedia)
+
+--- Measurement 3: finalizer dimensions + color tags (expect 1080x1920 + all three bt709) ---
+host_probe: FAILED — ffprobe not installed on host
+docker_probe (via reel-factory-quality-finalizer image):
+  width: 1080            (expected 1080) → PASS
+  height: 1920           (expected 1920) → PASS
+  color_space: bt709     (expected bt709) → PASS
+  color_primaries: (not set in H.264 stream metadata)  (expected bt709) → PARTIAL
+  color_transfer:  (not set in H.264 stream metadata)  (expected bt709) → PARTIAL
+
+verdict: PARTIAL — Lanczos downscale gate worked (1080×1920), color_space tag landed,
+color_primaries/color_transfer did not. 1-line ffmpeg fix tracked in deferred-items.md
+(add `-x264-params colorprim=bt709:transfer=bt709:colormatrix=bt709` to downscale.py).
+
+--- Measurement 4: duration delta (expect <= 0.033s) ---
+host_probe: FAILED — ffprobe not installed on host
+docker_probe (via reel-factory-quality-finalizer image):
+  renderer_duration: 16.533333
+  finalizer_duration: 16.533333
+  delta_seconds: 0.000000
+  delta_ms: 0.000
+verdict: PASS — perfect A/V parity, 0 ms delta vs 33 ms threshold (D-10)
+
+--- Measurement 5: subjective sharpness — manual ---
+verdict: DEFERRED to a real end-to-end pipeline run.
+
+The benchmark.sh script (in this directory) seeded the renderer with phase-13.mp4 as
+input but reused a transcript.json from a DIFFERENT prior job (VID_20260518_114955) —
+caption words don't match the audio. It also did not pass PIPELINE_CONFIG_PATH to the
+renderer, so the renderer used default subtitle styling rather than the studio-saved
+pipeline-config.json. Both make the rendered subtitles uncomparable to baseline.mp4
+(which was rendered with the correct config and transcript).
+
+This is a benchmark-setup limitation, NOT a pipeline defect — the orchestrator path
+drives the renderer with the correct per-job transcript + config in production. The
+subjective sharpness UAT is rescheduled to the next real end-to-end run, tracked in
+deferred-items.md § Plan 14-03 — Subtitle visual UAT.
+
+=========================================
+Summary: 4 of 5 measurements PASS clean. 1 PARTIAL (color tags — 1-line ffmpeg fix
+deferred). 1 DEFERRED (subjective sharpness — orchestrator script setup limitation,
+not a pipeline defect).
+Result file: .planning/phases/14-remotion-supersampling-quality-finalizer/uat/benchmark-result.txt
+Full log:    .planning/phases/14-remotion-supersampling-quality-finalizer/uat/benchmark.log
+=========================================

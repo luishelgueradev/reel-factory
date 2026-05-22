@@ -78,6 +78,12 @@ class Transcript(BaseModel):
             This is the same data as segments[*].words but flattened into
             a single list for simpler iteration by downstream consumers.
         duration: Total audio duration in seconds.
+        timeline: Which audio timeline the word timestamps are on. This step
+            runs on the ORIGINAL (uncut) audio, so timestamps are always
+            "original" and the renderer applies the silence remap. Declaring it
+            explicitly lets the renderer skip its fragile maxWordEnd heuristic
+            (which mis-fires on mid-speech cuts → highlight drift). See
+            .planning/contracts/whisper-service-integration.md.
     """
 
     language: str
@@ -85,3 +91,4 @@ class Transcript(BaseModel):
     segments: List[TranscriptSegment]
     words: List[TranscriptWord]
     duration: float
+    timeline: str = "original"

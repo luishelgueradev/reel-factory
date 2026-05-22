@@ -153,7 +153,15 @@ The new service should add `"timeline": "original"` to its `profile=reels` body 
 
 ---
 
-## 7. Open questions for the user
-- D-1/D-2/D-3 above (where the HTTP step lives, sync-vs-async threshold, URL/auth/network).
-- Do you want the `"timeline": "original"` marker added to the service contract now (recommended), so the sync fix is deterministic?
-- Confirm the 600 s / 200 MB service limits cover your reel-factory inputs.
+## 7. Decisions & open questions
+
+**Resolved (2026-05-22):**
+- ✅ **Timeline marker: YES.** `transcript.timeline` ("original" | "silence-removed") added to the contract. Implemented renderer-side (`captions.ts:shouldSkipSilenceRemap`, deterministic, heuristic fallback) and producer-side in the old whisper (`schema.py` default `"original"`). **The external whisper-api MUST emit `"timeline": "original"` in its `profile=reels` body** (additive, one field). The maxWordEnd heuristic is now legacy fallback only.
+- ✅ **HTTP step shape: small container/script writing `transcript.json`** (D-1 option a). Preserves the file-based step contract → zero downstream change.
+
+**Still open (decide when wiring the actual extraction):**
+- D-2: sync-vs-async threshold (probe duration; suggest `/jobs` above ~120 s).
+- D-3: `WHISPER_API_URL` + `WHISPER_API_KEY` + network reachability between stacks.
+- D-5: retire `services/whisper/` + its orchestrator step after the HTTP step is verified.
+- D-6: confirm the 600 s / 200 MB service limits cover reel-factory inputs (raise via `MAX_DURATION_S` / `MAX_FILE_MB` if not).
+- Add `"timeline": "original"` to the external whisper-api output (separate change in `/home/luis/proyectos/whisper`).

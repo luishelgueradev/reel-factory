@@ -60,6 +60,14 @@ interface WhisperWord {
 interface WhisperTranscript {
   language: string;
   model: string;
+  // Explicit declaration of which audio timeline word timestamps are on.
+  // "original" → produced from the uncut audio; the renderer MUST apply the
+  // silence remap. "silence-removed" → produced from the already-cut audio;
+  // remap MUST be skipped. When absent (legacy transcripts), the renderer
+  // falls back to the maxWordEnd heuristic (areTimestampsAlreadyRemapped).
+  // The marker makes the decision deterministic and kills the heuristic's
+  // mid-speech-cut drift bug. See .planning/contracts/whisper-service-integration.md.
+  timeline?: "original" | "silence-removed";
   segments: Array<{
     id: number;
     start: number;
@@ -218,6 +226,32 @@ export function areTimestampsAlreadyRemapped(
   return maxWordEnd <= silenceCuts.new_duration + DETECTION_TOLERANCE_SEC;
 }
 
+/**
+ * Deterministic remap decision: returns true when the silence remap should be
+ * SKIPPED (timestamps already on the cut timeline), false when it should be
+ * APPLIED (timestamps on the original timeline).
+ *
+ * Precedence:
+ *  1. Explicit `transcript.timeline` marker wins ("silence-removed" → skip,
+ *     "original" → remap). This is authoritative and immune to the maxWordEnd
+ *     drift bug.
+ *  2. No marker (legacy transcripts) → fall back to the maxWordEnd heuristic.
+ *
+ * If there are no silence cuts, there is nothing to remap → skip (false-y remap).
+ */
+export function shouldSkipSilenceRemap(
+  transcript: Pick<WhisperTranscript, "words" | "timeline">,
+  silenceCuts: SilenceCutList | null
+): boolean {
+  if (!silenceCuts || silenceCuts.cuts.length === 0 || transcript.words.length === 0) {
+    return false;
+  }
+  if (transcript.timeline === "silence-removed") return true;  // already cut → skip remap
+  if (transcript.timeline === "original") return false;        // original → apply remap
+  // Legacy transcript with no explicit marker: fall back to the heuristic.
+  return areTimestampsAlreadyRemapped(transcript.words, silenceCuts);
+}
+
 // ─── Caption page generation ────────────────────────────────────────────
 
 export function transcriptToCaptionPages(
@@ -229,12 +263,13 @@ export function transcriptToCaptionPages(
 ): TikTokPage[] {
   const { combineTokensWithinMilliseconds = 1500, silenceCuts = null } = options;
 
-  // Double-remap detection: if timestamps are already on the silence-removed
-  // timeline (Whisper ran on the cut video), skip remapping to avoid drift.
-  const alreadyRemapped = areTimestampsAlreadyRemapped(transcript.words, silenceCuts);
+  // Deterministic remap decision: explicit transcript.timeline marker wins,
+  // heuristic is the legacy fallback. Avoids the mid-speech-cut drift bug.
+  const alreadyRemapped = shouldSkipSilenceRemap(transcript, silenceCuts);
   const effectiveSilenceCuts = alreadyRemapped ? null : silenceCuts;
   if (alreadyRemapped) {
-    console.log("Detected timestamps already on silence-removed timeline — skipping remap");
+    const reason = transcript.timeline === "silence-removed" ? "timeline marker" : "heuristic";
+    console.log(`Timestamps already on silence-removed timeline (${reason}) — skipping remap`);
   }
 
   // D-04: Remap timestamps BEFORE createTikTokStyleCaptions
@@ -257,7 +292,7 @@ export function transcriptToCaptionPages(
     combineTokensWithinMilliseconds,
   });
 
-  const PROPER_NOUNS = new Set([]);
+  const PROPER_NOUNS = new Set<string>([]);
 
   for (const page of pages) {
     for (let i = 0; i < page.tokens.length; i++) {

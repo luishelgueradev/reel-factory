@@ -3,10 +3,11 @@ import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import fs from "fs/promises";
+import { existsSync } from "fs";
 import { ProcessResponseSchema } from "../schemas/response.js";
 import { ArtifactResponseSchema } from "../schemas/response.js";
 import { isValidVideoMimetype } from "../schemas/request.js";
-import { PIPELINE_DATA_DIR } from "../constants.js";
+import { PIPELINE_DATA_DIR, ACTIVE_PIPELINE_CONFIG_PATH } from "../constants.js";
 import { runPipeline, PipelineStepError, STEPS } from "../orchestrator.js";
 import { updateJobProgress } from "../progress.js";
 
@@ -110,6 +111,29 @@ processRouter.post("/process", upload.single("video"), async (req: Request, res:
   const tmpPath = req.file.path;
   const destPath = path.join(jobInputDir, "video.mp4");
   await fs.rename(tmpPath, destPath);
+
+  // Seed the per-job renderer config from the server-side active studio config so
+  // rendered captions honor the studio design. The orchestrator threads
+  // PIPELINE_CONFIG_PATH=/data/pipeline/{jobId}/remotion-renderer/pipeline-config.json
+  // to the renderer; render.ts uses it with precedence over the inline
+  // ACTIVE_COLOR/INACTIVE_COLOR/FONT_SIZE env fallbacks. If no active config exists
+  // (or it can't be read) this is a no-op and the renderer falls back to env defaults
+  // — identical to pre-config-threading behavior. A seeding failure must never fail the job.
+  try {
+    if (existsSync(ACTIVE_PIPELINE_CONFIG_PATH)) {
+      const jobRendererDir = path.join(PIPELINE_DATA_DIR, jobId, "remotion-renderer");
+      await fs.mkdir(jobRendererDir, { recursive: true });
+      await fs.copyFile(
+        ACTIVE_PIPELINE_CONFIG_PATH,
+        path.join(jobRendererDir, "pipeline-config.json")
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[process] Could not seed active pipeline-config.json for job ${jobId} ` +
+        `(renderer will use env defaults): ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
 
   // Per D-04: Write initial "queued" status to Redis for synchronous jobs
   // so they appear in GET /status queries even before the pipeline starts

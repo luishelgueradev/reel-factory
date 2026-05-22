@@ -101,6 +101,12 @@ export const STEPS: PipelineStepConfig[] = [
       ACTIVE_COLOR: "#FFFF00",
       INACTIVE_COLOR: "#FFFFFF",
       FONT_SIZE: "58",
+      // Honor the studio-saved design. render.ts (render.ts:165) treats this config
+      // as taking precedence over the inline ACTIVE_COLOR/INACTIVE_COLOR/FONT_SIZE
+      // fallbacks above. The file is seeded by the /process route from the server-side
+      // active config (ACTIVE_PIPELINE_CONFIG_PATH); when absent, render.ts gracefully
+      // falls back to the env defaults — identical to pre-config-threading behavior.
+      PIPELINE_CONFIG_PATH: "/data/pipeline/{jobId}/remotion-renderer/pipeline-config.json",
       // Phase 14 (D-06, D-07): Enable scale:2 supersampling + lossless PNG frame capture in the pipeline.
       REMOTION_SCALE: "2",
       REMOTION_IMAGE_FORMAT: "png",

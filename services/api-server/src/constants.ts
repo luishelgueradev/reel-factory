@@ -6,6 +6,21 @@
 export const PIPELINE_DATA_DIR = process.env.PIPELINE_DATA_DIR || "/data/pipeline";
 
 /**
+ * Server-side "active" studio pipeline config.
+ *
+ * The remotion-studio editor persists the user's subtitle/title design to a
+ * pipeline-config.json. The production /process route seeds this active config
+ * into each job's renderer dir (pipeline/{jobId}/remotion-renderer/pipeline-config.json)
+ * so rendered captions honor the studio design instead of falling back to the
+ * orchestrator's inline ACTIVE_COLOR/INACTIVE_COLOR/FONT_SIZE env defaults.
+ *
+ * Env-overridable. When the file does not exist, /process skips seeding and the
+ * renderer falls back to env defaults — identical to pre-config-threading behavior.
+ */
+export const ACTIVE_PIPELINE_CONFIG_PATH =
+  process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
+
+/**
  * Docker network name for pipeline containers.
  * Uses PIPELINE_NETWORK env var (overridable for testing).
  * Docker Compose prefixes network names with the project name,

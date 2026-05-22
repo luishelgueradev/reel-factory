@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: — Calidad de video
-status: completed
+milestone: v1.2
+milestone_name: Infrastructure / shared services
+status: planning
 last_updated: "2026-05-22T02:18:51.288Z"
-last_activity: 2026-05-22 -- Phase 14 marked complete
+last_activity: 2026-05-22 -- v1.1 archived, opening v1.2 (whisper externalization)
 progress:
   total_phases: 12
   completed_phases: 12
@@ -20,7 +20,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** Phase 14 — remotion-supersampling-quality-finalizer
+**Current focus:** v1.2 setup — Phase 15 (whisper-externalization) scaffolding
 
 ## Current Position
 

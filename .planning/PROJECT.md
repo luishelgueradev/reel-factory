@@ -8,16 +8,19 @@ Un pipeline de procesamiento de video containerizado en Docker que toma un MP4 c
 
 Transformar un video crudo de una persona hablando en un video dinámico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automáticamente.
 
-## Current Milestone: v1.1 Calidad de video
+## Current State
 
-**Goal:** Mejorar considerablemente la calidad y definición de los videos de salida, cerrando la brecha visual con los reels de Instagram.
+**Shipped:** v1.0 (Pipeline completo, 12 fases) + v1.1 (Calidad de video, fases 13-14) — 14 fases / 56 plans / 9 requirements v1.1 complete. Archived: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md).
 
-**Target features:**
-- Investigación (research-first): causas de baja nitidez del render (Remotion `scale`/supersampling, re-encode H.264 múltiple, bitrate/CRF, anti-aliasing de texto) y opciones de super-resolución/upscaling (Real-ESRGAN u otros, denoise, sharpening, tradeoffs)
-- Mejoras de nitidez del render de subtítulos y video, guiadas por la investigación
-- Aumento de definición más allá de la cámara del móvil vía upscaling
+**v1.1 outcomes (notable):** scale:1 production default (Spike 001 mostró que el supersampling no aporta a captions de alto contraste a 1080); orchestrator threadea `PIPELINE_CONFIG_PATH` (los renders honran el config del studio); fix determinista del sync de highlights vía marcador `transcript.timeline` (heurística como fallback); quality-finalizer container ships pero queda como no-op con scale:1.
 
-**Key context:** v1.0 completo (12 fases). Auditoría 2026-05-20 detectó causas probables de baja nitidez: `renderMedia` sin `scale`, triple re-encode (silence-cutter→finalizer→renderer), bitrate/CRF sin tunear. Arrancar por la fase de investigación antes de implementar.
+## Current Milestone: v1.2 — Infrastructure / shared services
+
+**Goal:** Externalizar whisper a un servicio HTTP standalone compartido (multi-app: reel-factory + WhatsApp→Chatwoot), preservando el contrato reels drop-in. El servicio externo ya está construido en `/home/luis/proyectos/whisper` (FastAPI + WhisperX large-v3 + GPU, Phase 4 LLM postprocessing completa, Phase 5 deployment hardening en fixes).
+
+**Contract reference:** `.planning/contracts/whisper-service-integration.md` (spec escrito y aprobado).
+
+**Scope:** 1 fase única — Phase 15 (whisper-externalization), con 3 plans (HTTP step, orchestrator wire, validation+retirement).
 
 ## Requirements
 

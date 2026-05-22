@@ -28,10 +28,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 11: Progress Tracking** - Per-step progress reporting via GET /status/{jobId} (completed 2026-05-13)
 - [x] **Phase 12: Subtitle Preview Lab** - Interactive web UI for live subtitle style preview with all tunable parameters (completed 2026-05-18)
 
-### Milestone v1.1 — Calidad de video
+### Milestone v1.1 — Calidad de video — ✅ ARCHIVED 2026-05-22
 
-- [x] **Phase 13: Encode Quality** - Config-only encode tuning across existing containers: stream-copy in silence-cutter, CRF/Lanczos/unsharp/BT.709 in ffmpeg-finalizer (completed 2026-05-21)
-- [x] **Phase 14: Remotion Supersampling + quality-finalizer** - scale:2 supersampling in remotion-renderer and new quality-finalizer Docker step that downscales 4K output to deliverable 1080x1920 (completed 2026-05-22)
+Closed at 14 phases / 56 plans / 9 requirements complete. Phases 13–14 delivered encode-quality and supersampling+quality-finalizer; Spike 001 settled the scale decision (production defaults to scale:1). Full archive: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) · requirements: [.planning/milestones/v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md)
+
+
+
+### Milestone v1.2 — Infrastructure / shared services
+
+- [ ] **Phase 15: Whisper externalization** - Replace embedded `services/whisper` container with HTTP calls to the standalone whisper-api at `/home/luis/proyectos/whisper`. Contract is drop-in (`profile=reels` bare body identical). See `.planning/contracts/whisper-service-integration.md`. Awaiting whisper standalone Phase 5 (deployment hardening) to start execution.
 
 ## Phase Details
 
@@ -286,64 +291,6 @@ Plans:
 - [x] 12-03-SUMMARY.md — Post-phase hot-fixes: font CSS family name resolution (BF-01), TitleOverlay temporal dead zone (BF-02), player visibility (BF-03), aspect-ratio fix (BF-04), word highlight overlap (BF-06), fontWeight shift (BF-07), config persistence (BF-08). Feature enhancements: title style editor (FE-01), 8 new fonts (FE-02), dual font loading (FE-03), smooth highlight fade (FE-04).
 
 ---
-
-## Milestone v1.1 — Calidad de video
-
-**Goal:** Mejorar considerablemente la calidad y definicion de los videos de salida, cerrando la brecha visual con los reels de Instagram.
-
-### Phase 13: Encode Quality
-
-**Goal**: El pipeline produce video nítido sin degradacion acumulada — encode tunado, color correcto, y sin re-encodes redundantes en los pasos existentes
-**Depends on**: Phase 12 (milestone v1.0 complete)
-**Requirements**: ENC-01, ENC-02, ENC-03, ENC-04, ENC-05
-**Success Criteria** (what must be TRUE):
-
-  1. El video producido por silence-cutter muestra bitrate consistente con stream-copy (sin timestamp de nuevo encode), verificable con ffprobe — la perdida de generacion del concat desaparece
-  2. ffprobe sobre la salida del ffmpeg-finalizer reporta `color_space=bt709`, `color_primaries=bt709`, `color_transfer=bt709` — el lavado de color en Instagram desaparece
-  3. ffprobe sobre la salida del ffmpeg-finalizer reporta un bitrate de 5,000–8,000 kbps para un clip de 60s de talking-head, confirmando que CRF ~18 produce calidad objetivo sin bloating
-  4. El video final conserva la duracion exacta del silence-cutter output (dentro de ±33ms) y el audio esta sincronizado cuadro a cuadro — ENC-05 verificado
-  5. No hay halos visibles alrededor del texto de subtítulos en la salida del ffmpeg-finalizer tras aplicar el filtro unsharp
-
-**Plans:** 4/4 plans complete
-
-Plans:
-**Wave 1**
-
-- [x] 13-01-PLAN.md — silence-cutter stream-copy concat + validate_concat_mode (ENC-01, ENC-05)
-- [x] 13-02-PLAN.md — ffmpeg-finalizer CRF 18 + Lanczos + unsharp + BT.709 + ffprobe validators (ENC-02, ENC-03, ENC-04)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 13-03-PLAN.md — Test sweep + new test_encode_quality.py + validate_concat_mode test wiring (ENC-01, ENC-02, ENC-03, ENC-04, ENC-05)
-- [x] 13-04-PLAN.md — Visual A/B render + 13-UAT.md + human-verify checkpoint (ENC-02, ENC-03, ENC-04, ENC-05)
-
-### Phase 14: Remotion Supersampling + quality-finalizer
-
-**Goal**: Los subtítulos y overlays salen nítidos via render a 2x densidad de pixel, y la salida final sigue siendo 1080x1920 entregable via un nuevo step Docker quality-finalizer
-**Depends on**: Phase 13 (encode quality upstream must be solid before supersampling)
-**Requirements**: RENDER-01, RENDER-02, RENDER-03, RENDER-04
-**Success Criteria** (what must be TRUE):
-
-  1. El texto de subtítulos en el video final se ve visualmente mas nítido que la baseline de Phase 12 — el anti-aliasing de Remotion a 2x escala es perceptible sin zoom digital
-  2. La salida del remotion-renderer es un MP4 de 2160x3840, y la salida del quality-finalizer es 1080x1920 — la resolucion entregable no cambia para el usuario
-  3. El quality-finalizer es un container Docker independiente que recibe INPUT_PATH (2160x3840) y emite OUTPUT_PATH (1080x1920) via Lanczos en un unico encode — no modifica ningun step existente
-  4. El tiempo de render con scale:2 esta medido en un clip representativo; si supera el umbral aceptable, se evalua scale:1.5 y el valor final queda documentado en el plan
-  5. La paridad A/V se preserva en la salida del quality-finalizer — duracion y sincronía de audio identicas a la entrada
-
-**Plans**: 3 plans
-
-Plans:
-
-**Wave 1**
-
-- [x] 14-01-PLAN.md — render.ts env-var params + 3h timeout (RENDER-01, RENDER-02)
-- [x] 14-02-PLAN.md — quality-finalizer Docker container: Dockerfile + main.py + downscale logic + validators (RENDER-03)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 14-03-PLAN.md — orchestrator + docker-compose wiring + scale:2 benchmark checkpoint (RENDER-03, RENDER-04)
-
-**UI hint**: no
 
 ## Progress
 

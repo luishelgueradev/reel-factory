@@ -115,8 +115,10 @@ services:
       - ACTIVE_COLOR=${ACTIVE_COLOR:-#FFFF00}
       - INACTIVE_COLOR=${INACTIVE_COLOR:-#FFFFFF}
       - FONT_SIZE=${FONT_SIZE:-58}
-      # Phase 14 (D-06, D-07): scale:2 supersampling + lossless PNG frame capture
-      - REMOTION_SCALE=${REMOTION_SCALE:-2}
+      # Phase 14 + Spike 001: scale:1 default (supersampling gave no perceptible gain for
+      # 1080-bounded captions). PNG kept for lossless frame capture. Override REMOTION_SCALE to
+      # re-enable supersampling for thin/animated graphics if ever needed.
+      - REMOTION_SCALE=${REMOTION_SCALE:-1}
       - REMOTION_IMAGE_FORMAT=${REMOTION_IMAGE_FORMAT:-png}
       - PIPELINE_CONFIG_PATH=${PIPELINE_CONFIG_PATH:-}
     healthcheck:

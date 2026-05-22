@@ -107,8 +107,12 @@ export const STEPS: PipelineStepConfig[] = [
       // active config (ACTIVE_PIPELINE_CONFIG_PATH); when absent, render.ts gracefully
       // falls back to the env defaults — identical to pre-config-threading behavior.
       PIPELINE_CONFIG_PATH: "/data/pipeline/{jobId}/remotion-renderer/pipeline-config.json",
-      // Phase 14 (D-06, D-07): Enable scale:2 supersampling + lossless PNG frame capture in the pipeline.
-      REMOTION_SCALE: "2",
+      // Phase 14 + Spike 001: scale:1 (no supersampling). Spike 001 proved scale:2 gives
+      // ZERO perceptible gain for bold high-contrast captions at the 1080x1920 deliverable
+      // (white text is encode/scale-invariant) while costing ~6x render time. PNG kept for
+      // lossless frame capture. With scale:1 the renderer outputs 1080x1920 directly and the
+      // quality-finalizer probe gate (D-08) stream-copies — no extra re-encode.
+      REMOTION_SCALE: "1",
       REMOTION_IMAGE_FORMAT: "png",
     },
   },

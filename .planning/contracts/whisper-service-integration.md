@@ -159,6 +159,20 @@ The new service should add `"timeline": "original"` to its `profile=reels` body 
 - ✅ **Timeline marker: YES.** `transcript.timeline` ("original" | "silence-removed") added to the contract. Implemented renderer-side (`captions.ts:shouldSkipSilenceRemap`, deterministic, heuristic fallback) and producer-side in the old whisper (`schema.py` default `"original"`). **The external whisper-api MUST emit `"timeline": "original"` in its `profile=reels` body** (additive, one field). The maxWordEnd heuristic is now legacy fallback only.
 - ✅ **HTTP step shape: small container/script writing `transcript.json`** (D-1 option a). Preserves the file-based step contract → zero downstream change.
 
+**Phase 4 (LLM post-processing) impact assessment (2026-05-22):** Reviewed the whisper
+project's Phase 4 spec (`.planning/phases/04-llm-post-processing/04-CONTEXT.md` + ROADMAP).
+**Verdict: ZERO impact on the reels contract or this relocation plan.** Phase 4 adds Ollama
+LLM spelling correction + `.srt` ONLY to the text envelope (`whatsapp`/`quality` profiles):
+new fields `text`, `text_raw`, `postprocessed`, `srt` live in the envelope, never in the
+reels bare body. The reels invariant (no LLM rewrite — would desync word timestamps) is an
+explicit, tested, protected contract (SC4 / REEL-04 / D-01 / D-03), and the reels bare body
+`{language, model, segments, words, duration}` is untouched (CONTEXT line 101). The
+`postprocess` request param going `Optional[bool]=None` is backward-compatible (reels forced
+OFF regardless). No need to finish Phase 4 before proceeding here; the two are orthogonal.
+**Opportunistic:** Phase 4 touches `build_result_body` (per-profile response assembly) — the
+ideal place to also add `"timeline": "original"` to the reels branch, making the external
+service contract-complete for reel-factory in the same pass.
+
 **Still open (decide when wiring the actual extraction):**
 - D-2: sync-vs-async threshold (probe duration; suggest `/jobs` above ~120 s).
 - D-3: `WHISPER_API_URL` + `WHISPER_API_KEY` + network reachability between stacks.

@@ -1,0 +1,174 @@
+[2026-05-22T12:35:02Z] Spike 001 variant renders starting
+[2026-05-22T12:35:02Z] === variant A (REMOTION_SCALE=1) ===
+[remotion-renderer] Starting subtitle render for job: spike001-A
+  INPUT_PATH: /data/pipeline/spike001-A/ffmpeg-finalizer/output.mp4
+  TRANSCRIPT: /data/pipeline/spike001-A/whisper/transcript.json
+  OUTPUT: /data/pipeline/spike001-A/remotion-renderer/output.mp4
+  SILENCE_CUTS: /data/pipeline/spike001-A/silence-cutter/silence-cuts.json
+  FINALIZER_INFO: /data/pipeline/spike001-A/ffmpeg-finalizer/finalizer-info.json
+  Loaded 1 silence cuts
+  Loaded finalizer-info.json, safe_zone: { top: 100, bottom: 230, left: 54, right: 54 }
+  Loaded pipeline-config.json: "bar"
+  2 title overlay(s) configured
+  Visual effects: using defaults (zooms disabled, transitions: zoom)
+[remotion-renderer] Step 1: Probing input video dimensions
+  1080x1920 16.5s
+[remotion-renderer] Step 2: Loading transcript and creating caption pages
+Detected timestamps already on silence-removed timeline — skipping remap
+  31 words -> 8 caption pages
+  Timestamp timeline: already on silence-removed timeline (skipping remap)
+  0 zoom event(s) detected (threshold: 0.6)
+  1 transition event(s) at silence cut boundaries
+  Wrote caption-pages.json
+[remotion-renderer] Step 3: Copying video to Remotion public/ directory
+  Copied /data/pipeline/spike001-A/ffmpeg-finalizer/output.mp4 -> public/input-video.mp4
+[remotion-renderer] Step 4: Bundling Remotion project
+  Bundle ready: /tmp/remotion-webpack-bundle-vFTCJc
+[remotion-renderer] Step 5: Selecting composition
+  inputProps: totalDurationMs=16500, videoSrc=input-video.mp4, captionPages=8 pages
+  Duration: 495 frames (16.5s)
+[remotion-renderer] Step 6: Rendering video with subtitles
+  Render: 0%
+[Tab 6, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 5, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 7, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 0, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 3, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 4, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 1, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 6, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 2, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 63 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 5, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 7, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 3, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 4, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 0, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 2, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+[Tab 1, node_modules/@remotion/google-fonts/dist/esm/Inter.mjs:95] Made 126 network requests to load fonts for Inter. Consider loading fewer weights and subsets by passing options to loadFont(). Disable this warning by passing "ignoreTooManyRequestsWarning: true" to "options".
+  Render: 0%
+  Render: 0%
+  Render: 0%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 10%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 20%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 30%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 40%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 50%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 60%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 70%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 80%
+  Render: 90%
+  Render: 100%
+  Render complete: /data/pipeline/spike001-A/remotion-renderer/output.mp4
+[remotion-renderer] Completed in 366.65s
+[2026-05-22T12:41:21Z] A render rc=0 in 379s
+[quality-finalizer] Starting probe-gated downscale for job: spike001-A
+  INPUT_PATH:  /data/pipeline/spike001-A/remotion-renderer/output.mp4
+  OUTPUT_PATH: /data/pipeline/spike001-A/quality-finalizer/output.mp4
+[quality-finalizer] Step 1: Probing input video
+  1080x1920 duration=16.5s audio=True
+[quality-finalizer] Step 2: Stream-copying — already 1080x1920
+[quality-finalizer] Stream-copy: input already at 1080x1920
+[quality-finalizer] Step 3: Writing downscale-info.json
+  Wrote downscale-info.json
+  Wrote manifest: /data/pipeline/spike001-A/quality-finalizer/manifest.json
+[quality-finalizer] Completed successfully in 0.31s
+[2026-05-22T12:41:29Z] A finalize rc=0 
+[2026-05-22T12:41:29Z] === variant B (REMOTION_SCALE=1.333) ===
+[remotion-renderer] Starting subtitle render for job: spike001-B
+  INPUT_PATH: /data/pipeline/spike001-B/ffmpeg-finalizer/output.mp4
+  TRANSCRIPT: /data/pipeline/spike001-B/whisper/transcript.json
+  OUTPUT: /data/pipeline/spike001-B/remotion-renderer/output.mp4
+  SILENCE_CUTS: /data/pipeline/spike001-B/silence-cutter/silence-cuts.json
+  FINALIZER_INFO: /data/pipeline/spike001-B/ffmpeg-finalizer/finalizer-info.json
+  Loaded 1 silence cuts
+  Loaded finalizer-info.json, safe_zone: { top: 100, bottom: 230, left: 54, right: 54 }
+  Loaded pipeline-config.json: "bar"
+  2 title overlay(s) configured
+  Visual effects: using defaults (zooms disabled, transitions: zoom)
+[remotion-renderer] Step 1: Probing input video dimensions
+  1080x1920 16.5s
+[remotion-renderer] Step 2: Loading transcript and creating caption pages
+Detected timestamps already on silence-removed timeline — skipping remap
+  31 words -> 8 caption pages
+  Timestamp timeline: already on silence-removed timeline (skipping remap)
+  0 zoom event(s) detected (threshold: 0.6)
+  1 transition event(s) at silence cut boundaries
+  Wrote caption-pages.json
+[remotion-renderer] Step 3: Copying video to Remotion public/ directory
+  Copied /data/pipeline/spike001-B/ffmpeg-finalizer/output.mp4 -> public/input-video.mp4
+[remotion-renderer] Step 4: Bundling Remotion project
+  Bundle ready: /tmp/remotion-webpack-bundle-WVsVg1
+[remotion-renderer] Step 5: Selecting composition
+  inputProps: totalDurationMs=16500, videoSrc=input-video.mp4, captionPages=8 pages
+  Duration: 495 frames (16.5s)
+[remotion-renderer] Step 6: Rendering video with subtitles
+ERROR: Render failed: The "height" prop passed to `stitchFramesToVideo()` must be an integer, but is 2558.027.
+TypeError: The "height" prop passed to `stitchFramesToVideo()` must be an integer, but is 2558.027.
+    at validateDimension (file:///app/node_modules/remotion/dist/esm/no-react.mjs:746:11)
+    at prespawnFfmpeg (file:///app/node_modules/@remotion/renderer/dist/esm/index.mjs:20135:3)
+    at createPrestitcherIfNecessary (file:///app/node_modules/@remotion/renderer/dist/esm/index.mjs:21935:21)
+    at file:///app/node_modules/@remotion/renderer/dist/esm/index.mjs:22000:21
+    at new Promise (<anonymous>)
+    at internalRenderMediaRaw (file:///app/node_modules/@remotion/renderer/dist/esm/index.mjs:21999:21)
+    at file:///app/node_modules/@remotion/renderer/dist/esm/index.mjs:16967:20
+    at renderMedia (file:///app/node_modules/@remotion/renderer/dist/esm/index.mjs:22303:10)
+    at main (/app/src/render.ts:318:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[2026-05-22T12:41:45Z] B render rc=1 in 16s
+[2026-05-22T12:41:45Z] DONE — variant outputs:
+  A: pipeline/spike001-A/quality-finalizer/output.mp4
+  B: pipeline/spike001-B/quality-finalizer/output.mp4

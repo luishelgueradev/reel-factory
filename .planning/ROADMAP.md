@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### Milestone v1.1 — Calidad de video
 
 - [x] **Phase 13: Encode Quality** - Config-only encode tuning across existing containers: stream-copy in silence-cutter, CRF/Lanczos/unsharp/BT.709 in ffmpeg-finalizer (completed 2026-05-21)
-- [ ] **Phase 14: Remotion Supersampling + quality-finalizer** - scale:2 supersampling in remotion-renderer and new quality-finalizer Docker step that downscales 4K output to deliverable 1080x1920
+- [x] **Phase 14: Remotion Supersampling + quality-finalizer** - scale:2 supersampling in remotion-renderer and new quality-finalizer Docker step that downscales 4K output to deliverable 1080x1920 (completed 2026-05-22)
 
 ## Phase Details
 
@@ -341,7 +341,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 14-03-PLAN.md — orchestrator + docker-compose wiring + scale:2 benchmark checkpoint (RENDER-03, RENDER-04)
+- [x] 14-03-PLAN.md — orchestrator + docker-compose wiring + scale:2 benchmark checkpoint (RENDER-03, RENDER-04)
 
 **UI hint**: no
 
@@ -365,4 +365,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
 | 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
 | 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
-| 14. Remotion Supersampling + quality-finalizer | 2/3 | In Progress|  |
+| 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |

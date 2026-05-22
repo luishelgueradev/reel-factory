@@ -114,3 +114,44 @@ The result: the rendered captions don't match the audio of `phase-13.mp4`, and t
 **Owner / next step:** Run the real pipeline end-to-end on a known clip with a known studio config (either a fresh upload via `/process` or `docker compose run` of the full chain), then visually compare the quality-finalizer output against `baseline.mp4`. Expected outcome: the scale:2 + Lanczos path produces visibly crisper subtitle text edges than the scale:1 baseline. If it doesn't, that's the real signal for D-09 / D-11 / D-12 review.
 
 This UAT can be folded into the next end-to-end smoke test, or scheduled as part of milestone v1.1 closing UAT.
+
+---
+
+## Cross-cutting — orchestrator does NOT thread PIPELINE_CONFIG_PATH to the renderer (root cause of "subtitles don't match studio")
+
+**Discovered during:** Phase 14 end-to-end UAT preparation (2026-05-22).
+
+**Issue:** `services/api-server/src/orchestrator.ts` defines the `remotion-renderer` STEP with inline
+caption env vars only — `ACTIVE_COLOR=#FFFF00`, `INACTIVE_COLOR=#FFFFFF`, `FONT_SIZE=58` — and does
+NOT set `PIPELINE_CONFIG_PATH`. But `services/remotion-renderer/src/render.ts:165-186` only loads the
+studio-saved `pipeline-config.json` when `process.env.PIPELINE_CONFIG_PATH` is set (no input-relative
+fallback in the renderer itself). Net effect: **every production pipeline run ignores the studio config**
+(layout, fontFamily, highlightColor, titles, etc.) and falls back to the three inline env defaults.
+
+This is exactly the symptom the user reported in Phase 14 ("los subtítulos renderizados no son los que
+seté en el remotion studio"). It is NOT a Phase 14 regression — Phase 14 only added the scale/quality
+env vars next to the existing caption env vars; the missing config-threading predates this phase. But it
+IS the real fix the user wants.
+
+**Why it matters:** The remotion-studio editor lets the user design captions + titles and persists them
+to `pipeline-config.json` via `PUT /api/config`. That design is silently dropped at render time in the
+orchestrated path. Only manually-invoked renders that set `PIPELINE_CONFIG_PATH` (like the Phase 14
+e2e-run.sh UAT script) honor it.
+
+**Fix (small, in orchestrator.ts remotion-renderer STEP envVars):**
+```ts
+// Thread the studio-saved config so caption layout/font/colors/titles are honored.
+PIPELINE_CONFIG_PATH: "/data/pipeline/{jobId}/remotion-renderer/pipeline-config.json",
+```
+…plus a mechanism to actually place that file per job. Options:
+  1. The API `/process` route accepts an optional config upload (or a `configId`) and writes it to
+     `pipeline/{jobId}/remotion-renderer/pipeline-config.json` before `runPipeline`.
+  2. Or copy a server-side "active" `pipeline-config.json` into the job dir at job start.
+  3. Or fall back to a default config path baked into the renderer when the per-job file is absent.
+
+Decision needed: where does the per-job config come from (request payload vs server-side active config).
+This is a UI/pipeline-contract change — recommend a dedicated small plan/phase rather than folding into
+Phase 14 verification.
+
+**Workaround in use:** `uat/e2e-run.sh` copies `services/remotion-studio/pipeline-config.json` into the
+job's renderer dir and sets `PIPELINE_CONFIG_PATH` explicitly, so the UAT output reflects the studio design.

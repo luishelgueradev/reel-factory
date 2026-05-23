@@ -420,21 +420,24 @@ cat pipeline/{jobId}/remotion-renderer/remotion-info.json | python3 -m json.tool
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `ACTIVE_PIPELINE_CONFIG_PATH` be added to docker-compose `remotion-studio` environment block?**
    - What we know: The default hardcoded in server.ts (if we use `process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json"`) matches `api-server/src/constants.ts:21`. No env var strictly needed.
    - What's unclear: Whether having it explicit in docker-compose aids observability and allows overriding without rebuild.
    - Recommendation: Add it to docker-compose for clarity. Low-risk one-line change.
+   - **RESOLVED: YES** — Plan 16-01 Task 2 adds  to the remotion-studio environment block in docker-compose.yml. Explicit declaration improves observability and allows env override without rebuild.
 
 2. **Does Issue B (flicker) fully disappear on `bar` layout after Issue A, even without the duration fix?**
    - What we know: The `bar` layout is more continuous than `tiktok` (single bar vs. per-word pop). The e2e flicker was measured on tiktok layout (wrong-layout fallback from Issue A). Short inter-page gaps (20ms) with 300ms FADE_OUT still cause blank gaps regardless of layout.
    - What's unclear: Whether the `bar` layout's opaque background bar visually masks the gap more than tiktok does.
    - Recommendation: Mandatory re-measure after Issue A fix before touching layout files. The plan must encode this as a checkpoint.
+   - **RESOLVED: TO BE MEASURED** — Plan 16-02 checkpoint measures flicker on a real bar-layout render. The human resume signal (approved: loaded=true, flicker=none/present/reduced) documents the outcome before Plan 16-03 executes the duration fix.
 
 3. **Should `PAGE_OVERLAP_GUARD_MS` be set to 0 as part of Option 1?**
    - What we know: With Option 1, `PAGE_OVERLAP_GUARD_MS` is only relevant to the last-page clamping logic and the `safeEndMs` formula which is being replaced. It becomes a dead constant.
    - Recommendation: Remove it from the `durationInFrames` calculation when applying Option 1; do not change its declaration in `shared-styles.ts` (other code may reference it, and removing the constant itself is cosmetic risk).
+   - **RESOLVED: NO** — `PAGE_OVERLAP_GUARD_MS` constant is preserved in `shared-styles.ts` unchanged. Plan 16-03 Task 1 stops using it in the duration formula (Option 1 makes it redundant for non-last pages) but does NOT remove or zero the declaration.
 
 ---
 

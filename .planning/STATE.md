@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Infrastructure / shared services
-status: executing
-last_updated: "2026-05-23T00:43:46.932Z"
+status: verifying
+last_updated: "2026-05-23T00:48:48.456Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 13
   completed_phases: 12
   total_plans: 51
-  completed_plans: 50
+  completed_plans: 51
   percent: 92
 ---
 
@@ -25,13 +25,14 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 15 (whisper-externalization) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-05-23 — Completed 15-01 (whisper-http-step container: HTTP client, 14 unit tests green)
+Plan: 3 of 3
+Status: Executing — 15-02 complete, 15-03 (validation + retire old whisper) remaining
+Last activity: 2026-05-23 — Completed 15-02 (orchestrator + compose wired to whisper-http-step; GPU plumbing removed; tests green; tsc zero new errors)
 
 ### Phase 15 Decisions
 
 - **15-01 NO_AUDIO_STREAM behavior change:** the new whisper-http-step FAILS on no-audio (400 NO_AUDIO_STREAM → error manifest + exit 1), vs the legacy whisper step which wrote an empty transcript and exited 0. Adopted to surface bad input instead of silently producing an empty transcript. FLAGGED for 15-03's parity test (the no-audio case is intentionally non-parity).
+- **15-02 GPU plumbing removed (D-4):** the whisper-only NVIDIA `DeviceRequests` block (orchestrator.ts) and the compose `deploy.resources.devices` GPU stanza were grep-confirmed whisper-only and removed; the external whisper-api owns the GPU. Reachability is now via `host.docker.internal:host-gateway` (D-3). STEP name + `whisper/transcript.json` path unchanged → zero downstream change. 15-03 must verify live host.docker.internal reachability before retiring `services/whisper/`.
 
 ## Post-Phase Fixes (2026-05-19)
 

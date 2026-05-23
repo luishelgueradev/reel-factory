@@ -176,6 +176,7 @@ services:
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
       - PIPELINE_CONFIG_PATH=/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/pipeline-config.json
       - PORT=3123
+      - ACTIVE_PIPELINE_CONFIG_PATH=/data/pipeline/pipeline-config.json
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3123/api/config"]
       interval: 10s

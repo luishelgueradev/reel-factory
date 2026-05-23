@@ -38,6 +38,7 @@ Closed at 14 phases / 56 plans / 9 requirements complete. Phases 13–14 deliver
 
 - [x] **Phase 15: Whisper externalization** - Replace embedded `services/whisper` container with HTTP calls to the standalone whisper-api at `/home/luis/proyectos/whisper`. Contract is drop-in (`profile=reels` bare body identical). See `.planning/contracts/whisper-service-integration.md`. **Plans:** 3 plans in 3 waves (planned 2026-05-22). (completed 2026-05-23)
 
+- [ ] **Phase 16: Render config + flicker fixes** - Two pre-existing render-path bugs surfaced during the Phase 15 e2e run (NOT whisper regressions): (A) studio pipeline-config.json never reaches the renderer in production because ACTIVE_PIPELINE_CONFIG_PATH is never populated (v1.1 wired the consumer, not the producer) — fix: studio PUT /api/config also writes the active config; (B) subtitle flicker from inter-page fade gaps. See .planning/phases/16-render-config-flicker/16-CONTEXT.md.
 ## Phase Details
 
 ### Phase 1: Pipeline Infrastructure
@@ -335,3 +336,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
 | 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |
 | 15. Whisper externalization | 3/3 | Complete   | 2026-05-23 |
+

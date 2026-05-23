@@ -36,7 +36,7 @@ Closed at 14 phases / 56 plans / 9 requirements complete. Phases 13–14 deliver
 
 ### Milestone v1.2 — Infrastructure / shared services
 
-- [ ] **Phase 15: Whisper externalization** - Replace embedded `services/whisper` container with HTTP calls to the standalone whisper-api at `/home/luis/proyectos/whisper`. Contract is drop-in (`profile=reels` bare body identical). See `.planning/contracts/whisper-service-integration.md`. **Plans:** 3 plans in 3 waves (planned 2026-05-22).
+- [x] **Phase 15: Whisper externalization** - Replace embedded `services/whisper` container with HTTP calls to the standalone whisper-api at `/home/luis/proyectos/whisper`. Contract is drop-in (`profile=reels` bare body identical). See `.planning/contracts/whisper-service-integration.md`. **Plans:** 3 plans in 3 waves (planned 2026-05-22). (completed 2026-05-23)
 
 ## Phase Details
 
@@ -309,7 +309,7 @@ Plans:
 
 - [x] 15-01-PLAN.md — New services/whisper-http-step/ container: ffprobe duration gate + sync/async HTTP client + error mapping + mock-api unit tests
 - [x] 15-02-PLAN.md — Orchestrator STEP swap (drop GPU/HF_HOME, add WHISPER_API_URL/KEY) + orchestrator tests + docker-compose wiring (host.docker.internal)
-- [ ] 15-03-PLAN.md — timeline marker on external whisper-api + e2e drift repro (human-verify) + parity test + retire services/whisper/
+- [x] 15-03-PLAN.md — timeline marker on external whisper-api + e2e drift repro (human-verify) + parity test + retire services/whisper/
 
 ---
 
@@ -334,3 +334,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
 | 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
 | 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |
+| 15. Whisper externalization | 3/3 | Complete   | 2026-05-23 |

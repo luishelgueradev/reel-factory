@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Infrastructure / shared services
 status: verifying
-last_updated: "2026-05-23T00:48:48.456Z"
+last_updated: "2026-05-23T02:13:20.348Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 13
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 51
-  completed_plans: 51
-  percent: 92
+  completed_plans: 52
+  percent: 100
 ---
 
 # Project State
@@ -24,15 +24,17 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 15 (whisper-externalization) — EXECUTING
-Plan: 3 of 3
-Status: Executing — 15-02 complete, 15-03 (validation + retire old whisper) remaining
-Last activity: 2026-05-23 — Completed 15-02 (orchestrator + compose wired to whisper-http-step; GPU plumbing removed; tests green; tsc zero new errors)
+Phase: 15 (whisper-externalization) — COMPLETE (ready for verification)
+Plan: 3 of 3 (all complete)
+Status: Phase complete — ready for verification
+Last activity: 2026-05-23 — Completed 15-03 (timeline marker @ external 00bceb2; e2e drift repro CLOSED + parity 76=76/0.000s; services/whisper retired)
 
 ### Phase 15 Decisions
 
 - **15-01 NO_AUDIO_STREAM behavior change:** the new whisper-http-step FAILS on no-audio (400 NO_AUDIO_STREAM → error manifest + exit 1), vs the legacy whisper step which wrote an empty transcript and exited 0. Adopted to surface bad input instead of silently producing an empty transcript. FLAGGED for 15-03's parity test (the no-audio case is intentionally non-parity).
 - **15-02 GPU plumbing removed (D-4):** the whisper-only NVIDIA `DeviceRequests` block (orchestrator.ts) and the compose `deploy.resources.devices` GPU stanza were grep-confirmed whisper-only and removed; the external whisper-api owns the GPU. Reachability is now via `host.docker.internal:host-gateway` (D-3). STEP name + `whisper/transcript.json` path unchanged → zero downstream change. 15-03 must verify live host.docker.internal reachability before retiring `services/whisper/`.
+- **15-03 externalization VERIFIED + services/whisper retired:** timeline=`"original"` marker added in the EXTERNAL whisper repo (`/home/luis/proyectos/whisper` @ `00bceb2`) — deterministic renderer remap fired (`timestamps_already_remapped=false` on 8 cuts). Parity old-vs-new passed: 76=76 words, 0.000s max delta, no_speech_prob on all, model whisperx-large-v3 both sides. Human-verified back-half highlight sync on an 8-mid-speech-cut clip → deferred Spike 001 drift repro CLOSED. `services/whisper/` deleted (D-5 gate satisfied); pipeline runs on the HTTP step only.
+- **15-03 DEFERRED (new phase — NOT whisper regressions):** (A) Studio config not applied — renderer fell back to env defaults because `ACTIVE_PIPELINE_CONFIG_PATH` (`/data/pipeline/pipeline-config.json`) is never populated (v1.1 wired the consumer, not the producer). (B) Subtitle flicker — empty inter-page caption gaps (20–241ms) + FADE_OUT_MS=300/FADE_IN_MS=100 cause ~15 fade-out/in cycles over 36s, amplified by the wrong layout fallback from (A). Both are render-path bugs, do NOT affect transcript parity, and were moved out of Phase 15. See 15-03-SUMMARY "Deferred / out-of-scope".
 
 ## Post-Phase Fixes (2026-05-19)
 

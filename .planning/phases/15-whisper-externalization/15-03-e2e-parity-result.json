@@ -1,0 +1,24 @@
+{
+  "clip": "videos/video-1.mp4 (54.65s source -> 36.73s output, 8 mid-speech silence cuts)",
+  "new_run_job": "c59d1234-6986-4c62-ba6e-7a84bf732a03",
+  "baseline_run_job": "24c4899d-6292-4751-9f5b-7bc75843923d",
+  "timeline_marker_in_new_transcript": "original",
+  "no_speech_prob_on_all_new_words": true,
+  "renderer_remap": {
+    "silence_cuts_applied": 8,
+    "timestamps_already_remapped": false,
+    "note": "deterministic remap path fired"
+  },
+  "parity": {
+    "passed": true,
+    "old_word_count": 76,
+    "new_word_count": 76,
+    "word_count_delta": 0,
+    "max_time_delta_s": 0.0,
+    "words_out_of_tolerance": 0,
+    "missing_no_speech_prob_new": 0,
+    "old_model": "whisperx-large-v3",
+    "new_model": "whisperx-large-v3",
+    "failures": []
+  }
+}

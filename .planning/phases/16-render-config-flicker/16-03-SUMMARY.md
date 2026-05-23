@@ -142,6 +142,10 @@ None.
 
 None — no external service configuration required.
 
+## Self-Check: PASSED
+
+All files exist, commits verified (118d757, c6016fd), isLastPage formula present in all 4 layout files, diff empty for both renderer sync files, 246 tests pass.
+
 ## Next Phase Readiness
 
 - Issue B formula fix in place (studio + renderer synced)

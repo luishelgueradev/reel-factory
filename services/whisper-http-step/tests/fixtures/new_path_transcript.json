@@ -1,0 +1,461 @@
+{
+  "language": "es",
+  "model": "whisperx-large-v3",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 7.2,
+      "text": "este es mi v\u00eddeo de prueba de 10 segundos y con esto vamos a probar si",
+      "words": [
+        {
+          "word": "este",
+          "start": 0.05,
+          "end": 1.15,
+          "confidence": 0.46240234375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "es",
+          "start": 1.15,
+          "end": 1.27,
+          "confidence": 0.9814453125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "mi",
+          "start": 1.27,
+          "end": 1.37,
+          "confidence": 0.990234375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "v\u00eddeo",
+          "start": 1.37,
+          "end": 1.75,
+          "confidence": 0.7666015625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "de",
+          "start": 1.75,
+          "end": 2.03,
+          "confidence": 0.9970703125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "prueba",
+          "start": 2.03,
+          "end": 2.41,
+          "confidence": 0.99267578125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "de",
+          "start": 2.41,
+          "end": 3.19,
+          "confidence": 0.99072265625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "10",
+          "start": 3.19,
+          "end": 3.47,
+          "confidence": 0.880859375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "segundos",
+          "start": 3.47,
+          "end": 4.43,
+          "confidence": 0.99609375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "y",
+          "start": 4.43,
+          "end": 6.09,
+          "confidence": 0.908203125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "con",
+          "start": 6.09,
+          "end": 6.21,
+          "confidence": 0.9775390625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "esto",
+          "start": 6.21,
+          "end": 6.37,
+          "confidence": 0.9287109375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "vamos",
+          "start": 6.37,
+          "end": 6.65,
+          "confidence": 0.826171875,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "a",
+          "start": 6.65,
+          "end": 6.77,
+          "confidence": 0.9921875,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "probar",
+          "start": 6.77,
+          "end": 7.11,
+          "confidence": 0.9921875,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "si",
+          "start": 7.11,
+          "end": 7.25,
+          "confidence": 0.943359375,
+          "no_speech_prob": 0.0
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 7.2,
+      "end": 13.84,
+      "text": "es que est\u00e1 funcionando bien la traducci\u00f3n de las fuentes y el",
+      "words": [
+        {
+          "word": "es",
+          "start": 7.25,
+          "end": 7.45,
+          "confidence": 0.56396484375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "que",
+          "start": 7.45,
+          "end": 7.55,
+          "confidence": 0.99267578125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "est\u00e1",
+          "start": 7.55,
+          "end": 7.55,
+          "confidence": 0.916015625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "funcionando",
+          "start": 7.55,
+          "end": 8.11,
+          "confidence": 0.99365234375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "bien",
+          "start": 8.11,
+          "end": 8.43,
+          "confidence": 0.99609375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "la",
+          "start": 8.43,
+          "end": 8.67,
+          "confidence": 0.96728515625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "traducci\u00f3n",
+          "start": 8.67,
+          "end": 9.21,
+          "confidence": 0.99609375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "de",
+          "start": 9.21,
+          "end": 9.97,
+          "confidence": 0.98876953125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "las",
+          "start": 9.97,
+          "end": 11.35,
+          "confidence": 0.94775390625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "fuentes",
+          "start": 11.35,
+          "end": 12.93,
+          "confidence": 0.97705078125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "y",
+          "start": 12.93,
+          "end": 13.59,
+          "confidence": 0.943359375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "el",
+          "start": 13.59,
+          "end": 13.89,
+          "confidence": 0.91162109375,
+          "no_speech_prob": 0.0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 13.84,
+      "end": 16.12,
+      "text": "remotion stop ahora",
+      "words": [
+        {
+          "word": "remotion",
+          "start": 13.89,
+          "end": 14.83,
+          "confidence": 0.56048583984375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "stop",
+          "start": 14.83,
+          "end": 15.47,
+          "confidence": 0.255859375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "ahora",
+          "start": 15.47,
+          "end": 16.17,
+          "confidence": 0.837890625,
+          "no_speech_prob": 0.0
+        }
+      ]
+    }
+  ],
+  "words": [
+    {
+      "word": "este",
+      "start": 0.05,
+      "end": 1.15,
+      "confidence": 0.46240234375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "es",
+      "start": 1.15,
+      "end": 1.27,
+      "confidence": 0.9814453125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "mi",
+      "start": 1.27,
+      "end": 1.37,
+      "confidence": 0.990234375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "v\u00eddeo",
+      "start": 1.37,
+      "end": 1.75,
+      "confidence": 0.7666015625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "de",
+      "start": 1.75,
+      "end": 2.03,
+      "confidence": 0.9970703125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "prueba",
+      "start": 2.03,
+      "end": 2.41,
+      "confidence": 0.99267578125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "de",
+      "start": 2.41,
+      "end": 3.19,
+      "confidence": 0.99072265625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "10",
+      "start": 3.19,
+      "end": 3.47,
+      "confidence": 0.880859375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "segundos",
+      "start": 3.47,
+      "end": 4.43,
+      "confidence": 0.99609375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "y",
+      "start": 4.43,
+      "end": 6.09,
+      "confidence": 0.908203125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "con",
+      "start": 6.09,
+      "end": 6.21,
+      "confidence": 0.9775390625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "esto",
+      "start": 6.21,
+      "end": 6.37,
+      "confidence": 0.9287109375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "vamos",
+      "start": 6.37,
+      "end": 6.65,
+      "confidence": 0.826171875,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "a",
+      "start": 6.65,
+      "end": 6.77,
+      "confidence": 0.9921875,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "probar",
+      "start": 6.77,
+      "end": 7.11,
+      "confidence": 0.9921875,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "si",
+      "start": 7.11,
+      "end": 7.25,
+      "confidence": 0.943359375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "es",
+      "start": 7.25,
+      "end": 7.45,
+      "confidence": 0.56396484375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "que",
+      "start": 7.45,
+      "end": 7.55,
+      "confidence": 0.99267578125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "est\u00e1",
+      "start": 7.55,
+      "end": 7.55,
+      "confidence": 0.916015625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "funcionando",
+      "start": 7.55,
+      "end": 8.11,
+      "confidence": 0.99365234375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "bien",
+      "start": 8.11,
+      "end": 8.43,
+      "confidence": 0.99609375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "la",
+      "start": 8.43,
+      "end": 8.67,
+      "confidence": 0.96728515625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "traducci\u00f3n",
+      "start": 8.67,
+      "end": 9.21,
+      "confidence": 0.99609375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "de",
+      "start": 9.21,
+      "end": 9.97,
+      "confidence": 0.98876953125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "las",
+      "start": 9.97,
+      "end": 11.35,
+      "confidence": 0.94775390625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "fuentes",
+      "start": 11.35,
+      "end": 12.93,
+      "confidence": 0.97705078125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "y",
+      "start": 12.93,
+      "end": 13.59,
+      "confidence": 0.943359375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "el",
+      "start": 13.59,
+      "end": 13.89,
+      "confidence": 0.91162109375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "remotion",
+      "start": 13.89,
+      "end": 14.83,
+      "confidence": 0.56048583984375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "stop",
+      "start": 14.83,
+      "end": 15.47,
+      "confidence": 0.255859375,
+      "no_speech_prob": 0.0
+    }
+  ],
+  "duration": 16.832,
+  "timeline": "original"
+}

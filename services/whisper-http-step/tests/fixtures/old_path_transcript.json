@@ -1,0 +1,467 @@
+{
+  "language": "es",
+  "model": "medium",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 7.2,
+      "text": "este es mi vídeo de prueba de 10 segundos y con esto vamos a probar si",
+      "words": [
+        {
+          "word": "este",
+          "start": 0.0,
+          "end": 1.1,
+          "confidence": 0.46240234375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "es",
+          "start": 1.1,
+          "end": 1.22,
+          "confidence": 0.9814453125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "mi",
+          "start": 1.22,
+          "end": 1.32,
+          "confidence": 0.990234375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "vídeo",
+          "start": 1.32,
+          "end": 1.7,
+          "confidence": 0.7666015625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "de",
+          "start": 1.7,
+          "end": 1.98,
+          "confidence": 0.9970703125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "prueba",
+          "start": 1.98,
+          "end": 2.36,
+          "confidence": 0.99267578125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "de",
+          "start": 2.36,
+          "end": 3.14,
+          "confidence": 0.99072265625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "10",
+          "start": 3.14,
+          "end": 3.42,
+          "confidence": 0.880859375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "segundos",
+          "start": 3.42,
+          "end": 4.38,
+          "confidence": 0.99609375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "y",
+          "start": 4.38,
+          "end": 6.04,
+          "confidence": 0.908203125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "con",
+          "start": 6.04,
+          "end": 6.16,
+          "confidence": 0.9775390625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "esto",
+          "start": 6.16,
+          "end": 6.32,
+          "confidence": 0.9287109375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "vamos",
+          "start": 6.32,
+          "end": 6.6,
+          "confidence": 0.826171875,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "a",
+          "start": 6.6,
+          "end": 6.72,
+          "confidence": 0.9921875,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "probar",
+          "start": 6.72,
+          "end": 7.06,
+          "confidence": 0.9921875,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "si",
+          "start": 7.06,
+          "end": 7.2,
+          "confidence": 0.943359375,
+          "no_speech_prob": 0.0
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 7.2,
+      "end": 13.84,
+      "text": "es que está funcionando bien la traducción de las fuentes y el",
+      "words": [
+        {
+          "word": "es",
+          "start": 7.2,
+          "end": 7.4,
+          "confidence": 0.56396484375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "que",
+          "start": 7.4,
+          "end": 7.5,
+          "confidence": 0.99267578125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "está",
+          "start": 7.5,
+          "end": 7.5,
+          "confidence": 0.916015625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "funcionando",
+          "start": 7.5,
+          "end": 8.06,
+          "confidence": 0.99365234375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "bien",
+          "start": 8.06,
+          "end": 8.38,
+          "confidence": 0.99609375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "la",
+          "start": 8.38,
+          "end": 8.62,
+          "confidence": 0.96728515625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "traducción",
+          "start": 8.62,
+          "end": 9.16,
+          "confidence": 0.99609375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "de",
+          "start": 9.16,
+          "end": 9.92,
+          "confidence": 0.98876953125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "las",
+          "start": 9.92,
+          "end": 11.3,
+          "confidence": 0.94775390625,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "fuentes",
+          "start": 11.3,
+          "end": 12.88,
+          "confidence": 0.97705078125,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "y",
+          "start": 12.88,
+          "end": 13.54,
+          "confidence": 0.943359375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "el",
+          "start": 13.54,
+          "end": 13.84,
+          "confidence": 0.91162109375,
+          "no_speech_prob": 0.0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 13.84,
+      "end": 16.12,
+      "text": "remotion stop ahora",
+      "words": [
+        {
+          "word": "remotion",
+          "start": 13.84,
+          "end": 14.78,
+          "confidence": 0.56048583984375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "stop",
+          "start": 14.78,
+          "end": 15.42,
+          "confidence": 0.255859375,
+          "no_speech_prob": 0.0
+        },
+        {
+          "word": "ahora",
+          "start": 15.42,
+          "end": 16.12,
+          "confidence": 0.837890625,
+          "no_speech_prob": 0.0
+        }
+      ]
+    }
+  ],
+  "words": [
+    {
+      "word": "este",
+      "start": 0.0,
+      "end": 1.1,
+      "confidence": 0.46240234375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "es",
+      "start": 1.1,
+      "end": 1.22,
+      "confidence": 0.9814453125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "mi",
+      "start": 1.22,
+      "end": 1.32,
+      "confidence": 0.990234375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "vídeo",
+      "start": 1.32,
+      "end": 1.7,
+      "confidence": 0.7666015625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "de",
+      "start": 1.7,
+      "end": 1.98,
+      "confidence": 0.9970703125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "prueba",
+      "start": 1.98,
+      "end": 2.36,
+      "confidence": 0.99267578125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "de",
+      "start": 2.36,
+      "end": 3.14,
+      "confidence": 0.99072265625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "10",
+      "start": 3.14,
+      "end": 3.42,
+      "confidence": 0.880859375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "segundos",
+      "start": 3.42,
+      "end": 4.38,
+      "confidence": 0.99609375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "y",
+      "start": 4.38,
+      "end": 6.04,
+      "confidence": 0.908203125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "con",
+      "start": 6.04,
+      "end": 6.16,
+      "confidence": 0.9775390625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "esto",
+      "start": 6.16,
+      "end": 6.32,
+      "confidence": 0.9287109375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "vamos",
+      "start": 6.32,
+      "end": 6.6,
+      "confidence": 0.826171875,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "a",
+      "start": 6.6,
+      "end": 6.72,
+      "confidence": 0.9921875,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "probar",
+      "start": 6.72,
+      "end": 7.06,
+      "confidence": 0.9921875,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "si",
+      "start": 7.06,
+      "end": 7.2,
+      "confidence": 0.943359375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "es",
+      "start": 7.2,
+      "end": 7.4,
+      "confidence": 0.56396484375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "que",
+      "start": 7.4,
+      "end": 7.5,
+      "confidence": 0.99267578125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "está",
+      "start": 7.5,
+      "end": 7.5,
+      "confidence": 0.916015625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "funcionando",
+      "start": 7.5,
+      "end": 8.06,
+      "confidence": 0.99365234375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "bien",
+      "start": 8.06,
+      "end": 8.38,
+      "confidence": 0.99609375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "la",
+      "start": 8.38,
+      "end": 8.62,
+      "confidence": 0.96728515625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "traducción",
+      "start": 8.62,
+      "end": 9.16,
+      "confidence": 0.99609375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "de",
+      "start": 9.16,
+      "end": 9.92,
+      "confidence": 0.98876953125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "las",
+      "start": 9.92,
+      "end": 11.3,
+      "confidence": 0.94775390625,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "fuentes",
+      "start": 11.3,
+      "end": 12.88,
+      "confidence": 0.97705078125,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "y",
+      "start": 12.88,
+      "end": 13.54,
+      "confidence": 0.943359375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "el",
+      "start": 13.54,
+      "end": 13.84,
+      "confidence": 0.91162109375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "remotion",
+      "start": 13.84,
+      "end": 14.78,
+      "confidence": 0.56048583984375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "stop",
+      "start": 14.78,
+      "end": 15.42,
+      "confidence": 0.255859375,
+      "no_speech_prob": 0.0
+    },
+    {
+      "word": "ahora",
+      "start": 15.42,
+      "end": 16.12,
+      "confidence": 0.837890625,
+      "no_speech_prob": 0.0
+    }
+  ],
+  "duration": 16.832
+}

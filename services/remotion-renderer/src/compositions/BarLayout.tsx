@@ -246,12 +246,17 @@ export const BarLayout: React.FC<BarLayoutProps> = ({
         const fromFrame = Math.round(page.startMs * (fps / 1000));
         const lastTokenEndMs = page.tokens.length > 0 ? page.tokens[page.tokens.length - 1].toMs : page.startMs;
 
-        const nextPageStartMs = i + 1 < captionPages.length ? captionPages[i + 1].startMs : Infinity;
-        const displayEndMs = lastTokenEndMs + FADE_OUT_MS;
-        const safeEndMs = Math.min(displayEndMs, nextPageStartMs - PAGE_OVERLAP_GUARD_MS);
-        const clampedEndMs = (i === captionPages.length - 1 && totalDurationMs)
-          ? Math.min(safeEndMs, totalDurationMs)
-          : safeEndMs;
+        const isLastPage = i === captionPages.length - 1;
+        const nextPageStartMs = !isLastPage ? captionPages[i + 1].startMs : Infinity;
+
+        // Non-last pages: Sequence runs until next page starts — eliminates inter-page blank gap.
+        // PAGE_OVERLAP_GUARD_MS is intentionally NOT subtracted (it was the source of the gap).
+        // Last page: fade out naturally after last token (FADE_OUT_MS=300ms).
+        const displayEndMs = !isLastPage ? nextPageStartMs : lastTokenEndMs + FADE_OUT_MS;
+
+        const clampedEndMs = (isLastPage && totalDurationMs)
+          ? Math.min(displayEndMs, totalDurationMs)
+          : displayEndMs;
         const durationInFrames = Math.max(1, Math.ceil((clampedEndMs - page.startMs) * (fps / 1000)));
 
         return (

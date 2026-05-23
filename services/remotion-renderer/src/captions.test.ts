@@ -716,3 +716,79 @@ describe("explicit timeline marker", () => {
     expect(pages.length).toBeGreaterThan(0);
   });
 });
+
+// ─── layout durationInFrames formula (Issue B fix) ──────────────────────────
+
+/**
+ * Pure arithmetic helper replicating the isLastPage formula from BarLayout.tsx
+ * and TikTokLayout.tsx (Plan 16-03 fix). Tests the no-gap duration calculation
+ * without importing React or Remotion hooks.
+ *
+ * Formula (must match exactly what is in the layout files):
+ *   isLastPage = i === pages.length - 1
+ *   nextPageStartMs = !isLastPage ? pages[i+1].startMs : Infinity
+ *   displayEndMs = !isLastPage ? nextPageStartMs : lastTokenEndMs + FADE_OUT_MS
+ *   clampedEndMs = (isLastPage && totalDurationMs) ? min(displayEndMs, totalDurationMs) : displayEndMs
+ *   durationInFrames = max(1, ceil((clampedEndMs - pages[i].startMs) * fps / 1000))
+ */
+function computeDuration(
+  pages: { startMs: number; tokens: { toMs: number }[] }[],
+  i: number,
+  fps: number,
+  totalDurationMs?: number
+): number {
+  const FADE_OUT_MS = 300; // matches shared-styles.ts:7
+  const isLastPage = i === pages.length - 1;
+  const lastTokenEndMs = pages[i].tokens[pages[i].tokens.length - 1].toMs;
+  const nextPageStartMs = !isLastPage ? pages[i + 1].startMs : Infinity;
+  const displayEndMs = !isLastPage ? nextPageStartMs : lastTokenEndMs + FADE_OUT_MS;
+  const clampedEndMs =
+    isLastPage && totalDurationMs
+      ? Math.min(displayEndMs, totalDurationMs)
+      : displayEndMs;
+  return Math.max(1, Math.ceil((clampedEndMs - pages[i].startMs) * (fps / 1000)));
+}
+
+describe("layout durationInFrames formula (Issue B fix)", () => {
+  // Case 1: non-last page with a short gap (40ms) between pages.
+  // Old formula: safeEndMs = min(800+300, 840-100) = min(1100, 740) = 740 → duration = ceil((740-0)*30/1000) = ceil(22.2) = 23
+  // New formula: displayEndMs = nextPageStartMs = 840 → duration = ceil((840-0)*30/1000) = ceil(25.2) = 26
+  it("Case 1 — contiguous pages, short gap (40ms): non-last page extends to next page start", () => {
+    const pages = [
+      { startMs: 0, tokens: [{ toMs: 800 }] },
+      { startMs: 840, tokens: [{ toMs: 1600 }] },
+    ];
+    const result = computeDuration(pages, 0, 30, undefined);
+    expect(result).toBe(26); // ceil((840-0)*30/1000) = ceil(25.2) = 26 — no gap
+  });
+
+  // Case 2: last page fades out naturally after final token.
+  // displayEndMs = 1600 + 300 = 1900
+  // durationInFrames = ceil((1900 - 840) * 30/1000) = ceil(31.8) = 32
+  it("Case 2 — last page fades out after final token (FADE_OUT_MS=300ms)", () => {
+    const pages = [
+      { startMs: 0, tokens: [{ toMs: 800 }] },
+      { startMs: 840, tokens: [{ toMs: 1600 }] },
+    ];
+    const result = computeDuration(pages, 1, 30, undefined);
+    expect(result).toBe(32); // ceil((1900-840)*30/1000) = ceil(31.8) = 32
+  });
+
+  // Case 3: single page (always the last page), clamped by totalDurationMs.
+  // displayEndMs = 2000 + 300 = 2300; totalDurationMs=5000 → clampedEndMs = min(2300,5000) = 2300
+  // durationInFrames = ceil((2300 - 100) * 30/1000) = ceil(66) = 66
+  it("Case 3 — single page (last) with totalDurationMs larger than fade-out end", () => {
+    const pages = [{ startMs: 100, tokens: [{ toMs: 2000 }] }];
+    const result = computeDuration(pages, 0, 30, 5000);
+    expect(result).toBe(66); // ceil((2300-100)*30/1000) = ceil(66) = 66
+  });
+
+  // Case 4: last page where totalDurationMs clamps the fade-out.
+  // displayEndMs = 4900 + 300 = 5200; totalDurationMs=5000 → clampedEndMs = min(5200,5000) = 5000
+  // durationInFrames = ceil((5000 - 0) * 30/1000) = ceil(150) = 150
+  it("Case 4 — last page clamped by totalDurationMs (fade-out extends past video end)", () => {
+    const pages = [{ startMs: 0, tokens: [{ toMs: 4900 }] }];
+    const result = computeDuration(pages, 0, 30, 5000);
+    expect(result).toBe(150); // ceil((5000-0)*30/1000) = ceil(150) = 150
+  });
+});

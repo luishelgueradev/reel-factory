@@ -38,16 +38,20 @@ services:
   # Existing step configurations do NOT need modification (PIPE-04).
   # ═════════════════════════════════════════════════════
 
-  # Step 1: Whisper Transcription (Phase 2)
+  # Step 1: Whisper Transcription (Phase 2; externalized via HTTP in Phase 15-02)
+  # Service KEY stays "whisper" and OUTPUT_PATH dir stays whisper/ so downstream
+  # (silence-cutter, remotion-renderer, srt-exporter) need zero changes — the
+  # file-based step contract is preserved. The heavy embedded GPU Whisper step is
+  # replaced by a thin HTTP-client step that calls the external whisper-api on the
+  # host (D-3/D-4). The external service owns the GPU, so no deploy.devices stanza.
   whisper:
     <<: *pipeline-common
     # Pinned so the build output matches the name the api-server orchestrator
     # uses (reel-factory-*), independent of the compose project / directory name
     # (a git worktree checkout has a different dir name).
-    image: reel-factory-whisper:latest
+    image: reel-factory-whisper-http-step:latest
     build:
-      context: ./services/whisper
-      dockerfile: Dockerfile
+      context: ./services/whisper-http-step
     depends_on:
       base-python:
         condition: service_completed_successfully
@@ -55,20 +59,19 @@ services:
       - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/input/video.mp4
       - OUTPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/whisper/transcript.json
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
-      - HF_HOME=/data/pipeline/.cache/huggingface
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+      - WHISPER_API_URL=${WHISPER_API_URL:-http://host.docker.internal:8000}
+      - WHISPER_API_KEY=${WHISPER_API_KEY:-}
+    extra_hosts:
+      # D-3: reach the external whisper-api stack published on the host. Required on
+      # Linux/WSL2 bridge networks; harmless on Docker Desktop where it resolves natively.
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "test", "-f", "/data/pipeline/${PIPELINE_JOB_ID}/whisper/manifest.json"]
       interval: 5s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      # No model load anymore (HTTP call), so the start_period drops 30s -> 15s.
+      start_period: 15s
 
   # Silence Cutter: runs BEFORE whisper in the new pipeline order.
   # TRANSCRIPT_PATH is optional — if not set, uses FFmpeg-only mode.
@@ -237,6 +240,11 @@ services:
       - MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-10}
       - PORT=3000
       - NODE_ENV=production
+      # Phase 15-02: the orchestrator reads these from process.env at module load and
+      # threads them into the spawned whisper HTTP-step container (orchestrator.ts STEPS[0]).
+      # Without them on the api-server, process.env.WHISPER_API_KEY is undefined when STEPS builds.
+      - WHISPER_API_URL=${WHISPER_API_URL:-http://host.docker.internal:8000}
+      - WHISPER_API_KEY=${WHISPER_API_KEY:-}
     restart: unless-stopped
 
   # SRT/VTT Exporter: generates sidecar subtitle files with remapped timestamps

@@ -307,7 +307,7 @@ Plans:
 
 Plans:
 
-- [ ] 15-01-PLAN.md — New services/whisper-http-step/ container: ffprobe duration gate + sync/async HTTP client + error mapping + mock-api unit tests
+- [x] 15-01-PLAN.md — New services/whisper-http-step/ container: ffprobe duration gate + sync/async HTTP client + error mapping + mock-api unit tests
 - [ ] 15-02-PLAN.md — Orchestrator STEP swap (drop GPU/HF_HOME, add WHISPER_API_URL/KEY) + orchestrator tests + docker-compose wiring (host.docker.internal)
 - [ ] 15-03-PLAN.md — timeline marker on external whisper-api + e2e drift repro (human-verify) + parity test + retire services/whisper/
 

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Infrastructure / shared services
 status: executing
-last_updated: "2026-05-23T00:33:24.057Z"
-last_activity: 2026-05-23 -- Phase 15 execution started
+last_updated: "2026-05-23T00:43:46.932Z"
+last_activity: 2026-05-23
 progress:
   total_phases: 13
   completed_phases: 12
   total_plans: 51
-  completed_plans: 49
+  completed_plans: 50
   percent: 92
 ---
 
@@ -25,9 +25,13 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 15 (whisper-externalization) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 15
-Last activity: 2026-05-23 -- Phase 15 execution started
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-05-23 — Completed 15-01 (whisper-http-step container: HTTP client, 14 unit tests green)
+
+### Phase 15 Decisions
+
+- **15-01 NO_AUDIO_STREAM behavior change:** the new whisper-http-step FAILS on no-audio (400 NO_AUDIO_STREAM → error manifest + exit 1), vs the legacy whisper step which wrote an empty transcript and exited 0. Adopted to surface bad input instead of silently producing an empty transcript. FLAGGED for 15-03's parity test (the no-audio case is intentionally non-parity).
 
 ## Post-Phase Fixes (2026-05-19)
 

@@ -32,13 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Closed at 14 phases / 56 plans / 9 requirements complete. Phases 13–14 delivered encode-quality and supersampling+quality-finalizer; Spike 001 settled the scale decision (production defaults to scale:1). Full archive: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) · requirements: [.planning/milestones/v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md)
 
-
-
 ### Milestone v1.2 — Infrastructure / shared services
 
 - [x] **Phase 15: Whisper externalization** - Replace embedded `services/whisper` container with HTTP calls to the standalone whisper-api at `/home/luis/proyectos/whisper`. Contract is drop-in (`profile=reels` bare body identical). See `.planning/contracts/whisper-service-integration.md`. **Plans:** 3 plans in 3 waves (planned 2026-05-22). (completed 2026-05-23)
 
 - [ ] **Phase 16: Render config + flicker fixes** - Two pre-existing render-path bugs surfaced during the Phase 15 e2e run (NOT whisper regressions): (A) studio pipeline-config.json never reaches the renderer in production because ACTIVE_PIPELINE_CONFIG_PATH is never populated (v1.1 wired the consumer, not the producer) — fix: studio PUT /api/config also writes the active config; (B) subtitle flicker from inter-page fade gaps. See .planning/phases/16-render-config-flicker/16-CONTEXT.md.
+
 ## Phase Details
 
 ### Phase 1: Pipeline Infrastructure
@@ -331,7 +330,12 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 16-01-PLAN.md — Issue A fix: add ACTIVE_PIPELINE_CONFIG_PATH write to PUT /api/config (server.ts + docker-compose.yml)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 16-02-PLAN.md — Human checkpoint: run real /process render, verify pipeline_config.loaded=true + observe flicker on bar layout
 - [ ] 16-03-PLAN.md — Issue B fix: isLastPage duration formula in BarLayout.tsx + TikTokLayout.tsx, renderer sync, unit tests, e2e validate
 
@@ -359,4 +363,3 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
 | 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |
 | 15. Whisper externalization | 3/3 | Complete   | 2026-05-23 |
-

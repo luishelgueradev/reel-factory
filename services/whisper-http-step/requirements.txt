@@ -1,0 +1,7 @@
+pydantic>=2.0.0
+requests>=2.31.0
+
+# Dev/test only (NOT installed in the container — the runtime needs no test deps):
+# the unit tests in tests/test_transcribe_http.py mock the HTTP layer with the
+# stdlib `unittest.mock` and monkeypatch `subprocess.run` for ffprobe, so there
+# is no runtime test dependency to pin here.

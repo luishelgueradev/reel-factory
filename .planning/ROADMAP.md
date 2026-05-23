@@ -314,6 +314,29 @@ Plans:
 
 ---
 
+### Phase 16: Render config + flicker fixes
+
+**Goal**: A `/process` render uses the style configured in the remotion-studio UI (layout, fonts, title overlays) instead of falling back to env defaults, AND subtitle flicker is eliminated on a correct-layout render — both pre-existing render-path bugs surfaced during the Phase 15 e2e run are closed
+**Depends on**: Phases 1-15 (full pipeline + externalized whisper); both bugs are pre-existing render-path defects, not whisper regressions
+**Requirements**: none formal (v1.2 infra/bugfix phase — must_haves derived from CONTEXT.md Issue A locked fix + Issue B candidate fixes + ROADMAP goal)
+**Success Criteria** (what must be TRUE):
+
+  1. Saving a config in remotion-studio writes the clean config (no `_meta`) to the active path (`/data/pipeline/pipeline-config.json`), so a subsequent `/process` job seeds it into the per-job renderer config
+  2. A `/process` render reports `pipeline_config: {loaded: true, source: <studio config>}` with the user's layout, fonts, and title overlays applied — NOT the env-default tiktok fallback
+  3. Issue B (subtitle flicker) is RE-MEASURED on a correct `bar`-layout render after Issue A is fixed, and the inter-page fade-gap blink is eliminated (pages hold visible until the next page starts; no fade-out-to-empty between contiguous pages)
+  4. Shared `src/*.ts` + `compositions/*` edits are synced studio↔renderer per the CLAUDE.md renderer-sync convention
+  5. A real render on a short clip with the studio config validates both fixes end-to-end
+
+**Plans**: 3 plans in 2 waves
+
+Plans:
+
+- [ ] 16-01-PLAN.md — Issue A fix: add ACTIVE_PIPELINE_CONFIG_PATH write to PUT /api/config (server.ts + docker-compose.yml)
+- [ ] 16-02-PLAN.md — Human checkpoint: run real /process render, verify pipeline_config.loaded=true + observe flicker on bar layout
+- [ ] 16-03-PLAN.md — Issue B fix: isLastPage duration formula in BarLayout.tsx + TikTokLayout.tsx, renderer sync, unit tests, e2e validate
+
+---
+
 ## Progress
 
 **Execution Order:**

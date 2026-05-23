@@ -1,8 +1,0 @@
-# Whisper container Python dependencies
-# Per STACK.md version pinning policy — exact versions for reproducibility
-faster-whisper==1.2.1
-ctranslate2==4.7.1
-whisperx>=3.1.1
-torch>=2.0.0
-pydantic>=2.0.0
-numpy>=1.24.0

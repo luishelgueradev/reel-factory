@@ -21,7 +21,7 @@ export interface SilenceCutList {
   cuts: SilenceCut[];
 }
 
-/** Mirror of services/whisper/src/schema.py TranscriptWord */
+/** Mirror of services/whisper-http-step/src/schema.py TranscriptWord */
 export interface WhisperWord {
   word: string;
   start: number;
@@ -30,7 +30,7 @@ export interface WhisperWord {
   no_speech_prob: number;
 }
 
-/** Mirror of services/whisper/src/schema.py TranscriptSegment */
+/** Mirror of services/whisper-http-step/src/schema.py TranscriptSegment */
 export interface WhisperSegment {
   id: number;
   start: number;
@@ -39,7 +39,7 @@ export interface WhisperSegment {
   words: WhisperWord[];
 }
 
-/** Mirror of services/whisper/src/schema.py Transcript */
+/** Mirror of services/whisper-http-step/src/schema.py Transcript */
 export interface WhisperTranscript {
   language: string;
   model: string;

@@ -18,7 +18,7 @@ SILENCE_MIN_DURATION_ENV = "SILENCE_MIN_DURATION"
 SILENCE_NOISE_TOLERANCE_DB = -30
 
 # D-03: Whisper no_speech_threshold for confirming silence.
-# Matches NO_SPEECH_THRESHOLD from whisper/src/config.py (0.6 per D-11 in Phase 2).
+# Matches NO_SPEECH_THRESHOLD from whisper-http-step/src/config.py (0.6 per D-11 in Phase 2).
 NO_SPEECH_THRESHOLD = 0.6
 
 # D-06: Padding expands cuts into adjacent silence.

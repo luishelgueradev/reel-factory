@@ -128,6 +128,16 @@ app.put("/api/config", (req, res) => {
     fs.writeFileSync(configPath, JSON.stringify(configToWrite, null, 2));
 
     console.log("[studio] Config written to:", configPath);
+
+    // Mirror write to ACTIVE_PIPELINE_CONFIG_PATH so /process renders pick up the studio config
+    const activePath = process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
+    const activeDir = path.dirname(activePath);
+    if (!fs.existsSync(activeDir)) {
+      fs.mkdirSync(activeDir, { recursive: true });
+    }
+    fs.writeFileSync(activePath, JSON.stringify(configToWrite, null, 2));
+    console.log("[studio] Active config mirrored to:", activePath);
+
     return res.json({
       ...configToWrite,
       _meta: { source: "file", valid: true, path: configPath },

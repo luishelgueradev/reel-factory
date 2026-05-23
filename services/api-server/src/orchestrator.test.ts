@@ -45,14 +45,17 @@ describe("STEPS configuration", () => {
 
   it("whisper step should have correct env vars", () => {
     const whisper = STEPS[0];
-    expect(whisper.image).toBe("reel-factory-whisper");
+    // Phase 15-02: externalized HTTP-client step. Image swapped, GPU env (HF_HOME)
+    // dropped, WHISPER_API_URL/KEY added. STEP name + transcript.json path unchanged.
+    expect(whisper.image).toBe("reel-factory-whisper-http-step");
     expect(whisper.envVars).toHaveProperty("INPUT_PATH");
     expect(whisper.envVars.INPUT_PATH).toContain("/input/video.mp4");
     expect(whisper.envVars).toHaveProperty("OUTPUT_PATH");
     expect(whisper.envVars.OUTPUT_PATH).toContain("/whisper/transcript.json");
     expect(whisper.envVars).toHaveProperty("PIPELINE_JOB_ID");
-    expect(whisper.envVars).toHaveProperty("HF_HOME");
-    expect(whisper.envVars.HF_HOME).toBe("/data/pipeline/.cache/huggingface");
+    expect(whisper.envVars).toHaveProperty("WHISPER_API_URL");
+    expect(whisper.envVars).toHaveProperty("WHISPER_API_KEY");
+    expect(whisper.envVars).not.toHaveProperty("HF_HOME");
   });
 
   it("silence-cutter step should have correct env vars including TRANSCRIPT_PATH", () => {
@@ -232,7 +235,9 @@ describe("runPipeline", () => {
 
     // Check that the first call was for whisper
     const firstCall = docker.createContainer.mock.calls[0][0];
-    expect(firstCall.Image).toBe("reel-factory-whisper");
+    expect(firstCall.Image).toBe("reel-factory-whisper-http-step");
+    // Phase 15-02 (D-4): no GPU device request — the external whisper-api owns the GPU.
+    expect(firstCall.HostConfig?.DeviceRequests).toBeUndefined();
     expect(firstCall.Env).toBeDefined();
     expect(firstCall.Env.length).toBeGreaterThan(0);
     // Verify that jobId was substituted in env vars

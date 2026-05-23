@@ -55,13 +55,20 @@ export class PipelineStepError extends Error {
  */
 export const STEPS: PipelineStepConfig[] = [
   {
+    // STEP name stays "whisper": the manifest dir + downstream transcript.json
+    // path (pipeline/{jobId}/whisper/) key on it. Phase 15-02 only swaps the
+    // image to the externalized HTTP-client step (15-01) and the env it carries.
     name: "whisper",
-    image: "reel-factory-whisper",
+    image: "reel-factory-whisper-http-step",
     envVars: {
       INPUT_PATH: "/data/pipeline/{jobId}/input/video.mp4",
       OUTPUT_PATH: "/data/pipeline/{jobId}/whisper/transcript.json",
       PIPELINE_JOB_ID: "{jobId}",
-      HF_HOME: "/data/pipeline/.cache/huggingface",
+      // The HTTP step calls the external whisper-api on the host (D-3). These
+      // resolve from process.env at module load; resolveEnvVars only substitutes
+      // {jobId}. The api-server container carries these env vars (docker-compose.yml).
+      WHISPER_API_URL: process.env.WHISPER_API_URL || "http://host.docker.internal:8000",
+      WHISPER_API_KEY: process.env.WHISPER_API_KEY || "",
     },
   },
   {
@@ -240,17 +247,9 @@ export async function runPipeline(
       },
     };
 
-    // Pass GPU device for whisper step if available
-    if (step.name === "whisper") {
-      containerConfig.HostConfig!.DeviceRequests = [
-        {
-          Driver: "nvidia",
-          Count: -1,
-          DeviceIDs: undefined,
-          Capabilities: [["gpu"]],
-        },
-      ];
-    }
+    // Phase 15-02 (D-4): the GPU is now owned by the external whisper-api service,
+    // so the whisper step no longer requests an NVIDIA device. It reaches the
+    // external service over HTTP via host.docker.internal (docker-compose extra_hosts).
 
     const container = await docker.createContainer(containerConfig);
 

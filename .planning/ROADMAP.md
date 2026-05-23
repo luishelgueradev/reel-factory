@@ -336,7 +336,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 16-02-PLAN.md — Human checkpoint: run real /process render, verify pipeline_config.loaded=true + observe flicker on bar layout
+- [x] 16-02-PLAN.md — Human checkpoint: run real /process render, verify pipeline_config.loaded=true + observe flicker on bar layout
 - [ ] 16-03-PLAN.md — Issue B fix: isLastPage duration formula in BarLayout.tsx + TikTokLayout.tsx, renderer sync, unit tests, e2e validate
 
 ---

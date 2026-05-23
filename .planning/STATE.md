@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Infrastructure / shared services
-status: verifying
+status: completed
 last_updated: "2026-05-23T02:13:20.348Z"
 last_activity: 2026-05-23
 progress:
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 15 (whisper-externalization) — COMPLETE (ready for verification)
+Phase: 15 (whisper-externalization) — COMPLETE & VERIFIED (5/5)
 Plan: 3 of 3 (all complete)
 Status: Phase complete — ready for verification
 Last activity: 2026-05-23 — Completed 15-03 (timeline marker @ external 00bceb2; e2e drift repro CLOSED + parity 76=76/0.000s; services/whisper retired)

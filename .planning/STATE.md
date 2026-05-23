@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Infrastructure / shared services
 status: executing
-last_updated: "2026-05-23T13:20:37.391Z"
-last_activity: 2026-05-23 -- Phase 16 planning complete
+last_updated: "2026-05-23T13:28:01.068Z"
+last_activity: 2026-05-23 -- Phase 16 execution started
 progress:
   total_phases: 14
   completed_phases: 13
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** Phase 15 — whisper-externalization
+**Current focus:** Phase 16 — render-config-flicker
 
 ## Current Position
 
-Phase: 15 (whisper-externalization) — COMPLETE & VERIFIED (5/5)
-Plan: 3 of 3 (all complete)
-Status: Ready to execute
-Last activity: 2026-05-23 -- Phase 16 planning complete
+Phase: 16 (render-config-flicker) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 16
+Last activity: 2026-05-23 -- Phase 16 execution started
 
 ### Phase 15 Decisions
 

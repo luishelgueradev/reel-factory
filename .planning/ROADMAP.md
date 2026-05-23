@@ -332,7 +332,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 16-01-PLAN.md — Issue A fix: add ACTIVE_PIPELINE_CONFIG_PATH write to PUT /api/config (server.ts + docker-compose.yml)
+- [x] 16-01-PLAN.md — Issue A fix: add ACTIVE_PIPELINE_CONFIG_PATH write to PUT /api/config (server.ts + docker-compose.yml)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

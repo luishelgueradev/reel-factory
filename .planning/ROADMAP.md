@@ -364,7 +364,12 @@ Plans:
   2. The active config lives as inspectable JSON in a persistent location (bind mount or named volume), not the ephemeral image layer
   3. A render after a rebuild uses the persisted config (pipeline_config.loaded=true with the user's values)
 
-**Plans**: TBD (plan-phase)
+**Plans**: 2 plans in 2 waves
+
+Plans:
+
+- [ ] 17-01-PLAN.md — Persistence plumbing: default template, server.ts single-write fix, startup seed hook, docker-compose.yml alignment (PERSIST-01, PERSIST-02)
+- [ ] 17-02-PLAN.md — Human verify: rebuild + render proof that config survives docker compose build + recreate (PERSIST-01, PERSIST-02)
 
 ### Phase 18: Studio UI redesign
 
@@ -448,3 +453,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
 | 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |
 | 15. Whisper externalization | 3/3 | Complete   | 2026-05-23 |
+| 16. Render config + flicker fixes | 3/3 | Complete   | 2026-05-26 |
+| 17. Config persistence | 0/2 | In progress | — |

@@ -1,0 +1,85 @@
+{
+  "subtitle": {
+    "layout": "bar",
+    "fontSize": 49,
+    "activeColor": "#FFFFFF",
+    "inactiveColor": "#545454",
+    "outlineColor": "#000000",
+    "outlineWidth": 3,
+    "position": "bottom-center",
+    "lineHeight": 1.1,
+    "bottomOffset": 440,
+    "pastWordOpacity": 1,
+    "highlightColor": "#00aaff",
+    "highlightDurationMs": 400,
+    "highlightTransition": "fade",
+    "subtitleWidth": 710,
+    "fontFamily": "Inter",
+    "letterSpacing": 0,
+    "backgroundHighlight": {
+      "enabled": false,
+      "color": "rgba(0,0,0,0.5)",
+      "padding": 8,
+      "borderRadius": 4
+    }
+  },
+  "titles": [
+    {
+      "text": "LA VIDRIERA",
+      "startTimeMs": 0,
+      "durationMs": 300000,
+      "style": {
+        "entranceAnimation": "slide-up",
+        "backgroundColor": "rgba(0, 0, 0, 0.7)",
+        "textColor": "#FFFFFF",
+        "titleFontSize": 106,
+        "subtitleFontSize": 80,
+        "titleColor": "#ffffff",
+        "subtitleColor": "#8cff00",
+        "titleFontFamily": "Raleway",
+        "subtitleFontFamily": "JosefinSans",
+        "topOffset": 10,
+        "lineHeight": 1,
+        "padding": 13
+      }
+    },
+    {
+      "text": "GMB - Redes - Web -WhatsApp",
+      "startTimeMs": 0,
+      "durationMs": 300000,
+      "style": {
+        "entranceAnimation": "fade-in",
+        "backgroundColor": "rgba(0, 0, 0, 1)",
+        "textColor": "#FFFFFF",
+        "titleFontSize": 40,
+        "subtitleFontSize": 42,
+        "titleColor": "#ffffff",
+        "subtitleColor": "#FFFFFF",
+        "titleFontFamily": "Inter",
+        "subtitleFontFamily": "Inter",
+        "topOffset": 23,
+        "lineHeight": 1.2,
+        "padding": 13
+      }
+    },
+    {
+      "text": "DIGITAL",
+      "startTimeMs": 0,
+      "durationMs": 300000,
+      "style": {
+        "entranceAnimation": "slide-up",
+        "backgroundColor": "rgba(0, 0, 0, 0.7)",
+        "textColor": "#FFFFFF",
+        "titleFontSize": 120,
+        "subtitleFontSize": 42,
+        "titleColor": "#80ff00",
+        "subtitleColor": "#FFFFFF",
+        "titleFontFamily": "Outfit",
+        "subtitleFontFamily": "Inter",
+        "topOffset": 17,
+        "lineHeight": 1,
+        "padding": 12
+      }
+    }
+  ]
+}

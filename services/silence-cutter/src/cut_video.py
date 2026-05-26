@@ -152,6 +152,7 @@ def _extract_segments(
         cmd = [
             "ffmpeg",
             "-y",
+            "-accurate_seek",
             "-ss", str(start),
             "-i", input_path,
             "-t", str(duration),

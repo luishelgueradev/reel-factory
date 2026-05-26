@@ -49,7 +49,21 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| (filled by roadmapper) | | |
+| PERSIST-01 | 17 | Planned |
+| PERSIST-02 | 17 | Planned |
+| STUDIO-01 | 18 | Planned |
+| STUDIO-02 | 18 | Planned |
+| STUDIO-03 | 18 | Planned |
+| TYPO-01 | 19 | Planned |
+| TYPO-02 | 19 | Planned |
+| TYPO-03 | 19 | Planned |
+| TYPO-04 | 19 | Planned |
+| TITLE-01 | 20 | Planned |
+| TITLE-02 | 20 | Planned |
+| TITLE-03 | 20 | Planned |
+| OVERLAY-01 | 21 | Planned |
+| OVERLAY-02 | 21 | Planned |
+| OVERLAY-03 | 21 | Planned |
 
 ---
 

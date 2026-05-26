@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-26T15:44:21.851Z"
 last_activity: 2026-05-26
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** Phase 16 — render-config-flicker
+**Current focus:** v1.3 — Phase 17 (config persistence), ready to plan
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 17 of 21 (config-persistence) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-26 — Milestone v1.3 started
+Status: Roadmap created (5 phases: 17-21), ready to plan Phase 17
+Last activity: 2026-05-26 — Milestone v1.3 roadmap created
 
 ### Phase 15 Decisions
 

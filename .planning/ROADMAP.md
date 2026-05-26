@@ -40,6 +40,16 @@ Closed at 2 phases / 6 plans. Whisper externalized to the standalone HTTP servic
 
 - [x] **Phase 16: Render config + flicker fixes** (completed 2026-05-26) - Two pre-existing render-path bugs surfaced during the Phase 15 e2e run (NOT whisper regressions): (A) studio pipeline-config.json never reaches the renderer in production because ACTIVE_PIPELINE_CONFIG_PATH is never populated (v1.1 wired the consumer, not the producer) — fix: studio PUT /api/config also writes the active config; (B) subtitle flicker from inter-page fade gaps. See .planning/phases/16-render-config-flicker/16-CONTEXT.md.
 
+### Milestone v1.3 — Studio redesign + visual capabilities
+
+Unify the studio into a single 2-column interface and expand render visual/typography capabilities, with config that survives Docker rebuilds. **Frontend tooling non-negotiable:** every studio-facing phase invokes `impeccable` + `frontend-design` (AGENTS.md).
+
+- [ ] **Phase 17: Config persistence** - Studio config (subtitle styles + title blocks) survives `docker compose build`/rebuild and container recreate, stored as inspectable JSON in a persistent location. Requirements: PERSIST-01, PERSIST-02.
+- [ ] **Phase 18: Studio UI redesign** - Single 2-column interface (left: preview, right: controls in tabs); consolidate the duplicated editor/preview screens. Foundational UI for the new control surface. Requirements: STUDIO-01, STUDIO-02, STUDIO-03. **(UI hint: yes)**
+- [ ] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)**
+- [ ] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)**
+- [ ] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)**
+
 ## Phase Details
 
 ### Phase 1: Pipeline Infrastructure
@@ -340,6 +350,79 @@ Plans:
 
 - [x] 16-02-PLAN.md — Human checkpoint: run real /process render, verify pipeline_config.loaded=true + observe flicker on bar layout
 - [ ] 16-03-PLAN.md — Issue B fix: isLastPage duration formula in BarLayout.tsx + TikTokLayout.tsx, renderer sync, unit tests, e2e validate
+
+---
+
+### Phase 17: Config persistence
+
+**Goal**: Studio-saved configuration (subtitle styles + title blocks) survives Docker rebuilds and container recreates — the user never loses their styling work
+**Depends on**: Phases 1-16 (studio + config plumbing)
+**Requirements**: PERSIST-01, PERSIST-02
+**Success Criteria** (what must be TRUE):
+
+  1. After editing styles in the studio, running `docker compose build` + recreate, the saved config is still present and applied
+  2. The active config lives as inspectable JSON in a persistent location (bind mount or named volume), not the ephemeral image layer
+  3. A render after a rebuild uses the persisted config (pipeline_config.loaded=true with the user's values)
+
+**Plans**: TBD (plan-phase)
+
+### Phase 18: Studio UI redesign
+
+**Goal**: The studio is a single two-column interface (left: preview, right: tabbed controls) with the duplicated editor/preview screens consolidated
+**Depends on**: Phase 17 (persistence in place so redesigned UI saves durably)
+**Requirements**: STUDIO-01, STUDIO-02, STUDIO-03
+**UI hint**: yes — invoke `impeccable` + `frontend-design` at plan/execute start
+**Success Criteria** (what must be TRUE):
+
+  1. The studio renders one screen split vertically: video preview on the left, all controls on the right
+  2. Controls are organized into tabs in the right panel
+  3. The previously separate editor and preview screens (and their duplicated components) are unified — no redundant copies
+  4. Live preview reflects control changes without a separate screen
+
+**Plans**: TBD (plan-phase)
+
+### Phase 19: Typography & text effects
+
+**Goal**: Users can style subtitle/title text with Plus Jakarta Sans, larger sizes, bold/italic, and an outer glow — controls in the redesigned UI, applied at render
+**Depends on**: Phase 18 (controls land in the new UI surface)
+**Requirements**: TYPO-01, TYPO-02, TYPO-03, TYPO-04
+**UI hint**: yes
+**Success Criteria** (what must be TRUE):
+
+  1. Plus Jakarta Sans is selectable and renders for subtitles and titles
+  2. Font sizes can be set beyond the current maximum and render correctly
+  3. Bold and italic variants apply and render
+  4. An outer glow with configurable color, intensity, and softness renders on text
+
+**Plans**: TBD (plan-phase)
+
+### Phase 20: Title block precision
+
+**Goal**: Title blocks are positioned by pixel coordinates with configurable border-radius, and the subtitle field is removed (a subtitle is a separate title block)
+**Depends on**: Phase 18 (title controls in the new UI)
+**Requirements**: TITLE-01, TITLE-02, TITLE-03
+**UI hint**: yes
+**Success Criteria** (what must be TRUE):
+
+  1. A title block can be positioned by pixel x/y coordinates (not percentages) and renders at that position
+  2. Title block containers have a configurable border-radius that renders
+  3. The title component no longer has a subtitle field; adding a subtitle is done via a separate title block
+
+**Plans**: TBD (plan-phase)
+
+### Phase 21: PNG overlays
+
+**Goal**: Users can place a transparent PNG overlay on the video, with a code-side supersampled downscale for crisp logos/watermarks
+**Depends on**: Phase 18 (overlay controls in the new UI)
+**Requirements**: OVERLAY-01, OVERLAY-02, OVERLAY-03
+**UI hint**: yes
+**Success Criteria** (what must be TRUE):
+
+  1. A transparent PNG can be added as an overlay and appears in the rendered video
+  2. A PNG larger than the frame is downscaled by code at render time and stays crisp (no blur/aliasing)
+  3. The overlay can be positioned and sized by the user
+
+**Plans**: TBD (plan-phase)
 
 ---
 

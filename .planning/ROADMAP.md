@@ -370,7 +370,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 17-01-PLAN.md — Persistence plumbing: default template, server.ts single-write fix, startup seed hook, docker-compose.yml alignment (PERSIST-01, PERSIST-02)
+- [x] 17-01-PLAN.md — Persistence plumbing: default template, server.ts single-write fix, startup seed hook, docker-compose.yml alignment (PERSIST-01, PERSIST-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -459,4 +459,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |
 | 15. Whisper externalization | 3/3 | Complete   | 2026-05-23 |
 | 16. Render config + flicker fixes | 3/3 | Complete   | 2026-05-26 |
-| 17. Config persistence | 0/2 | In progress | — |
+| 17. Config persistence | 1/2 | In Progress|  |

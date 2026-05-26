@@ -1,7 +1,8 @@
 import Dockerode from "dockerode";
 import fs from "fs/promises";
+import { existsSync } from "fs";
 import path from "path";
-import { PIPELINE_DATA_DIR, PIPELINE_NETWORK, HOST_PIPELINE_DIR } from "./constants.js";
+import { PIPELINE_DATA_DIR, PIPELINE_NETWORK, HOST_PIPELINE_DIR, ACTIVE_PIPELINE_CONFIG_PATH } from "./constants.js";
 import type { PipelineManifest } from "../../shared/schemas/manifest.js";
 
 /**
@@ -222,6 +223,30 @@ export async function runPipeline(
   const steps: PipelineResult["steps"] = [];
   const artifacts: Record<string, string[]> = {};
   const pipelineStartTime = Date.now();
+
+  // Seed the per-job renderer config from the server-side active studio config so
+  // rendered captions honor the studio design. The remotion-renderer step reads
+  // PIPELINE_CONFIG_PATH=/data/pipeline/{jobId}/remotion-renderer/pipeline-config.json
+  // (render.ts gives it precedence over the inline ACTIVE_COLOR/FONT_SIZE env fallbacks).
+  // Centralized here so BOTH the synchronous /process route and the async /batch worker
+  // path seed it — previously only /process did, so batch jobs silently ignored the
+  // studio config and fell back to env defaults. If no active config exists (or the copy
+  // fails) this is a no-op and the renderer uses env defaults. Never fails the job.
+  try {
+    if (existsSync(ACTIVE_PIPELINE_CONFIG_PATH)) {
+      const jobRendererDir = path.join(pipelineDir, jobId, "remotion-renderer");
+      await fs.mkdir(jobRendererDir, { recursive: true });
+      await fs.copyFile(
+        ACTIVE_PIPELINE_CONFIG_PATH,
+        path.join(jobRendererDir, "pipeline-config.json")
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[orchestrator] Could not seed active pipeline-config.json for job ${jobId} ` +
+        `(renderer will use env defaults): ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
 
   for (let stepIndex = 0; stepIndex < STEPS.length; stepIndex++) {
     const step = STEPS[stepIndex];

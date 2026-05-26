@@ -212,8 +212,9 @@ describe("runPipeline", () => {
 
     expect(result).toHaveProperty("jobId", jobId);
     expect(result).toHaveProperty("videoUrl");
-    // Phase 14: final deliverable is the quality-finalizer downscaled output, not the renderer's 4K
-    expect(result.videoUrl).toContain("/quality-finalizer/output.mp4");
+    // Final deliverable is copied to the canonical per-job output dir (the
+    // quality-finalizer downscaled output, not the renderer's 4K).
+    expect(result.videoUrl).toContain("/output/video.mp4");
     expect(result).toHaveProperty("steps");
     expect(result.steps).toHaveLength(6);
     expect(result).toHaveProperty("totalDurationSeconds");

@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Infrastructure / shared services
-status: Awaiting next milestone
-last_updated: "2026-05-26T15:37:22.682Z"
-last_activity: 2026-05-26 — Milestone v1.2 completed and archived
+milestone: v1.3
+milestone_name: Studio redesign + visual capabilities
+status: planning
+last_updated: "2026-05-26T15:44:21.851Z"
+last_activity: 2026-05-26
 progress:
-  total_phases: 14
-  completed_phases: 14
-  total_plans: 54
-  completed_plans: 55
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: Milestone v1.2 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-26 — Milestone v1.2 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-26 — Milestone v1.3 started
 
 ### Phase 15 Decisions
 

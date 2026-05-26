@@ -10,17 +10,22 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 ## Current State
 
-**Shipped:** v1.0 (Pipeline completo, 12 fases) + v1.1 (Calidad de video, fases 13-14) — 14 fases / 56 plans / 9 requirements v1.1 complete. Archived: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md).
+**Shipped:** v1.0 (Pipeline completo, 12 fases) + v1.1 (Calidad de video, fases 13-14) + v1.2 (Infrastructure / shared services, fases 15-16 — whisper externalizado + render config-propagation/flicker fixes + tunnel/auth/concurrency hardening). Archived: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md), [.planning/milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md).
 
 **v1.1 outcomes (notable):** scale:1 production default (Spike 001 mostró que el supersampling no aporta a captions de alto contraste a 1080); orchestrator threadea `PIPELINE_CONFIG_PATH` (los renders honran el config del studio); fix determinista del sync de highlights vía marcador `transcript.timeline` (heurística como fallback); quality-finalizer container ships pero queda como no-op con scale:1.
 
-## Current Milestone: v1.2 — Infrastructure / shared services
+## Current Milestone: v1.3 — Studio redesign + visual capabilities
 
-**Goal:** Externalizar whisper a un servicio HTTP standalone compartido (multi-app: reel-factory + WhatsApp→Chatwoot), preservando el contrato reels drop-in. El servicio externo ya está construido en `/home/luis/proyectos/whisper` (FastAPI + WhisperX large-v3 + GPU, Phase 4 LLM postprocessing completa, Phase 5 deployment hardening en fixes).
+**Goal:** Unificar el Studio en una sola interfaz de 2 columnas y expandir las capacidades visuales/tipográficas del render, con persistencia de config que sobreviva rebuilds de Docker.
 
-**Contract reference:** `.planning/contracts/whisper-service-integration.md` (spec escrito y aprobado).
+**Target features:**
+- **Persistencia de config** — estilos guardados como JSON en carpeta persistente (volume/bind), sobreviven `docker rebuild` (hoy se pierden en cada rebuild).
+- **Tipografía** — Plus Jakarta Sans, tamaños de fuente más grandes, variantes bold/italic, efecto outer glow (color/intensidad/suavidad).
+- **PNG overlays** — insertar PNGs transparentes más grandes que el frame, reducidos por código al render (logos/watermarks nítidos).
+- **Bloques de título** — posicionamiento por píxeles (no %), border-radius configurable, eliminar el campo subtítulo (un subtítulo = otro bloque de título).
+- **Rediseño Studio UI (mayor)** — skill `impeccable` + plugin `frontend-design`; una sola interfaz dividida vertical en 2 columnas (izq: preview de video, der: todos los controles en tabs). Elimina la duplicación editor/preview actual.
 
-**Scope:** 1 fase única — Phase 15 (whisper-externalization), con 3 plans (HTTP step, orchestrator wire, validation+retirement).
+**UI tooling (no-negociable):** toda fase/tarea de frontend DEBE invocar `impeccable` + `frontend-design` al inicio (ver AGENTS.md).
 
 ## Requirements
 
@@ -116,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 — started milestone v1.1 Calidad de video*
+*Last updated: 2026-05-26 — started milestone v1.3 Studio redesign + visual capabilities*

@@ -47,11 +47,11 @@ export const MAX_BATCH_SIZE = Number(parseInt(process.env.MAX_BATCH_SIZE || "10"
 
 /**
  * Maximum number of concurrent pipeline jobs processed by the BullMQ worker.
- * Per D-08: configurable via MAX_CONCURRENT_JOBS env var, default 2.
- * Prevents resource contention when processing multiple videos simultaneously.
+ * Hard-coded to 1: running multiple remotion-renderer containers simultaneously
+ * causes Chrome to OOM and fail. Still overridable via env var for testing.
  * NaN from non-numeric env vars coerces to the default.
  */
-export const MAX_CONCURRENT_JOBS = Number(parseInt(process.env.MAX_CONCURRENT_JOBS || "2", 10)) || 2;
+export const MAX_CONCURRENT_JOBS = Number(parseInt(process.env.MAX_CONCURRENT_JOBS || "1", 10)) || 1;
 
 /**
  * Redis connection URL.

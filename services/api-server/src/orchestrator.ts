@@ -14,6 +14,7 @@ export interface PipelineStepConfig {
   image: string;
   envVars: Record<string, string>;
   waitForStep?: string; // depends_on in docker-compose
+  shmSizeBytes?: number; // Docker shared memory (needed by Chrome in remotion-renderer)
 }
 
 /**
@@ -98,6 +99,7 @@ export const STEPS: PipelineStepConfig[] = [
   {
     name: "remotion-renderer",
     image: "reel-factory-remotion-renderer",
+    shmSizeBytes: 2 * 1024 * 1024 * 1024, // Chrome requires ≥2GB shm or it OOMs mid-render
     envVars: {
       INPUT_PATH: "/data/pipeline/{jobId}/ffmpeg-finalizer/output.mp4",
       OUTPUT_PATH: "/data/pipeline/{jobId}/remotion-renderer/output.mp4",
@@ -241,9 +243,8 @@ export async function runPipeline(
       HostConfig: {
         Binds: [`${hostPipelineDir}:/data/pipeline`],
         NetworkMode: options.pipelineNetwork || PIPELINE_NETWORK,
-        // AutoRemove off: we must wait(), read logs, and inspect the exit code
-        // BEFORE the container disappears. We remove it explicitly afterwards.
         AutoRemove: false,
+        ...(step.shmSizeBytes ? { ShmSize: step.shmSizeBytes } : {}),
       },
     };
 
@@ -345,11 +346,20 @@ export async function runPipeline(
 
   const totalDurationSeconds = (Date.now() - pipelineStartTime) / 1000;
 
+  // Copy final video to canonical output location: pipeline/{jobId}/output/video.mp4
+  const finalOutputDir = path.join(pipelineDir, jobId, "output");
+  const finalVideoPath = path.join(finalOutputDir, "video.mp4");
+  await fs.mkdir(finalOutputDir, { recursive: true });
+  await fs.copyFile(
+    path.join(pipelineDir, jobId, "quality-finalizer", "output.mp4"),
+    finalVideoPath
+  );
+
   return {
     jobId,
     steps,
     artifacts,
     totalDurationSeconds,
-    videoUrl: `/artifacts/${jobId}/quality-finalizer/output.mp4`,
+    videoUrl: `/artifacts/${jobId}/output/video.mp4`,
   };
 }

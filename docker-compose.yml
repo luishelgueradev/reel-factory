@@ -178,8 +178,15 @@ services:
       - PIPELINE_CONFIG_PATH=/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/pipeline-config.json
       - PORT=3123
       - ACTIVE_PIPELINE_CONFIG_PATH=/data/pipeline/pipeline-config.json
+      # HTTP Basic Auth for public (tunnel) exposure. Loopback healthcheck bypasses it.
+      # Leave blank to disable auth (local-only use).
+      - STUDIO_BASIC_AUTH_USER=${STUDIO_BASIC_AUTH_USER:-}
+      - STUDIO_BASIC_AUTH_PASSWORD=${STUDIO_BASIC_AUTH_PASSWORD:-}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3123/api/config"]
+      # The studio image ships node but NOT curl. Use a node fetch one-liner;
+      # loopback requests bypass Basic Auth (server.ts isLoopback), so this
+      # probes the real endpoint without credentials.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3123/api/config').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -240,7 +247,7 @@ services:
       # from the repo root); set HOST_PIPELINE_DIR in .env to override.
       - HOST_PIPELINE_DIR=${HOST_PIPELINE_DIR:-${PWD}/pipeline}
       - REDIS_URL=redis://redis:6379
-      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-2}
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-1}
       - MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-10}
       - PORT=3000
       - NODE_ENV=production
@@ -301,6 +308,22 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # Cloudflare Tunnel (token-managed) — publishes remotion-studio at
+  # https://reel-factory.luishelguera.dev. The public hostname → service mapping
+  # lives in the Cloudflare Zero Trust dashboard (set the service to
+  # http://remotion-studio:3123); this connector only needs the token. Attached to
+  # pipeline-net so it resolves the remotion-studio compose service name.
+  # Set CLOUDFLARE_TUNNEL_TOKEN in .env (leave blank to disable — connector exits).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - pipeline-net
+    depends_on:
+      remotion-studio:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   redis-data:

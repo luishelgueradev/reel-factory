@@ -9,6 +9,7 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { validatePipelineConfig } from "./pipeline-config.js";
 import type { PipelineConfig, TitleConfig } from "./pipeline-config.js";
 
@@ -37,6 +38,53 @@ const app = express();
 
 // Middleware
 app.use(cors());
+
+// ─── HTTP Basic Auth ────────────────────────────────────────────────────────
+// Protects the studio (incl. the write endpoints PUT /api/config and POST
+// /api/render) when it is exposed publicly via the Cloudflare tunnel.
+//
+// - Credentials come from STUDIO_BASIC_AUTH_USER / STUDIO_BASIC_AUTH_PASSWORD.
+//   If either is unset, auth is DISABLED (local-only / pipeline-internal use).
+// - Loopback requests bypass auth so the Docker healthcheck (which curls
+//   localhost:3123/api/config from inside the container) keeps the service
+//   healthy. Tunnel traffic arrives from the cloudflared container's network
+//   address — never loopback — so it is always challenged.
+const BASIC_AUTH_USER = process.env.STUDIO_BASIC_AUTH_USER || "";
+const BASIC_AUTH_PASSWORD = process.env.STUDIO_BASIC_AUTH_PASSWORD || "";
+
+function isLoopback(ip: string | undefined): boolean {
+  return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
+app.use((req, res, next) => {
+  // Auth disabled when no credentials are configured.
+  if (!BASIC_AUTH_USER || !BASIC_AUTH_PASSWORD) return next();
+  // Bypass for in-container loopback traffic (healthcheck).
+  if (isLoopback(req.socket.remoteAddress ?? undefined)) return next();
+
+  const header = req.headers.authorization || "";
+  if (header.startsWith("Basic ")) {
+    const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
+    const sep = decoded.indexOf(":");
+    if (sep !== -1) {
+      const user = decoded.slice(0, sep);
+      const pass = decoded.slice(sep + 1);
+      if (safeEqual(user, BASIC_AUTH_USER) && safeEqual(pass, BASIC_AUTH_PASSWORD)) {
+        return next();
+      }
+    }
+  }
+  res.set("WWW-Authenticate", 'Basic realm="reel-factory studio"');
+  return res.status(401).send("Authentication required");
+});
+
 app.use(express.json({ limit: "1mb" }));
 
 // ─── Health check ──────────────────────────────────────────────────────────

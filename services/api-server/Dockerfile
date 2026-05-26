@@ -30,6 +30,8 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application source
 COPY src/ ./src/
 COPY tsconfig.json ./
+# Copy default config template (D-06, D-07) — available at /app/config/ in the container
+COPY config/ ./config/
 
 # Verify the container can run the app
 RUN npx tsx --version

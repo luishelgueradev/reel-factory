@@ -1,5 +1,7 @@
 import express from "express";
 import multer from "multer";
+import { existsSync, copyFileSync, mkdirSync } from "fs";
+import path from "path";
 import { processRouter, UnsupportedMediaTypeError, FileTooLargeError } from "./routes/process.js";
 import { artifactsRouter } from "./routes/artifacts.js";
 import { healthRouter } from "./routes/health.js";
@@ -7,6 +9,7 @@ import { batchRouter } from "./routes/batch.js";
 import { statusRouter } from "./routes/status.js";
 import { startWorker, stopWorker } from "./worker.js";
 import { closeQueueConnection } from "./queue.js";
+import { ACTIVE_PIPELINE_CONFIG_PATH } from "./constants.js";
 
 const app = express();
 
@@ -58,7 +61,39 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // Start server if not in test mode
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
+// D-06: Seed default config on fresh install.
+// If the active config is missing, copy the git-tracked default template into place.
+// Runs once at startup; never throws — a failure logs and falls through gracefully.
+// DEFAULT_CONFIG_PATH is baked into the Docker image via COPY config/ ./config/ in the Dockerfile.
+const DEFAULT_CONFIG_PATH =
+  process.env.DEFAULT_CONFIG_PATH || "/app/config/pipeline-config.default.json";
+
+function seedDefaultConfig(): void {
+  // Idempotent: do NOT overwrite user's saved config (T-17-04)
+  if (existsSync(ACTIVE_PIPELINE_CONFIG_PATH)) return;
+  if (!existsSync(DEFAULT_CONFIG_PATH)) {
+    console.warn(
+      `[api-server] Default config template not found at ${DEFAULT_CONFIG_PATH}; skipping seed`
+    );
+    return;
+  }
+  try {
+    mkdirSync(path.dirname(ACTIVE_PIPELINE_CONFIG_PATH), { recursive: true });
+    copyFileSync(DEFAULT_CONFIG_PATH, ACTIVE_PIPELINE_CONFIG_PATH);
+    console.log(
+      `[api-server] Seeded default config: ${DEFAULT_CONFIG_PATH} → ${ACTIVE_PIPELINE_CONFIG_PATH}`
+    );
+  } catch (err) {
+    console.warn(
+      `[api-server] Could not seed default config (will use env fallbacks): ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+}
+
 if (process.env.NODE_ENV !== "test") {
+  // Seed default config before starting the server (D-06)
+  seedDefaultConfig();
+
   const server = app.listen(PORT, () => {
     console.log(`API server listening on port ${PORT}`);
   });

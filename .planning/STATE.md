@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Infrastructure / shared services
-status: executing
-last_updated: "2026-05-23T13:28:01.068Z"
-last_activity: 2026-05-23 -- Phase 16 execution started
+status: Awaiting next milestone
+last_updated: "2026-05-26T15:37:22.682Z"
+last_activity: 2026-05-26 — Milestone v1.2 completed and archived
 progress:
   total_phases: 14
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 54
-  completed_plans: 52
-  percent: 93
+  completed_plans: 55
+  percent: 100
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 16 (render-config-flicker) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 16
-Last activity: 2026-05-23 -- Phase 16 execution started
+Phase: Milestone v1.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-26 — Milestone v1.2 completed and archived
 
 ### Phase 15 Decisions
 
@@ -68,3 +68,7 @@ Last activity: 2026-05-23 -- Phase 16 execution started
 - `services/remotion-studio/src/compositions/{TikTokLayout,BarLayout,KaraokeLayout,SentenceLayout}.tsx`
 - `services/remotion-studio/src/compositions/shared-styles.ts`
 - `services/remotion-studio/src/server.ts`
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

@@ -368,7 +368,12 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 17-01-PLAN.md — Persistence plumbing: default template, server.ts single-write fix, startup seed hook, docker-compose.yml alignment (PERSIST-01, PERSIST-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 17-02-PLAN.md — Human verify: rebuild + render proof that config survives docker compose build + recreate (PERSIST-01, PERSIST-02)
 
 ### Phase 18: Studio UI redesign

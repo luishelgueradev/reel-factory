@@ -21,7 +21,7 @@ Un pipeline de procesamiento de video containerizado en Docker que toma un MP4 c
 
 ### Development Conventions
 
-- **remotion-studio port**: ALWAYS port **3123**. Never use any other port. Start with `cd services/remotion-studio && setsid env PORT=3123 EDITOR_DIST=$(pwd)/dist/editor npx tsx src/server.ts > /tmp/remotion-server.log 2>&1 &` — use `setsid` so the process survives shell termination.
+- **remotion-studio port**: ALWAYS port **3123**. Never use any other port. Start with `cd services/remotion-studio && setsid env PORT=3123 EDITOR_DIST=$(pwd)/dist/editor ACTIVE_PIPELINE_CONFIG_PATH=$(pwd)/../../pipeline/pipeline-config.json npx tsx src/server.ts > /tmp/remotion-server.log 2>&1 &` — use `setsid` so the process survives shell termination. `ACTIVE_PIPELINE_CONFIG_PATH` must point to the project-root `pipeline/pipeline-config.json` so that settings saved in the Studio UI propagate to the pipeline.
 - **remotion-studio build**: `npm run build:editor` from `services/remotion-studio/`
 - **Renderer sync pattern**: After modifying compositions or shared files in remotion-studio, copy to remotion-renderer. Component files live in `compositions/` in BOTH services; shared logic modules live at `src/` root in both. From `services/remotion-studio/`:
   ```bash

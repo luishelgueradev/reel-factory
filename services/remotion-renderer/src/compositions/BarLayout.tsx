@@ -18,6 +18,22 @@ import {
   getPastWordOpacity,
 } from "./shared-styles";
 
+// Interpolate between two hex colors (#RRGGBB). Falls back to `to` for non-hex inputs.
+function lerpColor(from: string, to: string, t: number): string {
+  const parse = (h: string) => {
+    const c = h.replace("#", "");
+    const s = c.length === 3 ? c.split("").map((x) => x + x).join("") : c;
+    return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)] as const;
+  };
+  try {
+    const [r1, g1, b1] = parse(from);
+    const [r2, g2, b2] = parse(to);
+    return `rgb(${Math.round(r1 + (r2 - r1) * t)},${Math.round(g1 + (g2 - g1) * t)},${Math.round(b1 + (b2 - b1) * t)})`;
+  } catch {
+    return to;
+  }
+}
+
 // ─── BarWord (single word rendered inside the bar) ───────────────────────────
 
 const BarWord: React.FC<{
@@ -73,9 +89,17 @@ const BarWord: React.FC<{
       : 1;
 
   const showHighlight = isActive && !!highlightColor && (highlightDurationMs ?? 0) > 0;
-  const hlFrames = showHighlight ? Math.round((highlightDurationMs ?? 0) * (fps / 1000)) : 0;
+  const hlFrames = showHighlight ? Math.max(1, Math.round((highlightDurationMs ?? 0) * (fps / 1000))) : 0;
   const isHighlighting = showHighlight && framesSinceActivated < hlFrames;
-  const wordColor = isHighlighting ? highlightColor! : color;
+  let wordColor = color;
+  if (isHighlighting) {
+    if (highlightTransition === "fade") {
+      const t = interpolate(framesSinceActivated, [0, hlFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+      wordColor = lerpColor(highlightColor!, color, t);
+    } else {
+      wordColor = highlightColor!;
+    }
+  }
 
   return (
     <span
@@ -149,6 +173,16 @@ const BarPage: React.FC<{
     }
   }
 
+  // When between tokens (currentTokenIdx = -1), find how many tokens have ended
+  // so wasActive stays true for past words instead of flashing to inactiveColor.
+  let wasActiveThreshold = currentTokenIdx;
+  if (currentTokenIdx === -1) {
+    for (let i = 0; i < tokens.length; i++) {
+      const toFrame = Math.round(tokens[i].toMs * (fps / 1000)) - pageFromFrame;
+      if (frame >= toFrame) wasActiveThreshold = i + 1;
+    }
+  }
+
   // Fade logic (shared with TikTok)
   const fadeInEndFrame = Math.round(FADE_IN_MS * (fps / 1000));
   const lastTokenEndMs = tokens.length > 0 ? tokens[tokens.length - 1].toMs : page.startMs;
@@ -190,7 +224,7 @@ const BarPage: React.FC<{
       >
         {tokens.map((token, i) => {
           const isActive = i === currentTokenIdx;
-          const wasActive = i < currentTokenIdx;
+          const wasActive = i < (currentTokenIdx !== -1 ? currentTokenIdx : wasActiveThreshold);
           const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
           const toFrame = Math.round(token.toMs * (fps / 1000)) - pageFromFrame;
           const framesSinceActive = wasActive ? Math.max(0, frame - toFrame) : 0;

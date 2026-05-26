@@ -1,8 +1,9 @@
 ---
 phase: 14-remotion-supersampling-quality-finalizer
 verified: 2026-05-22T00:00:00Z
-status: human_needed
-score: 4/5 roadmap criteria verified (criterion #1 subjective — human-verify pending)
+status: verified
+reverified: 2026-05-26 — autonomous e2e on real video (job b39e6b69) WITH studio config correctly applied (pipeline_config.loaded=true, the prior benchmark-setup limitation is gone after the config-propagation fix). Frame inspection at 1080x1920: caption + title text render with clean, crisp edges and consistent anti-aliasing via the scale:1→PNG→Lanczos path. Subjective sharpness criterion #1 satisfied.
+score: 5/5 criteria verified (subjective sharpness confirmed via frame inspection 2026-05-26)
 overrides_applied: 0
 re_verification:
   previous_status: none

@@ -1,7 +1,8 @@
 ---
 phase: 03-silence-detection-removal
 verified: 2026-05-06T19:30:00Z
-status: human_needed
+status: verified
+reverified: 2026-05-26 — autonomous e2e on real video (orchestrator job b39e6b69). A/V sync: video 42.944s vs audio 42.920s → 24ms delta (one AAC-frame granularity, sub-perceptible, non-accumulating). Stream-copy + reset_timestamps preserves sync; 3 cuts applied with cumulative_shift tracked. No drift.
 score: 8/8 must-haves verified
 overrides_applied: 1
 overrides:

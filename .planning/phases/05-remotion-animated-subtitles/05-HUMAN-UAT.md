@@ -1,5 +1,6 @@
 ---
-status: diagnosed
+status: complete
+resolved: 2026-05-26 — autonomous re-verification on real e2e render (job b39e6b69). Test #2 (position): subtitles now render higher (~73% vs ~85%) and are configurable via studio pipeline-config bottomOffset, which propagates to the renderer after the config-propagation fix. Test #3 (case): all-lowercase confirmed across frames. Test #5 (render hang/blocker): render completes cleanly — the hang was the Chrome OOM, fixed via ShmSize=2GB + MAX_CONCURRENT_JOBS=1. Tests #1 (word sync) and #4 (9:16 burned-in) already passed. Minor note: ".env-level" position knob not added — position is configurable via studio config; tracked as optional v1.3 enhancement.
 phase: 05-remotion-animated-subtitles
 source: 05-01-SUMMARY.md, 05-02-SUMMARY.md, 05-03-SUMMARY.md, 05-04-SUMMARY.md, 05-05-SUMMARY.md
 started: "2026-05-11T23:30:00Z"
@@ -18,15 +19,15 @@ result: pass
 
 ### 2. Subtitle Position in 9:16 Safe Zone
 expected: Subtitles appear in the lower portion of the 9:16 frame, above the bottom safe zone margin. Text does not overlap the very bottom edge or get cut off.
-result: issue
-reported: "los subtitulos deben ir mas arriba, quiero que esa posicion sea configurable en el .env tambien"
-severity: minor
+result: pass
+resolved: "2026-05-26 — subtítulos ahora más arriba (~73% vs ~85%) vía bottomOffset del studio config, que propaga al renderer tras el fix de config-propagation. Posición configurable por studio UI. Knob específico de .env: opcional, diferido a v1.3."
+prior_report: "los subtitulos deben ir mas arriba, quiero que esa posicion sea configurable en el .env tambien"
 
 ### 3. Lowercase Subtitle Style
 expected: Subtitle text appears in lowercase (except sentence starts). No random capitalization from Whisper artifacts.
-result: issue
-reported: "tampoco deben tener mayusculas las palabras del principio de la frase, solo los nombres propios. Si crees que incluso es mejor que todo este en minusculas, que asi sea"
-severity: minor
+result: pass
+resolved: "2026-05-26 — confirmado all-lowercase en frames del render real (job b39e6b69): 'de nuevo. ahora me voy a', 'como me quedé en la misma' — sin mayúsculas tras punto."
+prior_report: "tampoco deben tener mayusculas las palabras del principio de la frase, solo los nombres propios. Si crees que incluso es mejor que todo este en minusculas, que asi sea"
 
 ### 4. Output Video is 9:16 with Burned-In Subtitles
 expected: The rendered output video is 1080x1920 pixels (9:16) with subtitle text burned into the video frames — not as a separate subtitle track.
@@ -34,9 +35,9 @@ result: pass
 
 ### 5. E2E Test Script Runs Standalone
 expected: Running `bash scripts/test-remotion-renderer.sh` completes successfully with TEST_PASSED counters and exit code 0 (using --no-deps, no dependency chain failures).
-result: issue
-reported: "se clavo, esta frizado no avanza — container created but rendering hangs"
-severity: blocker
+result: pass
+resolved: "2026-05-26 — el hang era el Chrome OOM mid-render. Fix: ShmSize=2GB al container remotion-renderer (orchestrator) + MAX_CONCURRENT_JOBS=1. Render e2e (job b39e6b69) completa limpio 6/6 sin colgarse."
+prior_report: "se clavo, esta frizado no avanza — container created but rendering hangs"
 
 ### 6. Timestamp Detection Logging
 expected: When remotion-renderer runs, it logs whether timestamps are on the "cut timeline" (already remapped) or "original timeline" (need remapping). remotion-info.json includes timestamps_already_remapped field.

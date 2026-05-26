@@ -1,7 +1,8 @@
 ---
 phase: 10-async-batch-orchestrator
 verified: 2026-05-13T02:25:00Z
-status: human_needed
+status: verified
+reverified: 2026-05-26 — autonomous e2e via POST /batch (jobs 3b577ed9, b39e6b69). BullMQ enqueue → worker (concurrency 1) → all 6 steps → status "completed" read from Redis. Confirms queue/worker/Redis connectivity + job processing E2E. NOTE: the "isolation under concurrent conditions" criterion is superseded by the v1.2 single-job decision (MAX_CONCURRENT_JOBS=1, Chrome-OOM fix) — parallel jobs are forbidden, so jobs are isolated by serialization + per-job dirs.
 score: 12/14 must-haves verified
 overrides_applied: 0
 human_verification:

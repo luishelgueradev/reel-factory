@@ -1,5 +1,6 @@
 ---
 created: 2026-05-25T19:24:15.322Z
+completed: 2026-05-26T13:24:00.000Z
 title: Fix pipeline concurrency — enforce one job at a time
 area: api
 files:
@@ -30,3 +31,17 @@ más trabajo pendiente:
 - Grep `MAX_CONCURRENT_JOBS` en todos los compose files y .env para descartar overrides
 - Agregar nota en AGENTS.md Conventions: "Pipeline worker: concurrency=1 hard limit —
   remotion-renderer spawns Chrome y OOMea si corre en paralelo"
+
+## Resolution (2026-05-26)
+
+1. **Tests**: `__tests__/worker.test.ts` mockea `constants.js` y solo testea `processJob`
+   (no `startWorker`) — nunca asertaba la concurrency. No requería cambios; siguen verdes.
+2. **Overrides**: `docker-compose.yml:250` usa `${MAX_CONCURRENT_JOBS:-1}` y `.env.example:30`
+   es `1`. Ningún override >1. ✓
+3. **Docs**: nota agregada en `AGENTS.md` Development Conventions (single-job hard limit).
+   Comentario stale en `worker.ts` ("default concurrency is 2") corregido a 1.
+4. **Hardening adicional** (commit `feat: cloudflare tunnel...`): `orchestrator.ts` ahora
+   pasa `ShmSize=2GB` al container remotion-renderer (Chrome necesita ≥2GB shm).
+
+Verificado e2e: job 3b577ed9 procesó vía worker (concurrency 1) sin OOM ni hang —
+esto también cierra el blocker de 05-HUMAN-UAT test #5 ("render se clavó/frizado").

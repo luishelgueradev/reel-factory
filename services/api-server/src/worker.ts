@@ -75,7 +75,9 @@ export async function processJob(job: Job): Promise<void> {
 /**
  * Start the BullMQ worker that processes video-processing jobs.
  * Per D-12, runs in the same Node.js process as the Express server.
- * Per D-08, default concurrency is 2 (configurable via MAX_CONCURRENT_JOBS env var).
+ * Concurrency is hard-limited to 1 (MAX_CONCURRENT_JOBS default): each job spawns
+ * a remotion-renderer container running headless Chrome, and two in parallel
+ * exhaust RAM/shm and OOM mid-render. Overridable via env var for testing only.
  */
 export function startWorker(): Worker {
   const worker = new Worker(QUEUE_NAME, processJob, {

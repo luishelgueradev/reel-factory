@@ -25,13 +25,42 @@ Security:
 """
 
 import json
+import os
 import subprocess
+import tempfile
 import time
 from typing import Any, Dict
 
 import requests
 
 from . import config
+
+
+def _extract_audio(input_path: str) -> str:
+    """Extract audio-only MP3 from video into a temp file for Whisper upload.
+
+    Sends only the audio stream Whisper needs — strips video so a 225 MB
+    1.5-min MP4 becomes ~1.5 MB. Caller must delete the returned path.
+    16 kHz mono matches Whisper's native sample rate (no resampling loss).
+    """
+    fd, audio_path = tempfile.mkstemp(suffix=".wav", prefix="whisper-audio-")
+    os.close(fd)
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", input_path,
+        "-vn",                  # strip video stream
+        "-ac", "1",             # mono
+        "-ar", "16000",         # Whisper native sample rate
+        "-acodec", "pcm_s16le", # PCM WAV — no external codec needed
+        audio_path,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        os.unlink(audio_path)
+        raise RuntimeError(f"ffmpeg audio extraction failed: {result.stderr[-500:]}")
+    size_mb = os.path.getsize(audio_path) / 1024 / 1024
+    print(f"  Audio extracted: {size_mb:.1f} MB → {audio_path}")
+    return audio_path
 
 
 def probe_duration(input_path: str) -> float:
@@ -172,25 +201,31 @@ def transcribe_via_http(input_path: str, duration: float) -> Dict[str, Any]:
     headers = {"X-API-Key": config.WHISPER_API_KEY}
     data = {"language": config.WHISPER_LANGUAGE, "profile": config.WHISPER_PROFILE}
 
-    if duration <= config.SYNC_THRESHOLD_S:
-        # Sync path: single POST /transcribe, 200 -> bare body verbatim.
-        with open(input_path, "rb") as fh:
-            resp = requests.post(
-                f"{config.WHISPER_API_URL}/transcribe",
-                headers=headers,
-                files={"file": fh},
-                data=data,
-                timeout=config.SYNC_TIMEOUT_S,
-            )
+    # Extract audio-only before upload — strips the video stream so we send
+    # only what Whisper needs. Reduces a 225 MB MP4 to ~1.5 MB audio file.
+    audio_path = _extract_audio(input_path)
+    try:
+        if duration <= config.SYNC_THRESHOLD_S:
+            # Sync path: single POST /transcribe, 200 -> bare body verbatim.
+            with open(audio_path, "rb") as fh:
+                resp = requests.post(
+                    f"{config.WHISPER_API_URL}/transcribe",
+                    headers=headers,
+                    files={"file": ("audio.wav", fh, "audio/wav")},
+                    data=data,
+                    timeout=config.SYNC_TIMEOUT_S,
+                )
+            if not (200 <= resp.status_code < 300):
+                _raise_http_error(resp)
+            return resp.json()
+
+        # Async path: POST /jobs (503-aware) -> 202 {job_id} -> poll to done.
+        resp = _post_with_queue_retry(
+            f"{config.WHISPER_API_URL}/jobs", headers, audio_path, data
+        )
         if not (200 <= resp.status_code < 300):
             _raise_http_error(resp)
-        return resp.json()
-
-    # Async path: POST /jobs (503-aware) -> 202 {job_id} -> poll to done.
-    resp = _post_with_queue_retry(
-        f"{config.WHISPER_API_URL}/jobs", headers, input_path, data
-    )
-    if not (200 <= resp.status_code < 300):
-        _raise_http_error(resp)
-    job_id = resp.json()["job_id"]
-    return _poll_job(job_id, headers)
+        job_id = resp.json()["job_id"]
+        return _poll_job(job_id, headers)
+    finally:
+        os.unlink(audio_path)

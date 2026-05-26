@@ -235,10 +235,9 @@ services:
     volumes:
       - ./pipeline:/data/pipeline
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./services/remotion-studio:/data/studio:ro
     environment:
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID:-}
-      - ACTIVE_PIPELINE_CONFIG_PATH=/data/studio/pipeline-config.json
+      - ACTIVE_PIPELINE_CONFIG_PATH=/data/pipeline/pipeline-config.json
       - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-10800000}  # 3h — Phase 14 D-03, matches render.ts timeoutInMilliseconds ceiling
       - PIPELINE_NETWORK=${PIPELINE_NETWORK:-reel-factory_pipeline-net}
       # Host-side absolute path to ./pipeline — the orchestrator bind-mounts it

@@ -33,6 +33,10 @@ function sanitizeTitles(titles: TitleConfig[]): TitleConfig[] {
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
 const INPUT_PATH = process.env.INPUT_PATH || "";
+// D-04: Single source of truth for the write destination — read once at module load.
+// resolveConfigPath() is still used for GET reads (job-scoped preview); writes go here only.
+const ACTIVE_PIPELINE_CONFIG_PATH =
+  process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
 
 const app = express();
 
@@ -147,8 +151,6 @@ app.get("/api/config", (_req, res) => {
 // add authentication (API key, JWT, etc.) and rate limiting.
 
 app.put("/api/config", (req, res) => {
-  const configPath = resolveConfigPath();
-
   const body = req.body;
 
   // Validate against PipelineConfig schema (T-06-09)
@@ -161,34 +163,25 @@ app.put("/api/config", (req, res) => {
   }
 
   try {
-    // Ensure directory exists
-    const dir = path.dirname(configPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
     // Write config, stripping _meta if present, sanitizing title text (CR-02)
     const { _meta, ...configToWrite } = body as PipelineConfig & { _meta?: unknown };
     // CR-02: Sanitize title text to prevent stored XSS — strip/escape HTML
     if (configToWrite.titles && Array.isArray(configToWrite.titles)) {
       configToWrite.titles = sanitizeTitles(configToWrite.titles);
     }
-    fs.writeFileSync(configPath, JSON.stringify(configToWrite, null, 2));
 
-    console.log("[studio] Config written to:", configPath);
-
-    // Mirror write to ACTIVE_PIPELINE_CONFIG_PATH so /process renders pick up the studio config
-    const activePath = process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
-    const activeDir = path.dirname(activePath);
+    // D-04: Write ONLY to ACTIVE_PIPELINE_CONFIG_PATH (single source of truth).
+    // resolveConfigPath() is NOT called here — it is used only by GET for job-scoped reads.
+    const activeDir = path.dirname(ACTIVE_PIPELINE_CONFIG_PATH);
     if (!fs.existsSync(activeDir)) {
       fs.mkdirSync(activeDir, { recursive: true });
     }
-    fs.writeFileSync(activePath, JSON.stringify(configToWrite, null, 2));
-    console.log("[studio] Active config mirrored to:", activePath);
+    fs.writeFileSync(ACTIVE_PIPELINE_CONFIG_PATH, JSON.stringify(configToWrite, null, 2));
+    console.log("[studio] Config written to:", ACTIVE_PIPELINE_CONFIG_PATH);
 
     return res.json({
       ...configToWrite,
-      _meta: { source: "file", valid: true, path: configPath },
+      _meta: { source: "file", valid: true, path: ACTIVE_PIPELINE_CONFIG_PATH },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error writing config";

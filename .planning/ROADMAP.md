@@ -389,7 +389,18 @@ Plans:
   3. The previously separate editor and preview screens (and their duplicated components) are unified — no redundant copies
   4. Live preview reflects control changes without a separate screen
 
-**Plans**: TBD (plan-phase)
+**Plans**: 3 plans in 2 waves
+
+Plans:
+
+**Wave 1**
+
+- [ ] 18-01-PLAN.md — TitleEditor simplification: remove onPreviewChange/onSave props (D-10, STUDIO-02, STUDIO-03)
+
+**Wave 2** *(parallel — no shared files)*
+
+- [ ] 18-02-PLAN.md — PreviewApp.tsx unified StudioApp: TabBar + tabs + Font Grid inline + delete ConfigPreview/FontGridPage (STUDIO-01, STUDIO-02, STUDIO-03)
+- [ ] 18-03-PLAN.md — App.tsx single route + delete EditorApp + server.ts root serving + human-verify checkpoint (STUDIO-01, STUDIO-03)
 
 ### Phase 19: Typography & text effects
 

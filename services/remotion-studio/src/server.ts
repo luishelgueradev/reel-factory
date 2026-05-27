@@ -24,7 +24,14 @@ const ACTIVE_PIPELINE_CONFIG_PATH =
 const app = express();
 
 // Middleware
-app.use(cors());
+// WR-02: Restrict CORS to the studio's own origin rather than the wildcard '*'.
+// Wildcard CORS conflicts with the Basic Auth model: it lets any web page read
+// /api/config when auth is disabled, and permanently prevents credentials:include
+// mode if auth is later used cross-origin.
+app.use(cors({
+  origin: process.env.CORS_ALLOWED_ORIGIN || `http://localhost:${PORT}`,
+  credentials: true,
+}));
 
 // ─── HTTP Basic Auth ────────────────────────────────────────────────────────
 // Protects the studio (incl. the write endpoints PUT /api/config and POST

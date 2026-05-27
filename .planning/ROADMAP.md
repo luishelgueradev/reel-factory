@@ -395,7 +395,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 18-01-PLAN.md — TitleEditor simplification: remove onPreviewChange/onSave props (D-10, STUDIO-02, STUDIO-03)
+- [x] 18-01-PLAN.md — TitleEditor simplification: remove onPreviewChange/onSave props (D-10, STUDIO-02, STUDIO-03)
 
 **Wave 2** *(parallel — no shared files)*
 

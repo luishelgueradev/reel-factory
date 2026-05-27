@@ -44,7 +44,7 @@ Closed at 2 phases / 6 plans. Whisper externalized to the standalone HTTP servic
 
 Unify the studio into a single 2-column interface and expand render visual/typography capabilities, with config that survives Docker rebuilds. **Frontend tooling non-negotiable:** every studio-facing phase invokes `impeccable` + `frontend-design` (AGENTS.md).
 
-- [ ] **Phase 17: Config persistence** - Studio config (subtitle styles + title blocks) survives `docker compose build`/rebuild and container recreate, stored as inspectable JSON in a persistent location. Requirements: PERSIST-01, PERSIST-02.
+- [x] **Phase 17: Config persistence** - Studio config (subtitle styles + title blocks) survives `docker compose build`/rebuild and container recreate, stored as inspectable JSON in a persistent location. Requirements: PERSIST-01, PERSIST-02. (completed 2026-05-27)
 - [ ] **Phase 18: Studio UI redesign** - Single 2-column interface (left: preview, right: controls in tabs); consolidate the duplicated editor/preview screens. Foundational UI for the new control surface. Requirements: STUDIO-01, STUDIO-02, STUDIO-03. **(UI hint: yes)**
 - [ ] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)**
 - [ ] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)**
@@ -374,7 +374,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 17-02-PLAN.md — Human verify: rebuild + render proof that config survives docker compose build + recreate (PERSIST-01, PERSIST-02)
+- [x] 17-02-PLAN.md — Human verify: rebuild + render proof that config survives docker compose build + recreate (PERSIST-01, PERSIST-02)
 
 ### Phase 18: Studio UI redesign
 
@@ -459,4 +459,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |
 | 15. Whisper externalization | 3/3 | Complete   | 2026-05-23 |
 | 16. Render config + flicker fixes | 3/3 | Complete   | 2026-05-26 |
-| 17. Config persistence | 1/2 | In Progress|  |
+| 17. Config persistence | 2/2 | Complete    | 2026-05-27 |

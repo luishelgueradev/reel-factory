@@ -7,8 +7,8 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### Config Persistence (PERSIST)
 
-- [ ] **PERSIST-01**: User-saved studio config (subtitle styles + title blocks) survives a `docker compose build`/rebuild and container recreate — styles are not lost.
-- [ ] **PERSIST-02**: The active config is stored as inspectable JSON in a persistent location (bind mount or named volume), not the ephemeral image layer.
+- [x] **PERSIST-01**: User-saved studio config (subtitle styles + title blocks) survives a `docker compose build`/rebuild and container recreate — styles are not lost.
+- [x] **PERSIST-02**: The active config is stored as inspectable JSON in a persistent location (bind mount or named volume), not the ephemeral image layer.
 
 ### Typography (TYPO)
 
@@ -49,8 +49,8 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| PERSIST-01 | 17 | Planned |
-| PERSIST-02 | 17 | Planned |
+| PERSIST-01 | 17 | Validated (Phase 17, 2026-05-27) |
+| PERSIST-02 | 17 | Validated (Phase 17, 2026-05-27) |
 | STUDIO-01 | 18 | Planned |
 | STUDIO-02 | 18 | Planned |
 | STUDIO-03 | 18 | Planned |

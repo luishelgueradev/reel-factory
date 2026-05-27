@@ -3,7 +3,7 @@ status: complete
 phase: 05-remotion-animated-subtitles
 source: [05-04-SUMMARY.md, 05-05-SUMMARY.md]
 started: 2026-05-12T00:00:00Z
-updated: 2026-05-12T00:00:00Z
+updated: 2026-05-27T00:00:00Z
 ---
 
 ## Current Test
@@ -18,8 +18,8 @@ result: pass
 
 ### 2. Validación defensiva de timestamps imposibles
 expected: El pipeline rechaza tokens con fromMs > toMs. validateCaptionPages detecta y reporta errores SUBT-03 para timestamps imposibles.
-result: skipped
-reason: Validación interna del código, cubierta por tests unitarios
+result: pass
+note: "Resuelto 2026-05-27. Cobertura de tests unitarios confirmada y ejecutada: validate.test.ts describe \"validateCaptionPages: impossible timestamps (fromMs > toMs)\" (3 tests, todos pasan). Verifican que validateCaptionPages devuelve error con SUBT-03/fromMs/toMs cuando fromMs > toMs, pasa cuando fromMs <= toMs, e identifica el token específico (page[1].tokens[0]). Es validación interna sin observable de UI — la cobertura unitaria satisface el criterio."
 
 ### 3. Pipeline config: SILENCE_CUTS_PATH no se pasa a remotion-renderer
 expected: process.sh NO pasa SILENCE_CUTS_PATH al container remotion-renderer. Hay un comentario explicando por qué.
@@ -34,10 +34,10 @@ result: pass
 ## Summary
 
 total: 4
-passed: 2
+passed: 3
 issues: 1
 pending: 0
-skipped: 1
+skipped: 0
 
 ## Gaps
 

@@ -110,7 +110,12 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
     const updated = titles.filter((_, i) => i !== index);
     onChange(updated);
     if (editingIndex === index) {
+      // Removed the entry currently being edited — cancel the form.
       resetForm();
+    } else if (editingIndex !== null && index < editingIndex) {
+      // A preceding entry was removed; shift the editing index down by one so
+      // handleSaveEdit writes to the correct slot after the array shrinks.
+      setEditingIndex(editingIndex - 1);
     }
   };
 

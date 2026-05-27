@@ -225,30 +225,25 @@ function serveSpa(_req: express.Request, res: express.Response) {
   }
 }
 
-app.use("/editor", express.static(EDITOR_DIST));
+// ─── Serve unified StudioApp SPA at / (18-03 D-02) ──────────────────────────
+// API routes (/api/*) are all registered above — they must appear before this
+// static middleware to prevent express.static from intercepting API calls.
+// T-18-03-01: API ordering verified at registration time (lines 96-203 above).
 
-// Serve SPA static assets at /assets for all SPA routes (/editor, /preview, /preview/fonts)
-app.use("/assets", express.static(path.join(EDITOR_DIST, "assets")));
+app.use("/", express.static(EDITOR_DIST));      // serves /assets/... and any static file
 
-// SPA fallback: serve index.html for any /editor route that doesn't match a static file
-// Express 5 {*splat} doesn't match empty segments like "/editor/", so we need both
-app.get("/editor", serveSpa);
-app.get("/editor/", serveSpa);
-app.get("/editor/{*splat}", serveSpa);
+app.get("/", serveSpa);                          // root → unified StudioApp
 
-// ─── Serve preview SPA at /preview (D-01, D-02) ──────────────────────────────
-// Per D-02: Single SPA with routing — /preview shares the same Vite build as /editor.
-// Both routes serve the same index.html; React Router handles client-side routing.
+// 301 redirects: old /editor and /preview routes → canonical /
+app.get("/editor",           (_req, res) => res.redirect(301, "/"));
+app.get("/editor/",          (_req, res) => res.redirect(301, "/"));
+app.get("/editor/{*splat}",  (_req, res) => res.redirect(301, "/"));
+app.get("/preview",          (_req, res) => res.redirect(301, "/"));
+app.get("/preview/",         (_req, res) => res.redirect(301, "/"));
+app.get("/preview/{*splat}", (_req, res) => res.redirect(301, "/"));
 
-app.get("/preview", serveSpa);
-app.get("/preview/", serveSpa);
-app.get("/preview/{*splat}", serveSpa);
-
-// ─── Root route: redirect to /editor (D-02) ──────────────────────────────────
-
-app.get("/", (_req, res) => {
-  res.redirect("/editor");
-});
+// SPA catch-all: any unmatched path → serve index.html (client-side routing)
+app.get("/{*splat}", serveSpa);
 
 // ─── Helper: Resolve config file path ──────────────────────────────────────
 

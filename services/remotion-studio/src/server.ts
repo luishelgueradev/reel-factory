@@ -156,7 +156,19 @@ app.put("/api/config", (req, res) => {
     if (!fs.existsSync(activeDir)) {
       fs.mkdirSync(activeDir, { recursive: true });
     }
-    fs.writeFileSync(ACTIVE_PIPELINE_CONFIG_PATH, JSON.stringify(configToWrite, null, 2));
+    // CR-02: Atomic write — write to temp file then rename so a process kill
+    // mid-write never leaves a truncated/corrupt pipeline-config.json.
+    const tmpPath = path.join(
+      activeDir,
+      `.pipeline-config.${process.pid}.${Date.now()}.tmp.json`
+    );
+    try {
+      fs.writeFileSync(tmpPath, JSON.stringify(configToWrite, null, 2), "utf-8");
+      fs.renameSync(tmpPath, ACTIVE_PIPELINE_CONFIG_PATH);
+    } catch (writeErr) {
+      try { fs.unlinkSync(tmpPath); } catch { /* ignore cleanup error */ }
+      throw writeErr;
+    }
     console.log("[studio] Config written to:", ACTIVE_PIPELINE_CONFIG_PATH);
 
     return res.json({

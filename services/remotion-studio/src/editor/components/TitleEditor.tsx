@@ -3,14 +3,12 @@
 // Per D-16: Config editor UI for adding/editing/removing title overlays
 // Per T-06-12: XSS prevention — sanitize title text before rendering
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import type { TitleConfig, TitleEntranceAnimation } from "../../pipeline-config.js";
 
 interface TitleEditorProps {
   titles: TitleConfig[];
   onChange: (titles: TitleConfig[]) => void;
-  onPreviewChange?: (titles: TitleConfig[]) => void;
-  onSave?: (titles: TitleConfig[]) => void;
 }
 
 const ENTRANCE_ANIMATIONS: { id: TitleEntranceAnimation; label: string }[] = [
@@ -65,7 +63,7 @@ function hexAndAlphaToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function TitleEditor({ titles, onChange, onPreviewChange, onSave }: TitleEditorProps) {
+export function TitleEditor({ titles, onChange }: TitleEditorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [addingNew, setAddingNew] = useState(false);
 
@@ -90,42 +88,6 @@ export function TitleEditor({ titles, onChange, onPreviewChange, onSave }: Title
     setEditingIndex(null);
   };
 
-  // ── Live preview: propagate draft titles on every form change ─────────────
-  useEffect(() => {
-    if (!onPreviewChange) return;
-
-    if (editingIndex !== null) {
-      const preview = [...titles];
-      if (newTitle.text?.trim()) {
-        preview[editingIndex] = {
-          text: newTitle.text,
-          subtitle: newTitle.subtitle || undefined,
-          startTimeMs: newTitle.startTimeMs ?? 0,
-          durationMs: newTitle.durationMs ?? 3000,
-          style: newTitle.style,
-        };
-      }
-      onPreviewChange(preview);
-    } else if (addingNew) {
-      if (newTitle.text?.trim()) {
-        onPreviewChange([
-          ...titles,
-          {
-            text: newTitle.text,
-            subtitle: newTitle.subtitle || undefined,
-            startTimeMs: newTitle.startTimeMs ?? 0,
-            durationMs: newTitle.durationMs ?? 3000,
-            style: newTitle.style,
-          },
-        ]);
-      } else {
-        onPreviewChange([...titles]);
-      }
-    } else {
-      onPreviewChange([...titles]);
-    }
-  }, [newTitle, editingIndex, addingNew, titles, onPreviewChange]);
-
   // ── Add title ─────────────────────────────────────────────────────────────
   const handleAdd = () => {
     if (!newTitle.text?.trim()) return;
@@ -140,20 +102,16 @@ export function TitleEditor({ titles, onChange, onPreviewChange, onSave }: Title
 
     const updated = [...titles, title];
     onChange(updated);
-    if (onPreviewChange) onPreviewChange(updated);
     resetForm();
-    onSave?.(updated);
   };
 
   // ── Remove title ──────────────────────────────────────────────────────────
   const handleRemove = (index: number) => {
     const updated = titles.filter((_, i) => i !== index);
     onChange(updated);
-    if (onPreviewChange) onPreviewChange(updated);
     if (editingIndex === index) {
       resetForm();
     }
-    onSave?.(updated);
   };
 
   // ── Edit existing title ───────────────────────────────────────────────────
@@ -183,9 +141,7 @@ export function TitleEditor({ titles, onChange, onPreviewChange, onSave }: Title
     };
 
     onChange(updated);
-    if (onPreviewChange) onPreviewChange(updated);
     resetForm();
-    onSave?.(updated);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────

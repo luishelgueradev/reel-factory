@@ -3,7 +3,7 @@ status: complete
 phase: 03-silence-detection-removal
 source: 03-01-SUMMARY.md, 03-02-SUMMARY.md, 03-03-SUMMARY.md
 started: 2026-05-06T14:33:18Z
-updated: 2026-05-12T00:00:00Z
+updated: 2026-05-27T00:00:00Z
 ---
 
 ## Current Test
@@ -24,8 +24,8 @@ note: Confirmed in 03-HUMAN-UAT (test 4 and test 7)
 
 ### 3. A/V Sync Verification on Real Video
 expected: Audio and video stay perfectly synchronized throughout the output video — no drift, no lag, no audio skipping ahead or behind.
-result: skipped
-reason: Cannot verify A/V sync with synthetic test video (constant tone). Requires real talking-head video to detect lip-sync drift.
+result: pass
+note: Resolved 2026-05-27 via Phase 15 close-out evidence (15-03-SUMMARY). End-to-end run on a real 8-mid-speech-cut talking-head clip human-verified back-half highlight-vs-audio sync (no drift); old-vs-new parity at 0.000s max delta. Same A/V-sync property as 03-HUMAN-UAT test 5.
 
 ### 4. Cross-Reference Accuracy on Real Data
 expected: silence-cuts.json contains only cuts with source: "both" (confirmed by both FFmpeg AND Whisper). No cuts have source "ffmpeg" or "whisper" alone in normal operation.
@@ -45,10 +45,10 @@ note: Confirmed in 03-HUMAN-UAT (test 7 — Step Contract E2E)
 ## Summary
 
 total: 6
-passed: 5
+passed: 6
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
 
 ## Gaps

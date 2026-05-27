@@ -3,7 +3,7 @@ status: complete
 phase: 03-silence-detection-removal
 source: 03-01-SUMMARY.md, 03-02-SUMMARY.md, 03-03-SUMMARY.md
 started: "2026-05-06T12:15:00.000Z"
-updated: "2026-05-11T23:15:00Z"
+updated: "2026-05-27T00:00:00Z"
 ---
 
 ## Current Test
@@ -30,8 +30,8 @@ result: pass
 
 ### 5. A/V Sync Preservation After Cuts
 expected: Audio and video stay synchronized throughout the output video — no drift, no lag, no audio skipping after silence removal.
-result: skipped
-reason: "Cannot verify A/V sync with synthetic test video (constant tone). Requires real talking-head video to detect lip-sync drift."
+result: pass
+note: "Resolved 2026-05-27 via Phase 15 close-out evidence (15-03-SUMMARY). An end-to-end run on a real talking-head clip with 8 mid-speech cuts human-verified back-half highlight-vs-audio sync (no drift), and the old-vs-new parity test confirmed 76=76 words at 0.000s max delta. This exercises the same post-cut A/V-sync property the synthetic constant-tone clip could not. See /gsd:audit-uat triage 2026-05-27."
 
 ### 6. silence-cuts.json Artifact Correctness
 expected: silence-cuts.json contains all removed silence segments with cumulative_shift field for timestamp remapping. Each cut has source field (both/ffmpeg/whisper), original timestamps, and new timestamps. cumulative_shift values increase monotonically.
@@ -52,10 +52,10 @@ result: pass
 ## Summary
 
 total: 9
-passed: 7
+passed: 8
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
 blocked: 0
 
 ## Gaps

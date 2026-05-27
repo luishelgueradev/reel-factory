@@ -1,12 +1,11 @@
-// ─── PreviewApp: Main preview page (D-08) ──────────────────────────────────────
-// 9:16 viewport on the left (~40%), collapsible control panels on the right (~60%).
-// Per D-04: Uses @remotion/player with SubtitledVideo for pixel-accurate preview.
-// Per D-03: All SubtitleConfig parameters adjustable in real-time (no page reload).
-// Per D-11: Editable textarea with Spanish default text.
-// Per D-08: Layout mirrors existing /editor pattern.
+// ─── PreviewApp: Unified StudioApp (Phase 18 — D-01, D-02, D-03, D-04, D-06, D-07, D-08, D-09, D-10) ──
+// Two-column layout: left 40% live 9:16 Player, right panel with TabBar + three tab panels.
+// Tabs: Titles (default), Subtitles, Text.
+// Title state unified — single source of truth for titles (D-10).
+// Font Grid inline in Subtitles tab (D-06).
+// Render Video button disabled / coming-soon (D-05).
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
 import type { SubtitleConfig, TitleConfig } from "../pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 import { PreviewPlayer } from "./PreviewPlayer";
@@ -16,31 +15,202 @@ import { LayoutSelector } from "../editor/components/LayoutSelector";
 import { StyleControls } from "../editor/components/StyleControls";
 import { TitleEditor } from "../editor/components/TitleEditor";
 import type { TikTokPage } from "@remotion/captions";
-import { loadFont } from "../fonts";
+import { loadFont, AVAILABLE_FONTS, getFontFamilyCSS } from "../fonts";
 
 const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
   layout: "tiktok",
   ...DEFAULT_SUBTITLE_CONFIG,
 };
 
-export function PreviewApp() {
-  // ── Read font selection from URL params (from FontGridPage) ────────────────
-  const [searchParams] = useSearchParams();
+// ─── Tab definitions ───────────────────────────────────────────────────────────
 
+const TABS: { id: string; label: string }[] = [
+  { id: "titles",    label: "Titles"    },
+  { id: "subtitles", label: "Subtitles" },
+  { id: "text",      label: "Text"      },
+];
+
+// ─── TabBar component ─────────────────────────────────────────────────────────
+
+function TabBar({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: string;
+  onTabChange: (id: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        borderBottom: "1px solid #333",
+        background: "#16213e",
+        padding: "0 24px",
+      }}
+    >
+      {TABS.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <TabButton
+            key={tab.id}
+            tab={tab}
+            isActive={isActive}
+            onTabChange={onTabChange}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── TabButton — extracted to avoid inline function recreation per render ─────
+
+function TabButton({
+  tab,
+  isActive,
+  onTabChange,
+}: {
+  tab: { id: string; label: string };
+  isActive: boolean;
+  onTabChange: (id: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  const style: React.CSSProperties = {
+    padding: "12px 16px",
+    minHeight: 44,
+    border: "none",
+    background: (!isActive && hovered) ? "rgba(255,255,255,0.04)" : "transparent",
+    cursor: "pointer",
+    fontSize: 14,
+    borderBottom: isActive ? "2px solid #90caf9" : "2px solid transparent",
+    color: isActive ? "#90caf9" : hovered ? "#e0e0e0" : "#aaa",
+    fontWeight: isActive ? 600 : 400,
+    transition: "color 0.15s, background 0.15s",
+  };
+
+  return (
+    <button
+      key={tab.id}
+      onClick={() => onTabChange(tab.id)}
+      style={style}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {tab.label}
+    </button>
+  );
+}
+
+// ─── FontCard component ───────────────────────────────────────────────────────
+
+function FontCard({
+  fontName,
+  isSelected,
+  onSelect,
+}: {
+  fontName: string;
+  isSelected: boolean;
+  onSelect: (font: string) => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    loadFont(fontName)
+      .then(() => setLoaded(true))
+      .catch(() => setLoaded(true));
+  }, [fontName]);
+
+  return (
+    <div
+      onClick={() => onSelect(fontName)}
+      style={{
+        padding: 16,
+        background: hovered ? "rgba(76, 175, 80, 0.08)" : "#1e1e2e",
+        borderRadius: 8,
+        cursor: "pointer",
+        border: isSelected
+          ? "2px solid #90caf9"
+          : hovered
+          ? "1px solid #4CAF50"
+          : "1px solid #333",
+        transition: "border-color 0.2s, background 0.2s",
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ fontSize: 14, fontWeight: 600, color: "#90caf9", marginBottom: 8 }}>
+        {fontName}
+      </div>
+      {loaded ? (
+        <div style={{ fontSize: 24, fontFamily: getFontFamilyCSS(fontName), color: "#e0e0e0" }}>
+          Hola mundo
+        </div>
+      ) : (
+        <div style={{ fontSize: 24, fontFamily: "monospace", color: "#666" }}>
+          Loading...
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── FontGrid component ───────────────────────────────────────────────────────
+
+function FontGrid({
+  selectedFont,
+  onSelect,
+}: {
+  selectedFont: string | undefined;
+  onSelect: (font: string) => void;
+}) {
+  return (
+    <>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: "#90caf9",
+          marginBottom: 8,
+          marginTop: 16,
+        }}
+      >
+        Browse Fonts
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: 12,
+        }}
+      >
+        {(AVAILABLE_FONTS as readonly string[]).filter((f) => f !== "monospace").map((fontName) => (
+          <FontCard
+            key={fontName}
+            fontName={fontName}
+            isSelected={selectedFont === fontName}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+// ─── PreviewApp: Unified StudioApp ────────────────────────────────────────────
+
+export function PreviewApp() {
   // ── State ──────────────────────────────────────────────────────────────────
-  const [subtitleConfig, setSubtitleConfig] = useState<SubtitleConfig>(() => {
-    const fontFromUrl = searchParams.get("font");
-    return {
-      ...INITIAL_SUBTITLE_CONFIG,
-      ...(fontFromUrl ? { fontFamily: fontFromUrl } : {}),
-    };
-  });
+  const [subtitleConfig, setSubtitleConfig] = useState<SubtitleConfig>(() => ({
+    ...INITIAL_SUBTITLE_CONFIG,
+  }));
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
   const [titles, setTitles] = useState<TitleConfig[]>([]);
-  const [previewTitles, setPreviewTitles] = useState<TitleConfig[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("titles");
 
   // ── Derived state ──────────────────────────────────────────────────────────
   const captionPages = useMemo(() => textToCaptionPages(sampleText), [sampleText]);
@@ -71,7 +241,6 @@ export function PreviewApp() {
         }
         if (data && data.titles) {
           setTitles(data.titles);
-          setPreviewTitles(data.titles);
         }
       })
       .catch(() => {
@@ -80,7 +249,7 @@ export function PreviewApp() {
   }, []);
 
   // ── Save config to API (PUT /api/config) — manual save button ──────────────
-  const handleSave = useCallback(async (updatedTitles?: TitleConfig[]) => {
+  const handleSave = useCallback(async () => {
     try {
       setSaving(true);
       setSaveError(null);
@@ -88,7 +257,7 @@ export function PreviewApp() {
 
       const payload = {
         subtitle: subtitleConfig,
-        titles: updatedTitles ?? titles,
+        titles,
       };
 
       const res = await fetch("/api/config", {
@@ -103,10 +272,6 @@ export function PreviewApp() {
       }
 
       setSaveSuccess(true);
-      if (updatedTitles) {
-        setTitles(updatedTitles);
-        setPreviewTitles(updatedTitles);
-      }
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save config");
@@ -128,38 +293,28 @@ export function PreviewApp() {
           background: "#16213e",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <Link
-            to="/editor"
-            style={{
-              color: "#90caf9",
-              textDecoration: "none",
-              fontSize: 13,
-            }}
-          >
-            ← Editor
-          </Link>
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fff", margin: 0 }}>
-            Subtitle Preview Lab
-          </h1>
-        </div>
+        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fff", margin: 0 }}>
+          Reel Factory Studio
+        </h1>
         <div style={{ display: "flex", gap: 12 }}>
-          <Link
-            to="/preview/fonts"
+          <button
+            disabled
+            title="Coming soon — rendering via pipeline API"
             style={{
-              padding: "8px 16px",
               background: "#333",
-              color: "#e0e0e0",
-              border: "1px solid #555",
+              color: "#777",
+              border: "1px solid #444",
+              padding: "8px 16px",
               borderRadius: 6,
-              textDecoration: "none",
-              fontSize: 13,
+              fontSize: 14,
+              cursor: "not-allowed",
+              opacity: 0.6,
             }}
           >
-            Font Grid
-          </Link>
+            Render Video
+          </button>
           <button
-            onClick={() => handleSave()}
+            onClick={handleSave}
             disabled={saving}
             style={{
               padding: "8px 20px",
@@ -172,7 +327,7 @@ export function PreviewApp() {
               fontWeight: 600,
             }}
           >
-            {saving ? "Saving…" : "Save Config"}
+            {saving ? "Saving..." : "Save Config"}
           </button>
         </div>
       </header>
@@ -180,16 +335,16 @@ export function PreviewApp() {
       {/* ── Status messages ──────────────────────────────────────────────── */}
       {saveSuccess && (
         <div style={{ padding: "8px 24px", background: "#1b5e20", color: "#a5d6a7", fontSize: 14 }}>
-          ✓ Configuration saved successfully
+          Configuration saved successfully
         </div>
       )}
       {saveError && (
         <div style={{ padding: "8px 24px", background: "#b71c1c", color: "#ef9a9a", fontSize: 14 }}>
-          Error: {saveError}
+          Save failed: {saveError}
         </div>
       )}
 
-      {/* ── Main content: Player + Controls ────────────────────────────── */}
+      {/* ── Main content: Two-column layout ────────────────────────────── */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* ── Left panel: 9:16 Preview Player ──────────────────────────────── */}
         <div
@@ -208,96 +363,48 @@ export function PreviewApp() {
             subtitleConfig={subtitleConfig}
             captionPages={captionPages}
             totalDurationMs={totalDurationMs}
-            titles={previewTitles}
+            titles={titles}
           />
         </div>
 
-        {/* ── Right panel: Collapsible control sections ────────────────── */}
+        {/* ── Right panel: TabBar + tab content ────────────────────────── */}
         <div
           style={{
             flex: 1,
-            overflowY: "auto",
-            padding: 24,
             display: "flex",
             flexDirection: "column",
-            gap: 24,
+            overflow: "hidden",
           }}
         >
-          {/* Layout mode */}
-          <section>
-            <CollapsibleSection title="Subtitle Layout">
+          <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+
+          {/* Tab content wrapper */}
+          <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+            {/* Titles tab */}
+            <div style={{ display: activeTab === "titles" ? "block" : "none" }}>
+              <TitleEditor titles={titles} onChange={setTitles} />
+            </div>
+
+            {/* Subtitles tab */}
+            <div style={{ display: activeTab === "subtitles" ? "block" : "none" }}>
               <LayoutSelector
                 value={subtitleConfig.layout}
                 onChange={(layout) => updateSubtitle({ layout })}
               />
-            </CollapsibleSection>
-          </section>
-
-          {/* Style controls */}
-          <section>
-            <CollapsibleSection title="Subtitle Style" defaultOpen={true}>
               <StyleControls config={subtitleConfig} onChange={updateSubtitle} />
-            </CollapsibleSection>
-          </section>
+              <FontGrid
+                selectedFont={subtitleConfig.fontFamily}
+                onSelect={(font) => updateSubtitle({ fontFamily: font })}
+              />
+            </div>
 
-          {/* Title overlays */}
-          <section>
-            <CollapsibleSection title="Title Overlays" defaultOpen={false}>
-              <TitleEditor titles={titles} onChange={setTitles} onPreviewChange={setPreviewTitles} onSave={handleSave} />
-            </CollapsibleSection>
-          </section>
-
-          {/* Sample text */}
-          <section>
-            <CollapsibleSection title="Sample Text" defaultOpen={true}>
+            {/* Text tab */}
+            <div style={{ display: activeTab === "text" ? "block" : "none" }}>
               <TextareaInput value={sampleText} onChange={setSampleText} />
-            </CollapsibleSection>
-          </section>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ─── Collapsible section helper ────────────────────────────────────────────
-
-function CollapsibleSection({
-  title,
-  defaultOpen = false,
-  children,
-}: {
-  title: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = React.useState(defaultOpen);
-
-  return (
-    <div style={{ borderRadius: 8, border: "1px solid #333", background: "#1e1e2e" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          width: "100%",
-          padding: "12px 16px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          background: "transparent",
-          border: "none",
-          color: "#90caf9",
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: "pointer",
-          textTransform: "uppercase",
-          letterSpacing: 1,
-        }}
-      >
-        {title}
-        <span style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
-          ▼
-        </span>
-      </button>
-      {open && <div style={{ padding: "0 16px 16px" }}>{children}</div>}
     </div>
   );
 }

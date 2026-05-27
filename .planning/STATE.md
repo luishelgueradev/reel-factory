@@ -27,7 +27,13 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 Phase: 17 (config-persistence) — EXECUTING
 Plan: 1 of 2
 Status: Executing Phase 17
-Last activity: 2026-05-26 -- Phase 17 execution started
+Last activity: 2026-05-27 -- Completed quick task 260527-i3v: fix google-fonts loadFont signature bug
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260527-i3v | Fix google-fonts loadFont signature bug (all fonts fell back to monospace in preview + renders) | 2026-05-27 | c3b6a1c | [260527-i3v-fix-google-fonts-loadfont-signature-bug](./quick/260527-i3v-fix-google-fonts-loadfont-signature-bug/) |
 
 ### Phase 15 Decisions
 

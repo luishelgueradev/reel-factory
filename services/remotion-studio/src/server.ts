@@ -44,10 +44,13 @@ function isLoopback(ip: string | undefined): boolean {
 }
 
 function safeEqual(a: string, b: string): boolean {
-  const ab = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (ab.length !== bb.length) return false;
-  return crypto.timingSafeEqual(ab, bb);
+  // WR-01: Hash both inputs to fixed 32-byte digests so timingSafeEqual always
+  // executes for the same duration regardless of string length, eliminating
+  // the credential-length oracle that the early `length !== length` check exposed.
+  const key = Buffer.alloc(32); // zero key — only used to produce equal-length buffers
+  const ha = crypto.createHmac("sha256", key).update(a).digest();
+  const hb = crypto.createHmac("sha256", key).update(b).digest();
+  return crypto.timingSafeEqual(ha, hb);
 }
 
 app.use((req, res, next) => {

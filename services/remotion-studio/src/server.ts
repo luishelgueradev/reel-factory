@@ -11,24 +11,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { validatePipelineConfig } from "./pipeline-config.js";
-import type { PipelineConfig, TitleConfig } from "./pipeline-config.js";
-
-// ─── HTML sanitization for XSS prevention (CR-02) ──────────────────────────
-
-function sanitizeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function sanitizeTitles(titles: TitleConfig[]): TitleConfig[] {
-  return titles.map(t => ({
-    ...t,
-    text: sanitizeHtml(t.text),
-    subtitle: t.subtitle ? sanitizeHtml(t.subtitle) : undefined,
-  }));
-}
+import type { PipelineConfig } from "./pipeline-config.js";
 
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
@@ -163,12 +146,9 @@ app.put("/api/config", (req, res) => {
   }
 
   try {
-    // Write config, stripping _meta if present, sanitizing title text (CR-02)
+    // Write config, stripping _meta if present. JSX auto-escaping in TitleOverlay
+    // renders title text safely — no HTML sanitization needed here.
     const { _meta, ...configToWrite } = body as PipelineConfig & { _meta?: unknown };
-    // CR-02: Sanitize title text to prevent stored XSS — strip/escape HTML
-    if (configToWrite.titles && Array.isArray(configToWrite.titles)) {
-      configToWrite.titles = sanitizeTitles(configToWrite.titles);
-    }
 
     // D-04: Write ONLY to ACTIVE_PIPELINE_CONFIG_PATH (single source of truth).
     // resolveConfigPath() is NOT called here — it is used only by GET for job-scoped reads.

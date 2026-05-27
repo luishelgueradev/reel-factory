@@ -92,8 +92,15 @@ app.get("/api/health", (_req, res) => {
 
 // ─── Diagnostics endpoint ──────────────────────────────────────────────────
 
-app.post("/api/diag", express.json({ limit: "10kb" }), (req, res) => {
-  console.log("[diag] Browser errors:", JSON.stringify(req.body, null, 2));
+app.post("/api/diag", (req, res) => {
+  // WR-05: The global express.json({ limit: "1mb" }) already parsed the body before
+  // this route fires, so an inline express.json({ limit: "10kb" }) here is a no-op.
+  // Enforce the 10 KB limit manually to prevent log flooding via unauthenticated POST.
+  const raw = JSON.stringify(req.body);
+  if (raw.length > 10_000) {
+    return res.status(413).json({ error: "Payload too large" });
+  }
+  console.log("[diag] Browser errors:", raw.slice(0, 2000));
   res.json({ received: true });
 });
 

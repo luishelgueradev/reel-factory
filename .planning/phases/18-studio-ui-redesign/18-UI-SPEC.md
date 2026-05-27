@@ -46,7 +46,6 @@ Declared values (multiples of 4 only). Applied via inline `style={{}}` objects:
 Exceptions:
 - Header vertical padding: 12px top/bottom (existing, retained — not on the 8-point scale but
   consistent with current codebase; do not change)
-- Tab bar button padding: 10px top/bottom, 16px left/right (horizontal md, vertical between sm and md)
 - Touch target minimum: 44px height for all clickable tab buttons and primary action buttons
 
 ---
@@ -58,7 +57,7 @@ All sizes and weights declared as inline CSS values (no CSS variables in this ph
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 | 1.5 | Control labels, helper text, status messages |
-| Label | 13px | 400 | 1.4 | Sub-labels (color swatches, slider bounds), tab-bar inactive state |
+| Label | 12px | 400 | 1.4 | Sub-labels (color swatches, slider bounds), tab-bar inactive state |
 | Heading | 16px | 600 | 1.2 | Tab bar active label, section group headings, header app title |
 | Display | 20px | 600 | 1.2 | Page title ("Reel Factory Studio") in header — single instance only |
 
@@ -66,6 +65,8 @@ Only two weights in use: 400 (regular) and 600 (semibold). No 500/700 introduced
 Existing `fontSize: 20, fontWeight: 600` h1 in the header is the display role — retain as-is.
 Uppercase + letter-spacing (existing CollapsibleSection pattern) is retired — tab labels use
 Title Case at heading weight, no text-transform.
+
+Label tier uses 12px (not 13px) to maintain a clear typographic step below Body (14px).
 
 ---
 
@@ -141,7 +142,8 @@ Tab bar visual contract:
 - Active tab: `color: #90caf9`, `fontWeight: 600`, `borderBottom: 2px solid #90caf9`, `background: transparent`
 - Inactive tab: `color: #aaa`, `fontWeight: 400`, `borderBottom: 2px solid transparent`, `background: transparent`
 - Tab bar container: `display: flex`, `gap: 0`, `borderBottom: 1px solid #333`
-- Tab button: `padding: 10px 16px`, `minHeight: 44px`, `border: none`, `cursor: pointer`, `fontSize: 14px`
+- Tab button: `padding: 12px 16px`, `minHeight: 44px`, `border: none`, `cursor: pointer`, `fontSize: 14px`
+  - Vertical padding 12px satisfies the 44px touch target natively (12 + 12 + 20px content = 44px)
 - Hover on inactive: `color: #e0e0e0`, `background: rgba(255,255,255,0.04)`
 
 ---
@@ -174,7 +176,7 @@ browser, not a separate route. The `/preview/fonts` route is removed or redirect
 
 Font Grid layout inside Subtitles tab:
 - Rendered below StyleControls, inside the Subtitles tab content area
-- Section heading: "Browse Fonts" at label size (13px, weight 600, color #90caf9)
+- Section heading: "Browse Fonts" at label size (12px, weight 600, color #90caf9)
 - Grid: `display: grid, gridTemplateColumns: repeat(auto-fill, minmax(200px, 1fr)), gap: 12px`
 - Card: `padding: 16px, background: #1e1e2e, borderRadius: 8px, border: 1px solid #333, cursor: pointer`
 - Card hover: `borderColor: #4CAF50, background: rgba(76, 175, 80, 0.08)`
@@ -204,12 +206,12 @@ Font Grid layout inside Subtitles tab:
 | Font card loading | "Loading..." |
 | Empty titles list | "No title overlays. Add one below." — `color: #777, fontSize: 14px, textAlign: center, padding: 24px` |
 | Add title button | "Add Title" |
-| Remove title button | "Remove" — `color: #ef9a9a` (destructive color, no confirmation dialog — non-destructive UX since data is not saved until Save Config) |
+| Remove title button | "Remove Title" — `color: #ef9a9a` (destructive color, no confirmation dialog — non-destructive UX since data is not saved until Save Config) |
 
 Destructive actions:
-- Removing a title overlay: single "Remove" click (no modal confirmation). Rationale: title state
+- Removing a title overlay: single "Remove Title" click (no modal confirmation). Rationale: title state
   is in-memory only until Save Config is clicked; removing is safely undoable by not saving.
-  Copy: "Remove" with destructive red tint (`#ef9a9a`).
+  Copy: "Remove Title" with destructive red tint (`#ef9a9a`). Noun included for clarity.
 
 ---
 

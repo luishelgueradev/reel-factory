@@ -5,7 +5,7 @@
 // Font Grid inline in Subtitles tab (D-06).
 // Render Video button disabled / coming-soon (D-05).
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { SubtitleConfig, TitleConfig } from "../pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 import { PreviewPlayer } from "./PreviewPlayer";
@@ -211,6 +211,9 @@ export function PreviewApp() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("titles");
+  // WR-03: Ref to track the save-success clear timeout so it can be cancelled
+  // on unmount and on rapid re-saves, preventing state updates on unmounted components.
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Derived state ──────────────────────────────────────────────────────────
   const captionPages = useMemo(() => textToCaptionPages(sampleText), [sampleText]);
@@ -248,6 +251,13 @@ export function PreviewApp() {
       });
   }, []);
 
+  // ── WR-03: Cancel save-success timeout on unmount ────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
   // ── Save config to API (PUT /api/config) — manual save button ──────────────
   const handleSave = useCallback(async () => {
     try {
@@ -271,8 +281,9 @@ export function PreviewApp() {
         throw new Error(errData.error || `Save failed: ${res.status}`);
       }
 
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
+      saveTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save config");
     } finally {

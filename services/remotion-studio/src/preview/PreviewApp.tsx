@@ -242,8 +242,18 @@ export function PreviewApp() {
         if (data && data.subtitle) {
           setSubtitleConfig((prev) => ({ ...prev, ...data.subtitle }));
         }
-        if (data && data.titles) {
-          setTitles(data.titles);
+        if (data && Array.isArray(data.titles)) {
+          // WR-04: Validate shape before entering state — pipeline-config.json may have
+          // been hand-edited or migrated from an older schema. Missing numeric fields
+          // would produce NaN in time-range calculations downstream.
+          const validTitles = (data.titles as unknown[]).filter(
+            (t): t is TitleConfig =>
+              typeof t === "object" && t !== null &&
+              typeof (t as TitleConfig).text === "string" &&
+              typeof (t as TitleConfig).startTimeMs === "number" &&
+              typeof (t as TitleConfig).durationMs === "number"
+          );
+          setTitles(validTitles);
         }
       })
       .catch(() => {

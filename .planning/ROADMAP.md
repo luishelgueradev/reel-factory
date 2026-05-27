@@ -45,7 +45,7 @@ Closed at 2 phases / 6 plans. Whisper externalized to the standalone HTTP servic
 Unify the studio into a single 2-column interface and expand render visual/typography capabilities, with config that survives Docker rebuilds. **Frontend tooling non-negotiable:** every studio-facing phase invokes `impeccable` + `frontend-design` (AGENTS.md).
 
 - [x] **Phase 17: Config persistence** - Studio config (subtitle styles + title blocks) survives `docker compose build`/rebuild and container recreate, stored as inspectable JSON in a persistent location. Requirements: PERSIST-01, PERSIST-02. (completed 2026-05-27)
-- [ ] **Phase 18: Studio UI redesign** - Single 2-column interface (left: preview, right: controls in tabs); consolidate the duplicated editor/preview screens. Foundational UI for the new control surface. Requirements: STUDIO-01, STUDIO-02, STUDIO-03. **(UI hint: yes)**
+- [x] **Phase 18: Studio UI redesign** - Single 2-column interface (left: preview, right: controls in tabs); consolidate the duplicated editor/preview screens. Foundational UI for the new control surface. Requirements: STUDIO-01, STUDIO-02, STUDIO-03. **(UI hint: yes)** (completed 2026-05-27)
 - [ ] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)**
 - [ ] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)**
 - [ ] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)**
@@ -399,8 +399,8 @@ Plans:
 
 **Wave 2** *(parallel — no shared files)*
 
-- [ ] 18-02-PLAN.md — PreviewApp.tsx unified StudioApp: TabBar + tabs + Font Grid inline + delete ConfigPreview/FontGridPage (STUDIO-01, STUDIO-02, STUDIO-03)
-- [ ] 18-03-PLAN.md — App.tsx single route + delete EditorApp + server.ts root serving + human-verify checkpoint (STUDIO-01, STUDIO-03)
+- [x] 18-02-PLAN.md — PreviewApp.tsx unified StudioApp: TabBar + tabs + Font Grid inline + delete ConfigPreview/FontGridPage (STUDIO-01, STUDIO-02, STUDIO-03)
+- [x] 18-03-PLAN.md — App.tsx single route + delete EditorApp + server.ts root serving + human-verify checkpoint (STUDIO-01, STUDIO-03)
 
 ### Phase 19: Typography & text effects
 

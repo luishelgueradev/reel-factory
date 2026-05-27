@@ -143,6 +143,16 @@ None — pure frontend refactor, no external services or environment variables r
 - Phase 20 (Title block precision): Titles tab has space for pixel-positioning controls under TitleEditor
 - Phase 21 (PNG overlays): TABS array accepts a fourth `{ id: "overlays", label: "Overlays" }` entry — one-line config change
 
+## Self-Check: PASSED
+
+- PreviewApp.tsx: FOUND
+- ConfigPreview.tsx: CONFIRMED DELETED
+- FontGridPage.tsx: CONFIRMED DELETED
+- 18-02-SUMMARY.md: FOUND
+- Commit 74d1c45 (Task 1): FOUND
+- Commit fa8788c (Task 2): FOUND
+- Commit d02e90d (SUMMARY): FOUND
+
 ---
 *Phase: 18-studio-ui-redesign*
 *Completed: 2026-05-27*

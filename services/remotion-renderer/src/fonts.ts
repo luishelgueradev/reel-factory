@@ -119,7 +119,7 @@ export async function loadFont(fontFamily: string): Promise<string> {
     // Restrict to latin subsets only — loading all unicode ranges (the default) generates
     // 40-50 requests per font per Chrome tab, exhausting the socket pool when Remotion
     // renders frames in parallel. Spanish/English content only needs latin + latin-ext.
-    const result = await loader.loadFont({ subsets: ["latin", "latin-ext"] });
+    const result = await loader.loadFont("normal", { subsets: ["latin", "latin-ext"] });
     return result.fontFamily;
   } catch (err) {
     console.warn(`[fonts] Failed to load font "${fontFamily}", falling back to monospace:`, err);

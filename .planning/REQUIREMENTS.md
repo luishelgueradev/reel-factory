@@ -31,9 +31,9 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### Studio UI Redesign (STUDIO)
 
-- [ ] **STUDIO-01**: Studio presents a single interface split into two vertical columns — left: video preview, right: controls.
-- [ ] **STUDIO-02**: All controls live in the right panel, organized in tabs.
-- [ ] **STUDIO-03**: The duplicated editor/preview screens and redundant components are consolidated/removed.
+- [x] **STUDIO-01**: Studio presents a single interface split into two vertical columns — left: video preview, right: controls.
+- [x] **STUDIO-02**: All controls live in the right panel, organized in tabs.
+- [x] **STUDIO-03**: The duplicated editor/preview screens and redundant components are consolidated/removed.
 
 ## Future Requirements (deferred)
 

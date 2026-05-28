@@ -3,9 +3,10 @@
 // Per D-08: Background highlight - enabled/on/off + color, padding, borderRadius
 // Per D-09: Position presets - bottom-center, top-center, center-screen
 // Per D-16: Config editor UI for style controls
+// Phase 19: Extended font size (200), fontWeight/fontStyle toggles, Outer Glow card
 
 import React from "react";
-import type { SubtitleConfig, SubtitlePosition, BackgroundHighlight } from "../../pipeline-config.js";
+import type { SubtitleConfig, SubtitlePosition, BackgroundHighlight, OuterGlow } from "../../pipeline-config.js";
 import { AVAILABLE_FONTS } from "../../fonts.js";
 
 interface StyleControlsProps {
@@ -25,6 +26,13 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
     color: "#000000",
     padding: 8,
     borderRadius: 4,
+  };
+
+  const glow: OuterGlow = config.outerGlow ?? {
+    enabled: false,
+    color: "#ffffff",
+    intensity: 0.8,
+    softness: 20,
   };
 
   return (
@@ -59,7 +67,7 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
           Font Family
         </label>
         <select
-          value={config.fontFamily ?? "Inter"}
+          value={config.fontFamily ?? "PlusJakartaSans"}
           onChange={(e) => onChange({ fontFamily: e.target.value })}
           style={{
             width: "100%",
@@ -85,14 +93,92 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
         <input
           type="range"
           min={24}
-          max={120}
+          max={200}
           value={config.fontSize ?? 58}
           onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
           style={{ width: "100%", accentColor: "#4CAF50" }}
         />
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
           <span>24</span>
-          <span>120</span>
+          <span>200</span>
+        </div>
+      </div>
+
+      {/* ── Font Weight toggle ─────────────────────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Font Weight
+        </label>
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button
+            onClick={() => onChange({ fontWeight: false })}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              border: `1px solid ${config.fontWeight === false ? "#4CAF50" : "#444"}`,
+              borderRadius: 4,
+              background: config.fontWeight === false ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+              color: config.fontWeight === false ? "#a5d6a7" : "#ccc",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Regular
+          </button>
+          <button
+            onClick={() => onChange({ fontWeight: true })}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              border: `1px solid ${config.fontWeight !== false ? "#4CAF50" : "#444"}`,
+              borderRadius: 4,
+              background: config.fontWeight !== false ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+              color: config.fontWeight !== false ? "#a5d6a7" : "#ccc",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Bold
+          </button>
+        </div>
+      </div>
+
+      {/* ── Font Style toggle ──────────────────────────────────────────── */}
+      <div>
+        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+          Font Style
+        </label>
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button
+            onClick={() => onChange({ fontStyle: false })}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              border: `1px solid ${config.fontStyle !== true ? "#4CAF50" : "#444"}`,
+              borderRadius: 4,
+              background: config.fontStyle !== true ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+              color: config.fontStyle !== true ? "#a5d6a7" : "#ccc",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Normal
+          </button>
+          <button
+            onClick={() => onChange({ fontStyle: true })}
+            style={{
+              flex: 1,
+              padding: "6px 12px",
+              border: `1px solid ${config.fontStyle === true ? "#4CAF50" : "#444"}`,
+              borderRadius: 4,
+              background: config.fontStyle === true ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+              color: config.fontStyle === true ? "#a5d6a7" : "#ccc",
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            Italic
+          </button>
         </div>
       </div>
 
@@ -347,6 +433,87 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
                 onChange={(e) => onChange({ backgroundHighlight: { ...bh, borderRadius: Number(e.target.value) } })}
                 style={{ width: "100%", accentColor: "#4CAF50" }}
               />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Outer Glow (Phase 19, TYPO-04) ──────────────────────────────── */}
+      <div style={{
+        padding: "12px 16px",
+        background: "#1e1e2e",
+        borderRadius: 8,
+        border: "1px solid #333",
+      }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 8 }}>
+          <input
+            type="checkbox"
+            checked={glow.enabled}
+            onChange={(e) => onChange({ outerGlow: { ...glow, enabled: e.target.checked } })}
+          />
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>Outer Glow</span>
+        </label>
+
+        {glow.enabled && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginLeft: 24 }}>
+            {/* Glow Color */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+              <label style={{ fontSize: 12, color: "#999" }}>Glow Color</label>
+              <input
+                type="color"
+                value={glow.color}
+                onChange={(e) => onChange({ outerGlow: { ...glow, color: e.target.value } })}
+                style={{
+                  width: 48,
+                  height: 36,
+                  border: "1px solid #444",
+                  borderRadius: 4,
+                  padding: 2,
+                  background: "#2a2a3e",
+                  cursor: "pointer",
+                }}
+              />
+              <span style={{ fontSize: 11, color: "#666" }}>{glow.color}</span>
+            </div>
+
+            {/* Intensity slider */}
+            <div>
+              <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 4 }}>
+                Intensity: {glow.intensity}
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={glow.intensity}
+                onChange={(e) => onChange({ outerGlow: { ...glow, intensity: Number(e.target.value) } })}
+                style={{ width: "100%", accentColor: "#4CAF50" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+                <span>0</span>
+                <span>1</span>
+              </div>
+            </div>
+
+            {/* Softness slider */}
+            <div>
+              <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 4 }}>
+                Softness: {glow.softness}px
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={60}
+                step={1}
+                value={glow.softness}
+                onChange={(e) => onChange({ outerGlow: { ...glow, softness: Number(e.target.value) } })}
+                style={{ width: "100%", accentColor: "#4CAF50" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+                <span>0px</span>
+                <span>60px</span>
+              </div>
             </div>
           </div>
         )}

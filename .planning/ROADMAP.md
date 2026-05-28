@@ -428,7 +428,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 19-03-PLAN.md — UI controls (StyleControls + TitleEditor: size sliders, Bold/Italic toggles, Outer Glow card, build)
+- [x] 19-03-PLAN.md — UI controls (StyleControls + TitleEditor: size sliders, Bold/Italic toggles, Outer Glow card, build)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 

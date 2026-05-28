@@ -424,7 +424,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 19-02-PLAN.md — Compositions (getOuterGlowStyle, de-hardcode fontWeight in 4 layouts + TitleOverlay, renderer sync)
+- [x] 19-02-PLAN.md — Compositions (getOuterGlowStyle, de-hardcode fontWeight in 4 layouts + TitleOverlay, renderer sync)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

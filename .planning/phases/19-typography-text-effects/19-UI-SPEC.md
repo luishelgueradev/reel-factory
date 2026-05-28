@@ -1,7 +1,8 @@
 ---
 phase: 19
 slug: typography-text-effects
-status: draft
+status: approved
+reviewed_at: 2026-05-28
 shadcn_initialized: false
 preset: none
 created: 2026-05-28
@@ -49,7 +50,7 @@ Declared values (multiples of 4 only):
 
 Exceptions:
 - Section card padding is 12px vertical × 16px horizontal (`padding: "12px 16px"`) — matches existing card pattern in StyleControls.tsx and TitleEditor.tsx.
-- Button padding: 8px vertical × 16px horizontal for primary form actions; 4px × 10px for compact list-item actions — matches existing hardcoded compact button value in TitleEditor.tsx (lines 192, 198); not changed in Phase 19.
+- Button padding: 8px vertical × 16px horizontal for primary form actions. Compact list-item action buttons (TitleEditor.tsx lines 192, 198) are pre-existing and not introduced or modified by Phase 19 — their padding is not declared by this contract.
 - Color-picker swatch: 48px wide × 36px tall (native `<input type="color">` dimensions, established pattern).
 
 ---
@@ -287,11 +288,11 @@ No external component registries used. All UI is custom inline-style React compo
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: FLAG (non-blocking — existing scale, 1px increments)
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved — 2026-05-28

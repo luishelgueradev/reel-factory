@@ -19,6 +19,7 @@ const ENTRANCE_ANIMATIONS: { id: TitleEntranceAnimation; label: string }[] = [
 ];
 
 const FONT_OPTIONS = [
+  "PlusJakartaSans",
   "Inter", "Roboto", "Montserrat", "Oswald", "Poppins", "BebasNeue", "Antonio",
   "Raleway", "Ubuntu", "Nunito", "SpaceGrotesk", "Rubik", "SourceSans3",
   "Outfit", "PlayfairDisplay", "LexendDeca", "Signika", "Lato",
@@ -34,8 +35,8 @@ const DEFAULT_TITLE_STYLE = {
   subtitleFontSize: 42,
   titleColor: "#FFFFFF",
   subtitleColor: "#FFFFFF",
-  titleFontFamily: "Inter",
-  subtitleFontFamily: "Inter",
+  titleFontFamily: "PlusJakartaSans",
+  subtitleFontFamily: "PlusJakartaSans",
   topOffset: 50,
   lineHeight: 1.2,
   padding: 40,
@@ -375,7 +376,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               <input
                 type="range"
                 min={24}
-                max={120}
+                max={200}
                 value={newTitle.style?.titleFontSize ?? 72}
                 onChange={(e) => setNewTitle((prev) => ({
                   ...prev,
@@ -383,6 +384,10 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 }))}
                 style={{ width: "100%" }}
               />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+                <span>24</span>
+                <span>200</span>
+              </div>
             </div>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
@@ -391,7 +396,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               <input
                 type="range"
                 min={16}
-                max={80}
+                max={200}
                 value={newTitle.style?.subtitleFontSize ?? 42}
                 onChange={(e) => setNewTitle((prev) => ({
                   ...prev,
@@ -399,6 +404,10 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 }))}
                 style={{ width: "100%" }}
               />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+                <span>16</span>
+                <span>200</span>
+              </div>
             </div>
           </div>
 
@@ -464,7 +473,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 Title Font
               </label>
               <select
-                value={newTitle.style?.titleFontFamily ?? "Inter"}
+                value={newTitle.style?.titleFontFamily ?? "PlusJakartaSans"}
                 onChange={(e) => setNewTitle((prev) => ({
                   ...prev,
                   style: { ...prev.style!, titleFontFamily: e.target.value },
@@ -481,7 +490,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 Subtitle Font
               </label>
               <select
-                value={newTitle.style?.subtitleFontFamily ?? "Inter"}
+                value={newTitle.style?.subtitleFontFamily ?? "PlusJakartaSans"}
                 onChange={(e) => setNewTitle((prev) => ({
                   ...prev,
                   style: { ...prev.style!, subtitleFontFamily: e.target.value },
@@ -494,6 +503,188 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               </select>
             </div>
           </div>
+
+          {/* Font Weight toggle (Phase 19, TYPO-03) */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+              Font Weight
+            </label>
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <button
+                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontWeight: false } }))}
+                style={{
+                  flex: 1,
+                  padding: "6px 12px",
+                  border: `1px solid ${newTitle.style?.fontWeight === false ? "#4CAF50" : "#444"}`,
+                  borderRadius: 4,
+                  background: newTitle.style?.fontWeight === false ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+                  color: newTitle.style?.fontWeight === false ? "#a5d6a7" : "#ccc",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Regular
+              </button>
+              <button
+                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontWeight: true } }))}
+                style={{
+                  flex: 1,
+                  padding: "6px 12px",
+                  border: `1px solid ${newTitle.style?.fontWeight !== false ? "#4CAF50" : "#444"}`,
+                  borderRadius: 4,
+                  background: newTitle.style?.fontWeight !== false ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+                  color: newTitle.style?.fontWeight !== false ? "#a5d6a7" : "#ccc",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Bold
+              </button>
+            </div>
+          </div>
+
+          {/* Font Style toggle (Phase 19, TYPO-03) */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
+              Font Style
+            </label>
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <button
+                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontStyle: false } }))}
+                style={{
+                  flex: 1,
+                  padding: "6px 12px",
+                  border: `1px solid ${newTitle.style?.fontStyle !== true ? "#4CAF50" : "#444"}`,
+                  borderRadius: 4,
+                  background: newTitle.style?.fontStyle !== true ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+                  color: newTitle.style?.fontStyle !== true ? "#a5d6a7" : "#ccc",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Normal
+              </button>
+              <button
+                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontStyle: true } }))}
+                style={{
+                  flex: 1,
+                  padding: "6px 12px",
+                  border: `1px solid ${newTitle.style?.fontStyle === true ? "#4CAF50" : "#444"}`,
+                  borderRadius: 4,
+                  background: newTitle.style?.fontStyle === true ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
+                  color: newTitle.style?.fontStyle === true ? "#a5d6a7" : "#ccc",
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                Italic
+              </button>
+            </div>
+          </div>
+
+          {/* Outer Glow card (Phase 19, TYPO-04) */}
+          {(() => {
+            const titleGlow = newTitle.style?.outerGlow ?? {
+              enabled: false,
+              color: "#ffffff",
+              intensity: 0.8,
+              softness: 20,
+            };
+            return (
+              <div style={{
+                padding: "12px 16px",
+                background: "#1e1e2e",
+                borderRadius: 8,
+                border: "1px solid #333",
+                marginBottom: 12,
+              }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={titleGlow.enabled}
+                    onChange={(e) => setNewTitle((prev) => ({
+                      ...prev,
+                      style: { ...prev.style!, outerGlow: { ...titleGlow, enabled: e.target.checked } },
+                    }))}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>Outer Glow</span>
+                </label>
+
+                {titleGlow.enabled && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginLeft: 24 }}>
+                    {/* Glow Color */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                      <label style={{ fontSize: 12, color: "#999" }}>Glow Color</label>
+                      <input
+                        type="color"
+                        value={titleGlow.color}
+                        onChange={(e) => setNewTitle((prev) => ({
+                          ...prev,
+                          style: { ...prev.style!, outerGlow: { ...titleGlow, color: e.target.value } },
+                        }))}
+                        style={{
+                          width: 48,
+                          height: 36,
+                          border: "1px solid #444",
+                          borderRadius: 4,
+                          padding: 2,
+                          background: "#2a2a3e",
+                          cursor: "pointer",
+                        }}
+                      />
+                      <span style={{ fontSize: 11, color: "#666" }}>{titleGlow.color}</span>
+                    </div>
+
+                    {/* Intensity slider */}
+                    <div>
+                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 4 }}>
+                        Intensity: {titleGlow.intensity}
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={titleGlow.intensity}
+                        onChange={(e) => setNewTitle((prev) => ({
+                          ...prev,
+                          style: { ...prev.style!, outerGlow: { ...titleGlow, intensity: Number(e.target.value) } },
+                        }))}
+                        style={{ width: "100%", accentColor: "#4CAF50" }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+                        <span>0</span>
+                        <span>1</span>
+                      </div>
+                    </div>
+
+                    {/* Softness slider */}
+                    <div>
+                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 4 }}>
+                        Softness: {titleGlow.softness}px
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={60}
+                        step={1}
+                        value={titleGlow.softness}
+                        onChange={(e) => setNewTitle((prev) => ({
+                          ...prev,
+                          style: { ...prev.style!, outerGlow: { ...titleGlow, softness: Number(e.target.value) } },
+                        }))}
+                        style={{ width: "100%", accentColor: "#4CAF50" }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+                        <span>0px</span>
+                        <span>60px</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Form actions */}
           <div style={{ display: "flex", gap: 8 }}>

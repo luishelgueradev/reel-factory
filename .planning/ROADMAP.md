@@ -420,7 +420,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 19-01-PLAN.md — Schema + fonts.ts (OuterGlow, fontWeight/fontStyle fields, PlusJakartaSans, validation, tests)
+- [x] 19-01-PLAN.md — Schema + fonts.ts (OuterGlow, fontWeight/fontStyle fields, PlusJakartaSans, validation, tests)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

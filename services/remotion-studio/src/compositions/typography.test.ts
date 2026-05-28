@@ -140,6 +140,49 @@ describe("outerGlow validation (TYPO-04)", () => {
   });
 });
 
+// ─── TYPO-04: getOuterGlowStyle CSS helper ───────────────────────────────────
+
+import { getOuterGlowStyle } from "./shared-styles";
+
+describe("getOuterGlowStyle (TYPO-04)", () => {
+  it("returns {} when outerGlow is undefined", () => {
+    expect(getOuterGlowStyle(undefined)).toEqual({});
+  });
+
+  it("returns {} when outerGlow.enabled is false", () => {
+    expect(
+      getOuterGlowStyle({ enabled: false, color: "#ff0000", intensity: 0.8, softness: 20 })
+    ).toEqual({});
+  });
+
+  it("returns correct text-shadow for white glow", () => {
+    expect(
+      getOuterGlowStyle({ enabled: true, color: "#ffffff", intensity: 0.8, softness: 20 })
+    ).toEqual({ textShadow: "0 0 20px rgba(255, 255, 255, 0.8)" });
+  });
+
+  it("returns correct text-shadow for red glow with different params", () => {
+    expect(
+      getOuterGlowStyle({ enabled: true, color: "#ff0000", intensity: 0.5, softness: 10 })
+    ).toEqual({ textShadow: "0 0 10px rgba(255, 0, 0, 0.5)" });
+  });
+
+  it("comma-joins with existingTextShadow when glow is enabled", () => {
+    expect(
+      getOuterGlowStyle(
+        { enabled: true, color: "#ffffff", intensity: 1, softness: 5 },
+        "1px 1px 2px #000"
+      )
+    ).toEqual({ textShadow: "1px 1px 2px #000, 0 0 5px rgba(255, 255, 255, 1)" });
+  });
+
+  it("passes through existingTextShadow when glow is disabled", () => {
+    expect(
+      getOuterGlowStyle(undefined, "1px 1px 2px #000")
+    ).toEqual({ textShadow: "1px 1px 2px #000" });
+  });
+});
+
 // ─── TYPO-02: font size range extended to 200 ────────────────────────────────
 
 describe("font size range (TYPO-02)", () => {

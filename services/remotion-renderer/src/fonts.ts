@@ -3,6 +3,7 @@
 // Fonts are loaded via @remotion/google-fonts at render time (T-06-07 mitigation:
 // try/catch with monospace fallback if Google Fonts CDN is unavailable).
 
+import { loadFont as loadPlusJakartaSans, fontFamily as plusJakartaSansFamily } from "@remotion/google-fonts/PlusJakartaSans";
 import { loadFont as loadInter, fontFamily as interFamily } from "@remotion/google-fonts/Inter";
 import { loadFont as loadRoboto, fontFamily as robotoFamily } from "@remotion/google-fonts/Roboto";
 import { loadFont as loadMontserrat, fontFamily as montserratFamily } from "@remotion/google-fonts/Montserrat";
@@ -33,6 +34,7 @@ import { loadFont as loadTitanOne, fontFamily as titanOneFamily } from "@remotio
 
 /** Curated font set available for title and subtitle text */
 export const AVAILABLE_FONTS = [
+  "PlusJakartaSans",
   "Inter", "Roboto", "Montserrat", "Oswald", "Poppins", "BebasNeue", "Antonio",
   "Raleway", "Ubuntu", "Nunito", "SpaceGrotesk", "Rubik", "SourceSans3",
   "Outfit", "PlayfairDisplay", "LexendDeca", "Signika", "Lato",
@@ -52,6 +54,7 @@ export type AvailableFont = (typeof AVAILABLE_FONTS)[number];
 // We store them in a map for dynamic lookup by name.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const FONT_LOADERS: Record<string, { fontFamily: string; loadFont: (...args: any[]) => any }> = {
+  PlusJakartaSans: { fontFamily: plusJakartaSansFamily, loadFont: loadPlusJakartaSans },
   Inter: { fontFamily: interFamily, loadFont: loadInter },
   Roboto: { fontFamily: robotoFamily, loadFont: loadRoboto },
   Montserrat: { fontFamily: montserratFamily, loadFont: loadMontserrat },

@@ -30,6 +30,14 @@ export interface TextShadow {
   offsetY: number;
 }
 
+/** Outer glow effect parameters (TYPO-04) */
+export interface OuterGlow {
+  enabled: boolean;
+  color: string;    // hex color, e.g. "#ffffff"
+  intensity: number; // alpha multiplier 0–1
+  softness: number;  // blur radius in px
+}
+
 /** SubtitleConfig — all style fields from D-06 with defaults */
 export interface SubtitleConfig {
   layout: SubtitleLayoutMode;
@@ -50,6 +58,9 @@ export interface SubtitleConfig {
   highlightDurationMs?: number; // how long the highlight flash lasts (0-500ms)
   highlightTransition?: "fade" | "instant"; // how highlight transitions to activeColor
   subtitleWidth?: number; // max width in pixels for the subtitle paragraph (0 = full width, default 0)
+  fontWeight?: boolean;  // false = 400 (regular), true = 700 (bold). Default: true (preserves existing behavior)
+  fontStyle?: boolean;   // false = normal, true = italic. Default: false
+  outerGlow?: OuterGlow; // outer glow effect (TYPO-04)
 }
 
 // ─── Title Overlays (D-10, D-11, D-12) ────────────────────────────────────
@@ -71,6 +82,9 @@ export interface TitleStyleProps {
   topOffset?: number;
   lineHeight?: number;
   padding?: number;
+  fontWeight?: boolean;  // false = 400 (regular), true = 700 (bold). Default: true
+  fontStyle?: boolean;   // false = normal, true = italic. Default: false
+  outerGlow?: OuterGlow; // outer glow effect (TYPO-04)
 }
 
 /** Title overlay configuration (D-12) */
@@ -139,6 +153,8 @@ export const DEFAULT_SUBTITLE_CONFIG: Required<
     | "highlightDurationMs"
     | "highlightTransition"
     | "subtitleWidth"
+    | "fontFamily"
+    | "fontWeight"
   >
 > = {
   fontSize: 58,
@@ -154,6 +170,8 @@ export const DEFAULT_SUBTITLE_CONFIG: Required<
   highlightDurationMs: 200,
   highlightTransition: "fade",
   subtitleWidth: 0,
+  fontFamily: "PlusJakartaSans",
+  fontWeight: true,
 };
 
 // ─── Visual Effects Defaults (D-03, D-06, D-07, D-12) ──────────────────────
@@ -286,6 +304,37 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
     }
   }
 
+  // Validate subtitle.outerGlow (optional, TYPO-04 — T-19-01/02/03 mitigations)
+  if (sub.outerGlow !== undefined) {
+    const og = sub.outerGlow as Record<string, unknown>;
+    if (typeof og !== "object" || og === null || Array.isArray(og)) {
+      errors.push("subtitle.outerGlow must be an object");
+    } else {
+      if (typeof og.enabled !== "boolean") {
+        errors.push("subtitle.outerGlow.enabled must be a boolean");
+      }
+      if (typeof og.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(og.color as string)) {
+        errors.push("subtitle.outerGlow.color must be a 6-digit hex color (e.g. #ffffff)");
+      }
+      if (typeof og.intensity !== "number" || og.intensity < 0 || og.intensity > 1) {
+        errors.push("subtitle.outerGlow.intensity must be a number between 0 and 1");
+      }
+      if (typeof og.softness !== "number" || og.softness < 0) {
+        errors.push("subtitle.outerGlow.softness must be a non-negative number");
+      }
+    }
+  }
+
+  // Validate subtitle.fontWeight (optional, must be boolean if present — T-19-04)
+  if (sub.fontWeight !== undefined && typeof sub.fontWeight !== "boolean") {
+    errors.push("subtitle.fontWeight must be a boolean");
+  }
+
+  // Validate subtitle.fontStyle (optional, must be boolean if present — T-19-04)
+  if (sub.fontStyle !== undefined && typeof sub.fontStyle !== "boolean") {
+    errors.push("subtitle.fontStyle must be a boolean");
+  }
+
   // Validate subtitle.pastWordOpacity (optional, must be 0-1 if provided)
   if (sub.pastWordOpacity !== undefined && (typeof sub.pastWordOpacity !== "number" || sub.pastWordOpacity < 0 || sub.pastWordOpacity > 1)) {
     errors.push("subtitle.pastWordOpacity must be a number between 0 and 1");
@@ -356,8 +405,8 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
             if (s.titleFontSize !== undefined && (typeof s.titleFontSize !== "number" || s.titleFontSize < 8 || s.titleFontSize > 200)) {
               errors.push(`titles[${index}].style.titleFontSize must be a number between 8 and 200`);
             }
-            if (s.subtitleFontSize !== undefined && (typeof s.subtitleFontSize !== "number" || s.subtitleFontSize < 8 || s.subtitleFontSize > 120)) {
-              errors.push(`titles[${index}].style.subtitleFontSize must be a number between 8 and 120`);
+            if (s.subtitleFontSize !== undefined && (typeof s.subtitleFontSize !== "number" || s.subtitleFontSize < 8 || s.subtitleFontSize > 200)) {
+              errors.push(`titles[${index}].style.subtitleFontSize must be a number between 8 and 200`);
             }
             if (s.topOffset !== undefined && (typeof s.topOffset !== "number" || s.topOffset < 0 || s.topOffset > 100)) {
               errors.push(`titles[${index}].style.topOffset must be a number between 0 and 100`);
@@ -367,6 +416,14 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
             }
             if (s.padding !== undefined && (typeof s.padding !== "number" || s.padding < 0 || s.padding > 100)) {
               errors.push(`titles[${index}].style.padding must be a number between 0 and 100`);
+            }
+            // Validate title style fontWeight (optional, must be boolean if present — T-19-04)
+            if (s.fontWeight !== undefined && typeof s.fontWeight !== "boolean") {
+              errors.push(`titles[${index}].style.fontWeight must be a boolean`);
+            }
+            // Validate title style fontStyle (optional, must be boolean if present — T-19-04)
+            if (s.fontStyle !== undefined && typeof s.fontStyle !== "boolean") {
+              errors.push(`titles[${index}].style.fontStyle must be a boolean`);
             }
           }
         }

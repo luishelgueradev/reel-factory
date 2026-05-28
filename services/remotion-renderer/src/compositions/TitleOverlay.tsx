@@ -43,6 +43,9 @@ const DEFAULT_TITLE_STYLE: Required<TitleStyleProps> = {
   topOffset: 50,
   lineHeight: 1.2,
   padding: 40,
+  fontWeight: true,
+  fontStyle: false,
+  outerGlow: { enabled: false, color: "#ffffff", intensity: 0.8, softness: 20 },
 };
 
 export const TitleOverlay: React.FC<TitleOverlayProps> = ({

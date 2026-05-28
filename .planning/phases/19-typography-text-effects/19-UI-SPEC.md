@@ -49,7 +49,7 @@ Declared values (multiples of 4 only):
 
 Exceptions:
 - Section card padding is 12px vertical × 16px horizontal (`padding: "12px 16px"`) — matches existing card pattern in StyleControls.tsx and TitleEditor.tsx.
-- Button padding: 8px vertical × 16px horizontal for primary form actions; 4px × 10px for compact list-item actions.
+- Button padding: 8px vertical × 16px horizontal for primary form actions; 4px × 10px for compact list-item actions — matches existing hardcoded compact button value in TitleEditor.tsx (lines 192, 198); not changed in Phase 19.
 - Color-picker swatch: 48px wide × 36px tall (native `<input type="color">` dimensions, established pattern).
 
 ---

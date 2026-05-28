@@ -418,9 +418,20 @@ Plans:
 **Plans**: 4 plans in 4 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 19-01-PLAN.md — Schema + fonts.ts (OuterGlow, fontWeight/fontStyle fields, PlusJakartaSans, validation, tests)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 19-02-PLAN.md — Compositions (getOuterGlowStyle, de-hardcode fontWeight in 4 layouts + TitleOverlay, renderer sync)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 19-03-PLAN.md — UI controls (StyleControls + TitleEditor: size sliders, Bold/Italic toggles, Outer Glow card, build)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 19-04-PLAN.md — Human visual verify (studio at port 3123, all 4 requirements)
 
 ### Phase 20: Title block precision

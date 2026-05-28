@@ -1,4 +1,4 @@
-import type { SubtitleConfig, SubtitlePosition } from "../pipeline-config";
+import type { SubtitleConfig, SubtitlePosition, OuterGlow } from "../pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 
 // ─── Timing constants (shared across all layouts) ──────────────────────────
@@ -73,6 +73,25 @@ export function getBackgroundHighlightStyle(
     padding: `${backgroundHighlight.padding}px`,
     borderRadius: `${backgroundHighlight.borderRadius}px`,
   };
+}
+
+// ─── Outer glow (TYPO-04) ────────────────────────────────────────────────────
+
+export function getOuterGlowStyle(
+  outerGlow: OuterGlow | undefined,
+  existingTextShadow?: string
+): React.CSSProperties {
+  if (!outerGlow || !outerGlow.enabled) {
+    return existingTextShadow ? { textShadow: existingTextShadow } : {};
+  }
+  const hex = outerGlow.color.replace("#", "");
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const colorWithAlpha = `rgba(${r}, ${g}, ${b}, ${outerGlow.intensity})`;
+  const glowShadow = `0 0 ${outerGlow.softness}px ${colorWithAlpha}`;
+  const combined = existingTextShadow ? `${existingTextShadow}, ${glowShadow}` : glowShadow;
+  return { textShadow: combined };
 }
 
 // ─── Past word opacity helper (D-07) ──────────────────────────────────────

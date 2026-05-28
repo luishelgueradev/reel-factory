@@ -16,6 +16,7 @@ import {
   getPositionStyles,
   getBackgroundHighlightStyle,
   getPastWordOpacity,
+  getOuterGlowStyle,
 } from "./shared-styles";
 
 // ─── KaraokeWord (progressive fill effect) ──────────────────────────────────
@@ -41,6 +42,9 @@ const KaraokeWord: React.FC<{
   highlightColor?: string;
   highlightDurationMs?: number;
   highlightTransition?: "fade" | "instant";
+  fontWeight?: boolean;
+  fontStyle?: boolean;
+  outerGlowStyle?: React.CSSProperties;
 }> = ({
   token,
   isActive,
@@ -62,6 +66,9 @@ const KaraokeWord: React.FC<{
   highlightColor,
   highlightDurationMs,
   highlightTransition,
+  fontWeight,
+  fontStyle,
+  outerGlowStyle,
 }) => {
   // Calculate fill progress for the active word
   const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
@@ -105,6 +112,7 @@ const KaraokeWord: React.FC<{
         fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
         lineHeight: lineHeight ?? 1.3,
+        ...outerGlowStyle,
       }}
     >
       {/* Baseline layer: inactive color */}
@@ -112,7 +120,8 @@ const KaraokeWord: React.FC<{
         style={{
           fontSize,
           color: inactiveColor,
-          fontWeight: 700,
+          fontWeight: fontWeight !== false ? 700 : 400,
+          fontStyle: fontStyle === true ? "italic" : "normal",
           opacity: wasActive ? pastOpacity : 1,
           WebkitTextStroke: outlineWidth,
           WebkitTextStrokeColor: outlineColor,
@@ -131,7 +140,8 @@ const KaraokeWord: React.FC<{
           width: `${clipPercent}%`,
           fontSize,
           color: fillColor,
-          fontWeight: 700,
+          fontWeight: fontWeight !== false ? 700 : 400,
+          fontStyle: fontStyle === true ? "italic" : "normal",
           WebkitTextStroke: outlineWidth,
           WebkitTextStrokeColor: outlineColor,
           paintOrder: "stroke fill",
@@ -202,6 +212,7 @@ const KaraokePage: React.FC<{
   const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
   const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" as const } : {};
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
+  const outerGlowStyle = getOuterGlowStyle(config.outerGlow);
 
   return (
     <div
@@ -246,6 +257,9 @@ const KaraokePage: React.FC<{
             highlightColor={isActive ? highlightColorVal : undefined}
             highlightDurationMs={isActive ? highlightDurationMsVal : undefined}
             highlightTransition={isActive ? highlightTransitionVal : undefined}
+            fontWeight={config.fontWeight}
+            fontStyle={config.fontStyle}
+            outerGlowStyle={outerGlowStyle}
           />
         );
       })}

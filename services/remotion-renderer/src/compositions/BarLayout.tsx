@@ -16,6 +16,7 @@ import {
   HIGHLIGHT_FADE_MS,
   getPositionStyles,
   getPastWordOpacity,
+  getOuterGlowStyle,
 } from "./shared-styles";
 
 // Interpolate between two hex colors (#RRGGBB). Falls back to `to` for non-hex inputs.
@@ -55,6 +56,9 @@ const BarWord: React.FC<{
   highlightDurationMs?: number;
   highlightTransition?: "fade" | "instant";
   fps: number;
+  fontWeight?: boolean;
+  fontStyle?: boolean;
+  outerGlowStyle?: React.CSSProperties;
 }> = ({
   text,
   isActive,
@@ -74,6 +78,9 @@ const BarWord: React.FC<{
   highlightDurationMs,
   highlightTransition,
   fps,
+  fontWeight,
+  fontStyle,
+  outerGlowStyle,
 }) => {
   const color = isActive || wasActive ? activeColor : inactiveColor;
   const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
@@ -108,7 +115,8 @@ const BarWord: React.FC<{
         fontSize,
         color: wordColor,
         opacity: wordOpacity,
-        fontWeight: 700,
+        fontWeight: fontWeight !== false ? 700 : 400,
+        fontStyle: fontStyle === true ? "italic" : "normal",
         fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
         lineHeight: lineHeight ?? 1.3,
@@ -117,6 +125,7 @@ const BarWord: React.FC<{
         paintOrder: "stroke fill",
         padding: "0 2px",
         whiteSpace: "pre-wrap",
+        ...outerGlowStyle,
       }}
     >
       {text}
@@ -201,6 +210,7 @@ const BarPage: React.FC<{
   // For bar mode, we always use bottom positioning style but respect the position preset
   const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
   const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" } : {};
+  const outerGlowStyle = getOuterGlowStyle(config.outerGlow);
 
   return (
     <div
@@ -251,6 +261,9 @@ const BarPage: React.FC<{
               highlightDurationMs={isActive ? highlightDurationMsVal : undefined}
               highlightTransition={isActive ? highlightTransitionVal : undefined}
               fps={fps}
+              fontWeight={config.fontWeight}
+              fontStyle={config.fontStyle}
+              outerGlowStyle={outerGlowStyle}
             />
           );
         })}

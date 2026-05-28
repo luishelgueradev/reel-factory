@@ -17,6 +17,7 @@ import {
   getPositionStyles,
   getBackgroundHighlightStyle,
   getPastWordOpacity,
+  getOuterGlowStyle,
 } from "./shared-styles";
 
 // ─── Sentence grouping ──────────────────────────────────────────────────────
@@ -190,7 +191,8 @@ const SentencePage: React.FC<{
               fontSize,
               color: wordColor,
               opacity: wordOpacity,
-              fontWeight: 700,
+              fontWeight: (config.fontWeight !== false) ? 700 : 400,
+              fontStyle: config.fontStyle === true ? "italic" : "normal",
               fontFamily: fontFamily || undefined,
               letterSpacing: letterSpacing ?? "-0.02em",
               lineHeight: lineHeight ?? 1.3,
@@ -200,6 +202,7 @@ const SentencePage: React.FC<{
               padding: "0 4px",
               whiteSpace: "pre-wrap",
               willChange: "opacity",
+              ...getOuterGlowStyle(config.outerGlow),
             }}
           >
             {token.text}

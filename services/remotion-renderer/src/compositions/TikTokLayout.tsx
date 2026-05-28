@@ -17,6 +17,7 @@ import {
   getPositionStyles,
   getBackgroundHighlightStyle,
   getPastWordOpacity,
+  getOuterGlowStyle,
 } from "./shared-styles";
 
 // Interpolate between two hex colors (#RRGGBB). Falls back to `to` for non-hex inputs.
@@ -55,6 +56,9 @@ const CaptionWord: React.FC<{
   highlightDurationMs?: number;
   highlightTransition?: "fade" | "instant";
   fps: number;
+  fontWeight?: boolean;
+  fontStyle?: boolean;
+  outerGlowStyle?: React.CSSProperties;
 }> = ({
   text,
   isActive,
@@ -73,6 +77,9 @@ const CaptionWord: React.FC<{
   highlightDurationMs,
   highlightTransition,
   fps,
+  fontWeight,
+  fontStyle,
+  outerGlowStyle,
 }) => {
   const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
   const wordOpacity = isActive
@@ -106,7 +113,8 @@ const CaptionWord: React.FC<{
         fontSize,
         color: wordColor,
         opacity: wordOpacity,
-        fontWeight: 700,
+        fontWeight: fontWeight !== false ? 700 : 400,
+        fontStyle: fontStyle === true ? "italic" : "normal",
         fontFamily: fontFamily || undefined,
         letterSpacing: letterSpacing ?? "-0.02em",
         lineHeight: lineHeight ?? 1.3,
@@ -115,6 +123,7 @@ const CaptionWord: React.FC<{
         paintOrder: "stroke fill",
         padding: "0 2px",
         whiteSpace: "pre-wrap",
+        ...outerGlowStyle,
       }}
     >
       {text}
@@ -187,6 +196,7 @@ const CaptionPage: React.FC<{
   const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
   const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" as const } : {};
   const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
+  const outerGlowStyle = getOuterGlowStyle(config.outerGlow);
 
   return (
     <div
@@ -228,6 +238,9 @@ const CaptionPage: React.FC<{
               highlightDurationMs={isActive ? highlightDurationMs : undefined}
               highlightTransition={isActive ? highlightTransition : undefined}
               fps={fps}
+              fontWeight={config.fontWeight}
+              fontStyle={config.fontStyle}
+              outerGlowStyle={outerGlowStyle}
             />
           );
       })}

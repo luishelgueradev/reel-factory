@@ -9,6 +9,7 @@ import {
 } from "remotion";
 import type { TitleStyleProps } from "../pipeline-config";
 import { loadFont, getFontFamilyCSS } from "../fonts";
+import { getOuterGlowStyle } from "./shared-styles";
 
 // ─── TitleOverlay: Animated title card with entrance/exit animations ───────
 // Per D-10 (intro/outro title types), D-11 (visual style), D-13 (title/subtitle coexistence)
@@ -211,13 +212,15 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
         <span
           style={{
             fontSize: titleFontSize,
-            fontWeight: 800,
+            fontWeight: style?.fontWeight !== false ? 700 : 400,
+            fontStyle: style?.fontStyle === true ? "italic" : "normal",
             color: titleColor,
             fontFamily: titleFontCSS,
             textAlign: "center",
             lineHeight: lineHeight,
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
+            ...getOuterGlowStyle(style?.outerGlow),
           }}
         >
           {text}
@@ -229,6 +232,7 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
             style={{
               fontSize: subtitleFontSize,
               fontWeight: 500,
+              fontStyle: style?.fontStyle === true ? "italic" : "normal",
               color: subtitleColor,
               fontFamily: subtitleFontCSS,
               textAlign: "center",
@@ -236,6 +240,7 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
               opacity: 0.85,
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
+              ...getOuterGlowStyle(style?.outerGlow),
             }}
           >
             {subtitle}

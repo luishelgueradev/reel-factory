@@ -415,7 +415,13 @@ Plans:
   3. Bold and italic variants apply and render
   4. An outer glow with configurable color, intensity, and softness renders on text
 
-**Plans**: TBD (plan-phase)
+**Plans**: 4 plans in 4 waves
+
+Plans:
+- [ ] 19-01-PLAN.md — Schema + fonts.ts (OuterGlow, fontWeight/fontStyle fields, PlusJakartaSans, validation, tests)
+- [ ] 19-02-PLAN.md — Compositions (getOuterGlowStyle, de-hardcode fontWeight in 4 layouts + TitleOverlay, renderer sync)
+- [ ] 19-03-PLAN.md — UI controls (StyleControls + TitleEditor: size sliders, Bold/Italic toggles, Outer Glow card, build)
+- [ ] 19-04-PLAN.md — Human visual verify (studio at port 3123, all 4 requirements)
 
 ### Phase 20: Title block precision
 

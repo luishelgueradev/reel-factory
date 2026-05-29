@@ -201,7 +201,7 @@ describe("font size range (TYPO-02)", () => {
     expect(result.valid).toBe(true);
   });
 
-  it("rejects title style subtitleFontSize = 201 (exceeds max)", () => {
+  it("rejects title style titleFontSize = 201 (exceeds max)", () => {
     const result = validatePipelineConfig({
       subtitle: { layout: "tiktok" },
       titles: [
@@ -209,11 +209,11 @@ describe("font size range (TYPO-02)", () => {
           text: "Test title",
           startTimeMs: 0,
           durationMs: 3000,
-          style: { subtitleFontSize: 201 },
+          style: { titleFontSize: 201 },
         },
       ],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.includes("subtitleFontSize"))).toBe(true);
+    expect(result.errors.some((e) => e.includes("titleFontSize"))).toBe(true);
   });
 });

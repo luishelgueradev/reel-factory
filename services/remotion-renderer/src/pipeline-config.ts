@@ -74,12 +74,11 @@ export interface TitleStyleProps {
   backgroundColor?: string;
   textColor?: string;
   titleFontSize?: number;
-  subtitleFontSize?: number;
   titleColor?: string;
-  subtitleColor?: string;
   titleFontFamily?: string;
-  subtitleFontFamily?: string;
-  topOffset?: number;
+  x?: number;            // pixel x from top-left of 1080×1920 frame (D-05, D-06)
+  y?: number;            // pixel y from top-left (D-05, D-06)
+  borderRadius?: number; // container border-radius in px, default 12 (D-09)
   lineHeight?: number;
   padding?: number;
   fontWeight?: boolean;  // false = 400 (regular), true = 700 (bold). Default: true
@@ -90,7 +89,6 @@ export interface TitleStyleProps {
 /** Title overlay configuration (D-12) */
 export interface TitleConfig {
   text: string;
-  subtitle?: string;
   startTimeMs: number;
   durationMs: number;
   style?: TitleStyleProps;
@@ -405,11 +403,14 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
             if (s.titleFontSize !== undefined && (typeof s.titleFontSize !== "number" || s.titleFontSize < 8 || s.titleFontSize > 200)) {
               errors.push(`titles[${index}].style.titleFontSize must be a number between 8 and 200`);
             }
-            if (s.subtitleFontSize !== undefined && (typeof s.subtitleFontSize !== "number" || s.subtitleFontSize < 8 || s.subtitleFontSize > 200)) {
-              errors.push(`titles[${index}].style.subtitleFontSize must be a number between 8 and 200`);
+            if (s.x !== undefined && (typeof s.x !== "number" || s.x < 0)) {
+              errors.push(`titles[${index}].style.x must be a non-negative number`);
             }
-            if (s.topOffset !== undefined && (typeof s.topOffset !== "number" || s.topOffset < 0 || s.topOffset > 100)) {
-              errors.push(`titles[${index}].style.topOffset must be a number between 0 and 100`);
+            if (s.y !== undefined && (typeof s.y !== "number" || s.y < 0)) {
+              errors.push(`titles[${index}].style.y must be a non-negative number`);
+            }
+            if (s.borderRadius !== undefined && (typeof s.borderRadius !== "number" || s.borderRadius < 0)) {
+              errors.push(`titles[${index}].style.borderRadius must be a non-negative number`);
             }
             if (s.lineHeight !== undefined && (typeof s.lineHeight !== "number" || s.lineHeight <= 0 || s.lineHeight > 3)) {
               errors.push(`titles[${index}].style.lineHeight must be a number between 0.1 and 3`);

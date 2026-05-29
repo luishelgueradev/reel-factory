@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import type { TitleConfig, TitleEntranceAnimation } from "../../pipeline-config.js";
+import { AVAILABLE_FONTS } from "../../fonts.js";
 
 interface TitleEditorProps {
   titles: TitleConfig[];
@@ -18,14 +19,8 @@ const ENTRANCE_ANIMATIONS: { id: TitleEntranceAnimation; label: string }[] = [
   { id: "none", label: "None" },
 ];
 
-const FONT_OPTIONS = [
-  "PlusJakartaSans",
-  "Inter", "Roboto", "Montserrat", "Oswald", "Poppins", "BebasNeue", "Antonio",
-  "Raleway", "Ubuntu", "Nunito", "SpaceGrotesk", "Rubik", "SourceSans3",
-  "Outfit", "PlayfairDisplay", "LexendDeca", "Signika", "Lato",
-  "Sora", "DancingScript", "CormorantGaramond", "DMSans", "JosefinSans",
-  "Righteous", "TitanOne",
-];
+// Monospace is a system fallback and not suitable for title overlays
+const FONT_OPTIONS = AVAILABLE_FONTS.filter(f => f !== "monospace");
 
 const DEFAULT_TITLE_STYLE = {
   entranceAnimation: "slide-up" as TitleEntranceAnimation,

@@ -186,7 +186,7 @@ describe("getOuterGlowStyle (TYPO-04)", () => {
 // ─── TYPO-02: font size range extended to 200 ────────────────────────────────
 
 describe("font size range (TYPO-02)", () => {
-  it("accepts title style subtitleFontSize = 200 (new max)", () => {
+  it("accepts title style titleFontSize = 200 (new max)", () => {
     const result = validatePipelineConfig({
       subtitle: { layout: "tiktok" },
       titles: [
@@ -194,7 +194,7 @@ describe("font size range (TYPO-02)", () => {
           text: "Test title",
           startTimeMs: 0,
           durationMs: 3000,
-          style: { subtitleFontSize: 200 },
+          style: { titleFontSize: 200 },
         },
       ],
     });

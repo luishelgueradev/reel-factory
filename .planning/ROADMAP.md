@@ -456,8 +456,8 @@ Plans:
 
 **Wave 2** *(parallel — no shared files)*
 
-- [ ] 20-02-PLAN.md — TitleOverlay.tsx: pixel-coordinate positioning, config-driven borderRadius, subtitle rendering removed (TITLE-01, TITLE-02, TITLE-03)
-- [ ] 20-03-PLAN.md — TitleEditor.tsx: X/Y number inputs, borderRadius slider, all subtitle controls removed (TITLE-01, TITLE-02, TITLE-03)
+- [x] 20-02-PLAN.md — TitleOverlay.tsx: pixel-coordinate positioning, config-driven borderRadius, subtitle rendering removed (TITLE-01, TITLE-02, TITLE-03)
+- [x] 20-03-PLAN.md — TitleEditor.tsx: X/Y number inputs, borderRadius slider, all subtitle controls removed (TITLE-01, TITLE-02, TITLE-03)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

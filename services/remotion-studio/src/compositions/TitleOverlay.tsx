@@ -81,6 +81,7 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
   const [fontLoaded, setFontLoaded] = React.useState(false);
 
   React.useEffect(() => {
+    let cancelled = false;
     const fontsToLoad = [titleFontFamily, subtitleFontFamily].filter(
       (f, i, arr) => f && f !== "monospace" && arr.indexOf(f) === i
     );
@@ -94,20 +95,25 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
       loadFont(f)
         .then(() => {
           pending--;
-          if (pending === 0) {
+          if (!cancelled && pending === 0) {
             setFontLoaded(true);
             continueRender(handle);
           }
         })
         .catch(() => {
           pending--;
-          if (pending === 0) {
+          if (!cancelled && pending === 0) {
             setFontLoaded(true);
             continueRender(handle);
           }
         });
     }
+    return () => { cancelled = true; };
   }, [titleFontFamily, subtitleFontFamily]);
+
+  // Do not render until fonts are loaded — prevents Remotion from capturing
+  // frames before font loading resolves (delayRender contract).
+  if (!fontLoaded) return null;
 
   // Merge style with defaults
   // Calculate frame timing

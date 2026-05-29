@@ -81,7 +81,7 @@ const CaptionWord: React.FC<{
   fontStyle,
   outerGlowStyle,
 }) => {
-  const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
+  const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS * (fps / 1000)));
   const wordOpacity = isActive
     ? 1
     : wasActive

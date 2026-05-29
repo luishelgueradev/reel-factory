@@ -87,7 +87,7 @@ const KaraokeWord: React.FC<{
   // For upcoming word: 0% fill
   const clipPercent = isActive ? fillProgress : wasActive ? 100 : 0;
 
-  const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
+  const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS * (fps / 1000)));
   const pastOpacity = wasActive
     ? interpolate(
         Math.min(framesSinceActive, fadeFrames),

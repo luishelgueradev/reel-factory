@@ -163,7 +163,7 @@ const SentencePage: React.FC<{
         const tokenToFrame = Math.round(token.toMs * (fps / 1000)) - pageFromFrame;
         const framesSinceActive = isTokenPast ? Math.max(0, frame - tokenToFrame) : 0;
         const framesSinceActivated = isTokenActive ? Math.max(0, frame - tokenFromFrame) : 0;
-        const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS / 33));
+        const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS * (fps / 1000)));
 
         const wordOpacity = isTokenPast
           ? interpolate(

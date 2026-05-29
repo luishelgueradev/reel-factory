@@ -400,22 +400,22 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
                 `titles[${index}].style.entranceAnimation must be one of: ${VALID_ENTRANCE_ANIMATIONS.join(", ")}, got: ${JSON.stringify(s.entranceAnimation)}`
               );
             }
-            if (s.titleFontSize !== undefined && (typeof s.titleFontSize !== "number" || s.titleFontSize < 8 || s.titleFontSize > 200)) {
+            if (s.titleFontSize !== undefined && (typeof s.titleFontSize !== "number" || !Number.isFinite(s.titleFontSize) || s.titleFontSize < 8 || s.titleFontSize > 200)) {
               errors.push(`titles[${index}].style.titleFontSize must be a number between 8 and 200`);
             }
-            if (s.x !== undefined && (typeof s.x !== "number" || s.x < 0)) {
+            if (s.x !== undefined && (typeof s.x !== "number" || !Number.isFinite(s.x) || s.x < 0)) {
               errors.push(`titles[${index}].style.x must be a non-negative number`);
             }
-            if (s.y !== undefined && (typeof s.y !== "number" || s.y < 0)) {
+            if (s.y !== undefined && (typeof s.y !== "number" || !Number.isFinite(s.y) || s.y < 0)) {
               errors.push(`titles[${index}].style.y must be a non-negative number`);
             }
-            if (s.borderRadius !== undefined && (typeof s.borderRadius !== "number" || s.borderRadius < 0)) {
+            if (s.borderRadius !== undefined && (typeof s.borderRadius !== "number" || !Number.isFinite(s.borderRadius) || s.borderRadius < 0)) {
               errors.push(`titles[${index}].style.borderRadius must be a non-negative number`);
             }
-            if (s.lineHeight !== undefined && (typeof s.lineHeight !== "number" || s.lineHeight <= 0 || s.lineHeight > 3)) {
+            if (s.lineHeight !== undefined && (typeof s.lineHeight !== "number" || !Number.isFinite(s.lineHeight) || s.lineHeight < 0.1 || s.lineHeight > 3)) {
               errors.push(`titles[${index}].style.lineHeight must be a number between 0.1 and 3`);
             }
-            if (s.padding !== undefined && (typeof s.padding !== "number" || s.padding < 0 || s.padding > 100)) {
+            if (s.padding !== undefined && (typeof s.padding !== "number" || !Number.isFinite(s.padding) || s.padding < 0 || s.padding > 100)) {
               errors.push(`titles[${index}].style.padding must be a number between 0 and 100`);
             }
             // Validate title style fontWeight (optional, must be boolean if present — T-19-04)

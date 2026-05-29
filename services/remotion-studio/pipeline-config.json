@@ -33,12 +33,8 @@
         "backgroundColor": "rgba(0, 0, 0, 0.7)",
         "textColor": "#FFFFFF",
         "titleFontSize": 106,
-        "subtitleFontSize": 80,
         "titleColor": "#ffffff",
-        "subtitleColor": "#8cff00",
         "titleFontFamily": "Raleway",
-        "subtitleFontFamily": "JosefinSans",
-        "topOffset": 10,
         "lineHeight": 1,
         "padding": 13
       }
@@ -52,12 +48,8 @@
         "backgroundColor": "rgba(0, 0, 0, 1)",
         "textColor": "#FFFFFF",
         "titleFontSize": 40,
-        "subtitleFontSize": 42,
         "titleColor": "#ffffff",
-        "subtitleColor": "#FFFFFF",
         "titleFontFamily": "Inter",
-        "subtitleFontFamily": "Inter",
-        "topOffset": 23,
         "lineHeight": 1.2,
         "padding": 13
       }
@@ -71,12 +63,8 @@
         "backgroundColor": "rgba(0, 0, 0, 0.7)",
         "textColor": "#FFFFFF",
         "titleFontSize": 120,
-        "subtitleFontSize": 42,
         "titleColor": "#80ff00",
-        "subtitleColor": "#FFFFFF",
         "titleFontFamily": "Outfit",
-        "subtitleFontFamily": "Inter",
-        "topOffset": 17,
         "lineHeight": 1,
         "padding": 12
       }

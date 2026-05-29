@@ -270,7 +270,11 @@ function resolveConfigPath(): string {
     return path.join(inputDir, "pipeline-config.json");
   }
 
-  // Local dev fallback: save to a local config file
+  // Local dev: read from ACTIVE_PIPELINE_CONFIG_PATH so GET and PUT stay in sync.
+  // Fall back to local file only when ACTIVE_PIPELINE_CONFIG_PATH is also unset.
+  if (ACTIVE_PIPELINE_CONFIG_PATH) {
+    return ACTIVE_PIPELINE_CONFIG_PATH;
+  }
   return path.join(process.cwd(), "pipeline-config.json");
 }
 

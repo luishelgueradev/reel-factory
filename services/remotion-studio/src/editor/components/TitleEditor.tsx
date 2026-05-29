@@ -147,7 +147,22 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
       text: title.text,
       startTimeMs: title.startTimeMs,
       durationMs: title.durationMs,
-      style: title.style ? { ...title.style } : { ...DEFAULT_TITLE_STYLE },
+      style: title.style ? {
+        entranceAnimation: title.style.entranceAnimation,
+        backgroundColor: title.style.backgroundColor,
+        textColor: title.style.textColor,
+        titleFontSize: title.style.titleFontSize,
+        titleColor: title.style.titleColor,
+        titleFontFamily: title.style.titleFontFamily,
+        x: title.style.x,
+        y: title.style.y,
+        borderRadius: title.style.borderRadius,
+        lineHeight: title.style.lineHeight,
+        padding: title.style.padding,
+        fontWeight: title.style.fontWeight,
+        fontStyle: title.style.fontStyle,
+        outerGlow: title.style.outerGlow,
+      } : { ...DEFAULT_TITLE_STYLE },
     });
     setEditingIndex(index);
     setAddingNew(false);

@@ -36,13 +36,15 @@ Declared values (must be multiples of 4):
 |-------|-------|-------|
 | xs | 4px | Icon gaps, label-to-control gap |
 | sm | 8px | Compact element spacing, button padding (vertical) |
-| md | 12px | Gap between form rows inside cards |
+| md | 12px | Gap between form rows inside cards — **exception: matches TitleEditor.tsx `gap: 12` — cannot change without restyling existing components** |
 | lg | 16px | Default section padding, input padding, gap between card controls |
 | xl | 24px | Tab bar horizontal padding, section gap in right panel |
 | 2xl | 32px | Right-panel scroll padding |
 | 3xl | 48px | Not used in this phase |
 
-Exceptions: Touch targets (buttons) minimum 44px height — established in `PreviewApp.tsx` `TabButton` (`minHeight: 44`). Upload trigger `<label>` must also meet 44px height.
+Exceptions:
+- **12px (md):** Non-standard value inherited from `TitleEditor.tsx` (`gap: 12`, `padding: "12px 16px"`). Deviates from the 8-point grid. Kept to avoid restyling existing shared components. New OverlayEditor form rows use 12px gap to match TitleEditor visually.
+- **44px touch targets:** Buttons minimum 44px height — established in `PreviewApp.tsx` `TabButton` (`minHeight: 44`). Upload trigger `<label>` must also meet 44px height.
 
 Source: measured from `TitleEditor.tsx` (`gap: 12`, `padding: "12px 16px"`, `padding: 16`) and `PreviewApp.tsx` (`padding: "0 24px"`).
 
@@ -50,15 +52,16 @@ Source: measured from `TitleEditor.tsx` (`gap: 12`, `padding: "12px 16px"`, `pad
 
 ## Typography
 
-| Role | Size | Weight | Line Height |
-|------|------|--------|-------------|
-| Body / input text | 14px | 400 | 1.4 |
-| Label | 12px | 400 | 1.3 |
-| Sub-label / hint | 11px | 400 | 1.3 |
-| Card heading | 14px | 600 | 1.2 |
+| Role | Size | Weight | Line Height | Color |
+|------|------|--------|-------------|-------|
+| Body / input text | 14px | 400 | 1.4 | #e0e0e0 |
+| Label | 12px | 400 | 1.3 | #bbb / #ccc |
+| Sub-label / hint | 12px | 400 | 1.3 | #666 — muted color disambiguates from label |
+| Card heading | 14px | 600 | 1.2 | #e0e0e0 |
 
 Notes:
-- All sizes taken from existing editor components (TitleEditor.tsx: `fontSize: 14` for inputs, `fontSize: 12` for labels, `fontSize: 11` for range sub-labels, `fontWeight: 600` for item text).
+- Hint text uses the same 12px size as labels, differentiated by color: labels use `#bbb`/`#ccc`, hints use `#666` (disabled/muted tone). The 2-stop color contrast is sufficient for visual hierarchy without introducing a 5th size.
+- Previously 11px was used for range sub-labels in `TitleEditor.tsx`. Phase 21 does not introduce that size. Any sub-label text in `OverlayEditor` uses 12px at `#666`.
 - Only 4 sizes declared; no additional sizes may be introduced in Phase 21.
 - Only 2 weights declared (400 regular, 600 semibold); no other weights.
 
@@ -100,7 +103,7 @@ Mirrors `TitleEditor.tsx` structure exactly. Do not introduce new component patt
 
 ```
 ┌───────────────────────────────────────────────────────┐
-│ No PNG overlays configured. Click "Add Overlay" to    │  ← 13px, #666, italic
+│ No PNG overlays configured. Click "Add Overlay" to    │  ← 12px, #666, italic
 │ add a logo or watermark.                               │
 │                                                        │
 │  [ + Add Overlay ]  ← dashed green border button      │
@@ -120,7 +123,7 @@ Each overlay renders a list card (mirrors TitleEditor title-list-item):
 
 - Item background: `#1e1e2e`, border: `1px solid #333`, borderRadius: 8, padding: `12px 16px`
 - Primary text (filename or "Overlay 1"): `fontSize: 14, fontWeight: 600, color: #e0e0e0`
-- Secondary text (x/y/width summary): `fontSize: 11, color: #666, marginTop: 4`
+- Secondary text (x/y/width summary): `fontSize: 12, color: #666, marginTop: 4`
 - Edit button: same style as TitleEditor edit button (`padding: "4px 10px", background: "#333", color: "#ccc", border: "1px solid #555"`)
 - Delete button: same style as TitleEditor delete button (`background: "#b71c1c"`)
 
@@ -135,14 +138,14 @@ Form sections in order:
 3. **X / Y inputs** — Two `<input type="number">` in a flex row (gap: 16), identical pattern to TitleEditor X/Y inputs. X range: 0–1080, Y range: 0–1920.
 4. **Display Width input** — Single `<input type="number">` (min: 10, max: 1080, step: 1). Label: "Width (px)".
 5. **Opacity slider** — `<input type="range">` (min: 0, max: 1, step: 0.05). Label: "Opacity: {value}". accentColor: `#4CAF50`.
-6. **Form actions** — "Add Overlay" / "Save Changes" (green CTA) + "Cancel" (neutral) — identical to TitleEditor action row.
+6. **Form actions** — "Add Overlay" / "Save Changes" (green CTA) + "Discard Changes" (neutral) — identical to TitleEditor action row.
 
 **Upload Zone (no file selected):**
 
 ```
 ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
 │   Click to select a PNG file               │  ← dashed border #444
-│   Max 5 MB · PNG only                      │  ← 11px, #666
+│   Max 5 MB · PNG only                      │  ← 12px, #666
 └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
 ```
 
@@ -178,7 +181,7 @@ The new tab follows the exact `TabButton` style contract: 14px, `minHeight: 44`,
 
 - "Add Overlay" / "Save Changes" button is disabled (background `#555`, cursor `not-allowed`) when no PNG has been selected (imageData is empty string).
 - On click when enabled: call `onChange(overlays)` with the new array, then call `onPreviewChange?.(overlays)` for live preview. Reset form.
-- "Cancel": call `onPreviewChange?.(currentOverlays)` to revert live preview, then reset form.
+- "Discard Changes": call `onPreviewChange?.(currentOverlays)` to revert live preview, then reset form. Label applies to both modes — discards the unsaved new overlay (add mode) or discards edits (edit mode).
 
 ### Delete Interaction
 
@@ -206,13 +209,15 @@ No confirmation dialog — consistent with TitleEditor delete behavior. Delete i
 | Opacity label | Opacity: {value} |
 | Primary CTA (add) | Add Overlay |
 | Primary CTA (edit) | Save Changes |
-| Cancel button | Cancel |
+| Dismiss/cancel button | Discard Changes |
 | Edit button (list) | Edit |
 | Delete button (list) | Delete |
 | Error: file too large | File too large. Maximum size is 5 MB. |
 | Error: wrong file type | Please select a PNG file. |
 | Error: FileReader failure | Failed to read file. Please try again. |
 | Destructive confirmation | No confirmation dialog — delete is immediate (consistent with TitleEditor) |
+
+Note: "Discard Changes" replaces the generic "Cancel" label. In add mode it discards the unsaved new overlay; in edit mode it discards unsaved edits to an existing overlay. Same label, same behavior, both modes.
 
 ---
 

@@ -35,6 +35,7 @@ Last activity: 2026-05-29 -- Phase 20 marked complete
 |---|-------------|------|--------|-----------|
 | 260527-i3v | Fix google-fonts loadFont signature bug (all fonts fell back to monospace in preview + renders) | 2026-05-27 | c3b6a1c | [260527-i3v-fix-google-fonts-loadfont-signature-bug](./quick/260527-i3v-fix-google-fonts-loadfont-signature-bug/) |
 | 260529-mxw | fix title/position controls not showing in remotion live preview | 2026-05-29 | 7fc205a | [260529-mxw-fix-title-position-controls-not-showing-](./quick/260529-mxw-fix-title-position-controls-not-showing-/) |
+| 260529-sub | fix fontWeight/fontStyle/outerGlow silently dropped in SubtitledVideo and renderer Root — styles never applied | 2026-05-29 | bee3723 | [260529-sub-subtitle-style-fields-not-passed-through](./quick/260529-sub-subtitle-style-fields-not-passed-through/) |
 
 ### Phase 15 Decisions
 

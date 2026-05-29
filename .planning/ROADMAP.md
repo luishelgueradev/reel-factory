@@ -46,7 +46,7 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 
 - [x] **Phase 17: Config persistence** - Studio config (subtitle styles + title blocks) survives `docker compose build`/rebuild and container recreate, stored as inspectable JSON in a persistent location. Requirements: PERSIST-01, PERSIST-02. (completed 2026-05-27)
 - [x] **Phase 18: Studio UI redesign** - Single 2-column interface (left: preview, right: controls in tabs); consolidate the duplicated editor/preview screens. Foundational UI for the new control surface. Requirements: STUDIO-01, STUDIO-02, STUDIO-03. **(UI hint: yes)** (completed 2026-05-27)
-- [ ] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)**
+- [x] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)** (completed 2026-05-29)
 - [ ] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)**
 - [ ] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)**
 
@@ -432,7 +432,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 19-04-PLAN.md — Human visual verify (studio at port 3123, all 4 requirements)
+- [x] 19-04-PLAN.md — Human visual verify (studio at port 3123, all 4 requirements)
 
 ### Phase 20: Title block precision
 

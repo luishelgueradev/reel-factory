@@ -12,10 +12,10 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### Typography (TYPO)
 
-- [ ] **TYPO-01**: User can select Plus Jakarta Sans for subtitles and titles.
-- [ ] **TYPO-02**: User can set subtitle/title font sizes beyond the current maximum.
-- [ ] **TYPO-03**: User can apply bold and italic variants to fonts.
-- [ ] **TYPO-04**: User can apply an outer glow effect with configurable color, intensity, and softness.
+- [x] **TYPO-01**: User can select Plus Jakarta Sans for subtitles and titles.
+- [x] **TYPO-02**: User can set subtitle/title font sizes beyond the current maximum.
+- [x] **TYPO-03**: User can apply bold and italic variants to fonts.
+- [x] **TYPO-04**: User can apply an outer glow effect with configurable color, intensity, and softness.
 
 ### PNG Overlays (OVERLAY)
 

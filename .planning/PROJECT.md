@@ -12,6 +12,8 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 **Shipped:** v1.0 (Pipeline completo, 12 fases) + v1.1 (Calidad de video, fases 13-14) + v1.2 (Infrastructure / shared services, fases 15-16 — whisper externalizado + render config-propagation/flicker fixes + tunnel/auth/concurrency hardening). Archived: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md), [.planning/milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md).
 
+**Phase 19 complete (2026-05-29):** Typography & text effects done — Plus Jakarta Sans added as default font (AVAILABLE_FONTS[0]); OuterGlow/fontWeight/fontStyle schema fields with hex color validation; all 4 subtitle layouts de-hardcoded from fontWeight:700 to config-driven boolean; getOuterGlowStyle() helper; Bold/Italic toggle rows + Outer Glow section card in StyleControls and TitleEditor; font size sliders extended to 200; renderer synced; 25 unit tests pass; human UAT approved.
+
 **Phase 18 complete (2026-05-27):** Studio UI redesign done — TitleEditor simplified to 2-prop interface, PreviewApp rewritten as unified two-column StudioApp with TabBar (Titles/Subtitles/Text), React Router collapsed to single `/` route, server.ts serves SPA at root with 301 redirects for legacy routes.
 
 **v1.1 outcomes (notable):** scale:1 production default (Spike 001 mostró que el supersampling no aporta a captions de alto contraste a 1080); orchestrator threadea `PIPELINE_CONFIG_PATH` (los renders honran el config del studio); fix determinista del sync de highlights vía marcador `transcript.timeline` (heurística como fallback); quality-finalizer container ships pero queda como no-op con scale:1.
@@ -123,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-26 — started milestone v1.3 Studio redesign + visual capabilities*
+*Last updated: 2026-05-29 — Phase 19 complete: typography & text effects (Plus Jakarta Sans, Bold/Italic, Outer Glow)*

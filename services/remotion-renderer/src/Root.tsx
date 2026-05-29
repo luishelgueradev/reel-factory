@@ -63,6 +63,10 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
     highlightColor: subtitleConfig?.highlightColor ?? DEFAULT_SUBTITLE_CONFIG.highlightColor,
     highlightDurationMs: subtitleConfig?.highlightDurationMs ?? DEFAULT_SUBTITLE_CONFIG.highlightDurationMs,
     highlightTransition: subtitleConfig?.highlightTransition ?? DEFAULT_SUBTITLE_CONFIG.highlightTransition,
+    subtitleWidth: subtitleConfig?.subtitleWidth ?? DEFAULT_SUBTITLE_CONFIG.subtitleWidth,
+    fontWeight: subtitleConfig?.fontWeight,
+    fontStyle: subtitleConfig?.fontStyle,
+    outerGlow: subtitleConfig?.outerGlow,
   };
 
   // Load Google Font for subtitles — delay render until font is available (D-07, T-06-07)

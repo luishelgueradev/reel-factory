@@ -54,7 +54,6 @@ describe("validatePipelineConfig", () => {
         titles: [
           {
             text: "Welcome",
-            subtitle: "Episode 1",
             startTimeMs: 0,
             durationMs: 3000,
             style: {
@@ -68,6 +67,33 @@ describe("validatePipelineConfig", () => {
       const result = validatePipelineConfig(config);
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
+    });
+
+    it("accepts x and y fields in title style", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { x: 200, y: 960 } }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("accepts borderRadius field in title style", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { borderRadius: 24 } }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+    });
+
+    it("accepts borderRadius = 0 (sharp corners)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { borderRadius: 0 } }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
     });
 
     it("accepts all 4 layout modes: tiktok, sentence, bar, karaoke", () => {
@@ -198,6 +224,36 @@ describe("validatePipelineConfig", () => {
       const result = validatePipelineConfig(config);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes("entranceAnimation"))).toBe(true);
+    });
+
+    it("rejects negative x in title style", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { x: -10 } }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes(".style.x"))).toBe(true);
+    });
+
+    it("rejects negative y in title style", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { y: -1 } }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes(".style.y"))).toBe(true);
+    });
+
+    it("rejects negative borderRadius in title style", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { borderRadius: -5 } }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes(".style.borderRadius"))).toBe(true);
     });
   });
 

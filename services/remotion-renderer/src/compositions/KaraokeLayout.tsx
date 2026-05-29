@@ -194,6 +194,16 @@ const KaraokePage: React.FC<{
     }
   }
 
+  // Accumulate past-word threshold when between tokens (currentTokenIdx === -1)
+  // so wasActive stays true for past words instead of flashing to inactiveColor.
+  let wasActiveThreshold = currentTokenIdx;
+  if (currentTokenIdx === -1) {
+    for (let i = 0; i < tokens.length; i++) {
+      const toFrame = Math.round(tokens[i].toMs * (fps / 1000)) - pageFromFrame;
+      if (frame >= toFrame) wasActiveThreshold = i + 1;
+    }
+  }
+
   // Fade logic
   const fadeInEndFrame = Math.round(FADE_IN_MS * (fps / 1000));
   const lastTokenEndMs = tokens.length > 0 ? tokens[tokens.length - 1].toMs : page.startMs;
@@ -228,7 +238,7 @@ const KaraokePage: React.FC<{
     >
       {tokens.map((token, i) => {
         const isActive = i === currentTokenIdx;
-        const wasActive = i < currentTokenIdx;
+        const wasActive = i < (currentTokenIdx !== -1 ? currentTokenIdx : wasActiveThreshold);
         const toFrame = Math.round(token.toMs * (fps / 1000)) - pageFromFrame;
         const tokenFromFrame = Math.round(token.fromMs * (fps / 1000)) - pageFromFrame;
         const framesSinceActive = wasActive ? Math.max(0, frame - toFrame) : 0;

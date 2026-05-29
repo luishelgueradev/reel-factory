@@ -39,3 +39,6 @@ dist/
 
 # WSL
 *:Zone.Identifier
+
+# Playwright CLI
+.playwright-cli/

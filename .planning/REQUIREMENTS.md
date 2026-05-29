@@ -25,9 +25,9 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### Title Blocks (TITLE)
 
-- [ ] **TITLE-01**: User can position title blocks by pixel coordinates (not percentages).
-- [ ] **TITLE-02**: User can configure border-radius on title block containers.
-- [ ] **TITLE-03**: Title blocks have no subtitle field; a subtitle is added as a separate title block.
+- [x] **TITLE-01**: User can position title blocks by pixel coordinates (not percentages).
+- [x] **TITLE-02**: User can configure border-radius on title block containers.
+- [x] **TITLE-03**: Title blocks have no subtitle field; a subtitle is added as a separate title block.
 
 ### Studio UI Redesign (STUDIO)
 

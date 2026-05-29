@@ -452,7 +452,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 20-01-PLAN.md — Schema migration (pipeline-config.ts) + Phase 20 test cases (pipeline-config.test.ts): remove topOffset/subtitle/subtitleFontSize/subtitleColor/subtitleFontFamily; add x/y/borderRadius; validation (TITLE-01, TITLE-02, TITLE-03)
+- [x] 20-01-PLAN.md — Schema migration (pipeline-config.ts) + Phase 20 test cases (pipeline-config.test.ts): remove topOffset/subtitle/subtitleFontSize/subtitleColor/subtitleFontFamily; add x/y/borderRadius; validation (TITLE-01, TITLE-02, TITLE-03)
 
 **Wave 2** *(parallel — no shared files)*
 

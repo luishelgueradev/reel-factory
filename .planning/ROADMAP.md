@@ -446,7 +446,22 @@ Plans:
   2. Title block containers have a configurable border-radius that renders
   3. The title component no longer has a subtitle field; adding a subtitle is done via a separate title block
 
-**Plans**: TBD (plan-phase)
+**Plans**: 4 plans in 3 waves
+
+Plans:
+
+**Wave 1**
+
+- [ ] 20-01-PLAN.md — Schema migration (pipeline-config.ts) + Phase 20 test cases (pipeline-config.test.ts): remove topOffset/subtitle/subtitleFontSize/subtitleColor/subtitleFontFamily; add x/y/borderRadius; validation (TITLE-01, TITLE-02, TITLE-03)
+
+**Wave 2** *(parallel — no shared files)*
+
+- [ ] 20-02-PLAN.md — TitleOverlay.tsx: pixel-coordinate positioning, config-driven borderRadius, subtitle rendering removed (TITLE-01, TITLE-02, TITLE-03)
+- [ ] 20-03-PLAN.md — TitleEditor.tsx: X/Y number inputs, borderRadius slider, all subtitle controls removed (TITLE-01, TITLE-02, TITLE-03)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 20-04-PLAN.md — Renderer sync (cp TitleOverlay + pipeline-config to renderer), full vitest suite, build verify, human visual check (TITLE-01, TITLE-02, TITLE-03)
 
 ### Phase 21: PNG overlays
 

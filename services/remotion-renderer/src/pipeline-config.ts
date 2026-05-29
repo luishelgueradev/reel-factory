@@ -425,6 +425,22 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
             if (s.fontStyle !== undefined && typeof s.fontStyle !== "boolean") {
               errors.push(`titles[${index}].style.fontStyle must be a boolean`);
             }
+            // Validate title style outerGlow (optional — T-19-04 parity with subtitle.outerGlow)
+            if (s.outerGlow !== undefined) {
+              const og = s.outerGlow as Record<string, unknown>;
+              if (typeof og !== "object" || og === null || Array.isArray(og)) {
+                errors.push(`titles[${index}].style.outerGlow must be an object`);
+              } else {
+                if (typeof og.enabled !== "boolean")
+                  errors.push(`titles[${index}].style.outerGlow.enabled must be a boolean`);
+                if (typeof og.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(og.color as string))
+                  errors.push(`titles[${index}].style.outerGlow.color must be a 6-digit hex color`);
+                if (typeof og.intensity !== "number" || og.intensity < 0 || og.intensity > 1)
+                  errors.push(`titles[${index}].style.outerGlow.intensity must be between 0 and 1`);
+                if (typeof og.softness !== "number" || og.softness < 0)
+                  errors.push(`titles[${index}].style.outerGlow.softness must be >= 0`);
+              }
+            }
           }
         }
       });

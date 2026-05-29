@@ -12,11 +12,12 @@ import { loadFont, getFontFamilyCSS } from "../fonts";
 import { getOuterGlowStyle } from "./shared-styles";
 
 // ─── TitleOverlay: Animated title card with entrance/exit animations ───────
-// Per D-10 (intro/outro title types), D-11 (visual style), D-13 (title/subtitle coexistence)
+// Per D-10 (intro/outro title types), D-11 (visual style)
+// Phase 20: pixel-coordinate positioning (D-03, D-04), config-driven borderRadius (D-09),
+//           subtitle removal (D-07)
 
 interface TitleOverlayProps {
   text: string;
-  subtitle?: string;
   style?: TitleStyleProps;
   durationMs: number;
   fontFamily?: string;
@@ -29,19 +30,18 @@ const FADE_IN_DURATION_MS = 200;
 const FADE_IN_ONLY_DURATION_MS = 500;
 const EXIT_FADE_DURATION_MS = 300;
 
-// ─── Default style values (D-11) ──────────────────────────────────────────
+// ─── Default style values (D-11, Phase 20: D-06, D-09) ───────────────────
 
 const DEFAULT_TITLE_STYLE: Required<TitleStyleProps> = {
   entranceAnimation: "slide-up",
   backgroundColor: "rgba(0,0,0,0.7)",
   textColor: "#FFFFFF",
   titleFontSize: 72,
-  subtitleFontSize: 42,
   titleColor: "#FFFFFF",
-  subtitleColor: "#FFFFFF",
   titleFontFamily: "PlusJakartaSans",
-  subtitleFontFamily: "PlusJakartaSans",
-  topOffset: 50,
+  x: 200,
+  y: 960,
+  borderRadius: 12,
   lineHeight: 1.2,
   padding: 40,
   fontWeight: true,
@@ -51,7 +51,6 @@ const DEFAULT_TITLE_STYLE: Required<TitleStyleProps> = {
 
 export const TitleOverlay: React.FC<TitleOverlayProps> = ({
   text,
-  subtitle,
   style,
   durationMs,
   fontFamily = "PlusJakartaSans",
@@ -63,26 +62,26 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
   const entranceAnimation = style?.entranceAnimation ?? DEFAULT_TITLE_STYLE.entranceAnimation;
   const backgroundColor = style?.backgroundColor ?? DEFAULT_TITLE_STYLE.backgroundColor;
   const titleFontSize = style?.titleFontSize ?? DEFAULT_TITLE_STYLE.titleFontSize;
-  const subtitleFontSize = style?.subtitleFontSize ?? DEFAULT_TITLE_STYLE.subtitleFontSize;
   const titleColor = style?.titleColor ?? style?.textColor ?? DEFAULT_TITLE_STYLE.titleColor;
-  const subtitleColor = style?.subtitleColor ?? style?.textColor ?? DEFAULT_TITLE_STYLE.subtitleColor;
   const titleFontFamily = style?.titleFontFamily ?? fontFamily ?? DEFAULT_TITLE_STYLE.titleFontFamily;
-  const subtitleFontFamily = style?.subtitleFontFamily ?? fontFamily ?? DEFAULT_TITLE_STYLE.subtitleFontFamily;
-  const topOffset = style?.topOffset ?? DEFAULT_TITLE_STYLE.topOffset;
   const lineHeight = style?.lineHeight ?? DEFAULT_TITLE_STYLE.lineHeight;
   const padding = style?.padding ?? DEFAULT_TITLE_STYLE.padding;
 
   // Resolve module names to actual CSS fontFamily names
   // E.g., "DancingScript" → "Dancing Script"
   const titleFontCSS = getFontFamilyCSS(titleFontFamily);
-  const subtitleFontCSS = getFontFamilyCSS(subtitleFontFamily);
+
+  // Phase 20 pixel-coordinate positioning (D-03, D-04) and config-driven borderRadius (D-09)
+  const x = style?.x ?? DEFAULT_TITLE_STYLE.x;
+  const y = style?.y ?? DEFAULT_TITLE_STYLE.y;
+  const borderRadius = style?.borderRadius ?? DEFAULT_TITLE_STYLE.borderRadius;
 
   // Load Google Fonts — delay render until fonts are available
   const [fontLoaded, setFontLoaded] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
-    const fontsToLoad = [titleFontFamily, subtitleFontFamily].filter(
+    const fontsToLoad = [titleFontFamily].filter(
       (f, i, arr) => f && f !== "monospace" && arr.indexOf(f) === i
     );
     if (fontsToLoad.length === 0) {
@@ -109,7 +108,7 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
         });
     }
     return () => { cancelled = true; };
-  }, [titleFontFamily, subtitleFontFamily]);
+  }, [titleFontFamily]);
 
   // Do not render until fonts are loaded — prevents Remotion from capturing
   // frames before font loading resolves (delayRender contract).
@@ -196,21 +195,22 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
   return (
     <AbsoluteFill>
       {/* Semi-transparent background bar (D-11) */}
+      {/* Phase 20 D-03/D-04: pixel-coordinate positioning; D-09: config-driven borderRadius */}
       <div
         style={{
           position: "absolute",
-          top: `${topOffset}%`,
-          left: "50%",
-          transform: `translate(-50%, -50%) translateY(${translateY}px)`,
+          left: `${(x / 1080) * 100}%`,
+          top: `${(y / 1920) * 100}%`,
+          transform: `translateY(${translateY}px)`,
           backgroundColor,
           width: "80%",
           padding: `${padding}px 24px`,
-          borderRadius: "12px",
+          borderRadius: `${borderRadius}px`,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: subtitle ? "12px" : "0",
+          gap: "0",
           opacity,
         }}
       >
@@ -231,27 +231,6 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
         >
           {text}
         </span>
-
-        {/* Optional subtitle text */}
-        {subtitle && (
-          <span
-            style={{
-              fontSize: subtitleFontSize,
-              fontWeight: style?.fontWeight !== false ? 700 : 400,
-              fontStyle: style?.fontStyle === true ? "italic" : "normal",
-              color: subtitleColor,
-              fontFamily: subtitleFontCSS,
-              textAlign: "center",
-              lineHeight: lineHeight + 0.1,
-              opacity: 0.85,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              ...getOuterGlowStyle(style?.outerGlow),
-            }}
-          >
-            {subtitle}
-          </span>
-        )}
       </div>
     </AbsoluteFill>
   );

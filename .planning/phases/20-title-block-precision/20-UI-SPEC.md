@@ -39,15 +39,23 @@ Declared values (must be multiples of 4):
 |-------|-------|-------|
 | xs | 4px | Icon gaps, tight inline spacing |
 | sm | 8px | Gap between paired inputs (e.g. x/y side-by-side); button gaps |
-| md | 12px | Gap between form rows in TitleEditor; item list row padding |
-| lg | 16px | Form section internal padding; input padding |
+| lg | 16px | Form section internal padding; input padding; gap between form rows in TitleEditor; gap in coordinate row (new controls) |
 | xl | 24px | Horizontal padding for TabBar |
 | 2xl | 32px | (available but not primary in TitleEditor) |
 | 3xl | 64px | (available but not primary in TitleEditor) |
 
-Exceptions:
+All new controls introduced in Phase 20 MUST use only values from the standard set above (8px or 16px for gaps). Do not introduce 12px in any new element.
+
+### Legacy Exceptions
+
+The following 12px usage exists in the codebase and MUST be preserved exactly as-is. It is frozen legacy — do not replicate this pattern in new controls.
+
+| Location | Value | Justification |
+|----------|-------|---------------|
+| Title list item row padding (TitleEditor.tsx) | `padding: "12px 16px"` | Extracted from existing code; visually established rhythm; changing it would shift all existing list items. Frozen. Not to be replicated. |
+
+Other frozen exceptions:
 - Touch target minimum for tab bar buttons: 44px min-height (already enforced by `minHeight: 44` in TabButton — do not reduce)
-- Title list item padding: 12px 16px (already established — preserve exactly)
 - Add/edit form padding: 16px (already established — preserve exactly)
 
 Source: extracted from existing `TitleEditor.tsx`, `PreviewApp.tsx` inline styles.
@@ -121,7 +129,9 @@ Source: `TitleEditor.tsx` and `PreviewApp.tsx` inline styles — verified agains
 
 ### 1. X / Y Coordinate Inputs (replaces topOffset slider — TITLE-01)
 
-**Layout:** Two `<input type="number">` inputs side-by-side (flex row, gap 12px), occupying equal width (`flex: 1` each). This matches the existing Start Time / Duration row pattern.
+**Focal point:** Title Text * field (position 1, full-width) is the focal point of the editor form. The X/Y coordinate row is a secondary precision row — visually subordinate to the text input at the top.
+
+**Layout:** Two `<input type="number">` inputs side-by-side (flex row, gap 16px), occupying equal width (`flex: 1` each). This matches the existing Start Time / Duration row pattern.
 
 **Labels:** `X (px)` and `Y (px)` — short, unambiguous. Do NOT use "Left offset" or "Top offset"; the coordinate model is absolute pixel positioning from top-left, so `X` and `Y` are the correct terms.
 
@@ -218,7 +228,7 @@ Two inputs side by side:
 ```
 [  X (px)  __________ ]  [  Y (px)  __________ ]
 ```
-Flex row, gap 12px, each `flex: 1`. Placed after the existing Duration row, before the Entrance Animation row (or wherever topOffset slider was — directly replacing it).
+Flex row, gap 16px, each `flex: 1`. Placed after the existing Duration row, before the Entrance Animation row (or wherever topOffset slider was — directly replacing it).
 
 ### Form Layout Order (after Phase 20)
 1. Title Text * (full width)

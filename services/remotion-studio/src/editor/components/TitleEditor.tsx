@@ -1,7 +1,8 @@
 // ─── TitleEditor: Title overlay editor (D-12, D-16) ────────────────────────────
-// Per D-12: Titles array in pipeline-config.json with text, subtitle, startTimeMs, durationMs, style
+// Per D-12: Titles array in pipeline-config.json with text, startTimeMs, durationMs, style
 // Per D-16: Config editor UI for adding/editing/removing title overlays
 // Per T-06-12: XSS prevention — sanitize title text before rendering
+// Phase 20: removed subtitle, topOffset; added x/y pixel positioning + borderRadius slider
 
 import React, { useState } from "react";
 import type { TitleConfig, TitleEntranceAnimation } from "../../pipeline-config.js";
@@ -27,12 +28,11 @@ const DEFAULT_TITLE_STYLE = {
   backgroundColor: "rgba(0, 0, 0, 0.7)",
   textColor: "#FFFFFF",
   titleFontSize: 72,
-  subtitleFontSize: 42,
   titleColor: "#FFFFFF",
-  subtitleColor: "#FFFFFF",
   titleFontFamily: "PlusJakartaSans",
-  subtitleFontFamily: "PlusJakartaSans",
-  topOffset: 50,
+  x: 200,
+  y: 960,
+  borderRadius: 12,
   lineHeight: 1.2,
   padding: 40,
 };
@@ -66,7 +66,6 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
   // ── New title form state ─────────────────────────────────────────────────
   const [newTitle, setNewTitle] = useState<Partial<TitleConfig>>({
     text: "",
-    subtitle: "",
     startTimeMs: 0,
     durationMs: 3000,
     style: { ...DEFAULT_TITLE_STYLE },
@@ -75,7 +74,6 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
   const resetForm = () => {
     setNewTitle({
       text: "",
-      subtitle: "",
       startTimeMs: 0,
       durationMs: 3000,
       style: { ...DEFAULT_TITLE_STYLE },
@@ -90,7 +88,6 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
 
     const title: TitleConfig = {
       text: newTitle.text,
-      subtitle: newTitle.subtitle || undefined,
       startTimeMs: newTitle.startTimeMs ?? 0,
       durationMs: newTitle.durationMs ?? 3000,
       style: newTitle.style,
@@ -120,7 +117,6 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
     const title = titles[index];
     setNewTitle({
       text: title.text,
-      subtitle: title.subtitle ?? "",
       startTimeMs: title.startTimeMs,
       durationMs: title.durationMs,
       style: title.style ? { ...title.style } : { ...DEFAULT_TITLE_STYLE },
@@ -135,7 +131,6 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
     const updated = [...titles];
     updated[editingIndex] = {
       text: newTitle.text,
-      subtitle: newTitle.subtitle || undefined,
       startTimeMs: newTitle.startTimeMs ?? 0,
       durationMs: newTitle.durationMs ?? 3000,
       style: newTitle.style,
@@ -150,7 +145,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* ── Title list ─────────────────────────────────────────────────── */}
       {titles.length === 0 && !addingNew && editingIndex === null && (
-        <p style={{ fontSize: 13, color: "#666", fontStyle: "italic" }}>No title overlays configured. Click "Add Title" to create one.</p>
+        <p style={{ fontSize: 13, color: "#666", fontStyle: "italic" }}>No title overlays configured. Click &quot;Add Title&quot; to create one.</p>
       )}
 
       {titles.map((title, i) => {
@@ -170,9 +165,6 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
           >
             <div>
               <div style={{ fontWeight: 600, fontSize: 14, color: "#e0e0e0" }}>{title.text}</div>
-              {title.subtitle && (
-                <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{title.subtitle}</div>
-              )}
               <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
                 {(title.startTimeMs / 1000).toFixed(1)}s → {(title.startTimeMs / 1000 + title.durationMs / 1000).toFixed(1)}s ({title.durationMs}ms)
                 {title.style?.entranceAnimation && title.style.entranceAnimation !== "none" && (
@@ -212,7 +204,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             {editingIndex !== null ? "Edit Title" : "Add Title"}
           </h3>
 
-          {/* Title text (required) */}
+          {/* 1. Title text (required) */}
           <div style={{ marginBottom: 10 }}>
             <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
               Title Text *
@@ -226,21 +218,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             />
           </div>
 
-          {/* Subtitle (optional) */}
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
-              Subtitle (optional)
-            </label>
-            <input
-              type="text"
-              value={newTitle.subtitle ?? ""}
-              onChange={(e) => setNewTitle((prev) => ({ ...prev, subtitle: e.target.value }))}
-              placeholder="e.g. Episode 42"
-              style={{ width: "100%", padding: 8, background: "#2a2a3e", border: "1px solid #444", borderRadius: 4, color: "#e0e0e0", fontSize: 14 }}
-            />
-          </div>
-
-          {/* Timing: seconds displayed, milliseconds stored */}
+          {/* 2. Timing: seconds displayed, milliseconds stored */}
           <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
@@ -270,7 +248,53 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </div>
           </div>
 
-          {/* Title style (D-11) */}
+          {/* 3. X / Y coordinate inputs (replaces topOffset slider — D-01, D-02, D-05) */}
+          <div style={{ display: "flex", gap: 16, marginBottom: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
+                X (px)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={1080}
+                step={1}
+                value={newTitle.style?.x ?? 200}
+                onChange={(e) => setNewTitle((prev) => ({
+                  ...prev,
+                  style: { ...prev.style!, x: parseInt(e.target.value) },
+                }))}
+                style={{
+                  width: "100%", padding: 8, background: "#2a2a3e",
+                  border: "1px solid #444", borderRadius: 4,
+                  color: "#e0e0e0", fontSize: 14,
+                }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
+                Y (px)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={1920}
+                step={1}
+                value={newTitle.style?.y ?? 960}
+                onChange={(e) => setNewTitle((prev) => ({
+                  ...prev,
+                  style: { ...prev.style!, y: parseInt(e.target.value) },
+                }))}
+                style={{
+                  width: "100%", padding: 8, background: "#2a2a3e",
+                  border: "1px solid #444", borderRadius: 4,
+                  color: "#e0e0e0", fontSize: 14,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* 4. Entrance Animation */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
               Entrance Animation
@@ -303,7 +327,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </div>
           </div>
 
-          {/* Style colors */}
+          {/* 5. Background (color + opacity) */}
           <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
               <label style={{ fontSize: 12, color: "#999" }}>Background</label>
@@ -348,83 +372,54 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 style={{ width: 48, height: 36, border: "1px solid #444", borderRadius: 4, padding: 2, background: "#2a2a3e", cursor: "pointer" }}
               />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <label style={{ fontSize: 12, color: "#999" }}>Subtitle Color</label>
-              <input
-                type="color"
-                value={newTitle.style?.subtitleColor ?? newTitle.style?.textColor ?? "#FFFFFF"}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, subtitleColor: e.target.value },
-                }))}
-                style={{ width: 48, height: 36, border: "1px solid #444", borderRadius: 4, padding: 2, background: "#2a2a3e", cursor: "pointer" }}
-              />
-            </div>
           </div>
 
-          {/* Font sizes */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
-                Title Size: {newTitle.style?.titleFontSize ?? 72}
-              </label>
-              <input
-                type="range"
-                min={24}
-                max={200}
-                value={newTitle.style?.titleFontSize ?? 72}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, titleFontSize: parseInt(e.target.value) },
-                }))}
-                style={{ width: "100%" }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-                <span>24</span>
-                <span>200</span>
-              </div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
-                Subtitle Size: {newTitle.style?.subtitleFontSize ?? 42}
-              </label>
-              <input
-                type="range"
-                min={16}
-                max={200}
-                value={newTitle.style?.subtitleFontSize ?? 42}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, subtitleFontSize: parseInt(e.target.value) },
-                }))}
-                style={{ width: "100%" }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-                <span>16</span>
-                <span>200</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Top offset */}
+          {/* 7. Title Font Size slider */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
-              Vertical Position (top %): {newTitle.style?.topOffset ?? 50}%
+              Title Size: {newTitle.style?.titleFontSize ?? 72}
             </label>
             <input
               type="range"
-              min={10}
-              max={90}
-              value={newTitle.style?.topOffset ?? 50}
+              min={24}
+              max={200}
+              value={newTitle.style?.titleFontSize ?? 72}
               onChange={(e) => setNewTitle((prev) => ({
                 ...prev,
-                style: { ...prev.style!, topOffset: parseInt(e.target.value) },
+                style: { ...prev.style!, titleFontSize: parseInt(e.target.value) },
               }))}
               style={{ width: "100%" }}
             />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+              <span>24</span>
+              <span>200</span>
+            </div>
           </div>
 
-          {/* Line Height & Padding */}
+          {/* 8. Border Radius slider (D-09) */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
+              Border Radius: {newTitle.style?.borderRadius ?? 12}px
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={50}
+              step={1}
+              value={newTitle.style?.borderRadius ?? 12}
+              onChange={(e) => setNewTitle((prev) => ({
+                ...prev,
+                style: { ...prev.style!, borderRadius: parseInt(e.target.value) },
+              }))}
+              style={{ width: "100%", accentColor: "#4CAF50" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
+              <span>0px</span>
+              <span>50px</span>
+            </div>
+          </div>
+
+          {/* 9. Line Height & Padding */}
           <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
@@ -461,45 +456,26 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </div>
           </div>
 
-          {/* Font families */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
-                Title Font
-              </label>
-              <select
-                value={newTitle.style?.titleFontFamily ?? "PlusJakartaSans"}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, titleFontFamily: e.target.value },
-                }))}
-                style={{ width: "100%", padding: 8, background: "#2a2a3e", border: "1px solid #444", borderRadius: 4, color: "#e0e0e0", fontSize: 14 }}
-              >
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
-                Subtitle Font
-              </label>
-              <select
-                value={newTitle.style?.subtitleFontFamily ?? "PlusJakartaSans"}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, subtitleFontFamily: e.target.value },
-                }))}
-                style={{ width: "100%", padding: 8, background: "#2a2a3e", border: "1px solid #444", borderRadius: 4, color: "#e0e0e0", fontSize: 14 }}
-              >
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
-            </div>
+          {/* 10. Title Font select (single column — Subtitle Font removed per D-08) */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12, color: "#bbb", display: "block", marginBottom: 4 }}>
+              Title Font
+            </label>
+            <select
+              value={newTitle.style?.titleFontFamily ?? "PlusJakartaSans"}
+              onChange={(e) => setNewTitle((prev) => ({
+                ...prev,
+                style: { ...prev.style!, titleFontFamily: e.target.value },
+              }))}
+              style={{ width: "100%", padding: 8, background: "#2a2a3e", border: "1px solid #444", borderRadius: 4, color: "#e0e0e0", fontSize: 14 }}
+            >
+              {FONT_OPTIONS.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Font Weight toggle (Phase 19, TYPO-03) */}
+          {/* 11. Font Weight toggle (Phase 19, TYPO-03) */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
               Font Weight
@@ -538,7 +514,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </div>
           </div>
 
-          {/* Font Style toggle (Phase 19, TYPO-03) */}
+          {/* 12. Font Style toggle (Phase 19, TYPO-03) */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
               Font Style
@@ -577,7 +553,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </div>
           </div>
 
-          {/* Outer Glow card (Phase 19, TYPO-04) */}
+          {/* 13. Outer Glow card (Phase 19, TYPO-04) */}
           {(() => {
             const titleGlow = newTitle.style?.outerGlow ?? {
               enabled: false,
@@ -723,7 +699,6 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             setAddingNew(true);
             setNewTitle({
               text: "",
-              subtitle: "",
               startTimeMs: 0,
               durationMs: 3000,
               style: { ...DEFAULT_TITLE_STYLE },

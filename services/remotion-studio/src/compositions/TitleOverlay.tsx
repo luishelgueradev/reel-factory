@@ -237,7 +237,7 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
           <span
             style={{
               fontSize: subtitleFontSize,
-              fontWeight: 500,
+              fontWeight: style?.fontWeight !== false ? 700 : 400,
               fontStyle: style?.fontStyle === true ? "italic" : "normal",
               color: subtitleColor,
               fontFamily: subtitleFontCSS,

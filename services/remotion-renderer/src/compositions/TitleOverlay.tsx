@@ -39,8 +39,8 @@ const DEFAULT_TITLE_STYLE: Required<TitleStyleProps> = {
   subtitleFontSize: 42,
   titleColor: "#FFFFFF",
   subtitleColor: "#FFFFFF",
-  titleFontFamily: "Inter",
-  subtitleFontFamily: "Inter",
+  titleFontFamily: "PlusJakartaSans",
+  subtitleFontFamily: "PlusJakartaSans",
   topOffset: 50,
   lineHeight: 1.2,
   padding: 40,
@@ -54,7 +54,7 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
   subtitle,
   style,
   durationMs,
-  fontFamily = "Inter",
+  fontFamily = "PlusJakartaSans",
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();

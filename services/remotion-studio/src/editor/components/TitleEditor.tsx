@@ -260,10 +260,11 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 max={1080}
                 step={1}
                 value={newTitle.style?.x ?? 200}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, x: parseInt(e.target.value) },
-                }))}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (isNaN(val)) return;
+                  setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, x: val } }));
+                }}
                 style={{
                   width: "100%", padding: 8, background: "#2a2a3e",
                   border: "1px solid #444", borderRadius: 4,
@@ -281,10 +282,11 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 max={1920}
                 step={1}
                 value={newTitle.style?.y ?? 960}
-                onChange={(e) => setNewTitle((prev) => ({
-                  ...prev,
-                  style: { ...prev.style!, y: parseInt(e.target.value) },
-                }))}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (isNaN(val)) return;
+                  setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, y: val } }));
+                }}
                 style={{
                   width: "100%", padding: 8, background: "#2a2a3e",
                   border: "1px solid #444", borderRadius: 4,

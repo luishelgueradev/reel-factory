@@ -11,6 +11,7 @@ import { AVAILABLE_FONTS } from "../../fonts.js";
 interface TitleEditorProps {
   titles: TitleConfig[];
   onChange: (titles: TitleConfig[]) => void;
+  onPreviewChange?: (liveTitles: TitleConfig[]) => void;
 }
 
 const ENTRANCE_ANIMATIONS: { id: TitleEntranceAnimation; label: string }[] = [
@@ -59,7 +60,7 @@ function hexAndAlphaToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export function TitleEditor({ titles, onChange }: TitleEditorProps) {
+export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [addingNew, setAddingNew] = useState(false);
 
@@ -82,6 +83,32 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
     setEditingIndex(null);
   };
 
+  // Compute preview titles by merging the current draft into the committed list
+  const computeLiveTitles = (draft: Partial<TitleConfig>): TitleConfig[] => {
+    const entry: TitleConfig = {
+      text: draft.text ?? "",
+      startTimeMs: draft.startTimeMs ?? 0,
+      durationMs: draft.durationMs ?? 3000,
+      style: draft.style,
+    };
+    if (editingIndex !== null) {
+      const live = [...titles];
+      live[editingIndex] = entry;
+      return live;
+    }
+    if (addingNew && entry.text.trim()) {
+      return [...titles, entry];
+    }
+    return titles;
+  };
+
+  // Update local draft state AND emit live preview to parent
+  const handleDraftChange = (updater: (prev: Partial<TitleConfig>) => Partial<TitleConfig>) => {
+    const updated = updater(newTitle);
+    setNewTitle(updated);
+    onPreviewChange?.(computeLiveTitles(updated));
+  };
+
   // ── Add title ─────────────────────────────────────────────────────────────
   const handleAdd = () => {
     if (!newTitle.text?.trim()) return;
@@ -95,6 +122,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
 
     const updated = [...titles, title];
     onChange(updated);
+    onPreviewChange?.(updated);
     resetForm();
   };
 
@@ -137,6 +165,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
     };
 
     onChange(updated);
+    onPreviewChange?.(updated);
     resetForm();
   };
 
@@ -212,7 +241,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             <input
               type="text"
               value={newTitle.text ?? ""}
-              onChange={(e) => setNewTitle((prev) => ({ ...prev, text: e.target.value }))}
+              onChange={(e) => handleDraftChange((prev) => ({ ...prev, text: e.target.value }))}
               placeholder="e.g. Welcome to My Channel"
               style={{ width: "100%", padding: 8, background: "#2a2a3e", border: "1px solid #444", borderRadius: 4, color: "#e0e0e0", fontSize: 14 }}
             />
@@ -229,7 +258,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 min={0}
                 step={0.1}
                 value={(newTitle.startTimeMs ?? 0) / 1000}
-                onChange={(e) => setNewTitle((prev) => ({ ...prev, startTimeMs: Math.round(Number(e.target.value) * 1000) }))}
+                onChange={(e) => handleDraftChange((prev) => ({ ...prev, startTimeMs: Math.round(Number(e.target.value) * 1000) }))}
                 style={{ width: "100%", padding: 8, background: "#2a2a3e", border: "1px solid #444", borderRadius: 4, color: "#e0e0e0", fontSize: 14 }}
               />
             </div>
@@ -242,7 +271,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 min={0.1}
                 step={0.5}
                 value={(newTitle.durationMs ?? 3000) / 1000}
-                onChange={(e) => setNewTitle((prev) => ({ ...prev, durationMs: Math.round(Number(e.target.value) * 1000) }))}
+                onChange={(e) => handleDraftChange((prev) => ({ ...prev, durationMs: Math.round(Number(e.target.value) * 1000) }))}
                 style={{ width: "100%", padding: 8, background: "#2a2a3e", border: "1px solid #444", borderRadius: 4, color: "#e0e0e0", fontSize: 14 }}
               />
             </div>
@@ -263,7 +292,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
                   if (isNaN(val)) return;
-                  setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, x: val } }));
+                  handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, x: val } }));
                 }}
                 style={{
                   width: "100%", padding: 8, background: "#2a2a3e",
@@ -285,7 +314,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
                   if (isNaN(val)) return;
-                  setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, y: val } }));
+                  handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, y: val } }));
                 }}
                 style={{
                   width: "100%", padding: 8, background: "#2a2a3e",
@@ -307,7 +336,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 return (
                   <button
                     key={anim.id}
-                    onClick={() => setNewTitle((prev) => ({
+                    onClick={() => handleDraftChange((prev) => ({
                       ...prev,
                       style: { ...prev.style!, entranceAnimation: anim.id },
                     }))}
@@ -338,7 +367,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 value={rgbaToHex(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)")}
                 onChange={(e) => {
                   const alpha = rgbaToAlpha(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)");
-                  setNewTitle((prev) => ({
+                  handleDraftChange((prev) => ({
                     ...prev,
                     style: { ...prev.style!, backgroundColor: hexAndAlphaToRgba(e.target.value, alpha) },
                   }));
@@ -354,7 +383,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 value={rgbaToAlpha(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)")}
                 onChange={(e) => {
                   const hex = rgbaToHex(newTitle.style?.backgroundColor ?? "rgba(0, 0, 0, 0.7)");
-                  setNewTitle((prev) => ({
+                  handleDraftChange((prev) => ({
                     ...prev,
                     style: { ...prev.style!, backgroundColor: hexAndAlphaToRgba(hex, parseFloat(e.target.value)) },
                   }));
@@ -367,7 +396,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               <input
                 type="color"
                 value={newTitle.style?.titleColor ?? newTitle.style?.textColor ?? "#FFFFFF"}
-                onChange={(e) => setNewTitle((prev) => ({
+                onChange={(e) => handleDraftChange((prev) => ({
                   ...prev,
                   style: { ...prev.style!, titleColor: e.target.value },
                 }))}
@@ -386,7 +415,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               min={24}
               max={200}
               value={newTitle.style?.titleFontSize ?? 72}
-              onChange={(e) => setNewTitle((prev) => ({
+              onChange={(e) => handleDraftChange((prev) => ({
                 ...prev,
                 style: { ...prev.style!, titleFontSize: parseInt(e.target.value) },
               }))}
@@ -409,7 +438,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               max={50}
               step={1}
               value={newTitle.style?.borderRadius ?? 12}
-              onChange={(e) => setNewTitle((prev) => ({
+              onChange={(e) => handleDraftChange((prev) => ({
                 ...prev,
                 style: { ...prev.style!, borderRadius: parseInt(e.target.value) },
               }))}
@@ -433,7 +462,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 max={3}
                 step={0.1}
                 value={newTitle.style?.lineHeight ?? 1.2}
-                onChange={(e) => setNewTitle((prev) => ({
+                onChange={(e) => handleDraftChange((prev) => ({
                   ...prev,
                   style: { ...prev.style!, lineHeight: parseFloat(e.target.value) },
                 }))}
@@ -449,7 +478,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 min={0}
                 max={100}
                 value={newTitle.style?.padding ?? 40}
-                onChange={(e) => setNewTitle((prev) => ({
+                onChange={(e) => handleDraftChange((prev) => ({
                   ...prev,
                   style: { ...prev.style!, padding: parseInt(e.target.value) },
                 }))}
@@ -465,7 +494,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </label>
             <select
               value={newTitle.style?.titleFontFamily ?? "PlusJakartaSans"}
-              onChange={(e) => setNewTitle((prev) => ({
+              onChange={(e) => handleDraftChange((prev) => ({
                 ...prev,
                 style: { ...prev.style!, titleFontFamily: e.target.value },
               }))}
@@ -484,7 +513,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </label>
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
               <button
-                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontWeight: false } }))}
+                onClick={() => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, fontWeight: false } }))}
                 style={{
                   flex: 1,
                   padding: "6px 12px",
@@ -499,7 +528,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 Regular
               </button>
               <button
-                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontWeight: true } }))}
+                onClick={() => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, fontWeight: true } }))}
                 style={{
                   flex: 1,
                   padding: "6px 12px",
@@ -523,7 +552,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
             </label>
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
               <button
-                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontStyle: false } }))}
+                onClick={() => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, fontStyle: false } }))}
                 style={{
                   flex: 1,
                   padding: "6px 12px",
@@ -538,7 +567,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                 Normal
               </button>
               <button
-                onClick={() => setNewTitle((prev) => ({ ...prev, style: { ...prev.style!, fontStyle: true } }))}
+                onClick={() => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, fontStyle: true } }))}
                 style={{
                   flex: 1,
                   padding: "6px 12px",
@@ -575,7 +604,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                   <input
                     type="checkbox"
                     checked={titleGlow.enabled}
-                    onChange={(e) => setNewTitle((prev) => ({
+                    onChange={(e) => handleDraftChange((prev) => ({
                       ...prev,
                       style: { ...prev.style!, outerGlow: { ...titleGlow, enabled: e.target.checked } },
                     }))}
@@ -591,7 +620,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                       <input
                         type="color"
                         value={titleGlow.color}
-                        onChange={(e) => setNewTitle((prev) => ({
+                        onChange={(e) => handleDraftChange((prev) => ({
                           ...prev,
                           style: { ...prev.style!, outerGlow: { ...titleGlow, color: e.target.value } },
                         }))}
@@ -619,7 +648,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                         max={1}
                         step={0.05}
                         value={titleGlow.intensity}
-                        onChange={(e) => setNewTitle((prev) => ({
+                        onChange={(e) => handleDraftChange((prev) => ({
                           ...prev,
                           style: { ...prev.style!, outerGlow: { ...titleGlow, intensity: Number(e.target.value) } },
                         }))}
@@ -642,7 +671,7 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
                         max={60}
                         step={1}
                         value={titleGlow.softness}
-                        onChange={(e) => setNewTitle((prev) => ({
+                        onChange={(e) => handleDraftChange((prev) => ({
                           ...prev,
                           style: { ...prev.style!, outerGlow: { ...titleGlow, softness: Number(e.target.value) } },
                         }))}
@@ -677,7 +706,10 @@ export function TitleEditor({ titles, onChange }: TitleEditorProps) {
               {editingIndex !== null ? "Save Changes" : "Add Title"}
             </button>
             <button
-              onClick={resetForm}
+              onClick={() => {
+                onPreviewChange?.(titles);
+                resetForm();
+              }}
               style={{
                 padding: "8px 16px",
                 background: "#444",

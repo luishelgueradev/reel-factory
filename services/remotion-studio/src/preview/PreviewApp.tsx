@@ -207,6 +207,7 @@ export function PreviewApp() {
   }));
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
   const [titles, setTitles] = useState<TitleConfig[]>([]);
+  const [liveTitles, setLiveTitles] = useState<TitleConfig[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -267,6 +268,11 @@ export function PreviewApp() {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, []);
+
+  // Sync liveTitles to committed titles when not in draft-edit mode
+  useEffect(() => {
+    setLiveTitles(titles);
+  }, [titles]);
 
   // ── Save config to API (PUT /api/config) — manual save button ──────────────
   const handleSave = useCallback(async () => {
@@ -384,7 +390,7 @@ export function PreviewApp() {
             subtitleConfig={subtitleConfig}
             captionPages={captionPages}
             totalDurationMs={totalDurationMs}
-            titles={titles}
+            titles={liveTitles}
           />
         </div>
 
@@ -403,7 +409,7 @@ export function PreviewApp() {
           <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
             {/* Titles tab */}
             <div style={{ display: activeTab === "titles" ? "block" : "none" }}>
-              <TitleEditor titles={titles} onChange={setTitles} />
+              <TitleEditor titles={titles} onChange={setTitles} onPreviewChange={setLiveTitles} />
             </div>
 
             {/* Subtitles tab */}

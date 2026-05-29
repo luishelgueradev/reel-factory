@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Studio redesign + visual capabilities
 status: completed
-last_updated: "2026-05-29T16:22:37.679Z"
+last_updated: "2026-05-29T16:44:36.980Z"
 last_activity: 2026-05-29 -- Phase 20 marked complete
 progress:
   total_phases: 19
@@ -34,6 +34,7 @@ Last activity: 2026-05-29 -- Phase 20 marked complete
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260527-i3v | Fix google-fonts loadFont signature bug (all fonts fell back to monospace in preview + renders) | 2026-05-27 | c3b6a1c | [260527-i3v-fix-google-fonts-loadfont-signature-bug](./quick/260527-i3v-fix-google-fonts-loadfont-signature-bug/) |
+| 260529-mxw | fix title/position controls not showing in remotion live preview | 2026-05-29 | 7fc205a | [260529-mxw-fix-title-position-controls-not-showing-](./quick/260529-mxw-fix-title-position-controls-not-showing-/) |
 
 ### Phase 15 Decisions
 

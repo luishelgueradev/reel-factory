@@ -89,25 +89,36 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
       return;
     }
     let pending = fontsToLoad.length;
-    const handle = delayRender(`Loading title fonts: ${fontsToLoad.join(", ")}`);
+    let handle: number | null = delayRender(`Loading title fonts: ${fontsToLoad.join(", ")}`);
+
+    const finish = () => {
+      if (handle !== null) {
+        continueRender(handle);
+        handle = null;
+      }
+    };
+
     for (const f of fontsToLoad) {
       loadFont(f)
         .then(() => {
           pending--;
-          if (!cancelled && pending === 0) {
-            setFontLoaded(true);
-            continueRender(handle);
+          if (pending === 0) {
+            if (!cancelled) setFontLoaded(true);
+            finish();
           }
         })
         .catch(() => {
           pending--;
-          if (!cancelled && pending === 0) {
-            setFontLoaded(true);
-            continueRender(handle);
+          if (pending === 0) {
+            if (!cancelled) setFontLoaded(true);
+            finish();
           }
         });
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      finish(); // release the handle even if promises have not settled yet
+    };
   }, [titleFontFamily]);
 
   // Do not render until fonts are loaded — prevents Remotion from capturing

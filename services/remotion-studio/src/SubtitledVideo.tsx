@@ -3,7 +3,7 @@
 // by @remotion/player. Root.tsx still calls registerRoot() for Remotion Studio.
 
 import React from "react";
-import { AbsoluteFill, OffthreadVideo, staticFile, Sequence, delayRender, continueRender } from "remotion";
+import { AbsoluteFill, OffthreadVideo, staticFile, Sequence, delayRender, continueRender, useVideoConfig } from "remotion";
 import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher";
 import { TitleOverlay } from "./compositions/TitleOverlay";
 import { ZoomContainer } from "./compositions/ZoomContainer";
@@ -59,6 +59,7 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
     subtitleWidth: subtitleConfig?.subtitleWidth ?? DEFAULT_SUBTITLE_CONFIG.subtitleWidth,
   };
 
+  const { fps } = useVideoConfig();
   const fontFamily = config.fontFamily || "Inter";
   // Resolve module name to CSS fontFamily (e.g., "DancingScript" → "Dancing Script")
   const fontFamilyCSS = getFontFamilyCSS(fontFamily);
@@ -85,7 +86,6 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
       </ZoomContainer>
       <SubtitleLayoutRenderer captionPages={captionPages} config={resolvedConfig} totalDurationMs={totalDurationMs} />
       {(titles ?? []).map((title, i) => {
-        const fps = 30;
         const fromFrame = Math.round(title.startTimeMs * (fps / 1000));
         const durationInFrames = Math.max(1, Math.round(title.durationMs * (fps / 1000)));
         return (

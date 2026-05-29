@@ -84,7 +84,9 @@ export function getOuterGlowStyle(
   if (!outerGlow || !outerGlow.enabled) {
     return existingTextShadow ? { textShadow: existingTextShadow } : {};
   }
-  const hex = outerGlow.color.replace("#", "");
+  let hex = outerGlow.color.replace("#", "");
+  // Expand 3-char shorthand (#fff → #ffffff) to prevent NaN channel values
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);

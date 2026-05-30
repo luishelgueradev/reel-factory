@@ -475,7 +475,12 @@ Plans:
   2. A PNG larger than the frame is downscaled by code at render time and stays crisp (no blur/aliasing)
   3. The overlay can be positioned and sized by the user
 
-**Plans**: TBD (plan-phase)
+**Plans**: 3 plans in 3 waves
+
+Plans:
+- [ ] 21-01-PLAN.md — Schema foundation: PngOverlayConfig interface, validatePipelineConfig overlays block, server.ts body limit 10mb, renderer sync (OVERLAY-01, OVERLAY-02, OVERLAY-03)
+- [ ] 21-02-PLAN.md — Render path: PngOverlay.tsx composition, SubtitledVideo integration, render.ts base64 decode + upscale warning, Root.tsx defaultProps, renderer sync (OVERLAY-01, OVERLAY-02, OVERLAY-03)
+- [ ] 21-03-PLAN.md — Studio UI: OverlayEditor.tsx, PreviewApp.tsx Overlays tab + live preview wiring, human visual verify (OVERLAY-01, OVERLAY-02, OVERLAY-03)
 
 ---
 

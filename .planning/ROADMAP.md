@@ -480,7 +480,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 21-01-PLAN.md — Schema foundation: PngOverlayConfig interface, validatePipelineConfig overlays block, server.ts body limit 10mb, renderer sync (OVERLAY-01, OVERLAY-02, OVERLAY-03)
+- [x] 21-01-PLAN.md — Schema foundation: PngOverlayConfig interface, validatePipelineConfig overlays block, server.ts body limit 10mb, renderer sync (OVERLAY-01, OVERLAY-02, OVERLAY-03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

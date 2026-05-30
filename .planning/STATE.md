@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: — Studio redesign + visual capabilities
 status: executing
-last_updated: "2026-05-30T00:15:06.199Z"
-last_activity: 2026-05-30 -- Phase 21 planning complete
+last_updated: "2026-05-30T00:37:53.141Z"
+last_activity: 2026-05-30 -- Phase 21 execution started
 progress:
   total_phases: 19
   completed_phases: 18
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** Phase 20 — title-block-precision
+**Current focus:** Phase 21 — png-overlays
 
 ## Current Position
 
-Phase: 20 — COMPLETE
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-05-30 -- Phase 21 planning complete
+Phase: 21 (png-overlays) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 21
+Last activity: 2026-05-30 -- Phase 21 execution started
 
 ### Quick Tasks Completed
 

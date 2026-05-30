@@ -49,6 +49,7 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 - [x] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)** (completed 2026-05-29)
 - [x] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)** (completed 2026-05-29)
 - [x] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)** (completed 2026-05-30)
+- [ ] **Phase 22: Studio UI polish** - Denser, reordered Studio control panel (full impeccable pass); sample-text moved into the Subtitles tab; overlay layering/z-order model (overlays below text by default); x/y auto-position presets for titles + overlays. Requirements: to be formalized at discuss/plan. **(UI hint: yes)**
 
 ## Phase Details
 
@@ -489,6 +490,29 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 21-03-PLAN.md — Studio UI: OverlayEditor.tsx, PreviewApp.tsx Overlays tab + live preview wiring, human visual verify (OVERLAY-01, OVERLAY-02, OVERLAY-03)
+
+### Phase 22: Studio UI polish
+
+**Goal**: The Studio right-panel control surface is compact, prioritized, and visually deliberate — controls no longer waste space or read as stacked forms — and overlay layering relative to text is well-defined. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable)**
+**Depends on**: Phase 21
+**Requirements**: to be formalized at discuss/plan
+**Success Criteria** (what must be TRUE):
+
+  1. The Studio control panel is noticeably denser and reordered by priority/task-flow (controls grouped, rarely-used options collapsed/disclosed), while preserving the established dark-theme design system — done via a full `impeccable` pass over the whole right panel, not a single component
+  2. The sample-text input lives inside the Subtitles tab (the standalone "Text" tab is removed); final tabs are Titles | Overlays | Subtitles, and sample text still drives the live preview
+  3. Overlay layering is defined and implemented: overlays default to rendering BELOW titles/subtitles (decorators), applied consistently in `SubtitledVideo` (studio) and the renderer `Root.tsx`; whether per-overlay ordering is configurable is decided during discuss
+  4. Titles and overlays have auto-position preset buttons (top/bottom/left/right/center-x/center-y) on their x/y controls, mirroring the subtitle position presets (ideally via a shared component)
+
+**Scope** sourced from 4 follow-up todos captured during Phase 21 UAT (`.planning/todos/pending/`):
+- `2026-05-30-full-studio-ui-polish-with-impeccable-skill.md`
+- `2026-05-30-move-sample-text-input-into-subtitles-tab.md`
+- `2026-05-30-define-overlay-layering-z-order-model.md`
+- `2026-05-30-add-auto-position-buttons-to-x-y-controls.md`
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 22 to break down)
 
 ---
 

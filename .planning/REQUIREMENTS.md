@@ -19,9 +19,9 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### PNG Overlays (OVERLAY)
 
-- [ ] **OVERLAY-01**: User can add a transparent PNG overlay onto the video.
-- [ ] **OVERLAY-02**: A PNG larger than the frame is downscaled by code at render time for crisp output (supersampling approach).
-- [ ] **OVERLAY-03**: User can position and size the PNG overlay.
+- [x] **OVERLAY-01**: User can add a transparent PNG overlay onto the video.
+- [x] **OVERLAY-02**: A PNG larger than the frame is downscaled by code at render time for crisp output (supersampling approach).
+- [x] **OVERLAY-03**: User can position and size the PNG overlay.
 
 ### Title Blocks (TITLE)
 

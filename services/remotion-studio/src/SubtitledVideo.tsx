@@ -6,10 +6,11 @@ import React from "react";
 import { AbsoluteFill, OffthreadVideo, staticFile, Sequence, delayRender, continueRender, useVideoConfig } from "remotion";
 import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher";
 import { TitleOverlay } from "./compositions/TitleOverlay";
+import { PngOverlay } from "./compositions/PngOverlay";
 import { ZoomContainer } from "./compositions/ZoomContainer";
 import type { TransitionEvent } from "./compositions/JumpCutTransition";
 import type { TikTokPage } from "@remotion/captions";
-import type { SubtitleConfig, TitleConfig, SubtitleLayoutMode, SubtitlePosition } from "./pipeline-config";
+import type { SubtitleConfig, TitleConfig, SubtitleLayoutMode, SubtitlePosition, PngOverlayConfig } from "./pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
 import type { ZoomEvent } from "./zoom-detection";
 import { loadFont, getFontFamilyCSS } from "./fonts";
@@ -26,6 +27,8 @@ export interface RemotionProps {
   titles?: TitleConfig[];
   zoomEvents?: ZoomEvent[];
   transitionEvents?: TransitionEvent[];
+  // Phase 21: PNG overlays (OVERLAY-01)
+  overlays?: PngOverlayConfig[];
 }
 
 export const SubtitledVideo: React.FC<RemotionProps> = ({
@@ -37,6 +40,7 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
   zoomEvents = [],
   transitionEvents = [],
   totalDurationMs,
+  overlays = [],
 }) => {
   const config: SubtitleConfig = {
     layout: subtitleConfig?.layout ?? "tiktok",
@@ -102,6 +106,11 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
           </Sequence>
         );
       })}
+      {/* Phase 21: PNG overlays — rendered above titles (later in DOM = higher z-order) */}
+      {/* rawImageSrc = ov.imageData (data URL) for Player/browser preview context (D-11) */}
+      {overlays.map((ov, i) => (
+        <PngOverlay key={`overlay-${i}`} overlay={ov} rawImageSrc={ov.imageData} />
+      ))}
     </AbsoluteFill>
   );
 };

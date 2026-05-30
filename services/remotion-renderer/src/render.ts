@@ -5,7 +5,7 @@ import type { SilenceCutList, FinalizerInfo } from "./captions";
 import type { TikTokPage } from "@remotion/captions";
 import type { RemotionProps } from "./Root";
 import { validatePipelineConfig, DEFAULT_SUBTITLE_CONFIG, DEFAULT_VISUAL_EFFECTS } from "./pipeline-config";
-import type { PipelineConfig, SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig, VisualEffectsConfig } from "./pipeline-config";
+import type { PipelineConfig, SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig, VisualEffectsConfig, PngOverlayConfig } from "./pipeline-config";
 import { detectZoomEvents } from "./zoom-detection";
 import type { ZoomEvent } from "./zoom-detection";
 import { buildTransitionEvents } from "./compositions/JumpCutTransition";
@@ -255,6 +255,34 @@ async function main() {
     fs.copyFileSync(inputPath, publicVideoPath);
     console.log(`  Copied ${inputPath} -> public/${videoFileName}`);
 
+    // Phase 21: Decode base64 PNG overlays to public/ BEFORE bundle() (Pitfall 1)
+    // T-21-04: Validate imageData prefix; T-21-05: filename uses integer index only
+    const rawOverlays: PngOverlayConfig[] = pipelineConfig?.overlays ?? [];
+    const resolvedOverlays: PngOverlayConfig[] = rawOverlays.map((overlay, i) => {
+      if (!overlay.imageData) {
+        console.warn(`[overlay-${i}] imageData is empty — skipping PNG decode`);
+        return overlay;
+      }
+      // T-21-04: Only accept PNG data URLs — reject non-PNG binary data
+      if (!overlay.imageData.startsWith("data:image/png;base64,")) {
+        console.warn(`[overlay-${i}] imageData does not start with "data:image/png;base64," — skipping (T-21-04)`);
+        return overlay;
+      }
+      const base64 = overlay.imageData.replace(/^data:image\/\w+;base64,/, "");
+      const pngBuffer = Buffer.from(base64, "base64");
+      // D-05: Upscale heuristic — warn when buffer size suggests PNG is smaller than displayWidth
+      if (pngBuffer.byteLength < overlay.displayWidth * overlay.displayWidth * 0.5) {
+        console.warn(
+          `[overlay-${i}] PNG may be upscaled: buffer ${pngBuffer.byteLength} bytes < displayWidth ${overlay.displayWidth}px heuristic`
+        );
+      }
+      // T-21-05: filename is sanitized — integer index only, no path traversal
+      const fileName = `overlay-${i}.png`;
+      fs.writeFileSync(path.join(publicDir, fileName), pngBuffer);
+      console.log(`  Decoded PNG overlay ${i} -> public/${fileName}`);
+      return { ...overlay, _resolvedFile: fileName };
+    });
+
     console.log("[remotion-renderer] Step 4: Bundling Remotion project");
     const entryPoint = path.resolve(path.join(process.cwd(), "src", "Root.tsx"));
     const bundleLocation = await bundle({
@@ -307,6 +335,8 @@ async function main() {
       // Phase 7: Visual effects (D-08, D-10)
       zoomEvents,
       transitionEvents,
+      // Phase 21: PNG overlays with resolved file paths (OVERLAY-01)
+      overlays: resolvedOverlays,
     };
     const composition = await selectComposition({
       serveUrl: bundleLocation,

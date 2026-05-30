@@ -522,4 +522,98 @@ describe("validatePipelineConfig", () => {
       expect(DEFAULT_VISUAL_EFFECTS.transitions).toEqual(DEFAULT_TRANSITION_CONFIG);
     });
   });
+
+  // ─── PNG overlays (OVERLAY-01/02/03) ─────────────────────────────────────
+  describe("PNG overlays (OVERLAY-01/02/03)", () => {
+    // Test 1: empty overlays array is valid
+    it("OVERLAY-01: accepts config with empty overlays array", () => {
+      const config = { subtitle: { layout: "tiktok" }, overlays: [] };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    // Test 2: well-formed single overlay is valid
+    it("OVERLAY-01: accepts config with a valid overlay entry", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ imageData: "data:image/png;base64,abc", x: 40, y: 40, displayWidth: 200 }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    // Test 3: missing imageData -> error mentions "imageData"
+    it("OVERLAY-01: rejects overlay with missing imageData", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ x: 40, y: 40, displayWidth: 200 }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("imageData"))).toBe(true);
+    });
+
+    // Test 4: negative x -> error mentions "x"
+    it("OVERLAY-03: rejects overlay with negative x", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ imageData: "data:image/png;base64,abc", x: -1, y: 40, displayWidth: 200 }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("x"))).toBe(true);
+    });
+
+    // Test 5: displayWidth of 0 -> error mentions "displayWidth"
+    it("OVERLAY-03: rejects overlay with displayWidth = 0", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ imageData: "data:image/png;base64,abc", x: 40, y: 40, displayWidth: 0 }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("displayWidth"))).toBe(true);
+    });
+
+    // Test 6: opacity > 1 -> error mentions "opacity"
+    it("OVERLAY-03: rejects overlay with opacity > 1", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ imageData: "data:image/png;base64,abc", x: 40, y: 40, displayWidth: 200, opacity: 1.5 }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("opacity"))).toBe(true);
+    });
+
+    // Test 7: overlays is not an array -> error mentions "overlays"
+    it("OVERLAY-01: rejects overlays that is not an array", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: {},
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("overlays"))).toBe(true);
+    });
+
+    // Test 8: _resolvedFile present -> valid (runtime-only field, ignored by validation)
+    it("OVERLAY-01: accepts overlay with _resolvedFile (runtime-only field)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{
+          imageData: "data:image/png;base64,abc",
+          x: 40,
+          y: 40,
+          displayWidth: 200,
+          _resolvedFile: "overlay-0.png",
+        }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
 });

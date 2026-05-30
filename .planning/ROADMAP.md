@@ -48,7 +48,7 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 - [x] **Phase 18: Studio UI redesign** - Single 2-column interface (left: preview, right: controls in tabs); consolidate the duplicated editor/preview screens. Foundational UI for the new control surface. Requirements: STUDIO-01, STUDIO-02, STUDIO-03. **(UI hint: yes)** (completed 2026-05-27)
 - [x] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)** (completed 2026-05-29)
 - [x] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)** (completed 2026-05-29)
-- [ ] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)**
+- [x] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)** (completed 2026-05-30)
 
 ## Phase Details
 
@@ -488,7 +488,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 21-03-PLAN.md — Studio UI: OverlayEditor.tsx, PreviewApp.tsx Overlays tab + live preview wiring, human visual verify (OVERLAY-01, OVERLAY-02, OVERLAY-03)
+- [x] 21-03-PLAN.md — Studio UI: OverlayEditor.tsx, PreviewApp.tsx Overlays tab + live preview wiring, human visual verify (OVERLAY-01, OVERLAY-02, OVERLAY-03)
 
 ---
 

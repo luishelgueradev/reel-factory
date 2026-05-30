@@ -478,8 +478,16 @@ Plans:
 **Plans**: 3 plans in 3 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 21-01-PLAN.md — Schema foundation: PngOverlayConfig interface, validatePipelineConfig overlays block, server.ts body limit 10mb, renderer sync (OVERLAY-01, OVERLAY-02, OVERLAY-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 21-02-PLAN.md — Render path: PngOverlay.tsx composition, SubtitledVideo integration, render.ts base64 decode + upscale warning, Root.tsx defaultProps, renderer sync (OVERLAY-01, OVERLAY-02, OVERLAY-03)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 21-03-PLAN.md — Studio UI: OverlayEditor.tsx, PreviewApp.tsx Overlays tab + live preview wiring, human visual verify (OVERLAY-01, OVERLAY-02, OVERLAY-03)
 
 ---

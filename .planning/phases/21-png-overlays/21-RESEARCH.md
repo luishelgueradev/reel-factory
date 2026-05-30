@@ -406,22 +406,16 @@ const overlays: PngOverlayConfig[] = (pipelineConfig?.overlays ?? []).map((ov, i
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `_resolvedFile` be typed separately from the persisted config?**
-   - What we know: `TitleConfig` uses `style?: TitleStyleProps` with no runtime-only fields. The `_resolvedFile` field would be added by render.ts at render time and should NOT be in pipeline-config.json.
-   - What's unclear: Whether to use two types (`PngOverlayConfig` vs `PngOverlayRenderConfig`) or a single type with `_resolvedFile?: string` that validatePipelineConfig simply ignores.
-   - Recommendation: Single type, `_resolvedFile` is optional and excluded from validation (matches the current `_meta` pattern on GET /api/config responses).
+   - RESOLVED (CONTEXT.md D-03): Single type with `_resolvedFile?: string` optional. `validatePipelineConfig` ignores it (mirrors the `_meta` pattern). No separate runtime type needed.
 
 2. **Should opacity be animated or static?**
-   - What we know: TitleOverlay has entrance/exit fade animations. OVERLAY-03 says "positioned and sized" — does not mention animation.
-   - What's unclear: Whether the user expects an animated fade-in like TitleOverlay or a static overlay.
-   - Recommendation: Static opacity for v1 (OVERLAY-03 says position + size only). Add animation in a future phase if requested.
+   - RESOLVED (CONTEXT.md D-06): Static opacity for v1. No `enterFrame`/`exitFrame` fields. Animate in a future phase if requested.
 
 3. **Multiple overlays vs single overlay?**
-   - What we know: The requirements say "a transparent PNG overlay" (singular). TitleConfig uses an array.
-   - What's unclear: Whether the UI should support one overlay or multiple.
-   - Recommendation: Use an array (`overlays?: PngOverlayConfig[]`) from the start — symmetric with `titles[]` — but the UI can initially show a single-overlay interface (add/replace). This avoids a schema migration later if multi-overlay is needed.
+   - RESOLVED (CONTEXT.md D-01): Array schema `overlays?: PngOverlayConfig[]`, hard cap of 3 (D-02). Symmetric with `titles[]`.
 
 ---
 

@@ -2,10 +2,11 @@ import React from "react";
 import { Composition, registerRoot, AbsoluteFill, OffthreadVideo, staticFile, Sequence, delayRender, continueRender } from "remotion";
 import { SubtitleLayoutRenderer } from "./compositions/LayoutDispatcher";
 import { TitleOverlay } from "./compositions/TitleOverlay";
+import { PngOverlay } from "./compositions/PngOverlay";
 import { ZoomContainer } from "./compositions/ZoomContainer";
 import type { TransitionEvent } from "./compositions/JumpCutTransition";
 import type { TikTokPage } from "@remotion/captions";
-import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig } from "./pipeline-config";
+import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig, PngOverlayConfig } from "./pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
 import type { ZoomEvent } from "./zoom-detection";
 import { loadFont, getFontFamilyCSS } from "./fonts";
@@ -24,6 +25,8 @@ export interface RemotionProps {
   // Phase 7: Visual effects (D-08, D-10)
   zoomEvents?: ZoomEvent[];
   transitionEvents?: TransitionEvent[];
+  // Phase 21: PNG overlays (OVERLAY-01)
+  overlays?: PngOverlayConfig[];
 }
 
 /**
@@ -43,6 +46,7 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
   zoomEvents = [],
   transitionEvents = [],
   totalDurationMs,
+  overlays = [],
 }) => {
   // Build the SubtitleConfig, merging defaults for any missing fields
   const config: SubtitleConfig = {
@@ -114,6 +118,11 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
           </Sequence>
         );
       })}
+      {/* Phase 21: PNG overlays — above titles (later in DOM = higher z-order) */}
+      {/* No rawImageSrc in render context — PngOverlay uses staticFile(_resolvedFile) */}
+      {overlays.map((ov, i) => (
+        <PngOverlay key={`overlay-${i}`} overlay={ov} />
+      ))}
     </AbsoluteFill>
   );
 };
@@ -143,6 +152,8 @@ export const RemotionRoot: React.FC = () => {
         // Phase 7: Visual effects defaults (D-08, D-10)
         zoomEvents: [] as ZoomEvent[],
         transitionEvents: [] as TransitionEvent[],
+        // Phase 21: PNG overlays (OVERLAY-01)
+        overlays: [] as PngOverlayConfig[],
       }}
       calculateMetadata={async ({ props }) => {
         const durationMs = props.totalDurationMs || 10000;

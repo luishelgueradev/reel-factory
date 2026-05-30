@@ -49,7 +49,7 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 - [x] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)** (completed 2026-05-29)
 - [x] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)** (completed 2026-05-29)
 - [x] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)** (completed 2026-05-30)
-- [ ] **Phase 22: Studio UI polish** - Denser, reordered Studio control panel (full impeccable pass); sample-text moved into the Subtitles tab; overlay layering/z-order model (overlays below text by default); x/y auto-position presets for titles + overlays. Requirements: to be formalized at discuss/plan. **(UI hint: yes)**
+- [ ] **Phase 22: Studio UI polish** - Adopt a 3-column Studio shell (preview · controls · social-metadata placeholder); denser, reordered control panel (full impeccable pass); sample-text moved into the Subtitles tab; overlay layering model (overlays below text by default, per-overlay back/front toggle); x/y auto-position presets (9-point grid) for titles + overlays. Requirements: to be formalized at discuss/plan. **(UI hint: yes)**
 
 ## Phase Details
 
@@ -493,21 +493,24 @@ Plans:
 
 ### Phase 22: Studio UI polish
 
-**Goal**: The Studio right-panel control surface is compact, prioritized, and visually deliberate — controls no longer waste space or read as stacked forms — and overlay layering relative to text is well-defined. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable)**
+**Goal**: The Studio adopts a deliberate 3-column shell (preview · controls · social-metadata panel) and its right-panel control surface becomes compact, prioritized, and visually deliberate — controls no longer waste space or read as stacked forms — with overlay layering relative to text well-defined. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable; sketch-first per CONTEXT.md)**
 **Depends on**: Phase 21
-**Requirements**: to be formalized at discuss/plan
+**Requirements**: to be formalized at discuss/plan (decisions locked in `22-CONTEXT.md`)
 **Success Criteria** (what must be TRUE):
 
-  1. The Studio control panel is noticeably denser and reordered by priority/task-flow (controls grouped, rarely-used options collapsed/disclosed), while preserving the established dark-theme design system — done via a full `impeccable` pass over the whole right panel, not a single component
-  2. The sample-text input lives inside the Subtitles tab (the standalone "Text" tab is removed); final tabs are Titles | Overlays | Subtitles, and sample text still drives the live preview
-  3. Overlay layering is defined and implemented: overlays default to rendering BELOW titles/subtitles (decorators), applied consistently in `SubtitledVideo` (studio) and the renderer `Root.tsx`; whether per-overlay ordering is configurable is decided during discuss
-  4. Titles and overlays have auto-position preset buttons (top/bottom/left/right/center-x/center-y) on their x/y controls, mirroring the subtitle position presets (ideally via a shared component)
+  1. The Studio uses a 3-column layout — column 1 = live 9:16 preview, column 2 = controls (titled sections / tabs), column 3 = social-media metadata panel — shipped as a structured placeholder ("Metadata de redes — próximamente"); the AI that populates it is a future phase (see Deferred)
+  2. The control panel (column 2) is noticeably denser and reordered by priority/task-flow (Position → Style → Advanced, rarely-used collapsed/disclosed), while preserving the established dark-theme design system — done via a full `impeccable` pass over the whole panel, not a single component
+  3. The sample-text input lives at the top of the Subtitles tab (the standalone "Text" tab is removed); final tabs are Titles | Overlays | Subtitles, and sample text still drives the live preview
+  4. Overlay layering is defined and implemented: overlays default to rendering BELOW titles/subtitles (decorators) with a per-overlay back/front toggle to promote a specific overlay above text; multiple overlays paint in array order; applied consistently in `SubtitledVideo` (studio) and the renderer `Root.tsx`
+  5. Titles and overlays have auto-position preset buttons (9-point grid: corners + edge-centers + center) on their x/y controls, via a shared `PositionPresets` component (subtitle presets migrated onto it), with size-aware centering math
 
 **Scope** sourced from 4 follow-up todos captured during Phase 21 UAT (`.planning/todos/pending/`):
 - `2026-05-30-full-studio-ui-polish-with-impeccable-skill.md`
 - `2026-05-30-move-sample-text-input-into-subtitles-tab.md`
 - `2026-05-30-define-overlay-layering-z-order-model.md`
 - `2026-05-30-add-auto-position-buttons-to-x-y-controls.md`
+
+**Deferred (future phase):** AI-generated social-media metadata (title, description, hashtags) derived from the subtitle transcription + chosen titles, populating column 3. Phase 22 ships only the placeholder structure.
 
 **Plans:** 0 plans
 

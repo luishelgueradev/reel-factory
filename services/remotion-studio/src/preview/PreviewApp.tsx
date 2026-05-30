@@ -6,7 +6,7 @@
 // Render Video button disabled / coming-soon (D-05).
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import type { SubtitleConfig, TitleConfig } from "../pipeline-config";
+import type { SubtitleConfig, TitleConfig, PngOverlayConfig } from "../pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 import { PreviewPlayer } from "./PreviewPlayer";
 import { TextareaInput } from "./TextareaInput";
@@ -14,6 +14,7 @@ import { textToCaptionPages, deriveTotalDurationMs, DEFAULT_SAMPLE_TEXT } from "
 import { LayoutSelector } from "../editor/components/LayoutSelector";
 import { StyleControls } from "../editor/components/StyleControls";
 import { TitleEditor } from "../editor/components/TitleEditor";
+import { OverlayEditor } from "../editor/components/OverlayEditor";
 import type { TikTokPage } from "@remotion/captions";
 import { loadFont, AVAILABLE_FONTS, getFontFamilyCSS } from "../fonts";
 
@@ -26,6 +27,7 @@ const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
 
 const TABS: { id: string; label: string }[] = [
   { id: "titles",    label: "Titles"    },
+  { id: "overlays",  label: "Overlays"  },
   { id: "subtitles", label: "Subtitles" },
   { id: "text",      label: "Text"      },
 ];
@@ -208,6 +210,8 @@ export function PreviewApp() {
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
   const [titles, setTitles] = useState<TitleConfig[]>([]);
   const [liveTitles, setLiveTitles] = useState<TitleConfig[]>([]);
+  const [overlays, setOverlays] = useState<PngOverlayConfig[]>([]);
+  const [liveOverlays, setLiveOverlays] = useState<PngOverlayConfig[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -256,6 +260,19 @@ export function PreviewApp() {
           );
           setTitles(validTitles);
         }
+        if (data && Array.isArray(data.overlays)) {
+          // Validate shape before entering state — pipeline-config.json may have
+          // been hand-edited. Missing numeric/string fields would break the Player.
+          const validOverlays = (data.overlays as unknown[]).filter(
+            (o): o is PngOverlayConfig =>
+              typeof o === "object" && o !== null &&
+              typeof (o as PngOverlayConfig).imageData === "string" &&
+              typeof (o as PngOverlayConfig).x === "number" &&
+              typeof (o as PngOverlayConfig).y === "number" &&
+              typeof (o as PngOverlayConfig).displayWidth === "number"
+          );
+          setOverlays(validOverlays);
+        }
       })
       .catch(() => {
         /* use defaults */
@@ -274,6 +291,11 @@ export function PreviewApp() {
     setLiveTitles(titles);
   }, [titles]);
 
+  // Sync liveOverlays to committed overlays when not in draft-edit mode
+  useEffect(() => {
+    setLiveOverlays(overlays);
+  }, [overlays]);
+
   // ── Save config to API (PUT /api/config) — manual save button ──────────────
   const handleSave = useCallback(async () => {
     try {
@@ -284,6 +306,7 @@ export function PreviewApp() {
       const payload = {
         subtitle: subtitleConfig,
         titles,
+        overlays,
       };
 
       const res = await fetch("/api/config", {
@@ -305,7 +328,7 @@ export function PreviewApp() {
     } finally {
       setSaving(false);
     }
-  }, [subtitleConfig, titles]);
+  }, [subtitleConfig, titles, overlays]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#1a1a2e" }}>
@@ -391,6 +414,7 @@ export function PreviewApp() {
             captionPages={captionPages}
             totalDurationMs={totalDurationMs}
             titles={liveTitles}
+            overlays={liveOverlays}
           />
         </div>
 
@@ -410,6 +434,15 @@ export function PreviewApp() {
             {/* Titles tab */}
             <div style={{ display: activeTab === "titles" ? "block" : "none" }}>
               <TitleEditor titles={titles} onChange={setTitles} onPreviewChange={setLiveTitles} />
+            </div>
+
+            {/* Overlays tab */}
+            <div style={{ display: activeTab === "overlays" ? "block" : "none" }}>
+              <OverlayEditor
+                overlays={overlays}
+                onChange={(updated) => { setOverlays(updated); setLiveOverlays(updated); }}
+                onPreviewChange={setLiveOverlays}
+              />
             </div>
 
             {/* Subtitles tab */}

@@ -8,7 +8,7 @@ import React, { useMemo, useEffect, useState } from "react";
 import { Player } from "@remotion/player";
 import { SubtitledVideo } from "../SubtitledVideo";
 import { loadFont } from "../fonts";
-import type { SubtitleConfig, TitleConfig } from "../pipeline-config";
+import type { SubtitleConfig, TitleConfig, PngOverlayConfig } from "../pipeline-config";
 import type { TikTokPage } from "@remotion/captions";
 import type { RemotionProps } from "../SubtitledVideo";
 
@@ -17,6 +17,7 @@ interface PreviewPlayerProps {
   captionPages: TikTokPage[];
   totalDurationMs: number;
   titles?: TitleConfig[];
+  overlays?: PngOverlayConfig[];
 }
 
 export function PreviewPlayer({
@@ -24,6 +25,7 @@ export function PreviewPlayer({
   captionPages,
   totalDurationMs,
   titles,
+  overlays,
 }: PreviewPlayerProps) {
   const [fontLoaded, setFontLoaded] = useState(false);
 
@@ -52,11 +54,12 @@ export function PreviewPlayer({
       subtitleLayout: subtitleConfig.layout,
       subtitleConfig,
       titles: titles ?? [],
+      overlays: overlays ?? [],
       zoomEvents: [],
       transitionEvents: [],
       totalDurationMs: totalDurationMs || 10000,
     }),
-    [captionPages, subtitleConfig, totalDurationMs, titles]
+    [captionPages, subtitleConfig, totalDurationMs, titles, overlays]
   );
 
   const containerRef = React.useRef<HTMLDivElement>(null);

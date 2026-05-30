@@ -94,6 +94,16 @@ export interface TitleConfig {
   style?: TitleStyleProps;
 }
 
+/** Configuration for a single PNG overlay (Phase 21, OVERLAY-01) */
+export interface PngOverlayConfig {
+  imageData: string;       // base64 data URL: "data:image/png;base64,..."
+  x: number;               // pixel x from left edge of 1080px frame
+  y: number;               // pixel y from top edge of 1920px frame
+  displayWidth: number;    // CSS display width in pixels (triggers downscale)
+  opacity?: number;        // 0–1, default 1
+  _resolvedFile?: string;  // runtime-only, set by render.ts, NOT persisted
+}
+
 // ─── Visual Effects (D-11, D-12) ────────────────────────────────────────────
 
 /** Transition animation type between silence cuts */
@@ -129,6 +139,7 @@ export interface VisualEffectsConfig {
 export interface PipelineConfig {
   subtitle: SubtitleConfig;
   titles?: TitleConfig[];
+  overlays?: PngOverlayConfig[]; // Phase 21 OVERLAY-01
   visualEffects?: VisualEffectsConfig; // D-11
 }
 
@@ -444,6 +455,50 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
             }
           }
         }
+      });
+    }
+  }
+
+  // Validate overlays (optional array, Phase 21 OVERLAY-01/02/03)
+  if (cfg.overlays !== undefined) {
+    if (!Array.isArray(cfg.overlays)) {
+      errors.push("PipelineConfig.overlays must be an array");
+    } else {
+      cfg.overlays.forEach((overlay: unknown, index: number) => {
+        if (typeof overlay !== "object" || overlay === null) {
+          errors.push(`overlays[${index}] must be a non-null object`);
+          return;
+        }
+        const ov = overlay as Record<string, unknown>;
+
+        // imageData: required, non-empty string
+        if (typeof ov.imageData !== "string" || ov.imageData.trim() === "") {
+          errors.push(`overlays[${index}].imageData must be a non-empty string`);
+        }
+
+        // x: required, finite number >= 0
+        if (typeof ov.x !== "number" || !Number.isFinite(ov.x) || ov.x < 0) {
+          errors.push(`overlays[${index}].x must be a non-negative finite number`);
+        }
+
+        // y: required, finite number >= 0
+        if (typeof ov.y !== "number" || !Number.isFinite(ov.y) || ov.y < 0) {
+          errors.push(`overlays[${index}].y must be a non-negative finite number`);
+        }
+
+        // displayWidth: required, finite number > 0
+        if (typeof ov.displayWidth !== "number" || !Number.isFinite(ov.displayWidth) || ov.displayWidth <= 0) {
+          errors.push(`overlays[${index}].displayWidth must be a positive finite number`);
+        }
+
+        // opacity: optional, number between 0 and 1 inclusive
+        if (ov.opacity !== undefined) {
+          if (typeof ov.opacity !== "number" || ov.opacity < 0 || ov.opacity > 1) {
+            errors.push(`overlays[${index}].opacity must be a number between 0 and 1`);
+          }
+        }
+
+        // _resolvedFile: runtime-only, NOT validated (mirrors _meta pattern)
       });
     }
   }

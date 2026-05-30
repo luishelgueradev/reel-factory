@@ -82,7 +82,7 @@ app.use((req, res, next) => {
   return res.status(401).send("Authentication required");
 });
 
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "10mb" })); // Raised to 10mb for base64 PNG overlay payloads (Phase 21 D-10).
 
 // ─── Health check ──────────────────────────────────────────────────────────
 

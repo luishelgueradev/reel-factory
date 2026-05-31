@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 007 — preview as layer map</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text);
+         font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between;
+         padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm);
+         background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+         display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-5); align-items: center; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm);
+         border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--text-faint); border-color: var(--border); cursor: not-allowed; }
+  .btn.primary { background: var(--action); border-color: transparent; color: oklch(0.16 0.02 150); font-weight: 600; }
+
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { flex: 1 1 auto; background: var(--stage); display: flex; flex-direction: column;
+           align-items: center; justify-content: center; padding: var(--s-12); border-right: 1px solid var(--border); min-width: 0; position: relative; }
+  .canvas-hint { position: absolute; top: var(--s-8); left: 50%; transform: translateX(-50%); font-size: var(--t-xs);
+                 color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-full); padding: 5px 12px; }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 660px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%),
+                       radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%),
+                       linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); touch-action: none; user-select: none; }
+  .phone::after { content: ""; position: absolute; left: 50%; bottom: -6%; transform: translateX(-50%);
+           width: 56%; aspect-ratio: 1; border-radius: 50% 50% 42% 42%;
+           background: radial-gradient(closest-side, oklch(0.55 0.03 60 / 0.5), transparent); filter: blur(2px); }
+  /* snap guides */
+  .guide { position: absolute; background: var(--accent); opacity: 0; pointer-events: none; z-index: 200; transition: opacity 90ms; }
+  .guide.vx { width: 1px; top: 0; bottom: 0; } .guide.hy { height: 1px; left: 0; right: 0; }
+  .guide.show { opacity: 0.5; }
+
+  /* draggable elements */
+  .el { position: absolute; cursor: grab; outline: 1.5px dashed transparent; outline-offset: 3px;
+        transition: outline-color var(--dur) var(--ease); }
+  .el:hover { outline-color: oklch(0.82 0.095 242 / 0.4); }
+  .el.sel { outline: 1.5px solid var(--accent); cursor: grabbing; }
+  .el.dragging { outline-style: solid; }
+  .el-title { padding: 7px 16px; border-radius: var(--r-sm); background: oklch(0.20 0.03 280 / 0.78); backdrop-filter: blur(3px);
+              font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .el-cap { width: 84%; text-align: center; font-weight: 800; font-size: 26px; line-height: 1.15; text-shadow: 0 2px 12px oklch(0.12 0 0 / 0.85); }
+  .el-cap .on { color: var(--accent); }
+  .el-logo { width: 64px; height: 64px; border-radius: var(--r-sm); display: grid; place-items: center; font-size: var(--t-xs);
+             font-weight: 700; color: oklch(0.96 0.01 280); background: linear-gradient(140deg, oklch(0.7 0.13 30), oklch(0.6 0.16 12)); }
+  .el-mark { width: 150px; height: 150px; border-radius: 50%; display: grid; place-items: center; font-size: var(--t-sm);
+             color: oklch(0.96 0.01 280 / 0.7); background: oklch(0.96 0.01 280 / 0.14); border: 2px solid oklch(0.96 0.01 280 / 0.3); }
+  .el.behind { filter: saturate(0.8); opacity: 0.9; }
+  /* selection badge: shows layer + drag depth control */
+  .el .tag-chip { position: absolute; top: -22px; left: 0; font-size: var(--t-2xs); font-weight: 700; white-space: nowrap;
+                  background: var(--accent); color: var(--stage); padding: 2px 7px; border-radius: var(--r-xs); display: none; }
+  .el.sel .tag-chip { display: block; }
+
+  /* ── right rail: layer stack / inspector ── */
+  .rail { flex: 0 0 300px; background: var(--chrome); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; }
+  .rail-h { padding: var(--s-10) var(--s-10) var(--s-6); }
+  .rail-h h2 { font-size: var(--t-md); font-weight: 600; }
+  .rail-h p { font-size: var(--t-xs); color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+  .rail-body { flex: 1; overflow-y: auto; padding: var(--s-6) var(--s-10) var(--s-12); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700;
+           letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: var(--s-8) 0 var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+
+  /* layer stack rows */
+  .lstack { display: flex; flex-direction: column; gap: var(--s-3); }
+  .lrow { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-4) var(--s-5);
+          background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
+  .lrow:hover { border-color: var(--border-strong); }
+  .lrow.sel { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .lrow .ic { width: 22px; height: 22px; border-radius: var(--r-xs); display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none; color: oklch(0.96 0.01 280); }
+  .ic-logo { background: linear-gradient(140deg, oklch(0.7 0.13 30), oklch(0.6 0.16 12)); }
+  .ic-mark { background: oklch(0.96 0.01 280 / 0.14); border: 1px solid oklch(0.96 0.01 280 / 0.3); }
+  .ic-text { background: var(--accent-tint); color: var(--accent); }
+  .lrow .nm { flex: 1; font-size: var(--t-sm); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lrow .drag { color: var(--text-faint); cursor: grab; font-size: 14px; }
+  .lrow.textband { background: oklch(0.20 0.03 280 / 0.5); border-style: dashed; cursor: default; }
+  .lrow.textband .nm { color: var(--accent); font-weight: 700; font-size: var(--t-2xs); letter-spacing: 0.08em; text-transform: uppercase; }
+  .band-cap { font-size: var(--t-2xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;
+              display: flex; align-items: center; gap: var(--s-4); margin: var(--s-3) 0; }
+  .band-cap::before, .band-cap::after { content: ""; flex: 1; height: 1px; background: var(--accent-strong); opacity: 0.35; }
+
+  /* inspector for selected element */
+  .insp { margin-top: var(--s-6); }
+  .row { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  .field { display: flex; flex-direction: column; gap: var(--s-3); }
+  .field .mini { font-size: var(--t-2xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .inp { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+         border-radius: var(--r-sm); padding: 6px 9px; width: 100%; }
+  .inp.flash { animation: flash 0.5s var(--ease); }
+  @keyframes flash { 0% { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); } 100% {} }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .depthbtns { display: flex; gap: var(--s-4); }
+  .depthbtns button { flex: 1; font: inherit; font-size: var(--t-xs); color: var(--text-2); background: var(--surface);
+                      border: 1px solid var(--border); border-radius: var(--r-xs); padding: 6px; cursor: pointer; }
+  .depthbtns button:hover { border-color: var(--accent-strong); color: var(--accent); }
+  .empty { font-size: var(--t-sm); color: var(--text-faint); text-align: center; padding: var(--s-10) 0; }
+
+  /* variant B: layer-map exploded toggle */
+  .phone.exploded .el { box-shadow: 0 8px 24px oklch(0.08 0.02 280 / 0.6); }
+  .phone.exploded .el-logo, .phone.exploded .el-mark { outline: 1.5px solid oklch(0.82 0.095 242 / 0.5); }
+  .znum { position: absolute; top: -10px; right: -10px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+          color: var(--stage); font-size: 11px; font-weight: 800; display: none; place-items: center; z-index: 1; }
+  .phone.exploded .znum { display: grid; }
+  .maptoggle { display: flex; gap: var(--s-4); margin-bottom: var(--s-6); }
+  .maptoggle button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface);
+                      border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px; cursor: pointer; }
+  .maptoggle button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome);
+          border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+  .note { font-size: var(--t-2xs); color: var(--text-faint); line-height: 1.5; margin-top: var(--s-8);
+          border-top: 1px solid var(--border-faint); padding-top: var(--s-6); }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 007 · preview as layer map (lateral)</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ Chosen · Drag-to-position</button>
+  <button class="vtab" onclick="show('b',this)">B · Layer-map view</button>
+</nav>
+
+<!-- shared template injected by JS into each variant's stage+rail -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="canvas-hint">Arrastrá cualquier elemento · se ajusta a los 9 anclajes</div>
+      <div class="phone" id="phoneA"></div>
+    </section>
+    <aside class="rail" id="railA"></aside>
+  </div>
+</div>
+
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="canvas-hint" id="hintB">Mapa de capas · el número = orden de pintado</div>
+      <div class="phone exploded" id="phoneB"></div>
+    </section>
+    <aside class="rail" id="railB"></aside>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  const FRAME_W = 1080, FRAME_H = 1920;
+  // shared element model — text band is fixed-z (50); overlays sort by layer+array order
+  function mkModel() { return [
+    { id:'title', type:'text', name:'Título', x:300, y:170,  w:480, h:54,  layer:'text' },
+    { id:'cap',   type:'text', name:'Subtítulo', x:86, y:1560, w:900, h:120, layer:'text' },
+    { id:'logo',  type:'logo', name:'logo-marca.png',  x:856, y:64,  w:160, h:160, layer:'front' },
+    { id:'mark',  type:'mark', name:'watermark.png',   x:465, y:520, w:150, h:150, layer:'back' },
+  ]; }
+
+  function Variant(phoneId, railId, mode) {
+    const phone = document.getElementById(phoneId);
+    const rail  = document.getElementById(railId);
+    let els = mkModel();
+    let sel = 'logo';
+
+    function zFor(e, i) {
+      if (e.layer === 'text') return 50;
+      return (e.layer === 'front' ? 60 : 10) + i;
+    }
+    function renderPhone() {
+      phone.querySelectorAll('.el,.guide').forEach(n => n.remove());
+      ['vx','hy'].forEach(c => { const g=document.createElement('div'); g.className='guide '+c; phone.appendChild(g); });
+      els.forEach((e,i) => {
+        const d = document.createElement('div');
+        d.className = 'el ' + (e.type==='text'?(e.id==='title'?'el-title':'el-cap'):(e.type==='logo'?'el-logo':'el-mark'))
+                    + (e.id===sel?' sel':'') + (e.layer==='back'?' behind':'');
+        d.dataset.id = e.id;
+        d.style.left = (e.x/FRAME_W*100)+'%';
+        d.style.top  = (e.y/FRAME_H*100)+'%';
+        d.style.zIndex = zFor(e,i);
+        if (e.type==='logo') { d.style.width=(e.w/FRAME_W*100)+'%'; d.style.aspectRatio='1'; }
+        d.innerHTML = (e.id==='title'?'Cómo edité este reel'
+                      : e.id==='cap'?'<span class="on">subtítulos</span> que enganchan'
+                      : e.type==='logo'?'LOGO':'@user')
+                    + `<span class="znum">${zFor(e,i)}</span>`
+                    + (e.id===sel?`<span class="tag-chip">${e.name} · ${e.layer==='text'?'texto':e.layer==='front'?'delante':'detrás'}</span>`:'');
+        attachDrag(d, e);
+        phone.appendChild(d);
+      });
+    }
+    function renderRail() {
+      const front = els.filter(e=>e.layer==='front');
+      const back  = els.filter(e=>e.layer==='back');
+      const se = els.find(e=>e.id===sel);
+      const lrow = e => `<div class="lrow ${e.id===sel?'sel':''}" data-id="${e.id}"><span class="drag">⠿</span>
+          <span class="ic ${e.type==='logo'?'ic-logo':e.type==='mark'?'ic-mark':'ic-text'}">${e.type==='logo'?'R':e.type==='mark'?'@':'T'}</span>
+          <span class="nm">${e.name}</span></div>`;
+      const stackHTML = (mode==='map'
+        ? `<div class="maptoggle"><button class="exp on">Vista mapa</button><button class="exp">Vista normal</button></div>`
+        : '')
+        + `<div class="sec-h">Capas (adelante → atrás)</div>
+           <div class="lstack">
+             ${front.map(lrow).join('')}
+             <div class="band-cap">Texto (fijo)</div>
+             <div class="lrow textband"><span class="nm">▤ Títulos + subtítulos</span></div>
+             <div class="band-cap">Detrás</div>
+             ${back.map(lrow).join('')}
+           </div>`;
+      let inspHTML = '<div class="empty">Seleccioná un elemento</div>';
+      if (se) {
+        const editable = se.layer !== 'text';
+        inspHTML = `<div class="sec-h">${se.name}</div><div class="insp">
+          <div class="two"><div class="field"><span class="mini">X</span><input class="inp ix" value="${Math.round(se.x)}"></div>
+            <div class="field"><span class="mini">Y</span><input class="inp iy" value="${Math.round(se.y)}"></div></div>`
+          + (editable ? `<div class="row" style="margin-top:var(--s-6)"><label>Capa</label>
+              <div class="seg" data-layer><button data-l="back" class="${se.layer==='back'?'on':''}">Detrás</button><button data-l="front" class="${se.layer==='front'?'on':''}">Delante</button></div></div>
+            <div class="row"><label>Profund.</label><div class="depthbtns"><button data-d="back">Al fondo ↧</button><button data-d="front">Al frente ↥</button></div></div>`
+            : `<div class="note">El texto (títulos + subtítulos) es la banda fija de referencia. Los overlays se ordenan respecto de ella.</div>`)
+          + `</div>`;
+      }
+      rail.innerHTML = `<div class="rail-h"><h2>${mode==='map'?'Mapa de capas':'Inspector'}</h2>
+          <p>${mode==='map'?'El número en cada elemento es su orden de pintado. Arrastrá en la pila para reordenar.':'Arrastrá en el lienzo para posicionar; ajustá capa y profundidad acá.'}</p></div>
+        <div class="rail-body">${stackHTML}${inspHTML}</div>`;
+      // wire rail
+      rail.querySelectorAll('.lrow[data-id]').forEach(r => r.onclick = () => { sel = r.dataset.id; render(); });
+      rail.querySelectorAll('[data-layer] button').forEach(b => b.onclick = () => { se.layer = b.dataset.l; render(); });
+      rail.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+        se.layer = b.dataset.d;
+        const idx = els.findIndex(e=>e.id===se.id); els.splice(idx,1);
+        if (b.dataset.d==='front') els.push(se); else els.unshift(se);
+        render();
+      });
+      rail.querySelectorAll('.exp').forEach((b,i) => b.onclick = () => { phone.classList.toggle('exploded', i===0); rail.querySelectorAll('.exp').forEach(x=>x.classList.remove('on')); b.classList.add('on'); });
+    }
+    // drag-to-position with 9-anchor snap
+    function attachDrag(node, e) {
+      node.onpointerdown = ev => {
+        ev.preventDefault(); sel = e.id; render();
+        const node2 = phone.querySelector(`.el[data-id="${e.id}"]`); // re-grab after render
+        node2.classList.add('dragging'); node2.setPointerCapture?.(ev.pointerId);
+        const rect = phone.getBoundingClientRect();
+        const sx = ev.clientX, sy = ev.clientY, ox = e.x, oy = e.y;
+        const gx = phone.querySelector('.guide.vx'), gy = phone.querySelector('.guide.hy');
+        const move = m => {
+          const dx = (m.clientX - sx)/rect.width*FRAME_W, dy = (m.clientY - sy)/rect.height*FRAME_H;
+          let nx = Math.max(0, Math.min(FRAME_W - e.w, ox + dx));
+          let ny = Math.max(0, Math.min(FRAME_H - e.h, oy + dy));
+          // snap to 9 anchors (within ~40px frame units)
+          const ax = [0,(FRAME_W-e.w)/2,FRAME_W-e.w], ay=[0,(FRAME_H-e.h)/2,FRAME_H-e.h];
+          let snapX=null, snapY=null;
+          ax.forEach(a=>{ if(Math.abs(nx-a)<45){nx=a;snapX=a;} }); ay.forEach(a=>{ if(Math.abs(ny-a)<45){ny=a;snapY=a;} });
+          e.x=nx; e.y=ny;
+          node2.style.left=(nx/FRAME_W*100)+'%'; node2.style.top=(ny/FRAME_H*100)+'%';
+          const cx = phone.querySelector(`.el[data-id="${e.id}"] .tag-chip`);
+          gx.classList.toggle('show', snapX!==null); gy.classList.toggle('show', snapY!==null);
+          if(snapX!==null) gx.style.left=((nx+e.w/2)/FRAME_W*100)+'%';
+          if(snapY!==null) gy.style.top=((ny+e.h/2)/FRAME_H*100)+'%';
+          const ix=rail.querySelector('.ix'), iy=rail.querySelector('.iy');
+          if(ix) ix.value=Math.round(nx); if(iy) iy.value=Math.round(ny);
+        };
+        const up = () => { document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up);
+          gx.classList.remove('show'); gy.classList.remove('show'); render(); };
+        document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+      };
+    }
+    function render() { renderPhone(); renderRail(); }
+    render();
+  }
+
+  Variant('phoneA','railA','edit');
+  Variant('phoneB','railB','map');
+
+  function show(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('v-' + id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

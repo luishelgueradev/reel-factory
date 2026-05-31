@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 010 — render / export surface</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text);
+         font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between;
+         padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm);
+         background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+         display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-6); align-items: center; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm);
+         border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+  .btn.secondary { background: transparent; color: var(--text-2); border-color: var(--border-strong); }
+  /* Render = primary action → owns green (the tool's true primary; see README tension) */
+  .render-cta { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: var(--t-md); font-weight: 600;
+        padding: 7px 16px; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--action); color: oklch(0.16 0.02 150); cursor: pointer;
+        transition: opacity var(--dur) var(--ease); }
+  .render-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+  .render-cta .tri { font-size: 11px; }
+
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { position: relative; flex: 0 1 470px; background: var(--stage); display: flex; flex-direction: column;
+           align-items: center; justify-content: center; padding: var(--s-12); border-right: 1px solid var(--border); min-width: 0; }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 600px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%),
+                       radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%),
+                       linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); }
+  .pv-title { position: absolute; top: 9%; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 16px; border-radius: var(--r-sm);
+           background: oklch(0.20 0.03 280 / 0.82); backdrop-filter: blur(3px); font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .pv-cap { position: absolute; bottom: 13%; left: 8%; right: 8%; text-align: center; z-index: 40; font-weight: 800; font-size: 24px; line-height: 1.15; text-shadow: 0 2px 12px oklch(0.12 0 0 / 0.85); }
+  .pv-cap .on { color: var(--accent); }
+  .stage-meta { margin-top: var(--s-8); display: flex; gap: var(--s-6); align-items: center; color: var(--text-muted); font-size: var(--t-xs); }
+  .pill { padding: 3px 9px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+  /* ── render-on-stage overlay (variant A) ── */
+  .stage-overlay { position: absolute; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: var(--s-10); padding: var(--s-16); background: oklch(0.165 0.022 280 / 0.86); backdrop-filter: blur(6px);
+        opacity: 0; pointer-events: none; transition: opacity var(--dur) var(--ease); }
+  .stage-overlay.show { opacity: 1; pointer-events: auto; }
+  .ring-wrap { position: relative; width: 132px; height: 132px; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-wrap .pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--t-2xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ring-wrap .pct small { display: block; font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
+
+  /* pipeline stepper (shared) */
+  .steps { display: flex; flex-direction: column; gap: var(--s-3); width: 100%; max-width: 280px; }
+  .step { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-4) var(--s-5); border-radius: var(--r-sm); font-size: var(--t-sm); color: var(--text-muted); }
+  .step .dot { width: 18px; height: 18px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 10px; border: 1px solid var(--border-strong); color: var(--text-faint); }
+  .step.done { color: var(--text-2); } .step.done .dot { background: var(--success); border-color: transparent; color: var(--stage); }
+  .step.active { color: var(--text); background: var(--accent-tint-2); } .step.active .dot { border-color: var(--accent); color: var(--accent); }
+  .step.active .dot .s { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--accent); border-top-color: transparent; animation: spin 0.7s linear infinite; }
+  .step .tool { margin-left: auto; font-size: var(--t-2xs); color: var(--text-faint); font-family: var(--mono); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .done-card { text-align: center; }
+  .done-card .check { width: 56px; height: 56px; margin: 0 auto var(--s-6); border-radius: 50%; background: oklch(0.72 0.14 150 / 0.16); border: 1px solid var(--success); display: grid; place-items: center; font-size: 26px; color: var(--success); }
+  .done-card .t1 { font-size: var(--t-lg); font-weight: 600; }
+  .done-card .meta2 { font-size: var(--t-xs); color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .done-actions { display: flex; gap: var(--s-5); justify-content: center; margin-top: var(--s-10); flex-wrap: wrap; }
+  .da { font: inherit; font-size: var(--t-sm); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+  .da.prim { background: var(--accent); color: var(--stage); border-color: transparent; font-weight: 600; }
+  .fail-card .check { background: oklch(0.63 0.185 25 / 0.15); border-color: var(--danger); color: var(--danger); }
+  .fail-card .t2 { font-size: var(--t-xs); color: var(--text-muted); margin: 6px auto 0; max-width: 30ch; line-height: 1.5; }
+
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab { appearance: none; border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500; color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .row { display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 9px; width: 100%; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+
+  /* ── render DOCK (variant B) — persistent bar under controls ── */
+  .dock { flex: none; border-top: 1px solid var(--border-strong); background: var(--chrome); padding: var(--s-6) var(--s-8); }
+  .dock-idle { display: flex; align-items: center; gap: var(--s-6); }
+  .dock-idle .lead { font-size: var(--t-sm); color: var(--text-2); }
+  .dock-idle .lead b { color: var(--text); font-weight: 600; }
+  .dock-idle .sub { font-size: var(--t-2xs); color: var(--text-muted); }
+  .dock-idle .render-cta { margin-left: auto; }
+  .dock-run { display: flex; align-items: center; gap: var(--s-8); }
+  .hstep { display: flex; align-items: center; gap: var(--s-8); flex: 1; }
+  .hstep .hs { display: flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-muted); }
+  .hstep .hs.done { color: var(--text-2); } .hstep .hs.done .hd { background: var(--success); border-color: transparent; }
+  .hstep .hs.active { color: var(--accent); font-weight: 600; } .hstep .hs.active .hd { border-color: var(--accent); }
+  .hstep .hd { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border-strong); }
+  .hstep .conn { flex: 1; height: 1px; background: var(--border); }
+  .bar { height: 5px; border-radius: var(--r-full); background: var(--surface-hover); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: var(--r-full); transition: width var(--dur) var(--ease); }
+  .dock-run .pctnum { font-size: var(--t-sm); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; color: var(--accent); }
+  .dock-run .cancel { font: inherit; font-size: var(--t-xs); color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 10px; cursor: pointer; }
+  .dock-done { display: flex; align-items: center; gap: var(--s-6); }
+  .dock-done .fileic { width: 30px; height: 30px; border-radius: var(--r-xs); background: var(--accent-tint); color: var(--accent); display: grid; place-items: center; font-size: 14px; }
+  .dock-done .fn { font-size: var(--t-sm); font-weight: 600; } .dock-done .fmeta { font-size: var(--t-2xs); color: var(--text-muted); }
+  .dock-done .acts { margin-left: auto; display: flex; gap: var(--s-5); }
+
+  /* ── OUTPUT column (variant C) — replaces metadata placeholder ── */
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; flex: 0 0 340px; }
+  .meta-h { padding: var(--s-10) var(--s-10) var(--s-6); border-bottom: 1px solid var(--border-faint); }
+  .meta-h .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .meta-h h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta-body { flex: 1; overflow-y: auto; padding: var(--s-10); display: flex; flex-direction: column; gap: var(--s-10); }
+  .out-trigger { display: flex; flex-direction: column; gap: var(--s-5); padding: var(--s-8); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+  .out-trigger .ot1 { font-size: var(--t-sm); font-weight: 600; }
+  .out-trigger .ot2 { font-size: var(--t-2xs); color: var(--text-muted); line-height: 1.5; }
+  .out-thumb { aspect-ratio: 9/16; width: 120px; border-radius: var(--r-sm); margin: 0 auto;
+        background: linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270)); position: relative; box-shadow: var(--shadow-md); display: grid; place-items: end center; }
+  .out-thumb .play { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; color: oklch(0.96 0.01 280 / 0.9); }
+  .gh-label { font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-3); }
+  .gh-box { background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: var(--s-6); color: var(--text-faint); font-size: var(--t-sm); }
+  .gh-line { height: 9px; border-radius: var(--r-full); background: var(--surface-2); margin: 7px 0; }
+  .gh-line.w70 { width: 70%; } .gh-line.w90 { width: 90%; }
+  .ghost { opacity: 0.5; pointer-events: none; }
+
+  /* sketch chrome — state jumper */
+  .statejump { position: fixed; bottom: 12px; left: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color:#fff; padding: 7px 10px; border-radius: 8px; display: flex; gap: 6px; align-items: center; opacity: 0.5; }
+  .statejump:hover { opacity: 1; }
+  .statejump button { font: inherit; background:#222; color:#fff; border:1px solid #555; border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 010 · render / export</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ · On the preview</button>
+  <button class="vtab" onclick="show('b',this)">B · Bottom dock</button>
+  <button class="vtab" onclick="show('c',this)">C · Output column</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">click Render to run the pipeline · jump to states ↙</span>
+</nav>
+
+<div class="variant active" id="v-a"></div>
+<div class="variant" id="v-b"></div>
+<div class="variant" id="v-c"></div>
+
+<div class="statejump">
+  <span>estado</span>
+  <button data-jump="idle">idle</button>
+  <button data-jump="running">running</button>
+  <button data-jump="done">done</button>
+  <button data-jump="failed">failed</button>
+</div>
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  const STEPS = [
+    { id:'transcribe', label:'Transcripción',    tool:'Whisper' },
+    { id:'silence',    label:'Cortar silencios', tool:'FFmpeg'  },
+    { id:'render',     label:'Render 9:16',      tool:'Remotion'},
+  ];
+  const st = { a:{ph:'idle',step:0,prog:0}, b:{ph:'idle',step:0,prog:0}, c:{ph:'idle',step:0,prog:0} };
+  let timer = {};
+
+  // shared phone preview
+  const phoneHTML = `<div class="phone"><div class="pv-title">Cómo edité este reel</div><div class="pv-cap"><span class="on">subtítulos</span> que enganchan</div></div>`;
+
+  function ringSvg(pct){
+    const r=58, c=2*Math.PI*r, off=c*(1-pct/100);
+    return `<svg width="132" height="132"><circle cx="66" cy="66" r="${r}" fill="none" stroke="var(--border)" stroke-width="6"/>
+      <circle cx="66" cy="66" r="${r}" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"
+        stroke-dasharray="${c}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset var(--dur) var(--ease)"/></svg>`;
+  }
+  function stepperHTML(v){
+    return `<div class="steps">` + STEPS.map((s,i)=>{
+      const cls = i<v.step?'done': i===v.step && v.ph==='running'?'active':'';
+      const ic = i<v.step?'✓': i===v.step && v.ph==='running'?'<span class="s"></span>': i+1;
+      return `<div class="step ${cls}"><span class="dot">${ic}</span>${s.label}<span class="tool">${s.tool}</span></div>`;
+    }).join('') + `</div>`;
+  }
+
+  // ── variant A: overlay on stage ──
+  function stageOverlay(v){
+    if (v.ph==='idle') return '';
+    let inner='';
+    if (v.ph==='running') inner = `<div class="ring-wrap">${ringSvg(v.prog)}<div class="pct">${v.prog}%<small>${STEPS[v.step].label}</small></div></div>${stepperHTML(v)}`;
+    else if (v.ph==='done') inner = `<div class="done-card"><div class="check">✓</div><div class="t1">Reel listo</div><div class="meta2">reel-final.mp4 · 1080×1920 · 8.4 MB · 00:42</div>
+        <div class="done-actions"><button class="da prim">⤓ Descargar MP4</button><button class="da">Ver</button><button class="da">Renderizar de nuevo</button></div></div>`;
+    else inner = `<div class="done-card fail-card"><div class="check">!</div><div class="t1">Falló el render</div>
+        <div class="t2">Remotion se quedó sin memoria en el frame 612. Probá bajar el supersampling o reintentá.</div>
+        <div class="done-actions"><button class="da prim">↻ Reintentar</button><button class="da">Ver log</button></div></div>`;
+    return `<div class="stage-overlay show">${inner}</div>`;
+  }
+  function headerA(v){
+    const running = v.ph==='running';
+    return `<button class="btn secondary">Guardar config</button>
+      <button class="render-cta" ${running?'disabled':''} data-render>${running?'<span class="s" style="width:11px;height:11px;border:2px solid oklch(0.16 0.02 150);border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Renderizando…':'<span class="tri">▶</span>Render Video'}</button>`;
+  }
+  function renderA(){
+    const v=st.a;
+    document.getElementById('v-a').innerHTML = `
+      <header class="hdr"><div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+        <div class="hdr-actions">${headerA(v)}</div></header>
+      <div class="work">
+        <section class="stage">${phoneHTML}<div class="stage-meta"><span class="pill">1080×1920</span><span class="pill">9:16</span><span class="pill">00:42</span></div>${stageOverlay(v)}</section>
+        <section class="controls">${tabsAndBody()}</section>
+        ${metaPlaceholder()}
+      </div>`;
+    wireRender('a');
+  }
+
+  // ── variant B: bottom dock ──
+  function dockHTML(v){
+    if (v.ph==='idle') return `<div class="dock"><div class="dock-idle"><div><div class="lead"><b>Listo para renderizar</b></div><div class="sub">Whisper → cortar silencios → Remotion · ~40 s</div></div>
+        <button class="render-cta" data-render><span class="tri">▶</span>Render Video</button></div></div>`;
+    if (v.ph==='running'){
+      const steps = STEPS.map((s,i)=>{ const cls=i<v.step?'done':i===v.step?'active':''; return `<span class="hs ${cls}"><span class="hd"></span>${s.label}</span>${i<STEPS.length-1?'<span class="conn"></span>':''}`; }).join('');
+      return `<div class="dock"><div class="dock-run"><div class="hstep">${steps}</div><div style="flex:1.4"><div class="bar"><i style="width:${v.prog}%"></i></div></div><span class="pctnum">${v.prog}%</span><button class="cancel">Cancelar</button></div></div>`;
+    }
+    if (v.ph==='done') return `<div class="dock"><div class="dock-done"><span class="fileic">▶</span><div><div class="fn">reel-final.mp4</div><div class="fmeta">1080×1920 · 8.4 MB · 00:42 · renderizado hace 3 s</div></div>
+        <span class="acts"><button class="da prim">⤓ Descargar</button><button class="da">Ver</button><button class="render-cta" data-render style="padding:6px 12px"><span class="tri">▶</span>Render</button></span></div></div>`;
+    return `<div class="dock"><div class="dock-done"><span class="fileic" style="background:oklch(0.63 0.185 25 / 0.18);color:var(--danger)">!</span>
+        <div><div class="fn" style="color:var(--danger)">Falló el render</div><div class="fmeta">Remotion OOM en el frame 612 · bajá el supersampling</div></div>
+        <span class="acts"><button class="da prim">↻ Reintentar</button><button class="da">Ver log</button></span></div></div>`;
+  }
+  function renderB(){
+    const v=st.b;
+    document.getElementById('v-b').innerHTML = `
+      <header class="hdr"><div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+        <div class="hdr-actions"><button class="btn secondary">Guardar config</button></div></header>
+      <div class="work">
+        <section class="stage">${phoneHTML}<div class="stage-meta"><span class="pill">1080×1920</span><span class="pill">9:16</span><span class="pill">00:42</span></div></section>
+        <section class="controls">${tabsAndBody()}${dockHTML(v)}</section>
+        ${metaPlaceholder()}
+      </div>`;
+    wireRender('b');
+  }
+
+  // ── variant C: output column ──
+  function outColumn(v){
+    let block;
+    if (v.ph==='idle') block = `<div class="out-trigger"><div class="ot1">Generar el reel</div>
+        <div class="ot2">Corre el pipeline (Whisper → cortar silencios → Remotion) y deja el MP4 acá, junto a la metadata.</div>
+        <button class="render-cta" data-render style="width:100%;justify-content:center"><span class="tri">▶</span>Render Video</button></div>`;
+    else if (v.ph==='running') block = `<div class="out-trigger"><div class="ot1">Renderizando… ${v.prog}%</div>${stepperHTML(v)}<div class="bar" style="margin-top:var(--s-3)"><i style="width:${v.prog}%"></i></div></div>`;
+    else if (v.ph==='done') block = `<div class="out-trigger"><div class="out-thumb"><span class="play">▶</span></div>
+        <div style="text-align:center"><div class="ot1">reel-final.mp4</div><div class="ot2">1080×1920 · 8.4 MB · 00:42</div></div>
+        <div style="display:flex;gap:var(--s-5)"><button class="da prim" style="flex:1">⤓ Descargar</button><button class="da" style="flex:1">Render de nuevo</button></div></div>`;
+    else block = `<div class="out-trigger" style="border-color:var(--danger)"><div class="ot1" style="color:var(--danger)">Falló el render</div>
+        <div class="ot2">Remotion OOM en el frame 612. Bajá el supersampling o reintentá.</div>
+        <button class="render-cta" data-render style="width:100%;justify-content:center">↻ Reintentar</button></div>`;
+    return `<aside class="meta"><div class="meta-h"><div class="row1"><h2>Salida</h2>${v.ph==='done'?'<span class="soon" style="background:oklch(0.72 0.14 150 / 0.16);color:var(--success)">Listo</span>':''}</div></div>
+      <div class="meta-body">${block}
+        <div class="${v.ph==='done'?'':'ghost'}"><div class="gh-label">Metadata de redes · IA <span style="color:var(--accent)">(próximamente)</span></div>
+          <div style="margin-top:var(--s-5)"><div class="gh-label">Título</div><div class="gh-box">El truco de edición que cambió mis reels</div></div>
+          <div style="margin-top:var(--s-6)"><div class="gh-label">Descripción</div><div class="gh-box"><div class="gh-line w90"></div><div class="gh-line w70"></div></div></div></div>
+      </div></aside>`;
+  }
+  function renderC(){
+    const v=st.c;
+    document.getElementById('v-c').innerHTML = `
+      <header class="hdr"><div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+        <div class="hdr-actions"><button class="btn secondary">Guardar config</button></div></header>
+      <div class="work">
+        <section class="stage">${phoneHTML}<div class="stage-meta"><span class="pill">1080×1920</span><span class="pill">9:16</span><span class="pill">00:42</span></div></section>
+        <section class="controls">${tabsAndBody()}</section>
+        ${outColumn(v)}
+      </div>`;
+    wireRender('c');
+  }
+
+  function tabsAndBody(){
+    return `<div class="tabs"><button class="tab sel">Titles<span style="margin-left:6px;font-size:var(--t-2xs);color:var(--text-faint)">2</span></button><button class="tab">Overlays</button><button class="tab">Subtitles</button></div>
+      <div class="ctrl-body">
+        <div class="sec"><div class="sec-h"><span class="num">1</span>Posición</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s-5)"><input class="inp" value="300"><input class="inp" value="170"></div></div>
+        <div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+          <div class="row"><label>Texto</label><input class="inp" value="Cómo edité este reel"></div>
+          <div class="row"><label>Peso</label><div class="seg"><button>Regular</button><button class="on">Bold</button><button>Black</button></div></div></div>
+        <div class="sec" style="margin-bottom:0"><div class="sec-h"><span class="num">3</span>Avanzado</div>
+          <div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div></div>
+      </div>`;
+  }
+  function metaPlaceholder(){
+    return `<aside class="meta"><div class="meta-h"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div></div>
+      <div class="meta-body ghost"><div><div class="gh-label">Título</div><div class="gh-box">El truco de edición que cambió mis reels</div></div>
+        <div><div class="gh-label">Descripción</div><div class="gh-box"><div class="gh-line w90"></div><div class="gh-line w70"></div></div></div></div></aside>`;
+  }
+
+  const RENDER = { a:renderA, b:renderB, c:renderC };
+  function rerender(vk){ RENDER[vk](); }
+
+  function run(vk){
+    const v=st[vk]; if(v.ph==='running') return;
+    clearInterval(timer[vk]); v.ph='running'; v.step=0; v.prog=0; rerender(vk);
+    timer[vk]=setInterval(()=>{
+      v.prog += Math.max(2, Math.round(7*Math.random()));
+      const stepFloor = Math.min(STEPS.length-1, Math.floor(v.prog/ (100/STEPS.length)));
+      v.step = stepFloor;
+      if (v.prog>=100){ v.prog=100; clearInterval(timer[vk]); v.ph='done'; }
+      rerender(vk);
+    }, 240);
+  }
+  function jump(vk, ph){ clearInterval(timer[vk]); const v=st[vk];
+    if(ph==='running'){ v.ph='running'; v.step=1; v.prog=46; }
+    else { v.ph=ph; v.step= ph==='done'?STEPS.length:1; v.prog= ph==='done'?100:0; }
+    rerender(vk);
+  }
+  function wireRender(vk){ document.querySelectorAll('#v-'+vk+' [data-render]').forEach(b=> b.onclick=()=>run(vk)); }
+
+  ['a','b','c'].forEach(rerender);
+  document.querySelectorAll('.statejump [data-jump]').forEach(b=> b.onclick=()=>{ const vk=document.querySelector('.variant.active').id.slice(2); jump(vk, b.dataset.jump); });
+
+  function show(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('v-' + id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 001 — 3-column shell</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--canvas);
+    color: var(--text);
+    font-size: var(--t-base);
+    padding-top: 46px;            /* room for variant nav */
+    -webkit-font-smoothing: antialiased;
+  }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  /* ── App header ── */
+  .hdr {
+    height: 52px; flex: none;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 var(--s-12);
+    background: var(--chrome);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph {
+    width: 26px; height: 26px; border-radius: var(--r-sm);
+    background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+    display: grid; place-items: center;
+    font-weight: 700; font-size: var(--t-md); color: var(--stage);
+  }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-5); align-items: center; }
+  .btn {
+    font: inherit; font-size: var(--t-md); font-weight: 500;
+    padding: 7px 14px; border-radius: var(--r-sm);
+    border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2);
+    cursor: pointer; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .btn:hover { background: var(--surface-hover); color: var(--text); }
+  .btn.ghost { background: transparent; color: var(--text-faint); border-color: var(--border); cursor: not-allowed; }
+  .btn.primary { background: var(--action); border-color: transparent; color: oklch(0.16 0.02 150); font-weight: 600; }
+  .btn.primary:hover { background: var(--action-hover); }
+
+  /* ── Workspace (3 columns) ── */
+  .work { flex: 1; display: flex; min-height: 0; }
+
+  /* ── Column 1: preview stage ── */
+  .stage {
+    background: var(--stage);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: var(--s-12);
+    border-right: 1px solid var(--border);
+    min-width: 0;
+  }
+  .phone {
+    position: relative;
+    aspect-ratio: 9 / 16; height: min(100%, 640px);
+    border-radius: 18px; overflow: hidden;
+    background:
+      radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%),
+      radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%),
+      linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+    box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18);
+  }
+  /* fake talking-head silhouette */
+  .phone::after {
+    content: ""; position: absolute; left: 50%; bottom: -6%; transform: translateX(-50%);
+    width: 56%; aspect-ratio: 1; border-radius: 50% 50% 42% 42%;
+    background: radial-gradient(closest-side, oklch(0.55 0.03 60 / 0.5), transparent);
+    filter: blur(2px);
+  }
+  .pv-title {
+    position: absolute; top: 9%; left: 50%; transform: translateX(-50%);
+    padding: 7px 16px; border-radius: var(--r-sm);
+    background: oklch(0.20 0.03 280 / 0.78); backdrop-filter: blur(3px);
+    font-weight: 700; font-size: 17px; white-space: nowrap; letter-spacing: -0.01em;
+    box-shadow: 0 2px 10px oklch(0.1 0 0 / 0.4);
+  }
+  .pv-cap {
+    position: absolute; bottom: 13%; left: 8%; right: 8%; text-align: center;
+    font-weight: 800; font-size: 26px; line-height: 1.15; letter-spacing: -0.01em;
+    text-shadow: 0 2px 12px oklch(0.12 0 0 / 0.85);
+  }
+  .pv-cap .on { color: var(--accent); }
+  .stage-meta { margin-top: var(--s-8); display: flex; gap: var(--s-6); align-items: center; color: var(--text-muted); font-size: var(--t-xs); }
+  .pill { padding: 3px 9px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+  /* ── Column 2: controls ── */
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab {
+    appearance: none; border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500;
+    color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; position: relative;
+    border-bottom: 2px solid transparent; transition: color var(--dur) var(--ease);
+  }
+  .tab:hover { color: var(--text-2); }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab .ct { margin-left: 6px; font-size: var(--t-2xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10) var(--s-10) var(--s-16); }
+
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h {
+    display: flex; align-items: center; gap: var(--s-5);
+    font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: var(--s-6);
+  }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .row { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp, .sel {
+    font: inherit; font-size: var(--t-md); color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm);
+    padding: 6px 9px; width: 100%; transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+  .inp:focus, .sel:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  .field { display: flex; flex-direction: column; gap: var(--s-3); }
+  .field .mini { font-size: var(--t-2xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .swatch-row { display: flex; gap: var(--s-4); }
+  .sw { width: 24px; height: 24px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); cursor: pointer; }
+  .sw.on { box-shadow: 0 0 0 2px var(--accent-strong), 0 0 0 4px var(--accent-tint); }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 1px 4px oklch(0.1 0 0 /0.5); }
+
+  /* ── Column 3: metadata placeholder ── */
+  .meta {
+    background: var(--chrome);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; min-width: 0;
+    position: relative;
+  }
+  .meta-h { padding: var(--s-10) var(--s-10) var(--s-6); flex: none; }
+  .meta-h .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .meta-h h2 { font-size: var(--t-md); font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta-h p { font-size: var(--t-xs); color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+  .meta-body { flex: 1; overflow-y: auto; padding: var(--s-6) var(--s-10) var(--s-12); display: flex; flex-direction: column; gap: var(--s-8); }
+  .ghost { opacity: 0.55; pointer-events: none; }
+  .gh-label { font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-3); }
+  .gh-box { background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: var(--s-6); color: var(--text-faint); font-size: var(--t-sm); }
+  .gh-line { height: 9px; border-radius: var(--r-full); background: var(--surface-2); margin: 7px 0; }
+  .gh-line.w70 { width: 70%; } .gh-line.w90 { width: 90%; } .gh-line.w50 { width: 50%; }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--s-4); }
+  .chip { font-size: var(--t-xs); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-full); padding: 4px 10px; }
+  .platforms { display: flex; gap: var(--s-4); }
+  .plat { flex: 1; text-align: center; font-size: var(--t-xs); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 4px; }
+  .plat .ic { font-size: 16px; display: block; margin-bottom: 3px; }
+
+  /* collapsed metadata rail (variant C) */
+  .meta.collapsed { width: 46px !important; flex: none; cursor: pointer; }
+  .meta.collapsed .meta-h, .meta.collapsed .meta-body { display: none; }
+  .meta-rail { display: none; flex-direction: column; align-items: center; gap: var(--s-8); padding-top: var(--s-10); height: 100%; }
+  .meta.collapsed .meta-rail { display: flex; }
+  .meta-rail .vlabel { writing-mode: vertical-rl; transform: rotate(180deg); font-size: var(--t-xs); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+  .meta-toggle { position: absolute; top: var(--s-6); left: var(--s-6); background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); border-radius: var(--r-xs); width: 24px; height: 24px; cursor: pointer; font-size: 13px; line-height: 1; display: grid; place-items: center; z-index: 2; transition: background var(--dur) var(--ease); }
+  .meta-toggle:hover { background: var(--surface-hover); color: var(--text); }
+  .meta.collapsed .meta-toggle { left: 50%; transform: translateX(-50%); }
+
+  /* ── Variant D: preview content-sized, controls get the room w/ 2 internal columns ── */
+  .stage.fit { flex: 0 1 470px !important; }
+  .ctrl-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6) var(--s-12); align-items: start; }
+  .ctrl-2col .colwrap { display: flex; flex-direction: column; min-width: 0; }
+  .ctrl-2col .colwrap > .sec:first-child { margin-top: 0; }
+  .ctrl-2col .row { grid-template-columns: 72px 1fr; }      /* tighter label col inside narrower columns */
+  .pgrid { display: inline-grid; grid-template-columns: repeat(3, 30px); grid-auto-rows: 30px; gap: 3px; margin-top: var(--s-6); }
+  .pgrid button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: var(--r-xs); cursor: pointer; font-size: 13px; display: grid; place-items: center; transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+  .pgrid button:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+  .pgrid button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  /* ── Variant nav (sketch chrome) ── */
+  #vnav {
+    position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998;
+    background: var(--chrome); border-bottom: 1px solid var(--border-strong);
+    display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10);
+    font-size: var(--t-sm);
+  }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .vtab:hover { background: var(--surface-hover); color: var(--text); }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+
+  /* ── Sketch toolbar ── */
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<!-- variant nav -->
+<nav id="vnav">
+  <span class="lbl">Sketch 001 · 3-col shell</span>
+  <button class="vtab" onclick="show('a',this)">A · Balanced thirds</button>
+  <button class="vtab" onclick="show('b',this)">B · Preview-dominant + rail</button>
+  <button class="vtab" onclick="show('c',this)">C · Collapsible metadata</button>
+  <button class="vtab active" onclick="show('d',this)">D ★ Chosen · slim preview + 2-col controls + persistent metadata</button>
+</nav>
+
+<!-- ════════ VARIANT A — balanced thirds ════════ -->
+<div class="variant" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage" style="flex:1.05;">
+      <div class="phone"><div class="pv-title">Cómo edité este reel</div><div class="pv-cap"><span class="on">subtítulos</span> que enganchan</div></div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span><span class="pill">00:10</span></div>
+    </section>
+    <section class="controls" style="flex:0 0 380px;">
+      <div class="tabs"><button class="tab sel">Titles<span class="ct">2</span></button><button class="tab">Overlays<span class="ct">1</span></button><button class="tab">Subtitles</button></div>
+      <div class="ctrl-body" data-demo></div>
+    </section>
+    <aside class="meta" style="flex:0 0 320px;"></aside>
+  </div>
+</div>
+
+<!-- ════════ VARIANT B — preview-dominant + narrow metadata rail ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage" style="flex:1.5;">
+      <div class="phone"><div class="pv-title">Cómo edité este reel</div><div class="pv-cap"><span class="on">subtítulos</span> que enganchan</div></div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span><span class="pill">00:10</span></div>
+    </section>
+    <section class="controls" style="flex:0 0 360px;">
+      <div class="tabs"><button class="tab sel">Titles<span class="ct">2</span></button><button class="tab">Overlays<span class="ct">1</span></button><button class="tab">Subtitles</button></div>
+      <div class="ctrl-body" data-demo></div>
+    </section>
+    <aside class="meta" style="flex:0 0 240px;" data-narrow></aside>
+  </div>
+</div>
+
+<!-- ════════ VARIANT C — collapsible metadata column ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage" style="flex:1.2;">
+      <div class="phone"><div class="pv-title">Cómo edité este reel</div><div class="pv-cap"><span class="on">subtítulos</span> que enganchan</div></div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span><span class="pill">00:10</span></div>
+    </section>
+    <section class="controls" style="flex:1 1 420px;">
+      <div class="tabs"><button class="tab sel">Titles<span class="ct">2</span></button><button class="tab">Overlays<span class="ct">1</span></button><button class="tab">Subtitles</button></div>
+      <div class="ctrl-body" data-demo></div>
+    </section>
+    <aside class="meta" style="flex:0 0 320px;" id="metaC">
+      <button class="meta-toggle" onclick="toggleMeta(event)" title="Plegar / desplegar">⟩</button>
+      <div class="meta-rail"><span class="vlabel">Metadata de redes</span></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════ VARIANT D — synthesis: C-room allocation + 2-column controls (★ chosen direction) ════════ -->
+<div class="variant active" id="v-d">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage fit">
+      <div class="phone"><div class="pv-title">Cómo edité este reel</div><div class="pv-cap"><span class="on">subtítulos</span> que enganchan</div></div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span><span class="pill">00:10</span></div>
+    </section>
+    <section class="controls" style="flex:1 1 auto;">
+      <div class="tabs"><button class="tab sel">Titles<span class="ct">2</span></button><button class="tab">Overlays<span class="ct">1</span></button><button class="tab">Subtitles</button></div>
+      <div class="ctrl-body" data-demo2></div>
+    </section>
+    <aside class="meta" style="flex:0 0 320px;" id="metaD"></aside>
+  </div>
+</div>
+
+<!-- sketch toolbar -->
+<div id="tools">
+  <span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">default</option>
+  </select>
+</div>
+
+<script>
+  // ── Demo controls column content (shared across variants) ──
+  const demoControls = `
+    <div class="sec">
+      <div class="sec-h">Posición</div>
+      <div class="two">
+        <div class="field"><span class="mini">X</span><input class="inp" value="540" inputmode="numeric"></div>
+        <div class="field"><span class="mini">Y</span><input class="inp" value="220" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Estilo</div>
+      <div class="row"><label>Texto</label><input class="inp" value="Cómo edité este reel"></div>
+      <div class="row"><label>Fuente</label><select class="sel"><option>Inter</option><option>Plus Jakarta Sans</option><option>Poppins</option></select></div>
+      <div class="row"><label>Tamaño</label><input type="range" min="12" max="80" value="40"></div>
+      <div class="row"><label>Peso</label>
+        <div class="seg"><button>Regular</button><button class="on">Bold</button><button>Black</button></div>
+      </div>
+      <div class="row"><label>Color</label>
+        <div class="swatch-row">
+          <span class="sw on" style="background:oklch(0.96 0.01 280)"></span>
+          <span class="sw" style="background:var(--accent)"></span>
+          <span class="sw" style="background:var(--action)"></span>
+          <span class="sw" style="background:var(--warning)"></span>
+          <span class="sw" style="background:var(--stage)"></span>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">Avanzado</div>
+      <div class="row"><label>Radio</label><input type="range" min="0" max="40" value="6"></div>
+      <div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div>
+      <div class="row"><label>Duración</label><input class="inp" value="3.0 s"></div>
+    </div>`;
+
+  const demoMeta = (narrow) => `
+    <div class="meta-h">
+      <div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div>
+      <p>Generada con IA desde la transcripción y los títulos elegidos.</p>
+    </div>
+    <div class="meta-body ghost">
+      <div><div class="gh-label">Título</div><div class="gh-box">El truco de edición que cambió mis reels</div></div>
+      <div><div class="gh-label">Descripción</div><div class="gh-box"><div class="gh-line w90"></div><div class="gh-line w70"></div><div class="gh-line w50"></div></div></div>
+      <div><div class="gh-label">Hashtags</div><div class="chips"><span class="chip">#reels</span><span class="chip">#edición</span><span class="chip">#tutorial</span>${narrow?'':'<span class="chip">#creator</span><span class="chip">#viral</span>'}</div></div>
+      <div><div class="gh-label">Plataformas</div><div class="platforms"><span class="plat"><span class="ic">▶</span>Reels</span><span class="plat"><span class="ic">♪</span>TikTok</span>${narrow?'':'<span class="plat"><span class="ic">▷</span>Shorts</span>'}</div></div>
+    </div>`;
+
+  // ── Variant D: two internal columns (always-open sections + arrow presets) ──
+  const demoControls2col = `
+    <div class="ctrl-2col">
+      <div class="colwrap">
+        <div class="sec">
+          <div class="sec-h">Posición</div>
+          <div class="two">
+            <div class="field"><span class="mini">X</span><input class="inp" value="540"></div>
+            <div class="field"><span class="mini">Y</span><input class="inp" value="220"></div>
+          </div>
+          <div class="pgrid">
+            <button>↖</button><button class="on">↑</button><button>↗</button>
+            <button>←</button><button>•</button><button>→</button>
+            <button>↙</button><button>↓</button><button>↘</button>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h">Avanzado</div>
+          <div class="row"><label>Radio</label><input type="range" min="0" max="40" value="6"></div>
+          <div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div>
+          <div class="row"><label>Duración</label><input class="inp" value="3.0 s"></div>
+        </div>
+      </div>
+      <div class="colwrap">
+        <div class="sec">
+          <div class="sec-h">Estilo</div>
+          <div class="row"><label>Texto</label><input class="inp" value="Cómo edité este reel"></div>
+          <div class="row"><label>Fuente</label><select class="sel"><option>Inter</option><option>Plus Jakarta Sans</option><option>Poppins</option></select></div>
+          <div class="row"><label>Tamaño</label><input type="range" min="12" max="80" value="40"></div>
+          <div class="row"><label>Peso</label><div class="seg"><button>Regular</button><button class="on">Bold</button><button>Black</button></div></div>
+          <div class="row"><label>Color</label><div class="swatch-row">
+            <span class="sw on" style="background:oklch(0.96 0.01 280)"></span>
+            <span class="sw" style="background:var(--accent)"></span>
+            <span class="sw" style="background:var(--action)"></span>
+            <span class="sw" style="background:var(--warning)"></span>
+            <span class="sw" style="background:var(--stage)"></span>
+          </div></div>
+        </div>
+      </div>
+    </div>`;
+
+  document.querySelectorAll('[data-demo]').forEach(el => el.innerHTML = demoControls);
+  document.querySelectorAll('[data-demo2]').forEach(el => el.innerHTML = demoControls2col);
+  document.querySelectorAll('.meta:not(#metaC):not(#metaD)').forEach(el => el.innerHTML = demoMeta(el.hasAttribute('data-narrow')));
+  // variants C & D metadata: inject expanded content after the rail (hidden while collapsed)
+  document.getElementById('metaC').insertAdjacentHTML('beforeend', demoMeta(false));
+  document.getElementById('metaD').insertAdjacentHTML('beforeend', demoMeta(false));
+  // arrow-preset selection feedback
+  document.querySelectorAll('.pgrid').forEach(g => g.querySelectorAll('button').forEach(b => b.onclick = () => {
+    g.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on');
+  }));
+
+  function show(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('v-' + id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  function toggleMeta(e) {
+    e.stopPropagation();
+    const m = e.target.closest('.meta');
+    m.classList.toggle('collapsed');
+    e.target.textContent = m.classList.contains('collapsed') ? '⟨' : '⟩';
+  }
+  document.getElementById('metaC').addEventListener('click', function(){
+    if (this.classList.contains('collapsed')) { this.classList.remove('collapsed'); this.querySelector('.meta-toggle').textContent = '⟩'; }
+  });
+
+  // live-ish caption word cycling
+  const words = [['<span class="on">subtítulos</span> que enganchan','palabra <span class="on">por</span> palabra','ritmo y <span class="on">energía</span>']];
+  let wi = 0;
+  setInterval(() => { wi = (wi+1) % words[0].length; document.querySelectorAll('.pv-cap').forEach(c => c.innerHTML = words[0][wi]); }, 1400);
+</script>
+</body>
+</html>

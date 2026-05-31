@@ -1,0 +1,68 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Reel Factory Studio — sketch theme (dark, product register)
+   Tuned in OKLCH from the established design system:
+     canvas  #1a1a2e   chrome #16213e   accent #90caf9   action #4CAF50
+   Neutrals tinted toward the indigo brand hue (~280). No pure #000/#fff.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* ── Surfaces (cool indigo, layered dark) ── */
+  --canvas:        oklch(0.205 0.038 278);   /* deepest app background  ~#1a1a2e */
+  --chrome:        oklch(0.255 0.055 268);   /* header / toolbar / tab strip ~#16213e */
+  --surface:       oklch(0.245 0.030 282);   /* panel / card           ~#1e1e2e */
+  --surface-2:     oklch(0.285 0.028 282);   /* nested / input fill */
+  --surface-hover: oklch(0.315 0.030 282);
+  --stage:         oklch(0.165 0.022 280);   /* preview stage, darkest  ~#111 */
+
+  /* ── Borders / dividers ── */
+  --border:        oklch(0.345 0.022 282);   /* hairline divider ~#333 */
+  --border-strong: oklch(0.43 0.030 282);
+  --border-faint:  oklch(0.30 0.018 282);
+
+  /* ── Text ── */
+  --text:          oklch(0.93 0.012 280);    /* primary ~#e6e6ea */
+  --text-2:        oklch(0.74 0.018 280);    /* secondary ~#a8a8b3 */
+  --text-muted:    oklch(0.58 0.018 280);    /* muted labels ~#777 */
+  --text-faint:    oklch(0.46 0.016 280);    /* placeholder */
+
+  /* ── Accent (selection / focus / current) — the only chromatic UI color ── */
+  --accent:        oklch(0.82 0.095 242);    /* ~#90caf9 */
+  --accent-strong: oklch(0.72 0.130 244);    /* focus ring / pressed */
+  --accent-tint:   oklch(0.82 0.095 242 / 0.12);  /* selected-row wash */
+  --accent-tint-2: oklch(0.82 0.095 242 / 0.06);
+
+  /* ── Semantic (reserved, low-saturation on idle) ── */
+  --action:        oklch(0.68 0.150 150);    /* primary CTA green ~#4CAF50 */
+  --action-hover:  oklch(0.62 0.150 150);
+  --danger:        oklch(0.63 0.185 25);
+  --warning:       oklch(0.80 0.120 78);
+  --success:       oklch(0.72 0.140 150);
+
+  /* ── Typography (product: one well-tuned sans, fixed rem scale) ── */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --t-2xs: 10.5px;
+  --t-xs:  11.5px;
+  --t-sm:  12.5px;
+  --t-md:  13.5px;
+  --t-base:14px;
+  --t-lg:  16px;
+  --t-xl:  19px;
+  --t-2xl: 23px;
+
+  /* ── Spacing (compact rhythm for a dense control panel) ── */
+  --s-1: 2px;  --s-2: 4px;  --s-3: 6px;   --s-4: 8px;
+  --s-5: 10px; --s-6: 12px; --s-8: 16px;  --s-10: 20px;
+  --s-12: 24px; --s-16: 32px;
+
+  /* ── Shape ── */
+  --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-full: 999px;
+
+  /* ── Elevation (dark UI: subtle, cool) ── */
+  --shadow-sm: 0 1px 2px oklch(0.12 0.02 280 / 0.5);
+  --shadow-md: 0 6px 18px oklch(0.10 0.02 280 / 0.45);
+  --shadow-pop: 0 12px 34px oklch(0.08 0.02 280 / 0.55);
+
+  /* ── Motion (product: 150–250ms, ease-out, state-conveying) ── */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);   /* ease-out-quart */
+  --dur: 170ms;
+}

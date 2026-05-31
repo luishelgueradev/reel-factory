@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure, drag-to-position). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure, subtitle styling controls, drag-to-position). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -18,7 +18,8 @@ explored as throwaway HTML before the real React redesign.
 Sketch sessions wrapped: 2026-05-31 (sketches 001–003: shell, density, presets), 2026-05-31
 (sketches 004–007: per-tab structure, overlay layering, subtitles textarea, tab coherence, and the
 frontier drag-to-position surface), 2026-05-31 (sketches 008–010: off-happy-path states & save
-feedback, motion/timing coherence, and the frontier render/export surface).
+feedback, motion/timing coherence, and the frontier render/export surface), 2026-05-31 (sketch 011:
+subtitle styling control density against the full real caption schema).
 </context>
 
 <design_direction>
@@ -55,6 +56,7 @@ The realized synthesis is **sketch 001 variant D** — it folds in 002-A's alway
 | Control Panel Density & Disclosure | references/control-panel-density.md | Always-open titled sections, Posición→Estilo→Avanzado, hairline dividers; no collapse/accordion (height absorbed by 2-col layout) |
 | Position Presets (shared component) | references/position-presets.md | 9-point arrow-button grid (↖↑↗ …), size-aware X/Y math vs 1080×1920 top-left anchor, inputs flash on apply |
 | Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; Overlays = list+form with Detrás/Delante layer toggle (D-03) & drag-reorder paint order (D-04); Subtitles = condensed/expanding sample-text textarea (D-10) |
+| Subtitle Styling (dense controls) | references/subtitle-styling.md | Layout-mode = preset cards (not dropdown) leading the section, in-panel live specimen, 2×2 color-role matrix, collapsible Glow/Fondo effect-rows; validated against the real ~20-field caption schema from `pipeline-config.ts` (011-C). Anti-pattern: flat ~20 rows = the wall |
 | Preview as Editing Surface (frontier) | references/preview-direct-manipulation.md | ⚠️ Scope-expanding. Drag-to-position on the full preview, snapping to the same 9 anchors and writing the same X/Y path; cheap subset = click-to-select. Beyond committed control-driven scope |
 | States, Empties & Save Feedback | references/states-and-save-feedback.md | Save = header status chip (`● Cambios sin guardar`→`Guardando…`→`✓ Guardado recién`) left of a stay-put button; validated empty (0/3), cap (3/3 disabled), no-video & Whisper-loading states |
 | Motion & Timing | references/motion-and-timing.md | Calm 170ms ease-out-quart; two-tier timing (state `--dur` 170ms / travel `--dur2` 300ms); all 5 motions cohere; `prefers-reduced-motion` collapse required |
@@ -80,6 +82,7 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/008-states-and-empties/index.html` — winner `#v-b`
 - `sources/009-motion-coherence/index.html` — winner `#v-a`
 - `sources/010-render-export-surface/index.html` — winner `#v-a` (frontier / scope-expanding)
+- `sources/011-subtitle-style-density/index.html` — winner `#v-c`
 </findings_index>
 
 <metadata>
@@ -95,4 +98,5 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 008-states-and-empties (winner B)
 - 009-motion-coherence (winner A)
 - 010-render-export-surface (winner A — frontier, scope-expanding)
+- 011-subtitle-style-density (winner C)
 </metadata>

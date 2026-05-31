@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 006 — all three tabs coherence</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text);
+         font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between;
+         padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm);
+         background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+         display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-5); align-items: center; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm);
+         border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--text-faint); border-color: var(--border); cursor: not-allowed; }
+  .btn.primary { background: var(--action); border-color: transparent; color: oklch(0.16 0.02 150); font-weight: 600; }
+
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { flex: 0 1 470px; background: var(--stage); display: flex; flex-direction: column;
+           align-items: center; justify-content: center; padding: var(--s-12); border-right: 1px solid var(--border); min-width: 0; }
+  .variant.narrow .stage { flex: 0 1 360px; }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 620px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%),
+                       radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%),
+                       linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); }
+  .phone::after { content: ""; position: absolute; left: 50%; bottom: -6%; transform: translateX(-50%);
+           width: 56%; aspect-ratio: 1; border-radius: 50% 50% 42% 42%;
+           background: radial-gradient(closest-side, oklch(0.55 0.03 60 / 0.5), transparent); filter: blur(2px); }
+  .pv-title { position: absolute; top: 9%; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 16px; border-radius: var(--r-sm);
+           background: oklch(0.20 0.03 280 / 0.78); backdrop-filter: blur(3px); font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .pv-cap { position: absolute; bottom: 13%; left: 8%; right: 8%; text-align: center; z-index: 50; font-weight: 800; font-size: 26px; line-height: 1.15; text-shadow: 0 2px 12px oklch(0.12 0 0 / 0.85); }
+  .pv-cap .on { color: var(--accent); }
+  .pv-ov { position: absolute; display: grid; place-items: center; border-radius: var(--r-sm); font-size: var(--t-xs); font-weight: 700; color: oklch(0.96 0.01 280); }
+  .pv-ov.behind { opacity: 0.85; filter: saturate(0.8); }
+  .ov-logo { background: linear-gradient(140deg, oklch(0.7 0.13 30), oklch(0.6 0.16 12)); }
+  .ov-mark { width: 140px; height: 140px; border-radius: 50%; background: oklch(0.96 0.01 280 / 0.16); border: 2px solid oklch(0.96 0.01 280 / 0.3); color: oklch(0.96 0.01 280 / 0.7); font-size: var(--t-sm); }
+  .stage-meta { margin-top: var(--s-8); display: flex; gap: var(--s-6); align-items: center; color: var(--text-muted); font-size: var(--t-xs); }
+  .pill { padding: 3px 9px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab { appearance: none; border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500;
+         color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; transition: color var(--dur) var(--ease); }
+  .tab:hover { color: var(--text-2); }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab .ct { margin-left: 6px; font-size: var(--t-2xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700;
+           letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .row { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp, .sel { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+               border-radius: var(--r-sm); padding: 6px 9px; width: 100%; transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+  .inp:focus, .sel:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  .field { display: flex; flex-direction: column; gap: var(--s-3); }
+  .field .mini { font-size: var(--t-2xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .swatch-row { display: flex; gap: var(--s-4); }
+  .sw { width: 24px; height: 24px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); cursor: pointer; }
+  .sw.on { box-shadow: 0 0 0 2px var(--accent-strong), 0 0 0 4px var(--accent-tint); }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+  .pgrid { display: inline-grid; grid-template-columns: repeat(3, 30px); grid-auto-rows: 30px; gap: 3px; margin-top: var(--s-6); }
+  .pgrid button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: var(--r-xs); cursor: pointer; font-size: 13px; display: grid; place-items: center; }
+  .pgrid button:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+  .pgrid button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  /* list (cards) — shared by Titles + Overlays (004-A) */
+  .ovlist { display: flex; flex-direction: column; gap: var(--s-4); margin-bottom: var(--s-6); }
+  .ovcard { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-4) var(--s-5); background: var(--surface);
+            border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
+  .ovcard:hover { border-color: var(--border-strong); }
+  .ovcard.sel { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .ovcard .drag { color: var(--text-faint); font-size: 15px; cursor: grab; }
+  .ovthumb { width: 30px; height: 30px; border-radius: var(--r-xs); flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: oklch(0.96 0.01 280); }
+  .th-logo { background: linear-gradient(140deg, oklch(0.7 0.13 30), oklch(0.6 0.16 12)); }
+  .th-mark { background: oklch(0.96 0.01 280 / 0.14); border: 1px solid oklch(0.96 0.01 280 / 0.3); }
+  .th-text { background: var(--accent-tint); color: var(--accent); }
+  .ovcard .info { flex: 1; min-width: 0; }
+  .ovcard .nm { font-size: var(--t-sm); color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ovcard .sub { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 1px; }
+  .lbadge { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-full); border: 1px solid var(--border); }
+  .lbadge.back { color: var(--text-muted); background: var(--surface-2); }
+  .lbadge.front { color: var(--accent); background: var(--accent-tint); border-color: var(--accent-strong); }
+  .addbtn { width: 100%; padding: 8px; border: 1px dashed var(--border-strong); background: transparent; color: var(--text-2);
+            border-radius: var(--r-sm); font: inherit; font-size: var(--t-sm); cursor: pointer; }
+  .addbtn:hover { border-color: var(--accent-strong); color: var(--accent); }
+  .editing-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-6); padding-bottom: var(--s-5); border-bottom: 1px solid var(--border-faint); }
+  .editing-head .t { font-size: var(--t-md); font-weight: 600; }
+  .listhead { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+
+  /* condensed textarea (005-C) */
+  .ta { font: inherit; font-size: var(--t-md); line-height: 1.5; color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: var(--r-sm); padding: var(--s-5) var(--s-6); width: 100%; resize: none; height: 40px; overflow: hidden;
+        white-space: nowrap; text-overflow: ellipsis; cursor: text; transition: height var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+  .ta:focus { outline: none; height: 92px; white-space: normal; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .ta-meta { margin-top: var(--s-3); font-size: var(--t-2xs); }
+  .ta-meta .drives { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); }
+  .ta-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .fontgrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); margin-top: var(--s-5); }
+  .fontcard { padding: var(--s-4) var(--s-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
+  .fontcard.on { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .fontcard .fn { font-size: var(--t-sm); color: var(--text); font-weight: 600; }
+  .fontcard .fp { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 2px; }
+
+  /* layout strategies */
+  .ctrl-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6) var(--s-12); align-items: start; }
+  .ctrl-2col .colwrap { display: flex; flex-direction: column; min-width: 0; }
+  .ctrl-2col .colwrap > .sec:first-child { margin-top: 0; }
+  .ctrl-2col .row { grid-template-columns: 72px 1fr; }
+  .fullbleed { margin-bottom: var(--s-10); }
+  /* narrow / single-column variant: collapse the 2-col grid */
+  .variant.narrow .ctrl-2col { grid-template-columns: 1fr; }
+  .variant.narrow .ctrl-2col .row { grid-template-columns: 84px 1fr; }
+
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; flex: 0 0 320px; }
+  .variant.narrow .meta { flex: 0 0 280px; }
+  .meta-h { padding: var(--s-10) var(--s-10) var(--s-6); }
+  .meta-h .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .meta-h h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta-h p { font-size: var(--t-xs); color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+  .meta-body { flex: 1; overflow-y: auto; padding: var(--s-6) var(--s-10) var(--s-12); display: flex; flex-direction: column; gap: var(--s-8); }
+  .ghost { opacity: 0.55; pointer-events: none; }
+  .gh-label { font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-3); }
+  .gh-box { background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: var(--s-6); color: var(--text-faint); font-size: var(--t-sm); }
+  .gh-line { height: 9px; border-radius: var(--r-full); background: var(--surface-2); margin: 7px 0; }
+  .gh-line.w70 { width: 70%; } .gh-line.w90 { width: 90%; } .gh-line.w50 { width: 50%; }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--s-4); }
+  .chip { font-size: var(--t-xs); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-full); padding: 4px 10px; }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome);
+          border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 006 · all three tabs coherence</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ · 2-column (desktop)</button>
+  <button class="vtab" onclick="show('b',this)">B · Single-column (responsive collapse)</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">composes 004-A · 005-C · 003-B · 002-A · 001-D</span>
+</nav>
+
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage"><div class="phone" id="phone-a"></div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span><span class="pill">00:10</span></div></section>
+    <section class="controls">
+      <div class="tabs" id="tabs-a"></div>
+      <div class="ctrl-body" id="body-a"></div>
+    </section>
+    <aside class="meta" data-meta></aside>
+  </div>
+</div>
+
+<div class="variant narrow" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+    <div class="hdr-actions"><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+  </header>
+  <div class="work">
+    <section class="stage"><div class="phone" id="phone-b"></div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span></div></section>
+    <section class="controls">
+      <div class="tabs" id="tabs-b"></div>
+      <div class="ctrl-body" id="body-b"></div>
+    </section>
+    <aside class="meta" data-meta></aside>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  const TABS = [
+    { id:'titles',   label:'Titles',    ct:2 },
+    { id:'overlays', label:'Overlays',  ct:3 },
+    { id:'subtitles',label:'Subtitles', ct:null },
+  ];
+  const state = { a:{tab:'titles', sel:{titles:'t1', overlays:'o1'}}, b:{tab:'titles', sel:{titles:'t1', overlays:'o1'}} };
+
+  const titles = [
+    { id:'t1', name:'Cómo edité este reel', x:300, y:170 },
+    { id:'t2', name:'El antes y el después', x:300, y:1500 },
+  ];
+  const overlays = [
+    { id:'o1', name:'logo-marca.png', kind:'logo', x:856, y:64, w:160, op:1, layer:'front' },
+    { id:'o2', name:'watermark.png',  kind:'mark', x:465, y:880, w:150, op:0.45, layer:'back' },
+    { id:'o3', name:'marco-borde.png',kind:'frame',x:0, y:0, w:1080, op:0.7, layer:'back' },
+  ];
+
+  // ── shared section builders ──
+  const presetGrid = `<div class="pgrid"><button>↖</button><button>↑</button><button>↗</button><button>←</button><button>•</button><button>→</button><button>↙</button><button class="on">↓</button><button>↘</button></div>`;
+  function posSection(x,y){ return `<div class="sec"><div class="sec-h"><span class="num">1</span>Posición</div>
+      <div class="two"><div class="field"><span class="mini">X</span><input class="inp" value="${x}"></div><div class="field"><span class="mini">Y</span><input class="inp" value="${y}"></div></div>
+      ${presetGrid}</div>`; }
+  function advSection(rows){ return `<div class="sec" style="margin-bottom:0"><div class="sec-h"><span class="num">3</span>Avanzado <span style="color:var(--text-faint);font-weight:500;text-transform:none;letter-spacing:0">· rara vez</span></div>${rows}</div>`; }
+  const swatches = `<div class="swatch-row"><span class="sw on" style="background:oklch(0.96 0.01 280)"></span><span class="sw" style="background:var(--accent)"></span><span class="sw" style="background:var(--warning)"></span><span class="sw" style="background:var(--stage)"></span></div>`;
+
+  // form bodies per tab (the part that goes in the 2-col grid)
+  function titleForm(t){ return {
+    left: posSection(t.x,t.y) + advSection(`<div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div><div class="row"><label>Duración</label><input class="inp" value="3.0 s"></div>`),
+    right: `<div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+        <div class="row"><label>Texto</label><input class="inp" value="${t.name}"></div>
+        <div class="row"><label>Fuente</label><select class="sel"><option>Inter</option><option>Plus Jakarta Sans</option></select></div>
+        <div class="row"><label>Tamaño</label><input type="range" min="12" max="80" value="40"></div>
+        <div class="row"><label>Peso</label><div class="seg"><button>Regular</button><button class="on">Bold</button><button>Black</button></div></div>
+        <div class="row"><label>Color</label>${swatches}</div></div>` }; }
+  function overlayForm(o){ return {
+    left: posSection(o.x,o.y) + advSection(`<div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div><div class="row"><label>Duración</label><input class="inp" value="todo"></div>`),
+    right: `<div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+        <div class="row"><label>Capa</label><div class="seg"><button class="${o.layer==='back'?'on':''}">Detrás</button><button class="${o.layer==='front'?'on':''}">Delante</button></div></div>
+        <div class="row"><label>Ancho</label><input type="range" min="40" max="1080" value="${o.w}"></div>
+        <div class="row"><label>Opacidad</label><input type="range" min="0" max="100" value="${Math.round(o.op*100)}"></div></div>` }; }
+  function subtitleForm(){ return {
+    left: posSection(540,1650) + advSection(`<div class="row"><label>Palabras/pág</label><input class="inp" value="3"></div><div class="row"><label>Resaltado</label><div class="seg"><button class="on">Palabra</button><button>Línea</button></div></div>`),
+    right: `<div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+        <div class="row"><label>Tamaño</label><input type="range" min="12" max="80" value="48"></div>
+        <div class="row"><label>Peso</label><div class="seg"><button>Bold</button><button class="on">Black</button></div></div>
+        <div class="row"><label>Color</label>${swatches}</div>
+        <div class="row"><label>Resalte</label><div class="swatch-row"><span class="sw on" style="background:var(--accent)"></span><span class="sw" style="background:var(--action)"></span><span class="sw" style="background:var(--warning)"></span></div></div>
+        <div class="sec-h" style="margin:var(--s-6) 0 0">Fuente</div>
+        <div class="fontgrid"><div class="fontcard on"><div class="fn">Inter</div><div class="fp">Geométrica</div></div><div class="fontcard"><div class="fn">Plus Jakarta</div><div class="fp">Humanista</div></div></div></div>` }; }
+
+  // list card (Titles + Overlays share this — 004-A)
+  function listCard(item, isOverlay, selId){
+    const kind = isOverlay ? item.kind : 'text';
+    const th = kind==='logo'?'th-logo':kind==='mark'?'th-mark':kind==='frame'?'th-mark':'th-text';
+    const g = kind==='logo'?'R':kind==='mark'?'@':kind==='frame'?'▢':'T';
+    const sub = isOverlay ? `${item.w}px · ${Math.round(item.op*100)}%` : `X ${item.x} · Y ${item.y}`;
+    const badge = isOverlay ? `<span class="lbadge ${item.layer}">${item.layer==='back'?'Detrás':'Delante'}</span>` : '';
+    return `<div class="ovcard ${item.id===selId?'sel':''}" data-id="${item.id}"><span class="drag">⠿</span>
+      <span class="ovthumb ${th}">${g}</span><div class="info"><div class="nm">${item.name}</div><div class="sub">${sub}</div></div>${badge}</div>`;
+  }
+
+  function renderTabBody(vk){
+    const v = state[vk]; const tab = v.tab;
+    let html = '';
+    if (tab === 'titles' || tab === 'overlays') {
+      const isOv = tab === 'overlays';
+      const items = isOv ? overlays : titles;
+      const selId = v.sel[tab];
+      const sel = items.find(i=>i.id===selId) || items[0];
+      const form = isOv ? overlayForm(sel) : titleForm(sel);
+      html += `<div class="listhead">${isOv?'Overlays':'Títulos'} <span style="margin-left:auto;font-weight:600;color:var(--text-faint);text-transform:none;letter-spacing:0">${items.length}${isOv?' / 3':''}</span></div>`;
+      html += `<div class="ovlist" data-list="${tab}">${items.map(i=>listCard(i,isOv,selId)).join('')}</div>`;
+      html += `<button class="addbtn" ${isOv&&items.length>=3?'disabled':''}>＋ Agregar ${isOv?'overlay':'título'}</button>`;
+      html += `<div style="margin-top:var(--s-12)"><div class="editing-head"><span class="t">${isOv?'Overlay':'Título'} · ${sel.name}</span></div>
+        <div class="ctrl-2col"><div class="colwrap">${form.left}</div><div class="colwrap">${form.right}</div></div></div>`;
+    } else {
+      // subtitles: condensed textarea (005-C) full-width, then 2-col form
+      const form = subtitleForm();
+      html += `<div class="sec fullbleed"><div class="sec-h"><span class="num">✎</span>Texto de muestra <span style="color:var(--text-faint);font-weight:500;text-transform:none;letter-spacing:0;margin-left:auto">enfocá para expandir</span></div>
+        <textarea class="ta">Cómo edité este reel para que los subtítulos enganchen palabra por palabra.</textarea>
+        <div class="ta-meta"><span class="drives"><span class="dot"></span>Alimenta los subtítulos · no se exporta</span></div></div>`;
+      html += `<div class="ctrl-2col"><div class="colwrap">${form.left}</div><div class="colwrap">${form.right}</div></div>`;
+    }
+    return html;
+  }
+
+  function renderPhone(vk){
+    const ph = document.getElementById('phone-'+vk); const v = state[vk];
+    let html = '<div class="pv-title">'+ (titles.find(t=>t.id===v.sel.titles)?.name || 'Cómo edité este reel') +'</div>'
+             + '<div class="pv-cap"><span class="on">subtítulos</span> que enganchan</div>';
+    overlays.forEach((o,i)=>{
+      const z = (o.layer==='front'?60:10)+i; const behind = o.layer==='back'?' behind':'';
+      let st = `z-index:${z};`;
+      if (o.kind==='frame'){ st += 'inset:5%;border:5px solid oklch(0.82 0.095 242 / 0.5);background:transparent;border-radius:14px;'; }
+      else { st += `left:${(o.x/1080*100).toFixed(1)}%;top:${(o.y/1920*100).toFixed(1)}%;opacity:${o.op};`; if(o.kind==='logo') st+=`width:${(o.w/1080*100).toFixed(1)}%;aspect-ratio:1;`; }
+      const cls = o.kind==='logo'?'ov-logo':o.kind==='mark'?'ov-mark':'';
+      const lbl = o.kind==='logo'?'LOGO':o.kind==='mark'?'@user':'';
+      html += `<div class="pv-ov ${cls}${behind}" style="${st}">${lbl}</div>`;
+    });
+    ph.innerHTML = html;
+  }
+
+  function renderTabs(vk){
+    const v = state[vk];
+    document.getElementById('tabs-'+vk).innerHTML = TABS.map(t =>
+      `<button class="tab ${t.id===v.tab?'sel':''}" data-tab="${t.id}">${t.label}${t.ct?`<span class="ct">${t.ct}</span>`:''}</button>`).join('');
+  }
+  function renderVariant(vk){
+    renderTabs(vk);
+    document.getElementById('body-'+vk).innerHTML = renderTabBody(vk);
+    renderPhone(vk);
+    wire(vk);
+  }
+  function wire(vk){
+    const v = state[vk];
+    document.querySelectorAll(`#tabs-${vk} .tab`).forEach(b => b.onclick = () => { v.tab = b.dataset.tab; renderVariant(vk); });
+    const list = document.querySelector(`#body-${vk} [data-list]`);
+    if (list) list.querySelectorAll('.ovcard').forEach(c => c.onclick = () => { v.sel[v.tab] = c.dataset.id; renderVariant(vk); });
+    // local toggles
+    document.querySelectorAll(`#body-${vk} .seg`).forEach(s => s.querySelectorAll('button').forEach(b => b.onclick = () => { s.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }));
+    document.querySelectorAll(`#body-${vk} .pgrid`).forEach(g => g.querySelectorAll('button').forEach(b => b.onclick = () => { g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }));
+    document.querySelectorAll(`#body-${vk} .swatch-row`).forEach(r => r.querySelectorAll('.sw').forEach(s => s.onclick = () => { r.querySelectorAll('.sw').forEach(x=>x.classList.remove('on')); s.classList.add('on'); }));
+    document.querySelectorAll(`#body-${vk} .fontcard`).forEach(c => c.onclick = () => { c.closest('.fontgrid').querySelectorAll('.fontcard').forEach(x=>x.classList.remove('on')); c.classList.add('on'); });
+  }
+
+  const metaHTML = `
+    <div class="meta-h"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div>
+      <p>Generada con IA desde la transcripción y los títulos.</p></div>
+    <div class="meta-body ghost">
+      <div><div class="gh-label">Título</div><div class="gh-box">El truco de edición que cambió mis reels</div></div>
+      <div><div class="gh-label">Descripción</div><div class="gh-box"><div class="gh-line w90"></div><div class="gh-line w70"></div><div class="gh-line w50"></div></div></div>
+      <div><div class="gh-label">Hashtags</div><div class="chips"><span class="chip">#reels</span><span class="chip">#edición</span><span class="chip">#tutorial</span></div></div>
+    </div>`;
+  document.querySelectorAll('[data-meta]').forEach(el => el.innerHTML = metaHTML);
+
+  renderVariant('a'); renderVariant('b');
+
+  function show(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('v-' + id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

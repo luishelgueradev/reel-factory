@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure, drag-to-position). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -15,7 +15,9 @@ Raycast-grade control panels. The surface being elevated is
 These findings come from the sketch pass for Phase 22 decision D-05 — layout and density questions
 explored as throwaway HTML before the real React redesign.
 
-Sketch session wrapped: 2026-05-31
+Sketch sessions wrapped: 2026-05-31 (sketches 001–003: shell, density, presets), 2026-05-31
+(sketches 004–007: per-tab structure, overlay layering, subtitles textarea, tab coherence, and the
+frontier drag-to-position surface).
 </context>
 
 <design_direction>
@@ -48,6 +50,8 @@ The realized synthesis is **sketch 001 variant D** — it folds in 002-A's alway
 | Workspace Shell & Layout | references/workspace-shell.md | 3-column shell: content-sized preview (`flex:0 1 470px`) · controls grow into 2 internal columns · persistent (non-collapsing) 320px metadata placeholder |
 | Control Panel Density & Disclosure | references/control-panel-density.md | Always-open titled sections, Posición→Estilo→Avanzado, hairline dividers; no collapse/accordion (height absorbed by 2-col layout) |
 | Position Presets (shared component) | references/position-presets.md | 9-point arrow-button grid (↖↑↗ …), size-aware X/Y math vs 1080×1920 top-left anchor, inputs flash on apply |
+| Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; Overlays = list+form with Detrás/Delante layer toggle (D-03) & drag-reorder paint order (D-04); Subtitles = condensed/expanding sample-text textarea (D-10) |
+| Preview as Editing Surface (frontier) | references/preview-direct-manipulation.md | ⚠️ Scope-expanding. Drag-to-position on the full preview, snapping to the same 9 anchors and writing the same X/Y path; cheap subset = click-to-select. Beyond committed control-driven scope |
 
 ## Theme
 
@@ -62,6 +66,10 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/001-three-column-shell/index.html` — winner `#v-d`
 - `sources/002-control-density-disclosure/index.html` — winner `#v-a`
 - `sources/003-position-presets/index.html` — winner `#v-b`
+- `sources/004-overlay-list-and-layering/index.html` — winner `#v-a`
+- `sources/005-subtitles-tab-restructure/index.html` — winner `#v-c`
+- `sources/006-all-three-tabs-coherence/index.html` — winner `#v-a`
+- `sources/007-preview-as-layer-map/index.html` — winner `#v-a` (frontier / scope-expanding)
 </findings_index>
 
 <metadata>
@@ -70,4 +78,8 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 001-three-column-shell (winner D)
 - 002-control-density-disclosure (winner A)
 - 003-position-presets (winner B)
+- 004-overlay-list-and-layering (winner A)
+- 005-subtitles-tab-restructure (winner C)
+- 006-all-three-tabs-coherence (winner A)
+- 007-preview-as-layer-map (winner A — frontier, scope-expanding)
 </metadata>

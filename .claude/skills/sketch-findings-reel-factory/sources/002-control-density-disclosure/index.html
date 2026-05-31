@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 002 — control density & disclosure</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font); background: var(--stage); color: var(--text); font-size: var(--t-base);
+    padding-top: 46px; -webkit-font-smoothing: antialiased;
+  }
+  .variant { display: none; }
+  .variant.active { display: block; }
+
+  .frame-wrap { display: flex; justify-content: center; padding: var(--s-16) var(--s-12); min-height: calc(100vh - 46px); }
+  /* the controls column rendered at realistic width, like column 2 of the shell */
+  .col {
+    width: 396px; background: var(--canvas); border: 1px solid var(--border);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-md); overflow: hidden;
+    display: flex; flex-direction: column; max-height: calc(100vh - 110px);
+  }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .tab { appearance: none; border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500; color: var(--text-muted); padding: 13px 13px 11px; cursor: pointer; border-bottom: 2px solid transparent; transition: color var(--dur) var(--ease); }
+  .tab:hover { color: var(--text-2); }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .body { overflow-y: auto; padding: var(--s-8) var(--s-10) var(--s-12); }
+
+  /* shared control atoms */
+  .row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp, .sel { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 9px; width: 100%; transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+  .inp:focus, .sel:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  .field { display: flex; flex-direction: column; gap: var(--s-3); }
+  .field .mini { font-size: var(--t-2xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .swatch-row { display: flex; gap: var(--s-4); }
+  .sw { width: 24px; height: 24px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); cursor: pointer; }
+  .sw.on { box-shadow: 0 0 0 2px var(--accent-strong), 0 0 0 4px var(--accent-tint); }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+
+  /* ── Variant A: always-open titled sections w/ sub-grouping ── */
+  .secA { padding: var(--s-6) 0; border-top: 1px solid var(--border-faint); }
+  .secA:first-child { border-top: none; }
+  .secA > .h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .secA > .h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .secA > .h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .adv-note { font-size: var(--t-xs); color: var(--text-faint); }
+
+  /* ── Variant B/C: collapsible sections ── */
+  .acc { border: 1px solid var(--border); border-radius: var(--r-md); margin-bottom: var(--s-5); overflow: hidden; background: var(--surface); }
+  .acc-h { display: flex; align-items: center; gap: var(--s-5); width: 100%; padding: 10px 12px; background: none; border: none; font: inherit; cursor: pointer; color: var(--text); transition: background var(--dur) var(--ease); }
+  .acc-h:hover { background: var(--surface-2); }
+  .acc-h .tlt { font-size: var(--t-md); font-weight: 600; letter-spacing: -0.01em; }
+  .acc-h .sub { font-size: var(--t-xs); color: var(--text-muted); margin-left: auto; margin-right: var(--s-5); font-weight: 400; }
+  .acc-h .chev { width: 16px; transition: transform var(--dur) var(--ease); color: var(--text-muted); font-size: 11px; }
+  .acc.open .acc-h .chev { transform: rotate(90deg); }
+  .acc-c { display: none; padding: var(--s-3) var(--s-8) var(--s-8); }
+  .acc.open .acc-c { display: block; }
+  .acc.open .acc-h { border-bottom: 1px solid var(--border-faint); }
+  .acc-h .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity var(--dur); }
+  .acc.dirty .acc-h .dot { opacity: 1; }
+
+  /* nav + tools (sketch chrome) */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .vtab:hover { background: var(--surface-hover); color: var(--text); }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  .hint { text-align: center; color: var(--text-muted); font-size: var(--t-xs); margin-top: var(--s-8); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 002 · density & disclosure</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ Chosen · Always-open sections</button>
+  <button class="vtab" onclick="show('b',this)">B · Collapsible sections</button>
+  <button class="vtab" onclick="show('c',this)">C · Accordion (one open)</button>
+</nav>
+
+<!-- ════════ VARIANT A — always-open titled sections ════════ -->
+<div class="variant active" id="v-a">
+  <div class="frame-wrap"><div class="col">
+    <div class="tabs"><button class="tab sel">Titles</button><button class="tab">Overlays</button><button class="tab">Subtitles</button></div>
+    <div class="body" id="bodyA"></div>
+  </div></div>
+  <div class="hint">Everything visible at once — fastest scanning, tallest column. "Advanced" stays compact at the bottom.</div>
+</div>
+
+<!-- ════════ VARIANT B — collapsible sections ════════ -->
+<div class="variant" id="v-b">
+  <div class="frame-wrap"><div class="col">
+    <div class="tabs"><button class="tab sel">Titles</button><button class="tab">Overlays</button><button class="tab">Subtitles</button></div>
+    <div class="body" id="bodyB"></div>
+  </div></div>
+  <div class="hint">Each section folds independently. Position + Style open by default; Advanced collapsed. Edited sections show a dot.</div>
+</div>
+
+<!-- ════════ VARIANT C — accordion ════════ -->
+<div class="variant" id="v-c">
+  <div class="frame-wrap"><div class="col">
+    <div class="tabs"><button class="tab sel">Titles</button><button class="tab">Overlays</button><button class="tab">Subtitles</button></div>
+    <div class="body" id="bodyC"></div>
+  </div></div>
+  <div class="hint">Only one section open at a time — shortest column, but more clicks to move between Position and Style.</div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  // ── control group bodies (Position → Style → Advanced) ──
+  const posBody = `
+    <div class="two">
+      <div class="field"><span class="mini">X (px)</span><input class="inp" value="540"></div>
+      <div class="field"><span class="mini">Y (px)</span><input class="inp" value="220"></div>
+    </div>
+    <div class="row" style="margin-top:var(--s-6)"><label>Anclaje</label>
+      <div class="seg"><button>Izq</button><button class="on">Centro</button><button>Der</button></div>
+    </div>`;
+  const styleBody = `
+    <div class="row"><label>Texto</label><input class="inp" value="Cómo edité este reel"></div>
+    <div class="row"><label>Fuente</label><select class="sel"><option>Inter</option><option>Plus Jakarta Sans</option><option>Poppins</option></select></div>
+    <div class="row"><label>Tamaño</label><input type="range" min="12" max="80" value="40"></div>
+    <div class="row"><label>Peso</label><div class="seg"><button>Regular</button><button class="on">Bold</button><button>Black</button></div></div>
+    <div class="row"><label>Color</label><div class="swatch-row">
+      <span class="sw on" style="background:oklch(0.96 0.01 280)"></span>
+      <span class="sw" style="background:var(--accent)"></span>
+      <span class="sw" style="background:var(--action)"></span>
+      <span class="sw" style="background:var(--warning)"></span>
+      <span class="sw" style="background:var(--stage)"></span>
+    </div></div>`;
+  const advBody = `
+    <div class="row"><label>Radio fondo</label><input type="range" min="0" max="40" value="6"></div>
+    <div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div>
+    <div class="row"><label>Duración</label><input class="inp" value="3.0 s"></div>
+    <div class="row"><label>Sombra</label><div class="seg"><button class="on">Sí</button><button>No</button></div></div>`;
+
+  // Variant A — always open
+  document.getElementById('bodyA').innerHTML = `
+    <div class="secA"><div class="h"><span class="num">1</span>Posición</div>${posBody}</div>
+    <div class="secA"><div class="h"><span class="num">2</span>Estilo</div>${styleBody}</div>
+    <div class="secA"><div class="h"><span class="num">3</span>Avanzado <span class="adv-note">· rara vez</span></div>${advBody}</div>`;
+
+  // Variant B/C — section factory
+  function sec(title, sub, inner, open) {
+    return `<div class="acc${open?' open':''}">
+      <button class="acc-h" onclick="this.parentElement.classList.toggle('open')">
+        <span class="chev">▶</span><span class="tlt">${title}</span><span class="sub">${sub}</span><span class="dot"></span>
+      </button><div class="acc-c">${inner}</div></div>`;
+  }
+  document.getElementById('bodyB').innerHTML =
+    sec('Posición','x 540 · y 220', posBody, true) +
+    sec('Estilo','Inter · Bold · 40', styleBody, true) +
+    sec('Avanzado','3 ajustes', advBody, false);
+
+  // Variant C — accordion: clicking one closes the others
+  document.getElementById('bodyC').innerHTML =
+    sec('Posición','x 540 · y 220', posBody, true) +
+    sec('Estilo','Inter · Bold · 40', styleBody, false) +
+    sec('Avanzado','3 ajustes', advBody, false);
+  document.querySelectorAll('#bodyC .acc-h').forEach(h => h.setAttribute('onclick',
+    "document.querySelectorAll('#bodyC .acc').forEach(a=>{if(a!==this.parentElement)a.classList.remove('open')}); this.parentElement.classList.toggle('open')"));
+
+  // mark a section dirty in B when an input changes (feels alive)
+  document.querySelectorAll('#bodyB .acc').forEach(acc => acc.addEventListener('input', () => acc.classList.add('dirty')));
+
+  function show(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('v-' + id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

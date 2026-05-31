@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 003 — position presets</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--stage); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; }
+  .variant.active { display: block; }
+  .wrap { display: flex; justify-content: center; padding: var(--s-16) var(--s-12); }
+  .col { width: 380px; background: var(--canvas); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); padding: var(--s-10); }
+  .tag { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-3); display: flex; align-items: center; gap: var(--s-5); }
+  .tag::after { content:""; flex:1; height:1px; background:var(--border-faint); }
+
+  /* X/Y number row (the real integration context) */
+  .xy { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); margin-bottom: var(--s-8); }
+  .field { display: flex; flex-direction: column; gap: var(--s-3); }
+  .field .mini { font-size: var(--t-2xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .inp { font: var(--mono); font-family: var(--mono); font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 10px; width: 100%; transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+  .inp:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .inp.flash { animation: flash 0.5s var(--ease); }
+  @keyframes flash { 0% { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); } 100% {} }
+
+  .sizehint { font-size: var(--t-xs); color: var(--text-muted); margin-bottom: var(--s-8); line-height: 1.5; }
+  .sizehint b { color: var(--text-2); font-family: var(--mono); font-weight: 500; }
+
+  /* ── A: grid of dots ── */
+  .dots { display: inline-grid; grid-template-columns: repeat(3, 1fr); gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 6px; }
+  .dots button { width: 34px; height: 34px; border: none; background: none; cursor: pointer; display: grid; place-items: center; border-radius: var(--r-sm); transition: background var(--dur) var(--ease); }
+  .dots button:hover { background: var(--surface-2); }
+  .dots button i { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transition: all var(--dur) var(--ease); display: block; }
+  .dots button:hover i { background: var(--text-2); transform: scale(1.2); }
+  .dots button.on i { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-tint); transform: scale(1.25); }
+
+  /* ── B: labeled arrow buttons ── */
+  .grid { display: inline-grid; grid-template-columns: repeat(3, 40px); grid-auto-rows: 40px; gap: 4px; }
+  .grid button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: var(--r-sm); cursor: pointer; font-size: 15px; display: grid; place-items: center; transition: all var(--dur) var(--ease); }
+  .grid button:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+  .grid button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  /* ── C: mini canvas ── */
+  .canvas { position: relative; aspect-ratio: 9/16; width: 150px; background: var(--stage); border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; cursor: pointer; }
+  .anchor-pt { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); transform: translate(-50%, -50%); transition: background var(--dur); }
+  .canvas:hover .anchor-pt { background: var(--text-muted); }
+  .elbox { position: absolute; background: var(--accent-tint); border: 1.5px solid var(--accent); border-radius: 3px; display: grid; place-items: center; font-size: 8px; color: var(--accent); cursor: grab; transition: left var(--dur) var(--ease), top var(--dur) var(--ease); user-select: none; }
+  .elbox:active { cursor: grabbing; }
+  .canvas-side { display: flex; gap: var(--s-10); align-items: flex-start; }
+  .legend { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.6; }
+  .legend .k { color: var(--accent); }
+
+  .presets-area { display: flex; gap: var(--s-10); align-items: flex-start; }
+  .presets-area .note { font-size: var(--t-xs); color: var(--text-muted); flex: 1; line-height: 1.55; }
+
+  /* nav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .vtab:hover { background: var(--surface-hover); color: var(--text); }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 003 · position presets</span>
+  <button class="vtab" onclick="show('a',this)">A · Grid of dots</button>
+  <button class="vtab active" onclick="show('b',this)">B ★ Chosen · Arrow buttons</button>
+  <button class="vtab" onclick="show('c',this)">C · Mini-canvas drag</button>
+</nav>
+
+<!-- shared header note about size-aware math -->
+<template id="tpl-head">
+  <div class="tag">Posición</div>
+  <div class="xy">
+    <div class="field"><span class="mini">X (px)</span><input class="inp ix" value="340"></div>
+    <div class="field"><span class="mini">Y (px)</span><input class="inp iy" value="900"></div>
+  </div>
+  <div class="sizehint">Preset calculado sobre frame <b>1080×1920</b>, ancla = esquina sup-izq del elemento (<b>400×120</b>). Ej. abajo-derecha → X <b>680</b>, Y <b>1800</b>.</div>
+  <div class="tag">Presets</div>
+</template>
+
+<!-- ════════ A — grid of dots ════════ -->
+<div class="variant" id="v-a">
+  <div class="wrap"><div class="col" id="col-a">
+    <div class="presets-area">
+      <div class="dots" id="dotsA"></div>
+      <div class="note">Discreto, ocupa poco. Cada punto = un anclaje del grid 3×3 (4 esquinas, 4 bordes, centro). El activo se ilumina en azul.</div>
+    </div>
+  </div></div>
+</div>
+
+<!-- ════════ B — arrow buttons ════════ -->
+<div class="variant active" id="v-b">
+  <div class="wrap"><div class="col" id="col-b">
+    <div class="presets-area">
+      <div class="grid" id="gridB"></div>
+      <div class="note">Más explícito: la flecha comunica la dirección del anclaje. Buen objetivo de click, legible para logos/watermarks en esquinas.</div>
+    </div>
+  </div></div>
+</div>
+
+<!-- ════════ C — mini canvas ════════ -->
+<div class="variant" id="v-c">
+  <div class="wrap"><div class="col" id="col-c">
+    <div class="canvas-side">
+      <div class="canvas" id="canvasC"><div class="elbox" id="elC" style="width:34%;aspect-ratio:400/120;">elem</div></div>
+      <div class="legend">Arrastrá el elemento — hace <span class="k">snap</span> a los 9 anclajes y empuja X/Y al instante. Espacial y directo, pero ocupa más alto que un grid de botones.</div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  const FRAME_W = 1080, FRAME_H = 1920, EL_W = 400, EL_H = 120;
+  // 9 anchors → fractional position of the element's top-left, size-aware (D-09)
+  // cols: left=0, center=(W-elW)/2, right=W-elW ; rows analogous
+  const XS = { l: 0, c: (FRAME_W-EL_W)/2, r: FRAME_W-EL_W };
+  const YS = { t: 0, m: (FRAME_H-EL_H)/2, b: FRAME_H-EL_H };
+  const POINTS = [ // id, x%, y%, arrow
+    ['t-l',0,0,'↖'],['t-c',50,0,'↑'],['t-r',100,0,'↗'],
+    ['m-l',0,50,'←'],['m-c',50,50,'•'],['m-r',100,50,'→'],
+    ['b-l',0,100,'↙'],['b-c',50,100,'↓'],['b-r',100,100,'↘'],
+  ];
+  function coords(id){
+    const row=id[0], colp=id[2];
+    const x = colp==='l'?XS.l: colp==='c'?XS.c: XS.r;
+    const y = row==='t'?YS.t: row==='m'?YS.m: YS.b;
+    return [Math.round(x), Math.round(y)];
+  }
+  function setXY(scope, x, y){
+    const ix=scope.querySelector('.ix'), iy=scope.querySelector('.iy');
+    if(ix){ ix.value=x; iy.value=y; ix.classList.remove('flash'); iy.classList.remove('flash'); void ix.offsetWidth; ix.classList.add('flash'); iy.classList.add('flash'); }
+  }
+
+  // inject shared head into A and B cols
+  const head = document.getElementById('tpl-head').content;
+  ['col-a','col-b'].forEach(id => { const c=document.getElementById(id); c.insertBefore(head.cloneNode(true), c.firstChild); });
+
+  // ── A: dots ──
+  const dotsA = document.getElementById('dotsA');
+  POINTS.forEach(([id]) => { const b=document.createElement('button'); b.dataset.id=id; b.innerHTML='<i></i>'; if(id==='b-c')b.classList.add('on');
+    b.onclick=()=>{ dotsA.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); const [x,y]=coords(id); setXY(document.getElementById('col-a'),x,y); };
+    dotsA.appendChild(b); });
+
+  // ── B: arrow buttons ──
+  const gridB = document.getElementById('gridB');
+  POINTS.forEach(([id,,,arrow]) => { const b=document.createElement('button'); b.dataset.id=id; b.textContent=arrow; if(id==='b-c')b.classList.add('on');
+    b.onclick=()=>{ gridB.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); const [x,y]=coords(id); setXY(document.getElementById('col-b'),x,y); };
+    gridB.appendChild(b); });
+
+  // ── C: mini-canvas with anchor points + draggable element ──
+  const canvas = document.getElementById('canvasC'), el = document.getElementById('elC');
+  POINTS.forEach(([id,xp,yp]) => { const p=document.createElement('div'); p.className='anchor-pt'; p.style.left=xp+'%'; p.style.top=yp+'%'; canvas.appendChild(p); });
+  // element box sits at its top-left fraction; size-aware: place so its top-left lands on anchor band
+  const elWp = EL_W/FRAME_W*100, elHp = EL_H/FRAME_H*100;
+  function placeC(id){ const colp=id[2], row=id[0];
+    const left = colp==='l'?0: colp==='c'?(100-elWp)/2: 100-elWp;
+    const top  = row==='t'?0: row==='m'?(100-elHp)/2: 100-elHp;
+    el.style.left=left+'%'; el.style.top=top+'%';
+    const [x,y]=coords(id);
+  }
+  placeC('b-c');
+  // snap-on-click: clicking a region of the canvas snaps to nearest anchor
+  canvas.addEventListener('click', e => {
+    if(e.target===el) return;
+    const r=canvas.getBoundingClientRect(); const fx=(e.clientX-r.left)/r.width, fy=(e.clientY-r.top)/r.height;
+    const colp = fx<0.34?'l':fx<0.67?'c':'r'; const row = fy<0.34?'t':fy<0.67?'m':'b';
+    const id=row+'-'+colp; placeC(id);
+  });
+  // basic drag → snap on release
+  let dragging=false;
+  el.addEventListener('pointerdown', e=>{ dragging=true; el.setPointerCapture(e.pointerId); el.style.transition='none'; });
+  el.addEventListener('pointermove', e=>{ if(!dragging) return; const r=canvas.getBoundingClientRect();
+    let left=(e.clientX-r.left)/r.width*100-elWp/2, top=(e.clientY-r.top)/r.height*100-elHp/2;
+    left=Math.max(0,Math.min(100-elWp,left)); top=Math.max(0,Math.min(100-elHp,top));
+    el.style.left=left+'%'; el.style.top=top+'%'; });
+  el.addEventListener('pointerup', e=>{ if(!dragging)return; dragging=false; el.style.transition='';
+    const r=canvas.getBoundingClientRect(); const cx=(e.clientX-r.left)/r.width, cy=(e.clientY-r.top)/r.height;
+    const colp=cx<0.34?'l':cx<0.67?'c':'r'; const row=cy<0.34?'t':cy<0.67?'m':'b'; placeC(row+'-'+colp); });
+
+  function show(id, btn) {
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('v-' + id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

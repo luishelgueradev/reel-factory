@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 026 — metadata / AI column</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 220px 0; } }
+  @keyframes wake { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-8); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .save-chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); padding: 5px 11px; border-radius: var(--r-full); color: var(--warning); background: oklch(0.80 0.12 78 / 0.12); margin-left: var(--s-4); }
+  .save-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .hdr-spacer { flex: 1; }
+  .hdr-actions { display: flex; gap: var(--s-6); align-items: center; }
+  .zone-div { width: 1px; height: 24px; background: var(--border); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: transparent; color: var(--text-2); cursor: pointer; }
+  .render-cta { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 7px 16px; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--action); color: oklch(0.16 0.02 150); cursor: pointer; }
+
+  .work { flex: 1; display: flex; min-height: 0; }
+  /* editor side is contextual (dimmed) so the metadata column is the subject of this sketch */
+  .editor-context { flex: 1 1 auto; display: flex; min-width: 0; opacity: 0.62; }
+  .stage { flex: 0 1 360px; background: var(--stage); display: grid; place-items: center; padding: var(--s-10); border-right: 1px solid var(--border); min-width: 0; }
+  .phone { aspect-ratio: 9/16; height: min(100%, 460px); border-radius: 16px; background: linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270)); box-shadow: var(--shadow-pop); display: grid; place-items: center; position: relative; }
+  .phone .cap { font-family: "Plus Jakarta Sans"; font-weight: 800; font-size: 19px; text-align: center; width: 80%; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.85); } .phone .cap .on { color: #ffea00; }
+  .ed-controls { flex: 1; background: var(--canvas); padding: var(--s-10); }
+  .ed-controls .tabs { display: flex; gap: var(--s-8); border-bottom: 1px solid var(--border); margin: calc(var(--s-10) * -1) calc(var(--s-10) * -1) var(--s-8); padding: 0 var(--s-10); }
+  .ed-controls .tab { font-size: var(--t-md); color: var(--text-muted); padding: 13px 0 11px; border-bottom: 2px solid transparent; }
+  .ed-controls .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .ed-controls .skel { height: 11px; border-radius: var(--r-full); background: var(--surface-2); margin: 12px 0; }
+  .ed-controls .skel.w80 { width: 80%; } .ed-controls .skel.w60 { width: 60%; } .ed-controls .skel.w40 { width: 40%; }
+
+  /* THE metadata column — the subject */
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; flex: 0 0 340px; }
+  .meta-h { padding: var(--s-10) var(--s-10) var(--s-8); border-bottom: 1px solid var(--border); }
+  .meta-h .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .meta-h h2 { font-size: var(--t-md); font-weight: 600; }
+  .badge { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-full); }
+  .badge.idle { color: var(--text-muted); background: var(--surface-2); }
+  .badge.ai { color: var(--accent); background: var(--accent-tint); }
+  .badge.ok { color: var(--success); background: oklch(0.72 0.14 150 / 0.14); }
+  .meta-h p { font-size: var(--t-xs); color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+  .meta-body { flex: 1; overflow-y: auto; padding: var(--s-8) var(--s-10) var(--s-12); display: flex; flex-direction: column; gap: var(--s-8); }
+
+  .empty-cta { text-align: center; padding: var(--s-12) var(--s-6); display: flex; flex-direction: column; align-items: center; gap: var(--s-6); }
+  .empty-cta .ico { width: 46px; height: 46px; border-radius: 50%; background: var(--accent-tint); border: 1px solid var(--accent-strong); display: grid; place-items: center; font-size: 20px; color: var(--accent); }
+  .empty-cta p { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; max-width: 230px; }
+  /* generate uses ACCENT, not the reserved action-green */
+  .gen-btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 9px 18px; border-radius: var(--r-sm); border: 1px solid var(--accent-strong); background: var(--accent-tint); color: var(--accent); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .gen-btn:hover { background: oklch(0.82 0.095 242 / 0.2); }
+  .gen-btn .gs { width: 12px; height: 12px; border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; }
+
+  .field { animation: wake var(--dur) var(--ease) both; }
+  .field-lab { display: flex; align-items: center; justify-content: space-between; font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-3); }
+  .field-lab .acts { display: flex; gap: var(--s-5); letter-spacing: 0; text-transform: none; font-weight: 500; }
+  .field-lab .act { color: var(--accent); cursor: pointer; } .field-lab .act:hover { text-decoration: underline; }
+  .field-lab .count { color: var(--text-faint); font-variant-numeric: tabular-nums; } .field-lab .count.over { color: var(--danger); }
+  .editbox { width: 100%; font: inherit; font-size: var(--t-sm); color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-6); line-height: 1.5; resize: none; }
+  .editbox:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .hashwrap { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+  .hash { font-size: var(--t-xs); color: var(--accent); background: var(--accent-tint); border: 1px solid var(--accent-strong); border-radius: var(--r-full); padding: 3px 9px 3px 10px; display: inline-flex; align-items: center; gap: 5px; }
+  .hash .rm { cursor: pointer; opacity: 0.6; } .hash .rm:hover { opacity: 1; }
+  .hash-add { font-size: var(--t-xs); color: var(--text-faint); background: none; border: 1px dashed var(--border-strong); border-radius: var(--r-full); padding: 3px 10px; cursor: pointer; }
+  .shimmer { height: 13px; border-radius: var(--r-full); background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-hover) 40%, var(--surface-2) 80%); background-size: 220px 100%; animation: shimmer 1s linear infinite; margin: 9px 0; }
+  .shimmer.w90 { width: 90%; } .shimmer.w70 { width: 70%; } .shimmer.w50 { width: 50%; }
+  .regen-foot { padding: var(--s-6) var(--s-10); border-top: 1px solid var(--border); display: flex; gap: var(--s-5); }
+  .regen-foot .btn { flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 6px; }
+  .src-note { font-size: var(--t-2xs); color: var(--text-faint); line-height: 1.5; padding: var(--s-4) var(--s-6); border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); }
+  .src-note b { color: var(--text-muted); }
+
+  /* per-platform tabs (C) */
+  .ptabs { display: flex; gap: var(--s-3); padding: var(--s-6) var(--s-10) 0; }
+  .ptab { flex: 1; font: inherit; font-size: var(--t-xs); font-weight: 600; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm) var(--r-sm) 0 0; padding: 7px 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; border-bottom: none; }
+  .ptab.on { color: var(--accent); background: var(--accent-tint-2); border-color: var(--accent-strong); }
+  .ptab .pf { width: 8px; height: 8px; border-radius: 2px; }
+  .plat-limit { font-size: var(--t-2xs); color: var(--text-muted); margin-bottom: var(--s-6); padding: var(--s-4) var(--s-6); background: var(--surface); border-radius: var(--r-sm); border: 1px solid var(--border-faint); }
+
+  .toast { position: fixed; bottom: 56px; left: 50%; transform: translateX(-50%) translateY(20px); z-index: 9990; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font-size: var(--t-sm); padding: 9px 16px; border-radius: var(--r-full); box-shadow: var(--shadow-pop); opacity: 0; transition: all var(--dur) var(--ease); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 026 · metadata / AI column</span>
+  <button class="vtab" onclick="show('a',this)">A · Generar a demanda</button>
+  <button class="vtab" onclick="show('b',this)">B · Subproducto del render (auto)</button>
+  <button class="vtab active" onclick="show('c',this)">C ★ Chosen · Por plataforma (TikTok/IG/Shorts)</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">la columna que siempre fue "Próximamente" · ahora despierta</span>
+</nav>
+
+<!-- editor context (shared, dimmed) is inlined per variant -->
+
+<!-- ════════ A — generate on demand ════════ -->
+<div class="variant" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16</div></div></div>
+    <span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><div class="hdr-spacer"></div>
+    <div class="hdr-actions"><button class="btn">Guardar config</button><span class="zone-div"></span><button class="render-cta">▶ Render Video</button></div>
+  </header>
+  <div class="work">
+    <div class="editor-context">
+      <section class="stage"><div class="phone"><div class="cap"><span class="on">subtítulos</span> que enganchan</div></div></section>
+      <div class="ed-controls"><div class="tabs"><span class="tab sel">Títulos</span><span class="tab">Overlays</span><span class="tab">Subtítulos</span><span class="tab">Video</span></div>
+        <div class="skel w80"></div><div class="skel w60"></div><div class="skel w40"></div><div class="skel w80"></div></div>
+    </div>
+    <aside class="meta" data-col="a">
+      <div class="meta-h"><div class="row1"><h2>Metadata de redes</h2><span class="badge idle" data-badge>En espera</span></div>
+        <p>Generá título, descripción y hashtags con IA desde la transcripción y los títulos.</p></div>
+      <div class="meta-body" data-body>
+        <div class="empty-cta">
+          <div class="ico">✦</div>
+          <p>Cuando el video esté transcripto, generá la metadata para redes con un click.</p>
+          <button class="gen-btn" data-gen>✦ Generar metadata</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════ B — auto byproduct of the render ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16</div></div></div>
+    <span class="save-chip" style="color:var(--success);background:oklch(0.72 0.14 150 / 0.12)"><span class="dot"></span>Render completo</span><div class="hdr-spacer"></div>
+    <div class="hdr-actions"><button class="btn">Guardar config</button><span class="zone-div"></span><button class="render-cta">▶ Render de nuevo</button></div>
+  </header>
+  <div class="work">
+    <div class="editor-context">
+      <section class="stage"><div class="phone"><div class="cap"><span class="on">subtítulos</span> que enganchan</div></div></section>
+      <div class="ed-controls"><div class="tabs"><span class="tab sel">Títulos</span><span class="tab">Overlays</span><span class="tab">Subtítulos</span><span class="tab">Video</span></div>
+        <div class="skel w80"></div><div class="skel w60"></div><div class="skel w40"></div><div class="skel w80"></div></div>
+    </div>
+    <aside class="meta" data-col="b">
+      <div class="meta-h"><div class="row1"><h2>Metadata de redes</h2><span class="badge ok">✦ Generado</span></div>
+        <p>Generada automáticamente al terminar el render. Editá lo que quieras.</p></div>
+      <div class="meta-body">
+        <div class="field"><div class="field-lab">Título <span class="acts"><span class="act" data-toast="Copiado">copiar</span></span></div>
+          <textarea class="editbox" rows="2">El truco de edición que cambió mis reels para siempre</textarea></div>
+        <div class="field"><div class="field-lab">Descripción <span class="acts"><span class="act" data-toast="Copiado">copiar</span></span></div>
+          <textarea class="editbox" rows="4">Te muestro cómo edito un reel de cero: corto los silencios, subtítulos palabra por palabra y un título que engancha en el primer segundo. 🎬 Guardalo para tu próxima edición.</textarea></div>
+        <div class="field"><div class="field-lab">Hashtags <span class="acts"><span class="act" data-toast="Copiados">copiar</span></span></div>
+          <div class="hashwrap"><span class="hash">#reels <span class="rm">✕</span></span><span class="hash">#edición <span class="rm">✕</span></span><span class="hash">#tutorial <span class="rm">✕</span></span><span class="hash">#contentcreator <span class="rm">✕</span></span><button class="hash-add">＋</button></div></div>
+        <div class="src-note"><b>Fuente:</b> transcripción Whisper + los 2 títulos del reel. Se regenera si volvés a renderizar.</div>
+      </div>
+      <div class="regen-foot"><button class="btn" data-toast="Regenerando…">↻ Regenerar</button><button class="btn" style="flex:0 0 auto" data-toast="Todo copiado">⤓ copiar todo</button></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════ C — per-platform tabs ════════ -->
+<div class="variant active" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16</div></div></div>
+    <span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><div class="hdr-spacer"></div>
+    <div class="hdr-actions"><button class="btn">Guardar config</button><span class="zone-div"></span><button class="render-cta">▶ Render Video</button></div>
+  </header>
+  <div class="work">
+    <div class="editor-context">
+      <section class="stage"><div class="phone"><div class="cap"><span class="on">subtítulos</span> que enganchan</div></div></section>
+      <div class="ed-controls"><div class="tabs"><span class="tab sel">Títulos</span><span class="tab">Overlays</span><span class="tab">Subtítulos</span><span class="tab">Video</span></div>
+        <div class="skel w80"></div><div class="skel w60"></div><div class="skel w40"></div><div class="skel w80"></div></div>
+    </div>
+    <aside class="meta" data-col="c">
+      <div class="meta-h"><div class="row1"><h2>Metadata de redes</h2><span class="badge ai">✦ Generado</span></div>
+        <p>Adaptada por plataforma — límites y tono propios de cada red.</p></div>
+      <div class="ptabs" data-ptabs>
+        <button class="ptab on" data-plat="tiktok"><span class="pf" style="background:#69C9D0"></span>TikTok</button>
+        <button class="ptab" data-plat="ig"><span class="pf" style="background:#E1306C"></span>Reels</button>
+        <button class="ptab" data-plat="yt"><span class="pf" style="background:#FF0000"></span>Shorts</button>
+      </div>
+      <div class="meta-body" data-platbody></div>
+      <div class="regen-foot"><button class="btn" data-toast="Regenerando para esta plataforma…">↻ Regenerar</button><button class="btn" style="flex:0 0 auto" data-toast="Copiado para publicar">⤓ copiar</button></div>
+    </aside>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  let tt;
+  function toast(msg){ const el=document.getElementById('toast'); el.textContent='✓ '+msg; el.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('show'),1600); }
+  document.addEventListener('click', e=>{ const t=e.target.closest('[data-toast]'); if(t) toast(t.dataset.toast); const rm=e.target.closest('.hash .rm'); if(rm) rm.closest('.hash').remove(); });
+
+  // ── A: generate on demand ──
+  const filledA = `
+    <div class="field" style="animation-delay:40ms"><div class="field-lab">Título <span class="acts"><span class="act" data-toast="Copiado">copiar</span></span></div>
+      <textarea class="editbox" rows="2">El truco de edición que cambió mis reels para siempre</textarea></div>
+    <div class="field" style="animation-delay:120ms"><div class="field-lab">Descripción <span class="acts"><span class="act" data-toast="Copiado">copiar</span></span></div>
+      <textarea class="editbox" rows="4">Te muestro cómo edito un reel de cero: corto silencios, subtítulos palabra por palabra y un título que engancha. 🎬</textarea></div>
+    <div class="field" style="animation-delay:200ms"><div class="field-lab">Hashtags <span class="acts"><span class="act" data-toast="Copiados">copiar</span></span></div>
+      <div class="hashwrap"><span class="hash">#reels <span class="rm">✕</span></span><span class="hash">#edición <span class="rm">✕</span></span><span class="hash">#tutorial <span class="rm">✕</span></span><button class="hash-add">＋</button></div></div>
+    <div class="src-note"><b>Fuente:</b> transcripción + títulos. Editá libremente o regenerá.</div>`;
+  const colA = document.querySelector('[data-col="a"]');
+  colA.addEventListener('click', e=>{
+    const g = e.target.closest('[data-gen]'); if(!g) return;
+    const body = colA.querySelector('[data-body]'), badge = colA.querySelector('[data-badge]');
+    body.innerHTML = `<div class="shimmer w90"></div><div class="shimmer w70"></div><div class="shimmer w90"></div><div class="shimmer w50"></div>`;
+    badge.className='badge ai'; badge.textContent='Generando…';
+    setTimeout(()=>{ body.innerHTML = filledA; badge.textContent='✦ Generado';
+      if(!colA.querySelector('.regen-foot')){ const f=document.createElement('div'); f.className='regen-foot'; f.innerHTML='<button class="btn" data-regen>↻ Regenerar</button><button class="btn" style="flex:0 0 auto" data-toast="Todo copiado">copiar todo</button>'; colA.appendChild(f); }
+    }, 1100);
+    const re = e.target.closest('[data-regen]'); if(re){}
+  });
+  colA.addEventListener('click', e=>{ if(e.target.closest('[data-regen]')){ const body=colA.querySelector('[data-body]'); body.innerHTML=`<div class="shimmer w90"></div><div class="shimmer w70"></div><div class="shimmer w90"></div>`; setTimeout(()=>body.innerHTML=filledA, 900); }});
+
+  // ── C: per-platform ──
+  const PLAT = {
+    tiktok: { limit:'TikTok · caption ≤ 2.200 car · 3-5 hashtags', desc:'cómo edito un reel que engancha en el primer segundo 👀 silencios fuera, subtítulos palabra x palabra', max:2200, tags:['#reels','#edición','#fyp','#parati'] },
+    ig: { limit:'Instagram Reels · caption ≤ 2.200 car · hasta 30 hashtags', desc:'Te muestro mi proceso de edición de reels completo: corto silencios, agrego subtítulos dinámicos palabra por palabra y un título que retiene. Guardá este reel para tu próxima edición 🎬', max:2200, tags:['#reels','#edición','#tutorial','#contentcreator','#reelsinstagram'] },
+    yt: { limit:'YouTube Shorts · título ≤ 100 car · #Shorts recomendado', desc:'Cómo edito un Short de cero: silencios, subtítulos y un título que engancha. #Shorts', max:100, tags:['#Shorts','#edición','#tutorial'] },
+  };
+  const colC = document.querySelector('[data-col="c"]');
+  function renderPlat(p){
+    const d = PLAT[p];
+    const over = d.desc.length > d.max;
+    colC.querySelector('[data-platbody]').innerHTML = `
+      <div class="plat-limit">${d.limit}</div>
+      <div class="field"><div class="field-lab">Título <span class="acts"><span class="act" data-toast="Copiado">copiar</span></span></div>
+        <textarea class="editbox" rows="2">El truco de edición que cambió mis reels</textarea></div>
+      <div class="field"><div class="field-lab">${p==='yt'?'Descripción / título':'Caption'} <span class="acts"><span class="count ${over?'over':''}">${d.desc.length}/${d.max}</span><span class="act" data-toast="Copiado">copiar</span></span></div>
+        <textarea class="editbox" rows="4">${d.desc}</textarea></div>
+      <div class="field"><div class="field-lab">Hashtags <span class="acts"><span class="act" data-toast="Copiados">copiar</span></span></div>
+        <div class="hashwrap">${d.tags.map(t=>`<span class="hash">${t} <span class="rm">✕</span></span>`).join('')}<button class="hash-add">＋</button></div></div>`;
+  }
+  colC.querySelector('[data-ptabs]').addEventListener('click', e=>{ const b=e.target.closest('[data-plat]'); if(!b)return;
+    colC.querySelectorAll('.ptab').forEach(x=>x.classList.remove('on')); b.classList.add('on'); renderPlat(b.dataset.plat); });
+  renderPlat('tiktok');
+
+  function show(id, btn){
+    document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+    document.getElementById('v-'+id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

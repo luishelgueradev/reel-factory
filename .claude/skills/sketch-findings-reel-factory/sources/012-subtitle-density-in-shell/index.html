@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 012 — subtitle density in the shell</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700&family=Bebas+Neue&family=Montserrat:wght@600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text);
+         font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  /* header */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between;
+         padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm);
+         background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+         display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-6); align-items: center; }
+  .save-chip { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--t-xs);
+               padding: var(--s-2) var(--s-4); border-radius: var(--r-full); color: var(--warning); background: oklch(0.80 0.12 78 / 0.12); }
+  .save-chip .dot { width: 6px; height: 6px; border-radius: var(--r-full); background: currentColor; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm);
+         border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--text-faint); border-color: var(--border); cursor: not-allowed; }
+  .btn.primary { background: var(--action); border-color: transparent; color: oklch(0.16 0.02 150); font-weight: 600; }
+
+  /* work area */
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { flex: 0 1 470px; background: var(--stage); display: flex; flex-direction: column;
+           align-items: center; justify-content: center; padding: var(--s-12); border-right: 1px solid var(--border); min-width: 0; }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 620px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%),
+                       radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%),
+                       linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); }
+  .pv-title { position: absolute; top: 9%; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 16px; border-radius: var(--r-sm);
+           background: oklch(0.20 0.03 280 / 0.78); backdrop-filter: blur(3px); font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .pv-cap { position: absolute; bottom: 13%; left: 7%; right: 7%; text-align: center; z-index: 60;
+            font-family: "Plus Jakarta Sans", var(--font); font-weight: 800; font-size: 30px; line-height: 1.15; letter-spacing: -0.01em; }
+  .pv-cap .w { color: #ffffff; transition: color var(--dur) var(--ease); }
+  .pv-cap .w.on { color: #ffea00; }
+  .pv-ov { position: absolute; display: grid; place-items: center; border-radius: var(--r-sm); font-size: var(--t-xs); font-weight: 700; color: oklch(0.96 0.01 280); }
+  .pv-ov.behind { opacity: 0.85; filter: saturate(0.8); }
+  .ov-logo { background: linear-gradient(140deg, oklch(0.7 0.13 30), oklch(0.6 0.16 12)); }
+  .stage-meta { margin-top: var(--s-8); display: flex; gap: var(--s-6); align-items: center; color: var(--text-muted); font-size: var(--t-xs); }
+  .pill { padding: 3px 9px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+  /* controls column */
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab { appearance: none; border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500;
+         color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; transition: color var(--dur) var(--ease); }
+  .tab:hover { color: var(--text-2); }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab .ct { margin-left: 6px; font-size: var(--t-2xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+
+  /* section + atoms */
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700;
+           letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2);
+                display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .sec-h .note { color: var(--text-faint); font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .row { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp, .sel { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2);
+               border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 9px; width: 100%;
+               transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+  .inp:focus, .sel:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  .field { display: flex; flex-direction: column; gap: var(--s-3); }
+  .field .mini { font-size: var(--t-2xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none;
+                padding: 5px; border-radius: var(--r-xs); cursor: pointer; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .rng { display: grid; grid-template-columns: 1fr 42px; align-items: center; gap: var(--s-5); }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+  .rng output { font-size: var(--t-xs); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: right; }
+
+  .pgrid { display: inline-grid; grid-template-columns: repeat(3, 30px); grid-auto-rows: 30px; gap: 3px; margin-top: var(--s-6); }
+  .pgrid button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: var(--r-xs);
+                  cursor: pointer; font-size: 13px; display: grid; place-items: center; transition: all var(--dur) var(--ease); }
+  .pgrid button:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
+  .pgrid button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  .fontgrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); }
+  .fontcard { padding: var(--s-4) var(--s-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+              cursor: pointer; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .fontcard:hover { border-color: var(--border-strong); }
+  .fontcard.on { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .fontcard .fn { font-size: var(--t-md); color: var(--text); }
+  .fontcard .fp { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .fontmore { grid-column: 1 / -1; text-align: center; font-size: var(--t-2xs); color: var(--text-faint); padding-top: 2px; }
+
+  .cmatrix { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-6); }
+  .crole { display: flex; align-items: center; gap: var(--s-4); padding: var(--s-3) 0; }
+  .crole .rl { font-size: var(--t-xs); color: var(--text-2); flex: 1; min-width: 0; }
+  .cswatch { position: relative; width: 26px; height: 26px; flex: none; border-radius: var(--r-sm);
+             border: 1px solid var(--border-strong); overflow: hidden; cursor: pointer; }
+  .cswatch input[type=color] { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); border: none; padding: 0; background: none; cursor: pointer; }
+  .colorfield { display: flex; align-items: center; gap: var(--s-4); }
+  .chex { font-family: var(--mono); font-size: var(--t-xs); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .fx { border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface);
+        margin-bottom: var(--s-5); overflow: hidden; transition: border-color var(--dur) var(--ease); }
+  .fx.open { border-color: var(--border-strong); }
+  .fx-head { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-5) var(--s-6); cursor: pointer; }
+  .fx-head .fx-name { font-size: var(--t-sm); color: var(--text); flex: 1; font-weight: 500; }
+  .fx-head .fx-hint { font-size: var(--t-2xs); color: var(--text-faint); }
+  .switch { position: relative; width: 30px; height: 17px; border-radius: var(--r-full); background: var(--surface-hover);
+            border: 1px solid var(--border-strong); flex: none; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+  .switch::after { content: ""; position: absolute; top: 1px; left: 1px; width: 13px; height: 13px; border-radius: 50%;
+                   background: var(--text-2); transition: transform var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .fx.open .switch { background: var(--accent-tint); border-color: var(--accent-strong); }
+  .fx.open .switch::after { transform: translateX(13px); background: var(--accent); }
+  .fx-params { display: none; padding: 0 var(--s-6) var(--s-6); }
+  .fx.open .fx-params { display: block; }
+
+  /* in-panel live specimen */
+  .specimen { position: relative; border-radius: var(--r-md); overflow: hidden;
+              background: linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.20 0.03 270));
+              border: 1px solid var(--border); min-height: 88px; display: grid; place-items: center; padding: var(--s-10) var(--s-8); }
+  .specimen .sp-cap { font-family: "Plus Jakarta Sans", var(--font); font-weight: 800; font-size: 24px; line-height: 1.18; text-align: center; }
+  .specimen .sp-cap .w { color: #ffffff; }
+  .specimen .sp-cap .w.on { color: #ffea00; }
+  .specimen .sp-tag { position: absolute; top: 7px; right: 9px; font-size: var(--t-2xs); color: var(--text-faint);
+                      text-transform: uppercase; letter-spacing: 0.07em; }
+
+  .modecards { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-4); }
+  .modecard { padding: var(--s-5) var(--s-3) var(--s-4); background: var(--surface); border: 1px solid var(--border);
+              border-radius: var(--r-sm); cursor: pointer; text-align: center; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .modecard:hover { border-color: var(--border-strong); }
+  .modecard.on { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .modecard .mc-vis { height: 30px; border-radius: var(--r-xs); background: var(--stage); display: grid; place-items: center;
+                      margin-bottom: var(--s-4); overflow: hidden; }
+  .modecard .mc-vis span { font-size: 9px; font-weight: 800; }
+  .modecard .mc-vis .a { color: #ffea00; } .modecard .mc-vis .b { color: #ffffff; opacity: 0.65; }
+  .mc-vis .bar { background: var(--accent); color: var(--stage); padding: 1px 4px; border-radius: 2px; }
+  .modecard .mc-nm { font-size: var(--t-2xs); color: var(--text-2); font-weight: 600; }
+  .modecard.on .mc-nm { color: var(--accent); }
+
+  /* list (Titles + Overlays) */
+  .listhead { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .listhead .cnt { margin-left: auto; font-weight: 600; color: var(--text-faint); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .ovlist { display: flex; flex-direction: column; gap: var(--s-4); margin-bottom: var(--s-6); }
+  .ovcard { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-4) var(--s-5); background: var(--surface);
+            border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
+  .ovcard:hover { border-color: var(--border-strong); }
+  .ovcard.sel { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .ovcard .drag { color: var(--text-faint); font-size: 15px; cursor: grab; }
+  .ovthumb { width: 30px; height: 30px; border-radius: var(--r-xs); flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: oklch(0.96 0.01 280); }
+  .th-logo { background: linear-gradient(140deg, oklch(0.7 0.13 30), oklch(0.6 0.16 12)); }
+  .th-mark { background: oklch(0.96 0.01 280 / 0.14); border: 1px solid oklch(0.96 0.01 280 / 0.3); }
+  .th-text { background: var(--accent-tint); color: var(--accent); }
+  .ovcard .info { flex: 1; min-width: 0; }
+  .ovcard .nm { font-size: var(--t-sm); color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ovcard .sub { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 1px; }
+  .lbadge { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-full); border: 1px solid var(--border); }
+  .lbadge.back { color: var(--text-muted); background: var(--surface-2); }
+  .lbadge.front { color: var(--accent); background: var(--accent-tint); border-color: var(--accent-strong); }
+  .addbtn { width: 100%; padding: 8px; border: 1px dashed var(--border-strong); background: transparent; color: var(--text-2);
+            border-radius: var(--r-sm); font: inherit; font-size: var(--t-sm); cursor: pointer; }
+  .addbtn:hover { border-color: var(--accent-strong); color: var(--accent); }
+  .editing-head { display: flex; align-items: center; justify-content: space-between; margin: var(--s-12) 0 var(--s-6); padding-bottom: var(--s-5); border-bottom: 1px solid var(--border-faint); }
+  .editing-head .t { font-size: var(--t-md); font-weight: 600; }
+
+  /* condensed textarea (005-C) */
+  .ta { font: inherit; font-size: var(--t-md); line-height: 1.5; color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: var(--r-sm); padding: var(--s-5) var(--s-6); width: 100%; resize: none; height: 40px; overflow: hidden;
+        white-space: nowrap; text-overflow: ellipsis; cursor: text; transition: height var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+  .ta:focus { outline: none; height: 84px; white-space: normal; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .ta-meta { margin-top: var(--s-3); font-size: var(--t-2xs); }
+  .ta-meta .drives { display: inline-flex; align-items: center; gap: 5px; color: var(--accent); }
+  .ta-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+  /* coherence skeleton */
+  .tab-lead { margin-bottom: var(--s-10); }
+  .tab-lead > .sec { margin-bottom: var(--s-8); }
+  .tab-lead > .sec:last-child { margin-bottom: 0; }
+  .ctrl-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6) var(--s-12); align-items: start; }
+  .ctrl-2col .colwrap { display: flex; flex-direction: column; min-width: 0; }
+  .ctrl-2col .colwrap > .sec:first-child { margin-top: 0; }
+  .ctrl-2col .row { grid-template-columns: 72px 1fr; }
+
+  /* B: explicit lead-slot frame to prove the skeleton is identical */
+  .variant.framed .tab-lead { border: 1px dashed var(--border); border-radius: var(--r-md); padding: var(--s-6); background: oklch(0.245 0.030 282 / 0.35); position: relative; }
+  .variant.framed .tab-lead::before { content: "ZONA CABECERA · ancho completo"; position: absolute; top: -8px; left: var(--s-6); font-size: 9px; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); background: var(--canvas); padding: 0 6px; }
+  .variant.framed .ctrl-2col { border: 1px dashed var(--border); border-radius: var(--r-md); padding: var(--s-8) var(--s-6) var(--s-6); position: relative; }
+  .variant.framed .ctrl-2col::before { content: "FORMULARIO · 2 columnas (idéntico en cada tab)"; position: absolute; top: -8px; left: var(--s-6); font-size: 9px; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); background: var(--canvas); padding: 0 6px; }
+
+  /* metadata */
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; flex: 0 0 320px; }
+  .meta-h { padding: var(--s-10) var(--s-10) var(--s-6); }
+  .meta-h .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .meta-h h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta-h p { font-size: var(--t-xs); color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+  .meta-body { flex: 1; overflow-y: auto; padding: var(--s-6) var(--s-10) var(--s-12); display: flex; flex-direction: column; gap: var(--s-8); }
+  .ghost { opacity: 0.5; pointer-events: none; }
+  .gh-label { font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-3); }
+  .gh-box { background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: var(--s-6); color: var(--text-faint); font-size: var(--t-sm); }
+  .gh-line { height: 9px; border-radius: var(--r-full); background: var(--surface-2); margin: 7px 0; }
+  .gh-line.w70 { width: 70%; } .gh-line.w90 { width: 90%; } .gh-line.w50 { width: 50%; }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--s-4); }
+  .chip { font-size: var(--t-xs); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-full); padding: 4px 10px; }
+
+  /* chrome */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome);
+          border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .vtab:hover { background: var(--surface-hover); color: var(--text); }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 012 · subtitle density in the shell</span>
+  <button class="vtab active" onclick="show('a',this)">A · As decided (011-C in shell)</button>
+  <button class="vtab" onclick="show('b',this)">B ★ · Lead-slot normalized</button>
+  <button class="vtab" onclick="show('c',this)">C · Trimmed (no in-panel specimen)</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">switch tabs → feel the density jump between simple Títulos and dense Subtítulos</span>
+</nav>
+
+<div class="variant active" id="v-a"></div>
+<div class="variant framed" id="v-b"></div>
+<div class="variant" id="v-c"></div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  const TABS = [
+    { id:'titles',   label:'Títulos',   ct:2 },
+    { id:'overlays', label:'Overlays',  ct:3 },
+    { id:'subtitles',label:'Subtítulos',ct:null },
+  ];
+  const titles = [
+    { id:'t1', name:'Cómo edité este reel', x:300, y:170 },
+    { id:'t2', name:'El antes y el después', x:300, y:1500 },
+  ];
+  const overlays = [
+    { id:'o1', name:'logo-marca.png', kind:'logo', x:856, y:64, w:160, op:1, layer:'front' },
+    { id:'o2', name:'watermark.png',  kind:'mark', x:465, y:880, w:150, op:0.45, layer:'back' },
+    { id:'o3', name:'marco-borde.png',kind:'frame',x:0, y:0, w:1080, op:0.7, layer:'back' },
+  ];
+  const state = { a:{tab:'subtitles', sel:{titles:'t1',overlays:'o1'}}, b:{tab:'subtitles', sel:{titles:'t1',overlays:'o1'}}, c:{tab:'subtitles', sel:{titles:'t1',overlays:'o1'}} };
+
+  const presetGrid = `<div class="pgrid"><button>↖</button><button>↑</button><button>↗</button><button>←</button><button>•</button><button>→</button><button>↙</button><button class="on">↓</button><button>↘</button></div>`;
+
+  // ── Titles / Overlays form (simple — from 006-A) ──
+  function posSection(x,y){ return `<div class="sec"><div class="sec-h"><span class="num">1</span>Posición</div>
+      <div class="two"><div class="field"><span class="mini">X</span><input class="inp" value="${x}"></div><div class="field"><span class="mini">Y</span><input class="inp" value="${y}"></div></div>
+      ${presetGrid}</div>`; }
+  function advSection(rows){ return `<div class="sec" style="margin-bottom:0"><div class="sec-h"><span class="num">3</span>Avanzado <span class="note">· rara vez</span></div>${rows}</div>`; }
+  const swatches = `<div class="colorfield"><span class="cswatch"><input type="color" value="#ffffff"></span><span class="chex">#FFFFFF</span></div>`;
+
+  function titleForm(t){ return {
+    left: posSection(t.x,t.y) + advSection(`<div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div><div class="row"><label>Duración</label><input class="inp" value="3.0 s"></div>`),
+    right: `<div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+        <div class="row"><label>Texto</label><input class="inp" value="${t.name}"></div>
+        <div class="row"><label>Fuente</label><select class="sel"><option>Inter</option><option>Plus Jakarta Sans</option></select></div>
+        <div class="row"><label>Tamaño</label><div class="rng"><input type="range" min="12" max="80" value="40"><output>40</output></div></div>
+        <div class="row"><label>Peso</label><div class="seg"><button>Regular</button><button class="on">Bold</button></div></div>
+        <div class="row"><label>Color</label>${swatches}</div></div>` }; }
+  function overlayForm(o){ return {
+    left: posSection(o.x,o.y) + advSection(`<div class="row"><label>Aparece</label><input class="inp" value="0.0 s"></div><div class="row"><label>Duración</label><input class="inp" value="todo"></div>`),
+    right: `<div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+        <div class="row"><label>Capa</label><div class="seg"><button class="${o.layer==='back'?'on':''}">Detrás</button><button class="${o.layer==='front'?'on':''}">Delante</button></div></div>
+        <div class="row"><label>Ancho</label><div class="rng"><input type="range" min="40" max="1080" value="${o.w}"><output>${o.w}</output></div></div>
+        <div class="row"><label>Opacidad</label><div class="rng"><input type="range" min="0" max="100" value="${Math.round(o.op*100)}"><output>${Math.round(o.op*100)}</output></div></div></div>` }; }
+
+  function listCard(item, isOverlay, selId){
+    const kind = isOverlay ? item.kind : 'text';
+    const th = kind==='logo'?'th-logo':kind==='text'?'th-text':'th-mark';
+    const g = kind==='logo'?'R':kind==='mark'?'@':kind==='frame'?'▢':'T';
+    const sub = isOverlay ? `${item.w}px · ${Math.round(item.op*100)}%` : `X ${item.x} · Y ${item.y}`;
+    const badge = isOverlay ? `<span class="lbadge ${item.layer}">${item.layer==='back'?'Detrás':'Delante'}</span>` : '';
+    return `<div class="ovcard ${item.id===selId?'sel':''}" data-id="${item.id}"><span class="drag">⠿</span>
+      <span class="ovthumb ${th}">${g}</span><div class="info"><div class="nm">${item.name}</div><div class="sub">${sub}</div></div>${badge}</div>`;
+  }
+
+  // ── Subtitles dense form (011-C), assembled to fit the variant's coherence strategy ──
+  const fontGridHTML = `<div class="fontgrid">
+        <div class="fontcard on" data-font="'Plus Jakarta Sans'"><div class="fn" style="font-family:'Plus Jakarta Sans'">Plus Jakarta</div><div class="fp">Humanista</div></div>
+        <div class="fontcard" data-font="Inter"><div class="fn" style="font-family:Inter">Inter</div><div class="fp">Geométrica</div></div>
+        <div class="fontcard" data-font="Montserrat"><div class="fn" style="font-family:Montserrat">Montserrat</div><div class="fp">Grotesque</div></div>
+        <div class="fontcard" data-font="'Bebas Neue'"><div class="fn" style="font-family:'Bebas Neue';font-size:18px">BEBAS NEUE</div><div class="fp">Condensada</div></div>
+        <div class="fontmore">+ 22 fuentes</div></div>`;
+  const colorMatrix = `<div class="cmatrix">
+        <div class="crole"><span class="cswatch"><input type="color" value="#ffea00" data-active></span><span class="rl">Activo</span></div>
+        <div class="crole"><span class="cswatch"><input type="color" value="#ffffff"></span><span class="rl">Inactivo</span></div>
+        <div class="crole"><span class="cswatch"><input type="color" value="#00aaff"></span><span class="rl">Resalte</span></div>
+        <div class="crole"><span class="cswatch"><input type="color" value="#000000"></span><span class="rl">Borde</span></div></div>`;
+  const effectRows = `<div class="fx" data-fx>
+        <div class="fx-head"><span class="switch"></span><span class="fx-name">Glow</span><span class="fx-hint">apagado</span></div>
+        <div class="fx-params"><div class="row"><label>Color</label><div class="colorfield"><span class="cswatch"><input type="color" value="#ffffff"></span><span class="chex">#FFFFFF</span></div></div>
+          <div class="row"><label>Difusión</label><div class="rng"><input type="range" min="0" max="60" value="20"><output>20</output></div></div></div></div>
+      <div class="fx" data-fx>
+        <div class="fx-head"><span class="switch"></span><span class="fx-name">Fondo</span><span class="fx-hint">apagado</span></div>
+        <div class="fx-params"><div class="row"><label>Color</label><div class="colorfield"><span class="cswatch"><input type="color" value="#000000"></span><span class="chex">rgba 0,0,0,.5</span></div></div>
+          <div class="row"><label>Radio</label><div class="rng"><input type="range" min="0" max="24" value="4"><output>4</output></div></div></div></div>`;
+
+  const subTextarea = `<div class="sec"><div class="sec-h"><span class="num">✎</span>Texto de muestra <span class="note" style="margin-left:auto">enfocá para expandir</span></div>
+      <textarea class="ta" data-text>Cómo edité este reel para que los subtítulos enganchen palabra por palabra.</textarea>
+      <div class="ta-meta"><span class="drives"><span class="dot"></span>Alimenta los subtítulos · no se exporta</span></div></div>`;
+  const specimenBlock = `<div class="sec"><div class="specimen"><span class="sp-tag">vista en vivo</span><div class="sp-cap" data-cap></div></div></div>`;
+  const modeBlock = `<div class="sec"><div class="sec-h">Modo de subtítulo</div><div class="modecards">
+        <div class="modecard" data-mode><div class="mc-vis"><span class="a">pa</span><span class="b">labra</span></div><div class="mc-nm">TikTok</div></div>
+        <div class="modecard on" data-mode><div class="mc-vis"><span class="bar">barra</span></div><div class="mc-nm">Barra</div></div>
+        <div class="modecard" data-mode><div class="mc-vis"><span class="b">frase entera</span></div><div class="mc-nm">Frase</div></div>
+        <div class="modecard" data-mode><div class="mc-vis"><span class="a">kara</span><span class="b">oke</span></div><div class="mc-nm">Karaoke</div></div></div></div>`;
+
+  const subFormLeft = `<div class="sec"><div class="sec-h"><span class="num">1</span>Tipografía</div>
+        <div style="margin-bottom:var(--s-6)">${fontGridHTML}</div>
+        <div class="row"><label>Tamaño</label><div class="rng"><input type="range" min="24" max="200" value="58" data-size><output>58</output></div></div>
+        <div class="row"><label>Estilo</label><div class="seg" data-weight><button>Reg</button><button class="on">Bold</button><button><span style="font-style:italic">It</span></button></div></div>
+        <div class="row"><label>Espaciado</label><div class="rng"><input type="range" min="-2" max="20" value="0"><output>0</output></div></div></div>
+      <div class="sec" style="margin-bottom:0"><div class="sec-h"><span class="num">3</span>Posición</div>
+        <div class="row"><label>Lugar</label><div class="seg"><button>Arriba</button><button>Centro</button><button class="on">Abajo</button></div></div>
+        ${presetGrid}
+        <div class="row" style="margin-top:var(--s-6)"><label>Ancho</label><div class="rng"><input type="range" min="0" max="1080" value="710"><output>710</output></div></div></div>`;
+  const subFormRight = `<div class="sec"><div class="sec-h"><span class="num">2</span>Color</div>${colorMatrix}
+        <div class="row" style="margin-top:var(--s-6)"><label>Borde px</label><div class="rng"><input type="range" min="0" max="10" value="3"><output>3</output></div></div></div>
+      <div class="sec" style="margin-bottom:0"><div class="sec-h">Efectos <span class="note">· opcionales</span></div>${effectRows}</div>`;
+
+  function subtitleBody(vk){
+    // lead = textarea (+ specimen + modes per strategy), then 2-col form
+    let lead;
+    if (vk === 'c') {
+      // trimmed: textarea + modes, NO in-panel specimen (rely on the phone)
+      lead = `<div class="tab-lead">${subTextarea}${modeBlock}</div>`;
+    } else {
+      lead = `<div class="tab-lead">${subTextarea}${specimenBlock}${modeBlock}</div>`;
+    }
+    return lead + `<div class="ctrl-2col"><div class="colwrap">${subFormLeft}</div><div class="colwrap">${subFormRight}</div></div>`;
+  }
+
+  function listTabBody(vk, isOv){
+    const v = state[vk];
+    const items = isOv ? overlays : titles;
+    const selId = v.sel[isOv?'overlays':'titles'];
+    const sel = items.find(i=>i.id===selId) || items[0];
+    const form = isOv ? overlayForm(sel) : titleForm(sel);
+    const lead = `<div class="tab-lead">
+      <div class="listhead">${isOv?'Overlays':'Títulos'} <span class="cnt">${items.length}${isOv?' / 3':''}</span></div>
+      <div class="ovlist" data-list>${items.map(i=>listCard(i,isOv,selId)).join('')}</div>
+      <button class="addbtn">＋ Agregar ${isOv?'overlay':'título'}</button></div>`;
+    const editHead = `<div class="editing-head"><span class="t">${isOv?'Overlay':'Título'} · ${sel.name}</span></div>`;
+    return lead + editHead + `<div class="ctrl-2col"><div class="colwrap">${form.left}</div><div class="colwrap">${form.right}</div></div>`;
+  }
+
+  function body(vk){
+    const tab = state[vk].tab;
+    if (tab==='subtitles') return subtitleBody(vk);
+    return listTabBody(vk, tab==='overlays');
+  }
+
+  const metaHTML = `
+    <div class="meta-h"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div>
+      <p>Generada con IA desde la transcripción.</p></div>
+    <div class="meta-body ghost">
+      <div><div class="gh-label">Título</div><div class="gh-box">El truco de edición que cambió mis reels</div></div>
+      <div><div class="gh-label">Descripción</div><div class="gh-box"><div class="gh-line w90"></div><div class="gh-line w70"></div><div class="gh-line w50"></div></div></div>
+      <div><div class="gh-label">Hashtags</div><div class="chips"><span class="chip">#reels</span><span class="chip">#edición</span><span class="chip">#tutorial</span></div></div>
+    </div>`;
+
+  function caption(words, active){ return words.map((w,i)=> `<span class="w${i===active?' on':''}">${w}</span>`).join(' '); }
+
+  function render(vk){
+    const v = state[vk];
+    document.getElementById('v-'+vk).innerHTML = `
+      <header class="hdr">
+        <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+        <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><button class="btn ghost" title="Próximamente">Render Video</button><button class="btn primary">Guardar config</button></div>
+      </header>
+      <div class="work">
+        <section class="stage"><div class="phone" data-phone></div>
+          <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span><span class="pill">00:10</span></div></section>
+        <section class="controls">
+          <div class="tabs">${TABS.map(t=>`<button class="tab ${t.id===v.tab?'sel':''}" data-tab="${t.id}">${t.label}${t.ct?`<span class="ct">${t.ct}</span>`:''}</button>`).join('')}</div>
+          <div class="ctrl-body">${body(vk)}</div>
+        </section>
+        <aside class="meta">${metaHTML}</aside>
+      </div>`;
+    renderPhone(vk); wire(vk); sync(vk);
+  }
+
+  function renderPhone(vk){
+    const ph = document.querySelector('#v-'+vk+' [data-phone]'); const v = state[vk];
+    let html = '';
+    if (v.tab==='titles' || v.tab==='overlays') {
+      html += `<div class="pv-title">${titles.find(t=>t.id===v.sel.titles)?.name||'Cómo edité este reel'}</div>`;
+      overlays.forEach((o,i)=>{
+        const z=(o.layer==='front'?60:10)+i; const behind=o.layer==='back'?' behind':'';
+        let st=`z-index:${z};`;
+        if(o.kind==='frame'){ st+='inset:5%;border:5px solid oklch(0.82 0.095 242 / 0.5);background:transparent;border-radius:14px;'; }
+        else { st+=`left:${(o.x/1080*100).toFixed(1)}%;top:${(o.y/1920*100).toFixed(1)}%;opacity:${o.op};`; if(o.kind==='logo') st+=`width:${(o.w/1080*100).toFixed(1)}%;aspect-ratio:1;`; }
+        const cls=o.kind==='logo'?'ov-logo':o.kind==='mark'?'ov-mark':''; const lbl=o.kind==='logo'?'LOGO':o.kind==='mark'?'@user':'';
+        html += `<div class="pv-ov ${cls}${behind}" style="${st}">${lbl}</div>`;
+      });
+    }
+    html += `<div class="pv-cap" data-cap></div>`;
+    ph.innerHTML = html;
+  }
+
+  function sync(vk){
+    const root = document.getElementById('v-'+vk);
+    const text = root.querySelector('[data-text]')?.value.trim() || 'subtítulos que enganchan ahora';
+    const words = text.split(/\s+/).slice(0,4);
+    const active = Math.min(1, words.length-1);
+    const size = root.querySelector('[data-size]')?.value || 58;
+    const font = root.querySelector('.fontcard.on')?.dataset.font || "'Plus Jakarta Sans'";
+    const activeColor = root.querySelector('[data-active]')?.value || '#ffea00';
+    const wBtns = root.querySelector('[data-weight]');
+    const onLabel = wBtns ? (wBtns.querySelector('button.on')?.textContent || 'Bold') : 'Bold';
+    const bold = !/Reg/.test(onLabel); const italic = /It/.test(onLabel);
+    root.querySelectorAll('[data-cap]').forEach(cap=>{
+      cap.innerHTML = caption(words, active);
+      const isPhone = cap.classList.contains('pv-cap');
+      cap.style.fontSize = (isPhone ? size*0.52 : size*0.42)+'px';
+      cap.style.fontFamily = font + ', sans-serif';
+      cap.style.fontWeight = bold ? 800 : 500;
+      cap.style.fontStyle = italic ? 'italic' : 'normal';
+      cap.querySelectorAll('.w.on').forEach(w=> w.style.color = activeColor);
+    });
+  }
+
+  function wire(vk){
+    const root = document.getElementById('v-'+vk); const v = state[vk];
+    root.querySelectorAll('.tab').forEach(b=> b.onclick=()=>{ v.tab=b.dataset.tab; render(vk); });
+    root.querySelectorAll('[data-list] .ovcard').forEach(c=> c.onclick=()=>{ v.sel[v.tab==='overlays'?'overlays':'titles']=c.dataset.id; render(vk); });
+    root.querySelectorAll('.seg').forEach(s=> s.querySelectorAll('button').forEach(b=> b.onclick=()=>{ s.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); sync(vk); }));
+    root.querySelectorAll('.pgrid').forEach(g=> g.querySelectorAll('button').forEach(b=> b.onclick=()=>{ g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }));
+    root.querySelectorAll('.fontgrid').forEach(g=> g.querySelectorAll('.fontcard').forEach(c=> c.onclick=()=>{ g.querySelectorAll('.fontcard').forEach(x=>x.classList.remove('on')); c.classList.add('on'); sync(vk); }));
+    root.querySelectorAll('.modecards').forEach(g=> g.querySelectorAll('.modecard').forEach(c=> c.onclick=()=>{ g.querySelectorAll('.modecard').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }));
+    root.querySelectorAll('.rng input[type=range]').forEach(r=>{ const out=r.parentElement.querySelector('output'); r.oninput=()=>{ if(out) out.textContent=r.value; sync(vk); }; });
+    root.querySelectorAll('input[type=color]').forEach(ci=> ci.oninput=()=>{ const hex=ci.closest('.colorfield')?.querySelector('.chex'); if(hex) hex.textContent=ci.value.toUpperCase(); sync(vk); });
+    root.querySelectorAll('[data-fx] .fx-head').forEach(h=> h.onclick=()=>{ const fx=h.closest('.fx'); fx.classList.toggle('open'); h.querySelector('.fx-hint').textContent=fx.classList.contains('open')?'activado':'apagado'; });
+    const ta = root.querySelector('[data-text]'); if(ta) ta.oninput=()=>sync(vk);
+  }
+
+  ['a','b','c'].forEach(render);
+
+  function show(id, btn){
+    document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+    document.getElementById('v-'+id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

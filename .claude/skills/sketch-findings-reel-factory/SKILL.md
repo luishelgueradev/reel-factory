@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure, subtitle styling controls, drag-to-position). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, header action zone, render surface, drag-to-position, north-star composite & scope boundary). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -19,7 +19,9 @@ Sketch sessions wrapped: 2026-05-31 (sketches 001–003: shell, density, presets
 (sketches 004–007: per-tab structure, overlay layering, subtitles textarea, tab coherence, and the
 frontier drag-to-position surface), 2026-05-31 (sketches 008–010: off-happy-path states & save
 feedback, motion/timing coherence, and the frontier render/export surface), 2026-05-31 (sketch 011:
-subtitle styling control density against the full real caption schema).
+subtitle styling control density against the full real caption schema), 2026-06-01 (sketches 012–015:
+the TabLead/TabForm coherence skeleton, the reconciled header action zone, title styling density, and
+the north-star composite with its committed-vs-frontier scope boundary).
 </context>
 
 <design_direction>
@@ -55,12 +57,15 @@ The realized synthesis is **sketch 001 variant D** — it folds in 002-A's alway
 | Workspace Shell & Layout | references/workspace-shell.md | 3-column shell: content-sized preview (`flex:0 1 470px`) · controls grow into 2 internal columns · persistent (non-collapsing) 320px metadata placeholder |
 | Control Panel Density & Disclosure | references/control-panel-density.md | Always-open titled sections, Posición→Estilo→Avanzado, hairline dividers; no collapse/accordion (height absorbed by 2-col layout) |
 | Position Presets (shared component) | references/position-presets.md | 9-point arrow-button grid (↖↑↗ …), size-aware X/Y math vs 1080×1920 top-left anchor, inputs flash on apply |
-| Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; Overlays = list+form with Detrás/Delante layer toggle (D-03) & drag-reorder paint order (D-04); Subtitles = condensed/expanding sample-text textarea (D-10) |
+| Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; **TabLead/TabForm skeleton (012-B)** = the two slots every tab fills, the buildable form of the rule; Overlays = list+form with Detrás/Delante layer toggle (D-03) & drag-reorder paint order (D-04); Subtitles = condensed/expanding sample-text textarea (D-10) |
 | Subtitle Styling (dense controls) | references/subtitle-styling.md | Layout-mode = preset cards (not dropdown) leading the section, in-panel live specimen, 2×2 color-role matrix, collapsible Glow/Fondo effect-rows; validated against the real ~20-field caption schema from `pipeline-config.ts` (011-C). Anti-pattern: flat ~20 rows = the wall |
+| Title Styling (dense controls) | references/title-styling.md | Titles = **boxed text card + entrance animation**. Specimen showing the box + **entrance preset cards** (Slide↑/↓·Fade·Ninguna) + 1×2 Texto/Caja color pairing + collapsible Glow (014-C). The 011-C vocabulary transfers: mode-cards→entrance-cards, color-matrix→box/text, effect-rows→glow. One component kit for both tabs. Anti-pattern: flat ~16 rows = the same wall |
+| Header Action Zone | references/header-action-zone.md | Split zones (013-B): status chip left (ambient, by brand) · Guardar(outline)+Render(green) right, hairline between. **Render is the only green; Guardar never greens — the chip carries dirty.** Chip holds its left home through render. State map idle→dirty→saving→rendering→done |
 | Preview as Editing Surface (frontier) | references/preview-direct-manipulation.md | ⚠️ Scope-expanding. Drag-to-position on the full preview, snapping to the same 9 anchors and writing the same X/Y path; cheap subset = click-to-select. Beyond committed control-driven scope |
 | States, Empties & Save Feedback | references/states-and-save-feedback.md | Save = header status chip (`● Cambios sin guardar`→`Guardando…`→`✓ Guardado recién`) left of a stay-put button; validated empty (0/3), cap (3/3 disabled), no-video & Whisper-loading states |
 | Motion & Timing | references/motion-and-timing.md | Calm 170ms ease-out-quart; two-tier timing (state `--dur` 170ms / travel `--dur2` 300ms); all 5 motions cohere; `prefers-reduced-motion` collapse required |
 | Render / Export Surface (frontier) | references/render-export-surface.md | ⚠️ Scope-expanding. Render on the dimmed preview (progress ring + 3-step pipeline → "Reel listo"), no modal; Render takes the green primary; single-job constraint surfaced; OOM-aware failure |
+| North-Star Composite & Scope Boundary | references/north-star-composite.md | The whole vision in one screen (015-A: 013-B header + 001-D shell + all tabs + 007 drag + 010 render). **Plan-split rule: ship the committed editing surface (B) first, bolt on the 007/010 frontier layers later without rework.** The A↔B contrast names the boundary |
 
 ## Theme
 
@@ -83,6 +88,10 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/009-motion-coherence/index.html` — winner `#v-a`
 - `sources/010-render-export-surface/index.html` — winner `#v-a` (frontier / scope-expanding)
 - `sources/011-subtitle-style-density/index.html` — winner `#v-c`
+- `sources/012-subtitle-density-in-shell/index.html` — winner `#v-b`
+- `sources/013-header-action-zone/index.html` — winner `#v-b`
+- `sources/014-title-style-density/index.html` — winner `#v-c`
+- `sources/015-north-star-composite/index.html` — winner `#v-a` (A = north star; B = committed-scope slice)
 </findings_index>
 
 <metadata>
@@ -99,4 +108,8 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 009-motion-coherence (winner A)
 - 010-render-export-surface (winner A — frontier, scope-expanding)
 - 011-subtitle-style-density (winner C)
+- 012-subtitle-density-in-shell (winner B — TabLead/TabForm skeleton)
+- 013-header-action-zone (winner B — split zones)
+- 014-title-style-density (winner C — specimen + entrance cards)
+- 015-north-star-composite (winner A — north star; B = committed-scope slice)
 </metadata>

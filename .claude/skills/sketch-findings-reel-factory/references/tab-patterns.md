@@ -25,6 +25,28 @@ section rhythm, header style, and row cadence stay identical when switching tabs
   width breakpoint, `.ctrl-2col` collapses to one column (preview + metadata narrow). Kept as
   real-build behavior, never the primary view.
 
+### The TabLead / TabForm skeleton (sketch 012-B — the coherence rule made buildable)
+006's coherence rule was proven on a *simplified* Subtitles. Sketch 012 re-ran it with the **real dense
+Subtitles** (011-C: full-width specimen + 4-up mode cards + 2×2 color matrix + collapsible effect-rows)
+composed next to the still-lean Titles/Overlays — does the density jump read as "same panel showing
+more," or as a different screen? **Winner 012-B: formalize the rule as a named two-slot skeleton every
+tab fills.**
+
+- **`tab-lead`** = the full-width lead region. Per tab it holds: Títulos/Overlays → the **card list**;
+  Subtítulos → **textarea + specimen + mode cards**. Whatever the tab's full-width content is, it lives
+  here, above the form.
+- **`ctrl-2col` (TabForm)** = the **always-2-col** Posición/Estilo/Avanzado form, identical skeleton on
+  every tab.
+- **Finding:** *naming the slot* is what turns the density jump into "same panel, fuller lead" rather
+  than "different screen." The dense Subtitles and the lean Títulos read as one panel because they fill
+  the **same two slots** — only the lead's contents differ.
+- **Build contract:** this hands the React build a literal **`<TabLead>` / `<TabForm>`** pair. Every tab
+  is `<TabLead>{full-width content}</TabLead><TabForm>{2-col sections}</TabForm>`. This is the structural
+  realization of the 006-A coherence rule — don't reimplement per-tab layout; compose these two.
+- 012-A (011-C verbatim, no skeleton) already coheres; B's contribution is making the coherence
+  *explicit and reusable*. 012-C (drop the in-panel specimen, lean on the phone preview) is the lighter
+  fallback if vertical space gets tight (see `references/subtitle-styling.md`).
+
 ### Overlays — list + detail form (sketch 004-A)
 The Overlays tab manages a multi-item list (hard cap **3** = real `MAX_OVERLAYS`) while keeping the
 dense form identical to Titles/Subtitles:
@@ -126,6 +148,29 @@ var(--accent-tint); color: var(--accent); }`.
 @media (max-width: …) { .ctrl-2col { grid-template-columns: 1fr; } }
 ```
 
+### The TabLead / TabForm skeleton (012-B) — the two slots every tab fills
+```css
+/* slot 1: full-width lead. list (Títulos/Overlays) OR textarea+specimen+mode-cards (Subtítulos) */
+.tab-lead { margin-bottom: var(--s-10); }
+.tab-lead > .sec { margin-bottom: var(--s-8); }
+.tab-lead > .sec:last-child { margin-bottom: 0; }
+/* slot 2: the form = .ctrl-2col (always 2-col). identical on every tab. */
+```
+```js
+// every tab body is exactly: <TabLead>{leadContent}</TabLead><TabForm>{2-col sections}</TabForm>
+function subtitleBody(vk) {                       // Subtítulos lead = textarea + specimen + mode cards
+  const lead = `<div class="tab-lead">${subTextarea}${specimenBlock}${modeBlock}</div>`;
+  return lead + `<div class="ctrl-2col"><div class="colwrap">${subFormLeft}</div><div class="colwrap">${subFormRight}</div></div>`;
+}
+function listTabBody(vk, isOv) {                  // Títulos/Overlays lead = the card list
+  const lead = `<div class="tab-lead"><div class="listhead">…</div><div class="ovlist">…cards…</div><button class="addbtn">＋ Agregar</button></div>`;
+  return lead + editHead + `<div class="ctrl-2col"><div class="colwrap">${form.left}</div><div class="colwrap">${form.right}</div></div>`;
+}
+```
+012-B's sketch makes the skeleton *visible* with dashed `ZONA CABECERA` / `FORMULARIO · 2 columnas`
+frames purely to prove the slots are identical across tabs — those frames are a teaching device, not a
+shipping treatment.
+
 ## HTML Structures
 
 ### Subtitles tab — textarea-led, then the 2-col form (005-C composed)
@@ -182,6 +227,7 @@ var(--accent-tint); color: var(--accent); }`.
 
 ## Origin
 Synthesized from sketches: 004 (overlay list & layering, winner A), 005 (subtitles tab restructure,
-winner C), 006 (all-three-tabs coherence, winner A). Source files in `sources/004-overlay-list-and-layering/`,
-`sources/005-subtitles-tab-restructure/`, `sources/006-all-three-tabs-coherence/` (winners marked ★
-in each variant nav).
+winner C), 006 (all-three-tabs coherence, winner A), 012 (subtitle density in shell, winner B — the
+`TabLead`/`TabForm` skeleton). Source files in `sources/004-overlay-list-and-layering/`,
+`sources/005-subtitles-tab-restructure/`, `sources/006-all-three-tabs-coherence/`,
+`sources/012-subtitle-density-in-shell/` (winners marked ★ in each variant nav).

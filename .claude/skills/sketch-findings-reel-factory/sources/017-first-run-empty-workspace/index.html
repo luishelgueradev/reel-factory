@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 017 — first-run empty workspace</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text);
+         font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  /* ── header ── */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between;
+         padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm);
+         background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+         display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-4); align-items: center; }
+  /* split-zone header (013-B): chip left of brand area, actions right */
+  .save-chip { display: inline-flex; align-items: center; gap: var(--s-3); font-size: var(--t-xs);
+               padding: var(--s-2) var(--s-5); border-radius: var(--r-full); color: var(--text-muted);
+               background: var(--surface); border: 1px solid var(--border-faint); }
+  .save-chip .dot { width: 6px; height: 6px; border-radius: var(--r-full); background: currentColor; opacity: 0.6; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm);
+         border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer;
+         transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
+  .btn.green { background: var(--action); border-color: transparent; color: oklch(0.16 0.02 150); font-weight: 600; }
+  .btn.green:hover { background: var(--action-hover); }
+  .btn.ghost { color: var(--text-faint); border-style: dashed; cursor: not-allowed; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ── work area ── */
+  .work { flex: 1; display: flex; min-height: 0; position: relative; }
+  .stage { flex: 0 1 460px; background: var(--stage); display: flex; flex-direction: column;
+           align-items: center; justify-content: center; padding: var(--s-12); border-right: 1px solid var(--border); min-width: 0; }
+
+  /* dropzone (the cold-start hero) */
+  .dropzone { width: 100%; max-width: 320px; aspect-ratio: 9 / 16; border-radius: 18px;
+              border: 2px dashed var(--border-strong); background: oklch(0.20 0.025 280 / 0.5);
+              display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-8);
+              text-align: center; padding: var(--s-12); cursor: pointer; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .dropzone:hover { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .dz-ic { width: 54px; height: 54px; border-radius: var(--r-lg); background: var(--surface);
+           border: 1px solid var(--border); display: grid; place-items: center; font-size: 26px; color: var(--accent); }
+  .dz-title { font-size: var(--t-lg); font-weight: 600; color: var(--text); }
+  .dz-sub { font-size: var(--t-sm); color: var(--text-muted); line-height: 1.5; max-width: 220px; }
+  .dz-or { font-size: var(--t-xs); color: var(--text-faint); }
+  .dz-formats { font-size: var(--t-2xs); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-top: var(--s-4); }
+  .dz-btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 18px; border-radius: var(--r-sm);
+            background: var(--action); color: oklch(0.16 0.02 150); border: none; cursor: pointer; }
+
+  /* ── controls column ── */
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; position: relative; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab { appearance: none; border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500;
+         color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+  .ctrl-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6) var(--s-12); align-items: start; }
+  .colwrap { display: flex; flex-direction: column; min-width: 0; }
+
+  /* sections / atoms */
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700;
+           letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .row { display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 9px; width: 100%; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .rng { display: grid; grid-template-columns: 1fr 42px; align-items: center; gap: var(--s-5); }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); }
+  .rng output { font-size: var(--t-xs); color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; }
+  .pgrid { display: inline-grid; grid-template-columns: repeat(3, 28px); grid-auto-rows: 28px; gap: 3px; margin-top: var(--s-3); }
+  .pgrid button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: var(--r-xs); cursor: pointer; font-size: 12px; display: grid; place-items: center; }
+  .pgrid button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  /* A: controls gated behind a soft overlay */
+  .gate { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+          background: oklch(0.18 0.02 280 / 0.62); backdrop-filter: blur(2px); }
+  .gate-card { text-align: center; max-width: 250px; }
+  .gate-card .gc-ic { font-size: 26px; color: var(--text-muted); margin-bottom: var(--s-5); }
+  .gate-card h3 { font-size: var(--t-md); color: var(--text); font-weight: 600; margin-bottom: var(--s-3); }
+  .gate-card p { font-size: var(--t-sm); color: var(--text-muted); line-height: 1.5; }
+  .dimmed { opacity: 0.4; filter: saturate(0.6); pointer-events: none; user-select: none; }
+
+  /* B: "defaults" hint banner */
+  .pre-banner { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-5) var(--s-6); margin-bottom: var(--s-8);
+                border-radius: var(--r-sm); font-size: var(--t-xs); line-height: 1.45; color: var(--text-2);
+                background: var(--accent-tint-2); border: 1px solid var(--accent-strong); }
+  .pre-banner b { color: var(--text); font-weight: 600; }
+
+  /* metadata column */
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); flex: 0 0 300px; padding: var(--s-10); display: flex; flex-direction: column; }
+  .meta .row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .meta h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta p { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; margin-bottom: var(--s-8); }
+  .gh-box { background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: var(--s-6); margin-bottom: var(--s-6); opacity: 0.5; }
+  .gh-label { font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-4); }
+  .gh-line { height: 9px; border-radius: var(--r-full); background: var(--surface-2); margin: 7px 0; }
+  .gh-line.w70 { width: 70%; } .gh-line.w90 { width: 90%; } .gh-line.w50 { width: 50%; }
+
+  /* C: welcome takeover */
+  .welcome-scrim { position: absolute; inset: 0; z-index: 50; background: oklch(0.16 0.02 280 / 0.74); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: var(--s-12); }
+  .welcome { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--border-strong);
+             border-radius: var(--r-lg); box-shadow: var(--shadow-pop); padding: var(--s-16); text-align: center; }
+  .welcome .w-glyph { width: 52px; height: 52px; border-radius: var(--r-md); margin: 0 auto var(--s-8);
+             background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-xl); color: var(--stage); }
+  .welcome h2 { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; margin-bottom: var(--s-5); }
+  .welcome .lead { font-size: var(--t-md); color: var(--text-2); line-height: 1.55; margin-bottom: var(--s-10); }
+  .welcome .steps { display: flex; gap: var(--s-6); justify-content: center; margin-bottom: var(--s-12); }
+  .welcome .step { flex: 1; max-width: 110px; }
+  .welcome .step .sn { width: 22px; height: 22px; border-radius: var(--r-full); background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); display: grid; place-items: center; font-size: var(--t-2xs); font-weight: 700; margin: 0 auto var(--s-4); }
+  .welcome .step .st { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.4; }
+  .welcome .w-actions { display: flex; gap: var(--s-5); justify-content: center; }
+  .welcome .w-actions .btn { font-size: var(--t-base); padding: 9px 20px; }
+
+  /* variant nav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome);
+          border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .vtab:hover { background: var(--surface-hover); color: var(--text); }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 017 · first-run empty workspace</span>
+  <button class="vtab active" onclick="show('a',this)">A · Empty guiado (controles gated)</button>
+  <button class="vtab" onclick="show('b',this)">B ★ Chosen · Controles vivos con defaults</button>
+  <button class="vtab" onclick="show('c',this)">C · Welcome takeover</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">sin video · nada configurado · ¿dónde vive el verde?</span>
+</nav>
+
+<!-- reusable dense controls markup is injected by JS to keep variants in sync -->
+<template id="tpl-controls">
+  <div class="ctrl-2col">
+    <div class="colwrap">
+      <div class="sec"><div class="sec-h"><span class="num">1</span>Posición</div>
+        <div class="row"><label>Lugar</label><div class="seg"><button>Arriba</button><button>Centro</button><button class="on">Abajo</button></div></div>
+        <div class="pgrid"><button>↖</button><button>↑</button><button>↗</button><button>←</button><button>•</button><button>→</button><button>↙</button><button class="on">↓</button><button>↘</button></div>
+        <div class="row" style="margin-top:var(--s-6)"><label>Ancho</label><div class="rng"><input type="range" min="0" max="1080" value="710"><output>710</output></div></div>
+      </div>
+      <div class="sec" style="margin-bottom:0"><div class="sec-h"><span class="num">3</span>Avanzado <span style="color:var(--text-faint);font-weight:500;text-transform:none;letter-spacing:0">· ritmo</span></div>
+        <div class="row"><label>Modo</label><div class="seg"><button class="on">TikTok</button><button>Barra</button><button>Frase</button></div></div>
+        <div class="row"><label>Palabras</label><input class="inp" value="3"></div>
+      </div>
+    </div>
+    <div class="colwrap">
+      <div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+        <div class="row"><label>Fuente</label><input class="inp" value="Plus Jakarta Sans"></div>
+        <div class="row"><label>Tamaño</label><div class="rng"><input type="range" min="24" max="200" value="58"><output>58</output></div></div>
+        <div class="row"><label>Estilo</label><div class="seg"><button>Reg</button><button class="on">Bold</button><button style="font-style:italic">It</button></div></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- ════════════════════ VARIANT A — guided empty, controls gated ════════════════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Nuevo proyecto</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Sin cambios</span><button class="btn" disabled>Guardar config</button><button class="btn ghost">Render</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="dropzone">
+        <div class="dz-ic">↑</div>
+        <div><div class="dz-title">Subí un video para empezar</div><div class="dz-sub">Arrastrá un MP4 acá, o elegí un archivo. Una persona hablando, formato vertical u horizontal.</div></div>
+        <button class="dz-btn">Elegir archivo</button>
+        <div class="dz-formats">MP4 · hasta 10 min</div>
+      </div>
+    </section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button></div>
+      <div class="ctrl-body dimmed" data-controls></div>
+      <div class="gate">
+        <div class="gate-card">
+          <div class="gc-ic">⬡</div>
+          <h3>Cargá un video para editar</h3>
+          <p>Los controles de subtítulos, títulos y overlays se activan en cuanto el video esté listo.</p>
+        </div>
+      </div>
+    </section>
+    <aside class="meta">
+      <div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div>
+      <p>Se generará con IA desde la transcripción del video.</p>
+      <div class="gh-box"><div class="gh-label">Título</div><div class="gh-line w90"></div></div>
+      <div class="gh-box"><div class="gh-label">Descripción</div><div class="gh-line w90"></div><div class="gh-line w70"></div><div class="gh-line w50"></div></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════════════════ VARIANT B — controls live with defaults ════════════════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Nuevo proyecto</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Sin cambios</span><button class="btn" disabled>Guardar config</button><button class="btn ghost">Render</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="dropzone">
+        <div class="dz-ic">↑</div>
+        <div><div class="dz-title">Subí tu video</div><div class="dz-sub">Mientras tanto, podés dejar tu estilo listo en el panel de la derecha.</div></div>
+        <button class="dz-btn">Elegir archivo</button>
+        <div class="dz-formats">MP4 · hasta 10 min</div>
+      </div>
+    </section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button></div>
+      <div class="ctrl-body">
+        <div class="pre-banner">✎ <span>Estás configurando los <b>valores por defecto</b>. Se aplicarán al video apenas lo cargues.</span></div>
+        <div data-controls></div>
+      </div>
+    </section>
+    <aside class="meta">
+      <div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div>
+      <p>Se generará con IA desde la transcripción del video.</p>
+      <div class="gh-box"><div class="gh-label">Título</div><div class="gh-line w90"></div></div>
+      <div class="gh-box"><div class="gh-label">Descripción</div><div class="gh-line w90"></div><div class="gh-line w70"></div><div class="gh-line w50"></div></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════════════════ VARIANT C — welcome takeover ════════════════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Nuevo proyecto</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Sin cambios</span><button class="btn" disabled>Guardar config</button><button class="btn ghost">Render</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="dropzone" style="opacity:0.35"><div class="dz-ic">↑</div><div><div class="dz-title">Subí un video</div></div></div>
+    </section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button></div>
+      <div class="ctrl-body dimmed" data-controls></div>
+    </section>
+    <aside class="meta" style="opacity:0.4">
+      <div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div>
+      <p>Se generará con IA desde la transcripción del video.</p>
+    </aside>
+    <!-- the takeover sits over the whole work area -->
+    <div class="welcome-scrim">
+      <div class="welcome">
+        <div class="w-glyph">R</div>
+        <h2>Convertí un video hablado en un reel</h2>
+        <p class="lead">Subtítulos palabra-por-palabra, silencios recortados y formato vertical 9:16 — listo para redes con un solo flujo.</p>
+        <div class="steps">
+          <div class="step"><div class="sn">1</div><div class="st">Subís un MP4</div></div>
+          <div class="step"><div class="sn">2</div><div class="st">Ajustás el estilo</div></div>
+          <div class="step"><div class="sn">3</div><div class="st">Renderizás el reel</div></div>
+        </div>
+        <div class="w-actions">
+          <button class="btn green">Subir video</button>
+          <button class="btn">Ver un ejemplo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  // inject the shared dense controls into each variant's mount
+  const tpl = document.getElementById("tpl-controls").innerHTML;
+  document.querySelectorAll("[data-controls]").forEach(el => el.innerHTML = tpl);
+
+  // make seg/pgrid clickable for tactile realism
+  document.querySelectorAll(".seg, .pgrid").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
+    if (b.closest(".dimmed")) return;
+    g.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+  }));
+  document.querySelectorAll(".rng input[type=range]").forEach(r => {
+    const out = r.parentElement.querySelector("output"); if (out) r.oninput = () => out.textContent = r.value;
+  });
+
+  function show(id, btn) {
+    document.querySelectorAll(".variant").forEach(v => v.classList.remove("active"));
+    document.getElementById("v-" + id).classList.add("active");
+    document.querySelectorAll(".vtab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+  }
+</script>
+</body>
+</html>

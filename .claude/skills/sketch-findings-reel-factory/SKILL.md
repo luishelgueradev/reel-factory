@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, header action zone, render surface, drag-to-position, north-star composite & scope boundary). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, font picker, header action zone, render surface, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star composite & scope boundary). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -21,7 +21,9 @@ frontier drag-to-position surface), 2026-05-31 (sketches 008–010: off-happy-pa
 feedback, motion/timing coherence, and the frontier render/export surface), 2026-05-31 (sketch 011:
 subtitle styling control density against the full real caption schema), 2026-06-01 (sketches 012–015:
 the TabLead/TabForm coherence skeleton, the reconciled header action zone, title styling density, and
-the north-star composite with its committed-vs-frontier scope boundary).
+the north-star composite with its committed-vs-frontier scope boundary), 2026-06-01 (sketches 016–018:
+the slide-over font-picker shared component, the first-run/empty-workspace cold start, and the
+responsive breakpoint reflow rule for the dense tabs).
 </context>
 
 <design_direction>
@@ -60,6 +62,9 @@ The realized synthesis is **sketch 001 variant D** — it folds in 002-A's alway
 | Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; **TabLead/TabForm skeleton (012-B)** = the two slots every tab fills, the buildable form of the rule; Overlays = list+form with Detrás/Delante layer toggle (D-03) & drag-reorder paint order (D-04); Subtitles = condensed/expanding sample-text textarea (D-10) |
 | Subtitle Styling (dense controls) | references/subtitle-styling.md | Layout-mode = preset cards (not dropdown) leading the section, in-panel live specimen, 2×2 color-role matrix, collapsible Glow/Fondo effect-rows; validated against the real ~20-field caption schema from `pipeline-config.ts` (011-C). Anti-pattern: flat ~20 rows = the wall |
 | Title Styling (dense controls) | references/title-styling.md | Titles = **boxed text card + entrance animation**. Specimen showing the box + **entrance preset cards** (Slide↑/↓·Fade·Ninguna) + 1×2 Texto/Caja color pairing + collapsible Glow (014-C). The 011-C vocabulary transfers: mode-cards→entrance-cards, color-matrix→box/text, effect-rows→glow. One component kit for both tabs. Anti-pattern: flat ~16 rows = the same wall |
+| Font Picker (shared component) | references/font-picker.md | **Slide-over gallery sheet** (016-C) opened from a current-font trigger: search + category chips (Sans/Condensada/Display/Serif/Script/Mono) over a 2-up grid of cards each rendering the **sample text in its own face**, against the real 26-font `AVAILABLE_FONTS`. Selection = blue; self-contained, drops into Títulos + Subtítulos. Resolves the picker 011 flagged. Anti-pattern: inline scroll-box / popover (too cramped for 26 live specimens) |
+| First-Run & Empty Workspace | references/first-run-empty-workspace.md | Cold start = **dropzone on the stage + dense controls live on their defaults** (017-B), framed by a "valores por defecto" banner. Single green = the upload action; Guardar disabled, Render ghosted; metadata column persists "Próximamente". Not gated, not a welcome takeover |
+| Responsive Breakpoint Reflow | references/responsive-reflow.md | At the narrow (~360px) column, **reflow the multi-up grids** (018-B): 2-col form → 1-col, mode/entrance cards → 2×2, font grid → 1-up, color matrix stays 2×2. **002-A's always-open rule stays intact** (no disclosure-under-pressure). One reflow rule across all three tabs |
 | Header Action Zone | references/header-action-zone.md | Split zones (013-B): status chip left (ambient, by brand) · Guardar(outline)+Render(green) right, hairline between. **Render is the only green; Guardar never greens — the chip carries dirty.** Chip holds its left home through render. State map idle→dirty→saving→rendering→done |
 | Preview as Editing Surface (frontier) | references/preview-direct-manipulation.md | ⚠️ Scope-expanding. Drag-to-position on the full preview, snapping to the same 9 anchors and writing the same X/Y path; cheap subset = click-to-select. Beyond committed control-driven scope |
 | States, Empties & Save Feedback | references/states-and-save-feedback.md | Save = header status chip (`● Cambios sin guardar`→`Guardando…`→`✓ Guardado recién`) left of a stay-put button; validated empty (0/3), cap (3/3 disabled), no-video & Whisper-loading states |
@@ -92,6 +97,9 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/013-header-action-zone/index.html` — winner `#v-b`
 - `sources/014-title-style-density/index.html` — winner `#v-c`
 - `sources/015-north-star-composite/index.html` — winner `#v-a` (A = north star; B = committed-scope slice)
+- `sources/016-font-picker/index.html` — winner `#v-c` (slide-over gallery; shared component)
+- `sources/017-first-run-empty-workspace/index.html` — winner `#v-b` (controls live with defaults)
+- `sources/018-dense-tabs-at-breakpoint/index.html` — winner `#v-b` (reflow the multi-up grids)
 </findings_index>
 
 <metadata>
@@ -112,4 +120,7 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 013-header-action-zone (winner B — split zones)
 - 014-title-style-density (winner C — specimen + entrance cards)
 - 015-north-star-composite (winner A — north star; B = committed-scope slice)
+- 016-font-picker (winner C — slide-over gallery, shared component)
+- 017-first-run-empty-workspace (winner B — controls live with defaults)
+- 018-dense-tabs-at-breakpoint (winner B — reflow the multi-up grids)
 </metadata>

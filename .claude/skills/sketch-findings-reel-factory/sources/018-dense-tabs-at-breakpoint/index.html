@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 018 — dense tabs at breakpoint</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base);
+         padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; min-height: calc(100vh - 46px); padding: var(--s-12); }
+  .variant.active { display: block; }
+
+  /* the explainer + the narrow-panel stage */
+  .explain { max-width: 760px; margin: 0 auto var(--s-12); color: var(--text-2); font-size: var(--t-sm); line-height: 1.6; }
+  .explain b { color: var(--text); }
+  .explain .bp { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-2xs); text-transform: uppercase;
+                 letter-spacing: 0.08em; color: var(--accent); background: var(--accent-tint); border: 1px solid var(--accent-strong);
+                 padding: 3px 9px; border-radius: var(--r-full); }
+
+  /* simulate the controls column collapsed to its narrow single-column width */
+  .panel-stage { display: flex; justify-content: center; }
+  .panel { width: 360px; background: var(--canvas); border: 1px solid var(--border-strong); border-radius: var(--r-md);
+           overflow: hidden; box-shadow: var(--shadow-md); }
+  .ruler { font-size: var(--t-2xs); color: var(--text-faint); text-align: center; margin-bottom: var(--s-5);
+           text-transform: uppercase; letter-spacing: 0.08em; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-8); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .tab { border: none; background: none; font: inherit; font-size: var(--t-sm); font-weight: 500; color: var(--text-muted);
+         padding: 11px 11px 9px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .ctrl-body { padding: var(--s-8); max-height: 640px; overflow-y: auto; }
+
+  /* atoms (locked vocabulary, from 011) */
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700;
+           letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .sec-h .note { color: var(--text-faint); font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .row { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .rng { display: grid; grid-template-columns: 1fr 42px; align-items: center; gap: var(--s-5); }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); }
+  .rng output { font-size: var(--t-xs); color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* full-width lead: textarea + specimen */
+  .ta { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: var(--r-sm); padding: var(--s-5) var(--s-6); width: 100%; resize: none; height: 40px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .ta-meta { margin-top: var(--s-3); font-size: var(--t-2xs); color: var(--accent); display: flex; align-items: center; gap: 5px; }
+  .ta-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .specimen { position: relative; border-radius: var(--r-md); margin: var(--s-8) 0; overflow: hidden;
+              background: linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.20 0.03 270)); border: 1px solid var(--border);
+              min-height: 80px; display: grid; place-items: center; padding: var(--s-8); }
+  .specimen .sp-cap { font-family: 'Plus Jakarta Sans', var(--font); font-weight: 800; font-size: 23px; line-height: 1.18; text-align: center; }
+  .specimen .sp-cap .on { color: #ffea00; }
+  .specimen .sp-tag { position: absolute; top: 6px; right: 8px; font-size: var(--t-2xs); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; }
+
+  /* mode cards — the reflow battleground */
+  .modecards { display: grid; gap: var(--s-4); margin-bottom: var(--s-8); }
+  .modecards.up4 { grid-template-columns: repeat(4, 1fr); }   /* A: literal — stays 4-up */
+  .modecards.up2 { grid-template-columns: repeat(2, 1fr); }   /* B/C: reflows to 2x2 */
+  .modecard { padding: var(--s-5) var(--s-2) var(--s-4); background: var(--surface); border: 1px solid var(--border);
+              border-radius: var(--r-sm); cursor: pointer; text-align: center; }
+  .modecard.on { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .modecard .mc-vis { height: 26px; border-radius: var(--r-xs); background: var(--stage); display: grid; place-items: center; margin-bottom: var(--s-3); overflow: hidden; }
+  .modecard .mc-vis span { font-size: 9px; font-weight: 800; }
+  .modecard .mc-vis .a { color: #ffea00; } .modecard .mc-vis .b { color: #fff; opacity: 0.6; }
+  .modecard .mc-vis .bar { background: var(--accent); color: var(--stage); padding: 1px 4px; border-radius: 2px; }
+  .modecard .mc-nm { font-size: var(--t-2xs); color: var(--text-2); font-weight: 600; }
+  .modecard.on .mc-nm { color: var(--accent); }
+
+  /* font grid — A keeps 2-up (cramped), B/C go 1-up */
+  .fontgrid { display: grid; gap: var(--s-4); margin-bottom: var(--s-6); }
+  .fontgrid.up2 { grid-template-columns: 1fr 1fr; }
+  .fontgrid.up1 { grid-template-columns: 1fr; }
+  .fontcard { padding: var(--s-4) var(--s-5); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
+  .fontcard.on { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .fontcard .fn { font-size: var(--t-md); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fontcard .fp { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .fontmore { grid-column: 1 / -1; text-align: center; font-size: var(--t-2xs); color: var(--text-faint); padding-top: 2px; cursor: pointer; }
+
+  /* color matrix — stays 2x2 everywhere (already compact) */
+  .cmatrix { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-6); }
+  .crole { display: flex; align-items: center; gap: var(--s-4); padding: var(--s-3) 0; }
+  .crole .rl { font-size: var(--t-xs); color: var(--text-2); flex: 1; }
+  .cswatch { position: relative; width: 24px; height: 24px; flex: none; border-radius: var(--r-sm); border: 1px solid var(--border-strong); overflow: hidden; cursor: pointer; }
+  .cswatch input[type=color] { position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); border: none; padding: 0; background: none; }
+
+  /* effect rows */
+  .fx { border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); margin-bottom: var(--s-5); overflow: hidden; }
+  .fx-head { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-5) var(--s-6); cursor: pointer; }
+  .fx-head .fx-name { font-size: var(--t-sm); color: var(--text); flex: 1; font-weight: 500; }
+  .fx-head .fx-hint { font-size: var(--t-2xs); color: var(--text-faint); }
+  .switch { position: relative; width: 30px; height: 17px; border-radius: var(--r-full); background: var(--surface-hover); border: 1px solid var(--border-strong); flex: none; }
+  .switch::after { content: ""; position: absolute; top: 1px; left: 1px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-2); transition: transform var(--dur) var(--ease); }
+  .fx.open .switch { background: var(--accent-tint); border-color: var(--accent-strong); }
+  .fx.open .switch::after { transform: translateX(13px); background: var(--accent); }
+  .fx-params { display: none; padding: 0 var(--s-6) var(--s-6); }
+  .fx.open .fx-params { display: block; }
+
+  /* C: disclosure for the demoted controls */
+  .more-btn { width: 100%; font: inherit; font-size: var(--t-sm); font-weight: 500; color: var(--text-2);
+              background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+              padding: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-4);
+              transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease); margin-top: var(--s-4); }
+  .more-btn:hover { border-color: var(--border-strong); color: var(--text); }
+  .more-btn .cnt { font-size: var(--t-2xs); color: var(--text-faint); }
+  .more-body { display: none; margin-top: var(--s-8); padding-top: var(--s-8); border-top: 1px dashed var(--border); }
+  .more-body.open { display: block; }
+  .priority-note { font-size: var(--t-2xs); color: var(--text-faint); font-style: italic; margin: var(--s-4) 0 var(--s-8); }
+
+  /* variant nav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome);
+          border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .vtab:hover { background: var(--surface-hover); color: var(--text); }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 018 · dense tabs @ breakpoint</span>
+  <button class="vtab active" onclick="show('a',this)">A · Stack literal (4-up se queda)</button>
+  <button class="vtab" onclick="show('b',this)">B ★ Chosen · Reflow de grids (4-up → 2×2)</button>
+  <button class="vtab" onclick="show('c',this)">C · Prioridad + disclosure</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">columna de controles a 360px · subtítulos densos (011-C)</span>
+</nav>
+
+<!-- ════════════════════ VARIANT A — literal stack ════════════════════ -->
+<div class="variant active" id="v-a">
+  <p class="explain"><span class="bp">▾ breakpoint</span> &nbsp; <b>A — colapso literal.</b> El form 2-col se vuelve 1-col, pero las
+  grillas multi-up <b>no cambian</b>: las 4 mode-cards siguen en fila y el font-grid sigue 2-up. Mirá si a 360px se aprietan
+  demasiado (cards de ~70px, fuentes con nombres cortados).</p>
+  <div class="ruler">columna de controles · 360 px</div>
+  <div class="panel-stage"><div class="panel">
+    <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button></div>
+    <div class="ctrl-body">
+      <textarea class="ta">Cómo edité este reel palabra por palabra.</textarea>
+      <div class="ta-meta"><span class="dot"></span>Alimenta los subtítulos · no se exporta</div>
+      <div class="specimen"><span class="sp-tag">vista en vivo</span><div class="sp-cap"><span class="b">Subtítulos</span> <span class="on">que</span> <span class="b">enganchan</span></div></div>
+      <div class="sec"><div class="sec-h">Modo de subtítulo</div>
+        <div class="modecards up4">
+          <div class="modecard"><div class="mc-vis"><span class="a">pa</span><span class="b">l</span></div><div class="mc-nm">TikTok</div></div>
+          <div class="modecard on"><div class="mc-vis"><span class="bar">barra</span></div><div class="mc-nm">Barra</div></div>
+          <div class="modecard"><div class="mc-vis"><span class="b">frase</span></div><div class="mc-nm">Frase</div></div>
+          <div class="modecard"><div class="mc-vis"><span class="a">ka</span><span class="b">oke</span></div><div class="mc-nm">Karaoke</div></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-h"><span class="num">1</span>Tipografía</div>
+        <div class="fontgrid up2">
+          <div class="fontcard on"><div class="fn" style="font-family:'Plus Jakarta Sans'">Plus Jakarta</div><div class="fp">Humanista</div></div>
+          <div class="fontcard"><div class="fn" style="font-family:Inter">Inter</div><div class="fp">Geométrica</div></div>
+          <div class="fontmore">+ 24 fuentes</div>
+        </div>
+        <div class="row"><label>Tamaño</label><div class="rng"><input type="range" min="24" max="200" value="58"><output>58</output></div></div>
+        <div class="row"><label>Estilo</label><div class="seg"><button>Reg</button><button class="on">Bold</button><button style="font-style:italic">It</button></div></div>
+      </div>
+      <div class="sec"><div class="sec-h"><span class="num">2</span>Color</div>
+        <div class="cmatrix">
+          <div class="crole"><span class="cswatch"><input type="color" value="#ffea00"></span><span class="rl">Activo</span></div>
+          <div class="crole"><span class="cswatch"><input type="color" value="#ffffff"></span><span class="rl">Inactivo</span></div>
+          <div class="crole"><span class="cswatch"><input type="color" value="#00aaff"></span><span class="rl">Resalte</span></div>
+          <div class="crole"><span class="cswatch"><input type="color" value="#000000"></span><span class="rl">Borde</span></div>
+        </div>
+        <div class="row" style="margin-top:var(--s-6)"><label>Borde px</label><div class="rng"><input type="range" min="0" max="10" value="3"><output>3</output></div></div>
+      </div>
+      <div class="sec" style="margin-bottom:0"><div class="sec-h">Efectos <span class="note">· opcionales</span></div>
+        <div class="fx"><div class="fx-head"><span class="switch"></span><span class="fx-name">Glow</span><span class="fx-hint">apagado</span></div>
+          <div class="fx-params"><div class="row"><label>Difusión</label><div class="rng"><input type="range" min="0" max="60" value="20"><output>20</output></div></div></div></div>
+        <div class="fx"><div class="fx-head"><span class="switch"></span><span class="fx-name">Fondo</span><span class="fx-hint">apagado</span></div>
+          <div class="fx-params"><div class="row"><label>Radio</label><div class="rng"><input type="range" min="0" max="24" value="4"><output>4</output></div></div></div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- ════════════════════ VARIANT B — reflow the multi-up grids ════════════════════ -->
+<div class="variant" id="v-b">
+  <p class="explain"><span class="bp">▾ breakpoint</span> &nbsp; <b>B — reflow de las grillas.</b> Mismas secciones, mismo orden,
+  todo en 1-col — pero las grillas multi-up se <b>reacomodan</b>: mode-cards <b>2×2</b>, font-grid <b>1-up</b> (nombre completo),
+  la matriz de color se queda 2×2 (ya es compacta). Nada se aprieta; las cards siguen mostrando su comportamiento.</p>
+  <div class="ruler">columna de controles · 360 px</div>
+  <div class="panel-stage"><div class="panel">
+    <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button></div>
+    <div class="ctrl-body">
+      <textarea class="ta">Cómo edité este reel palabra por palabra.</textarea>
+      <div class="ta-meta"><span class="dot"></span>Alimenta los subtítulos · no se exporta</div>
+      <div class="specimen"><span class="sp-tag">vista en vivo</span><div class="sp-cap"><span class="b">Subtítulos</span> <span class="on">que</span> <span class="b">enganchan</span></div></div>
+      <div class="sec"><div class="sec-h">Modo de subtítulo</div>
+        <div class="modecards up2">
+          <div class="modecard"><div class="mc-vis"><span class="a">pa</span><span class="b">labra</span></div><div class="mc-nm">TikTok</div></div>
+          <div class="modecard on"><div class="mc-vis"><span class="bar">barra</span></div><div class="mc-nm">Barra</div></div>
+          <div class="modecard"><div class="mc-vis"><span class="b">frase entera</span></div><div class="mc-nm">Frase</div></div>
+          <div class="modecard"><div class="mc-vis"><span class="a">kara</span><span class="b">oke</span></div><div class="mc-nm">Karaoke</div></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-h"><span class="num">1</span>Tipografía</div>
+        <div class="fontgrid up1">
+          <div class="fontcard on"><div class="fn" style="font-family:'Plus Jakarta Sans'">Plus Jakarta Sans</div><div class="fp">Humanista</div></div>
+          <div class="fontmore">Cambiar fuente · 26 disponibles</div>
+        </div>
+        <div class="row"><label>Tamaño</label><div class="rng"><input type="range" min="24" max="200" value="58"><output>58</output></div></div>
+        <div class="row"><label>Estilo</label><div class="seg"><button>Reg</button><button class="on">Bold</button><button style="font-style:italic">It</button></div></div>
+      </div>
+      <div class="sec"><div class="sec-h"><span class="num">2</span>Color</div>
+        <div class="cmatrix">
+          <div class="crole"><span class="cswatch"><input type="color" value="#ffea00"></span><span class="rl">Activo</span></div>
+          <div class="crole"><span class="cswatch"><input type="color" value="#ffffff"></span><span class="rl">Inactivo</span></div>
+          <div class="crole"><span class="cswatch"><input type="color" value="#00aaff"></span><span class="rl">Resalte</span></div>
+          <div class="crole"><span class="cswatch"><input type="color" value="#000000"></span><span class="rl">Borde</span></div>
+        </div>
+        <div class="row" style="margin-top:var(--s-6)"><label>Borde px</label><div class="rng"><input type="range" min="0" max="10" value="3"><output>3</output></div></div>
+      </div>
+      <div class="sec" style="margin-bottom:0"><div class="sec-h">Efectos <span class="note">· opcionales</span></div>
+        <div class="fx"><div class="fx-head"><span class="switch"></span><span class="fx-name">Glow</span><span class="fx-hint">apagado</span></div>
+          <div class="fx-params"><div class="row"><label>Difusión</label><div class="rng"><input type="range" min="0" max="60" value="20"><output>20</output></div></div></div></div>
+        <div class="fx"><div class="fx-head"><span class="switch"></span><span class="fx-name">Fondo</span><span class="fx-hint">apagado</span></div>
+          <div class="fx-params"><div class="row"><label>Radio</label><div class="rng"><input type="range" min="0" max="24" value="4"><output>4</output></div></div></div></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- ════════════════════ VARIANT C — priority + disclosure under pressure ════════════════════ -->
+<div class="variant" id="v-c">
+  <p class="explain"><span class="bp">▾ breakpoint</span> &nbsp; <b>C — prioridad + disclosure.</b> A lo angosto, sólo lo de
+  mayor leverage queda abierto (specimen · modo 2×2 · tamaño · color activo); el resto (color completo, efectos, avanzado) se
+  pliega tras <b>“Más ajustes”</b>. Dobla a propósito la regla 002-A (“sin secciones plegables”) <i>sólo bajo presión de ancho</i>
+  — esa es la pregunta.</p>
+  <div class="ruler">columna de controles · 360 px</div>
+  <div class="panel-stage"><div class="panel">
+    <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button></div>
+    <div class="ctrl-body">
+      <textarea class="ta">Cómo edité este reel palabra por palabra.</textarea>
+      <div class="ta-meta"><span class="dot"></span>Alimenta los subtítulos · no se exporta</div>
+      <div class="specimen"><span class="sp-tag">vista en vivo</span><div class="sp-cap"><span class="b">Subtítulos</span> <span class="on">que</span> <span class="b">enganchan</span></div></div>
+      <p class="priority-note">Lo esencial, abierto. El detalle fino, a un toque.</p>
+      <div class="sec"><div class="sec-h">Modo de subtítulo</div>
+        <div class="modecards up2">
+          <div class="modecard"><div class="mc-vis"><span class="a">pa</span><span class="b">labra</span></div><div class="mc-nm">TikTok</div></div>
+          <div class="modecard on"><div class="mc-vis"><span class="bar">barra</span></div><div class="mc-nm">Barra</div></div>
+          <div class="modecard"><div class="mc-vis"><span class="b">frase entera</span></div><div class="mc-nm">Frase</div></div>
+          <div class="modecard"><div class="mc-vis"><span class="a">kara</span><span class="b">oke</span></div><div class="mc-nm">Karaoke</div></div>
+        </div>
+      </div>
+      <div class="sec"><div class="sec-h"><span class="num">★</span>Esencial</div>
+        <div class="fontgrid up1" style="margin-bottom:var(--s-5)">
+          <div class="fontcard on"><div class="fn" style="font-family:'Plus Jakarta Sans'">Plus Jakarta Sans</div><div class="fp">Humanista · cambiar</div></div>
+        </div>
+        <div class="row"><label>Tamaño</label><div class="rng"><input type="range" min="24" max="200" value="58"><output>58</output></div></div>
+        <div class="row"><label>Color activo</label><div class="cswatch" style="justify-self:start"><input type="color" value="#ffea00"></div></div>
+      </div>
+      <button class="more-btn" data-more>Más ajustes <span class="cnt">color · efectos · borde · ritmo</span> ⌄</button>
+      <div class="more-body" data-morebody>
+        <div class="sec"><div class="sec-h"><span class="num">2</span>Color completo</div>
+          <div class="cmatrix">
+            <div class="crole"><span class="cswatch"><input type="color" value="#ffea00"></span><span class="rl">Activo</span></div>
+            <div class="crole"><span class="cswatch"><input type="color" value="#ffffff"></span><span class="rl">Inactivo</span></div>
+            <div class="crole"><span class="cswatch"><input type="color" value="#00aaff"></span><span class="rl">Resalte</span></div>
+            <div class="crole"><span class="cswatch"><input type="color" value="#000000"></span><span class="rl">Borde</span></div>
+          </div>
+          <div class="row" style="margin-top:var(--s-6)"><label>Borde px</label><div class="rng"><input type="range" min="0" max="10" value="3"><output>3</output></div></div>
+        </div>
+        <div class="sec" style="margin-bottom:0"><div class="sec-h">Efectos <span class="note">· opcionales</span></div>
+          <div class="fx"><div class="fx-head"><span class="switch"></span><span class="fx-name">Glow</span><span class="fx-hint">apagado</span></div>
+            <div class="fx-params"><div class="row"><label>Difusión</label><div class="rng"><input type="range" min="0" max="60" value="20"><output>20</output></div></div></div></div>
+          <div class="fx"><div class="fx-head"><span class="switch"></span><span class="fx-name">Fondo</span><span class="fx-hint">apagado</span></div>
+            <div class="fx-params"><div class="row"><label>Radio</label><div class="rng"><input type="range" min="0" max="24" value="4"><output>4</output></div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  document.querySelectorAll(".seg").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
+    g.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+  }));
+  document.querySelectorAll(".modecards").forEach(g => g.querySelectorAll(".modecard").forEach(c => c.onclick = () => {
+    g.querySelectorAll(".modecard").forEach(x => x.classList.remove("on")); c.classList.add("on");
+  }));
+  document.querySelectorAll(".rng input[type=range]").forEach(r => {
+    const out = r.parentElement.querySelector("output"); if (out) r.oninput = () => out.textContent = r.value;
+  });
+  document.querySelectorAll(".fx-head").forEach(h => h.onclick = () => {
+    const fx = h.closest(".fx"); fx.classList.toggle("open");
+    h.querySelector(".fx-hint").textContent = fx.classList.contains("open") ? "activado" : "apagado";
+  });
+  document.querySelectorAll("[data-more]").forEach(btn => btn.onclick = () => {
+    const body = btn.parentElement.querySelector("[data-morebody]");
+    const open = body.classList.toggle("open");
+    btn.innerHTML = open ? 'Menos ajustes ⌃' : 'Más ajustes <span class="cnt">color · efectos · borde · ritmo</span> ⌄';
+  });
+
+  function show(id, btn) {
+    document.querySelectorAll(".variant").forEach(v => v.classList.remove("active"));
+    document.getElementById("v-" + id).classList.add("active");
+    document.querySelectorAll(".vtab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+  }
+</script>
+</body>
+</html>

@@ -1,10 +1,10 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015)
-**Sketches processed:** 15 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018)
+**Sketches processed:** 18 (all)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm),
-Subtitle Styling, Title Styling, Header Action Zone, States & Save, Motion, Preview Manipulation,
-Render Surface, North-Star Composite
+Subtitle Styling, Title Styling, Font Picker, Header Action Zone, States & Save, First-Run/Empty,
+Responsive Reflow, Motion, Preview Manipulation, Render Surface, North-Star Composite
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
 ## Included Sketches
@@ -25,6 +25,9 @@ Render Surface, North-Star Composite
 | 013 | header-action-zone | B | Header Action Zone |
 | 014 | title-style-density | C | Title Styling |
 | 015 | north-star-composite | A | North-Star Composite |
+| 016 | font-picker | C | Font Picker |
+| 017 | first-run-empty-workspace | B | First-Run & Empty Workspace |
+| 018 | dense-tabs-at-breakpoint | B | Responsive Breakpoint Reflow |
 
 ## Excluded Sketches
 _None._
@@ -54,7 +57,17 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
 - **Header action zone:** split zones — status chip left (by brand), Guardar(outline)+Render(green)
   right with a hairline between — 013-B. **Render is the only green; Guardar never greens (the chip
   carries dirty).** Reconciles 008-B + 010-A; chip holds its left home through render.
+- **Font picker:** a **slide-over gallery sheet** opened from a current-font trigger — search +
+  category chips over a 2-up grid of cards each rendering the **sample text in its own face**, against
+  the real 26-font `AVAILABLE_FONTS` — 016-C. Selection = blue; self-contained shared component for
+  Títulos + Subtítulos. Resolves the picker 011 flagged. Anti-pattern: inline scroll-box / popover.
 - **States/save:** header status chip; empty/cap/loading states — 008-B.
+- **First-run / empty workspace:** cold start = dropzone on the stage + dense controls **live on their
+  defaults** (banner: "valores por defecto") — 017-B. Single green = upload; Guardar disabled, Render
+  ghosted; metadata persists "Próximamente". Not gated, not a welcome takeover.
+- **Responsive reflow:** at the narrow (~360px) column, **reflow the multi-up grids** — 2-col form →
+  1-col, mode/entrance cards → 2×2, font grid → 1-up, color matrix stays 2×2 — 018-B. **002-A's
+  always-open rule stays intact** (no disclosure-under-pressure). One reflow rule across all three tabs.
 - **Motion:** calm 170ms two-tier timing — 009-A.
 - **Preview (frontier):** drag-to-position on the full preview, sharing the X/Y path — 007-A.
 - **Render (frontier):** on the dimmed preview + green-primary reassignment to Render — 010-A.
@@ -62,7 +75,8 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   the committed editing surface (015-B) first; bolt on the 007 drag + 010 render frontier layers later
   without rework.** The A↔B contrast names the boundary the build plan cuts along.
 
-## Open Sub-Problems (not yet sketched)
-- **Font picker** for 26 fonts with live previews (011/014 stubbed it as a font grid + overflow).
-- Title-animation timing/keyframe UI; zoom-segment editor; the metadata column's real content (AI phase).
-- Responsive behavior of the dense tabs (the 2-col→1-col collapse is documented, not sketched in full).
+## Open Sub-Problems
+- ~~**Font picker** for 26 fonts with live previews~~ — **resolved by sketch 016-C** (slide-over gallery).
+- ~~Responsive behavior of the dense tabs~~ — **resolved by sketch 018-B** (reflow the multi-up grids).
+- Still open: Title-animation timing/keyframe UI; zoom-segment editor; the metadata column's real
+  content (AI phase).

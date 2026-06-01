@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, title entrance timing, overlays tab density, font picker, header action zone, render surface, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star composite & scope boundary). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, animated caption preview, title entrance timing, overlays tab density, font picker, header action zone, render surface, render last-mile/results screen, AI metadata column, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star v2 canonical screen & scope boundary). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -25,7 +25,11 @@ the north-star composite with its committed-vs-frontier scope boundary), 2026-06
 the slide-over font-picker shared component, the first-run/empty-workspace cold start, and the
 responsive breakpoint reflow rule for the dense tabs), 2026-06-01 (sketches 019–022: the list-forward
 Overlays tab against its small real schema, the frontier timeline strip, the minimal transitions
-"Video" tab with auto-emphasis-zoom dropped as a product decision, and numeric title entrance timing).
+"Video" tab with auto-emphasis-zoom dropped as a product decision, and numeric title entrance timing),
+2026-06-01 (sketches 023–026: the recomposed **north-star v2** that supersedes 015 as the canonical
+screen, the **render last-mile** results takeover that closes the core-value loop, the **animated
+caption preview** that retires static subtitle specimens, and the **per-platform AI metadata column**
+that finally wakes the long-dormant right column).
 </context>
 
 <design_direction>
@@ -51,6 +55,18 @@ chroma. See `references/states-and-save-feedback.md` and `references/render-expo
 
 The realized synthesis is **sketch 001 variant D** — it folds in 002-A's always-open sections and
 003-B's arrow presets into the real shell.
+
+**Current canonical screen is sketch 023-B (north-star v2), which supersedes 015** — recomposed after
+016–022 with a **4-tab bar** (Títulos · Overlays · Subtítulos · **Video** pushed right via
+`margin-left:auto` to read "per-frame vs global"), the timeline strip living *inside* the work column
+so the metadata column keeps full height, list-forward overlays, and the font slide-over. **The
+subtitle/caption preview now plays** the word-by-word highlight (025-C: in-panel specimen loops the
+*style*, stage transport scrubs the *real moment* — static specimens retired). **The render's payoff is
+a full-screen results takeover** (024-B: the finished reel big + playable with file + AI metadata
+gathered) that closes the core-value loop. The persistent right column's awake form is **per-platform
+AI metadata** (026-C: TikTok/Reels/Shorts with per-platform char limits + hashtags) — reserved for the
+AI phase, but it justifies the column's reserved width. Green discipline held throughout: AI
+generate/copy use **accent (blue)**, never the reserved action-green.
 </design_direction>
 
 <findings_index>
@@ -62,7 +78,8 @@ The realized synthesis is **sketch 001 variant D** — it folds in 002-A's alway
 | Control Panel Density & Disclosure | references/control-panel-density.md | Always-open titled sections, Posición→Estilo→Avanzado, hairline dividers; no collapse/accordion (height absorbed by 2-col layout) |
 | Position Presets (shared component) | references/position-presets.md | 9-point arrow-button grid (↖↑↗ …), size-aware X/Y math vs 1080×1920 top-left anchor, inputs flash on apply |
 | Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; **TabLead/TabForm skeleton (012-B)** = the two slots every tab fills; Subtitles = condensed/expanding sample-text textarea (D-10). **Overlays resolved list-forward (019-C):** fat per-item cards with inline width/opacity/Capa/anchor, no separate form (small real schema) — *departs from the TabLead/TabForm contract; 019-A = contract-preserving fallback if it reads off-pattern at build* |
-| Subtitle Styling (dense controls) | references/subtitle-styling.md | Layout-mode = preset cards (not dropdown) leading the section, in-panel live specimen, 2×2 color-role matrix, collapsible Glow/Fondo effect-rows; validated against the real ~20-field caption schema from `pipeline-config.ts` (011-C). Anti-pattern: flat ~20 rows = the wall |
+| Subtitle Styling (dense controls) | references/subtitle-styling.md | Layout-mode = preset cards (not dropdown) leading the section, in-panel live specimen, 2×2 color-role matrix, collapsible Glow/Fondo effect-rows; validated against the real ~20-field caption schema from `pipeline-config.ts` (011-C). **Specimen now ANIMATES** — see caption-animation-preview. Anti-pattern: flat ~20 rows = the wall |
+| Caption Animation Preview | references/caption-animation-preview.md | **Word-by-word highlight PLAYS** (025-C): in-panel specimen loops the *style* (judge rhythm), stage transport scrubs the *real moment* — same idiom as 020 timeline. One `paint()` renderer, two drivers. **Static subtitle specimens retired.** Anti-pattern: forking the word renderer; static-only preview |
 | Title Styling (dense controls) | references/title-styling.md | Titles = **boxed text card + entrance animation**. Specimen + **entrance preset cards** (Slide↑/↓·Fade·Ninguna) + 1×2 Texto/Caja color pairing + collapsible Glow (014-C); 011-C kit transfers. **Entrance timing = numeric Aparece/Dura/Velocidad rows in Tiempo (022-B)** — global timeline does visual placement, rows refine; no per-title track. Anti-pattern: flat ~16 rows = the wall |
 | Video Effects — Transitions Tab | references/video-effects.md | **Auto-emphasis-zoom DROPPED** (product decision — Whisper confidence ≠ emphasis, off-brand). Survivor `TransitionConfig` (1.08× push / crop-shift masking silence cuts) lives in a **minimal "Video" 4th tab (021-A)**: transition type cards w/ looping motion preview + Duración. Anti-pattern: rebuild `detectZoomEvents`; flashy preview; over-fill the thin tab |
 | Timeline / Temporal Axis (frontier) | references/timeline-temporal.md | ⚠️ Scope-expanding / likely next-milestone. **Strip under stage+controls (020-C):** Títulos/Overlays/Subtítulos lanes below preview+controls, **metadata column keeps full height**. Track surface (not cards), scrub-to-preview + drag-to-retime. Middle ground vs preview-only scrubber (A) / full-width dock (B). One timeline idiom — pairs with 022-B numeric rows |
@@ -73,8 +90,11 @@ The realized synthesis is **sketch 001 variant D** — it folds in 002-A's alway
 | Preview as Editing Surface (frontier) | references/preview-direct-manipulation.md | ⚠️ Scope-expanding. Drag-to-position on the full preview, snapping to the same 9 anchors and writing the same X/Y path; cheap subset = click-to-select. Beyond committed control-driven scope |
 | States, Empties & Save Feedback | references/states-and-save-feedback.md | Save = header status chip (`● Cambios sin guardar`→`Guardando…`→`✓ Guardado recién`) left of a stay-put button; validated empty (0/3), cap (3/3 disabled), no-video & Whisper-loading states |
 | Motion & Timing | references/motion-and-timing.md | Calm 170ms ease-out-quart; two-tier timing (state `--dur` 170ms / travel `--dur2` 300ms); all 5 motions cohere; `prefers-reduced-motion` collapse required |
-| Render / Export Surface (frontier) | references/render-export-surface.md | ⚠️ Scope-expanding. Render on the dimmed preview (progress ring + 3-step pipeline → "Reel listo"), no modal; Render takes the green primary; single-job constraint surfaced; OOM-aware failure |
-| North-Star Composite & Scope Boundary | references/north-star-composite.md | The whole vision in one screen (015-A: 013-B header + 001-D shell + all tabs + 007 drag + 010 render). **Plan-split rule: ship the committed editing surface (B) first, bolt on the 007/010 frontier layers later without rework.** The A↔B contrast names the boundary |
+| Render / Export Surface (frontier) | references/render-export-surface.md | ⚠️ Scope-expanding. Render on the dimmed preview (progress ring + 3-step pipeline → "Reel listo"), no modal; Render takes the green primary; single-job constraint surfaced; OOM-aware failure. **Continues into render-last-mile** |
+| Render Last-Mile / Output (frontier) | references/render-last-mile.md | ⚠️ Scope-expanding. Where the finished reel lands: **full-screen results takeover (024-B)** — reel big + playable, file card (download · path · play · re-render) + AI metadata gathered as one "done, publish" moment. Metadata column **wakes**. Single-job re-render; download = accent not green |
+| Metadata / AI Column (AI phase) | references/metadata-ai-column.md | ⚠️ AI-phase / forward-looking. The awakened right column: **per-platform tabs (026-C)** TikTok/Reels/Shorts, each with tailored caption + char-limit counter (red over limit) + hashtags. Editable in place; lands on 024-B. **Green discipline: Generar/copiar = accent, never action-green** |
+| North-Star v2 — Canonical Screen | references/north-star-v2.md | **CURRENT canonical screen (023-B), supersedes 015.** Recomposed post-016–022: 4-tab bar (Video pushed right), timeline strip *inside* work column (metadata keeps full height), list-forward overlays, font sheet, numeric timing. Strip places / rows refine — coordinated not redundant. Ship B, frontier layers (007/010/020) bolt on |
+| North-Star Composite (superseded) | references/north-star-composite.md | ⚠️ **Superseded by north-star-v2 (023).** Historical 015 capstone of the 001–014 era: 013-B header + 001-D shell + 3 tabs + 007 drag + 010 render, A↔B scope boundary. Plan-split rule originates here; the screen itself is stale (3 tabs, no timeline) |
 
 ## Theme
 
@@ -108,6 +128,10 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/020-timeline-scrubber/index.html` — winner `#v-c` (strip under stage+controls; frontier / scope-expanding)
 - `sources/021-video-effects-surface/index.html` — winner `#v-a` (minimal "Video" tab; auto-zoom dropped)
 - `sources/022-title-entrance-timing/index.html` — winner `#v-b` (numeric timing rows)
+- `sources/023-north-star-v2/index.html` — winner `#v-b` (committed slice; **current canonical**, supersedes 015)
+- `sources/024-render-last-mile/index.html` — winner `#v-b` (full-screen results takeover; frontier / scope-expanding)
+- `sources/025-caption-animation-preview/index.html` — winner `#v-c` (loop + transport; specimens now animate)
+- `sources/026-metadata-ai-column/index.html` — winner `#v-c` (per-platform AI metadata; AI-phase / forward-looking)
 </findings_index>
 
 <metadata>
@@ -135,4 +159,8 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 020-timeline-scrubber (winner C — strip under stage+controls; frontier, scope-expanding)
 - 021-video-effects-surface (winner A — minimal "Video" tab; auto-emphasis-zoom dropped)
 - 022-title-entrance-timing (winner B — numeric timing rows)
+- 023-north-star-v2 (winner B — committed slice; current canonical screen, supersedes 015)
+- 024-render-last-mile (winner B — full-screen results takeover; frontier, scope-expanding)
+- 025-caption-animation-preview (winner C — loop + transport; static subtitle specimens retired)
+- 026-metadata-ai-column (winner C — per-platform AI metadata tabs; AI-phase, forward-looking)
 </metadata>

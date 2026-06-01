@@ -1,11 +1,13 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022)
-**Sketches processed:** 22 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026)
+**Sketches processed:** 26 (all)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
-Overlays list-forward), Subtitle Styling, Title Styling (+ entrance timing), Video Effects/Transitions,
-Timeline (frontier), Font Picker, Header Action Zone, States & Save, First-Run/Empty, Responsive
-Reflow, Motion, Preview Manipulation, Render Surface, North-Star Composite
+Overlays list-forward), Subtitle Styling, Caption Animation Preview, Title Styling (+ entrance timing),
+Video Effects/Transitions, Timeline (frontier), Font Picker, Header Action Zone, States & Save,
+First-Run/Empty, Responsive Reflow, Motion, Preview Manipulation, Render Surface, Render Last-Mile
+(frontier), Metadata/AI Column (AI phase), North-Star Composite (015, superseded), North-Star v2
+(023, current canonical)
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
 ## Included Sketches
@@ -33,6 +35,10 @@ Reflow, Motion, Preview Manipulation, Render Surface, North-Star Composite
 | 020 | timeline-scrubber | C | Timeline / Temporal (frontier) |
 | 021 | video-effects-surface | A | Video Effects — Transitions Tab |
 | 022 | title-entrance-timing | B | Title Styling (entrance timing) |
+| 023 | north-star-v2 | B | North-Star v2 (current canonical, supersedes 015) |
+| 024 | render-last-mile | B | Render Last-Mile / Output (frontier) |
+| 025 | caption-animation-preview | C | Caption Animation Preview |
+| 026 | metadata-ai-column | C | Metadata / AI Column (AI phase) |
 
 ## Excluded Sketches
 _None._
@@ -99,6 +105,25 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
 - **North star & scope line:** the whole thing composed in one screen — 015-A. **Plan-split rule: ship
   the committed editing surface (015-B) first; bolt on the 007 drag + 010 render frontier layers later
   without rework.** The A↔B contrast names the boundary the build plan cuts along.
+- **North star v2 (current canonical, supersedes 015):** recomposed after 016–022 — 023-B. **4-tab bar**
+  (Títulos·Overlays·Subtítulos·**Video** pushed right via `margin-left:auto` = "per-frame vs global"),
+  the timeline strip *inside* the work column (`.leftcol` wraps stage+controls+strip) so the **metadata
+  column keeps full height**, list-forward overlays, font slide-over, numeric timing. Strip *places* /
+  Tiempo rows *refine* — coordinated, not redundant. Ship B; 007/010/020 frontier layers bolt on.
+- **Caption animation preview:** the word-by-word highlight **PLAYS** — 025-C. In-panel specimen loops
+  the *style* (judge rhythm), stage transport scrubs the *real moment* (same idiom as the 020 timeline).
+  One `paint(target, words, idx, mode)` renderer, two drivers. **Static subtitle specimens (011/014)
+  retired.** Anti-pattern: forking the word renderer per surface; static-only preview.
+- **Render last-mile (frontier):** where the finished reel lands — **full-screen results takeover**,
+  024-B. Reel big + playable, file card (download · `📁 path · copiar ruta` · play · re-render) + AI
+  metadata gathered as one "done, time to publish" moment; the metadata column **wakes** with the AI
+  caption as the payoff. Single-job re-render surfaced; **download = accent (blue), not green** (Render
+  already ran). Closes the core-value loop. Chosen over lighter stage-card (A) / right-column (C).
+- **Metadata / AI column (AI phase, forward-looking):** the long-dormant "Próximamente" column awake —
+  **per-platform tabs** TikTok/Reels/Shorts, 026-C. Each: tailored caption + its own char-limit counter
+  (turns red over limit, e.g. Shorts ≤100) + platform hashtags. Editable in place; lands on 024-B's
+  results screen. **Green discipline: Generar/Regenerar/copiar = accent (blue), NEVER action-green** —
+  the named test of the sketch. Reserved for the AI phase; justifies the column's reserved ~320–340px.
 
 ## Open Sub-Problems
 - ~~**Font picker** for 26 fonts with live previews~~ — **resolved by sketch 016-C** (slide-over gallery).
@@ -109,6 +134,14 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   separate spike.
 - **Build-time watch (019-C):** the list-forward Overlays tab departs from the TabLead/TabForm contract
   — confirm it reads on-pattern next to the other tabs, else fall back to 019-A.
-- **Frontier / next-milestone:** the **timeline** (020-C) and the committed-vs-frontier scope line
-  (007 drag, 010 render) are validated *directions*, not Phase-22 deliverables. Still open: the
-  metadata column's real content (AI phase).
+- ~~Static subtitle specimens can't show rhythm~~ — **resolved by sketch 025-C** (specimen loops style,
+  stage transport scrubs the real moment; one shared `paint()` renderer).
+- ~~Where the finished reel lands (download/locate/play/re-render) and the metadata payoff~~ — **resolved
+  by sketch 024-B** (full-screen results takeover; metadata column wakes).
+- ~~The metadata column's real content (AI phase)~~ — **sketched as 026-C** (per-platform AI metadata).
+  Still **reserved for the AI phase**, not Phase-22 committed scope — but its shape is now drawn.
+- **Build-time watch (023-B):** confirm the timeline strip lives *inside* `.leftcol` (work column) so
+  the metadata column keeps full height, and that the 4th "Video" tab reads as "global" pushed right.
+- **Frontier / next-milestone:** the **timeline** (020-C), the committed-vs-frontier scope line
+  (007 drag, 010 render), the **render last-mile** results screen (024-B), and the **AI metadata
+  column** (026-C) are validated *directions*, not Phase-22 control-panel deliverables.

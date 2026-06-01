@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 031 — pipeline run-flow spine</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ── header ── */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .vswitch { display: flex; gap: 2px; margin-left: var(--s-6); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; }
+  .vswitch button { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px 12px; border-radius: var(--r-xs); cursor: pointer; }
+  .vswitch button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .vswitch.dim { opacity: 0.4; pointer-events: none; }
+  .spacer { flex: 1; }
+
+  /* status chip (008-B / 013-B) */
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.dirty { color: var(--warning); } .chip.run { color: var(--accent); } .chip.done { color: var(--success); }
+  .chip.run .dot { animation: pulse 1.1s var(--ease) infinite; }
+
+  /* buttons */
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-out:disabled { opacity: 0.4; cursor: default; }
+  .btn-green { background: var(--action); color: #08220f; border-color: transparent; }
+  .btn-green:hover { background: var(--action-hover); }
+  .btn-ghost { background: transparent; color: var(--text-muted); border-color: transparent; font-weight: 500; font-size: var(--t-sm); padding: 6px 10px; }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-cancel { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-cancel:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* step-rail (029-B) */
+  .steprail { display: flex; align-items: center; gap: var(--s-4); font-size: var(--t-xs); }
+  .steprail .s { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); white-space: nowrap; }
+  .steprail .s .n { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; background: var(--surface-2); color: var(--text-faint); border: 1px solid var(--border); }
+  .steprail .s.done .n { background: var(--success); color: var(--stage); border-color: transparent; }
+  .steprail .s.cur { color: var(--text); } .steprail .s.cur .n { background: var(--accent); color: var(--stage); border-color: transparent; }
+  .steprail .sep { width: 16px; height: 1px; background: var(--border); }
+
+  /* ── body ── */
+  .body { flex: 1; min-height: 0; display: flex; }
+
+  /* editor placeholder (the canonical 027 screen, abstracted — this sketch is about the FLOW, not the editor) */
+  .ed { flex: 1; display: flex; gap: 1px; background: var(--border-faint); position: relative; }
+  .ed .col { background: var(--canvas); padding: var(--s-10); display: flex; flex-direction: column; }
+  .ed .stagecol { flex: 0 1 360px; align-items: center; justify-content: center; background: var(--stage); position: relative; }
+  .ed .ctrlcol { flex: 1; gap: var(--s-6); }
+  .ed .metacol { flex: 0 0 240px; background: var(--surface); align-items: center; justify-content: center; }
+  .stage9x16 { width: 200px; height: 356px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; display: grid; place-items: center; transition: filter var(--dur) var(--ease); }
+  .stage9x16 .capword { position: absolute; bottom: 56px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 17px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .stage9x16 .capword b { color: var(--accent); }
+  .stage9x16 .ttl { position: absolute; top: 40px; left: 16px; right: 16px; text-align: center; font-weight: 700; font-size: 13px; background: rgba(0,0,0,.45); padding: 6px; border-radius: 5px; }
+  .ed .placard { font-size: var(--t-2xs); color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+  .tabhint { display: flex; gap: var(--s-3); margin-bottom: var(--s-4); }
+  .tabhint span { font-size: var(--t-xs); padding: 5px 10px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+  .tabhint span:first-child { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); }
+  .tabhint span.push { margin-left: auto; }
+  .ghostrow { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); margin-bottom: var(--s-4); }
+  .ghostrow.lg { height: 52px; }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 8px 12px; }
+
+  /* dim + run overlay (inline, 010-A) */
+  .stagecol.dim .stage9x16 { filter: brightness(0.32) saturate(0.5); }
+  .runover { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-8); padding: var(--s-12); animation: fadein .25s var(--ease); }
+  .runover.show { display: flex; }
+  .ring { position: relative; width: 92px; height: 92px; flex: none; } .ring svg { transform: rotate(-90deg); }
+  .ring .pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--t-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* pipeline mini-steps (vertical) */
+  .pvert { display: flex; flex-direction: column; gap: var(--s-5); width: 220px; }
+  .pvrow { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-sm); color: var(--text-muted); }
+  .pvrow .pn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); display: grid; place-items: center; font-size: 10px; flex: none; }
+  .pvrow.done { color: var(--text-2); } .pvrow.done .pn { background: var(--success); border-color: transparent; color: var(--stage); }
+  .pvrow.cur { color: var(--text); font-weight: 600; } .pvrow.cur .pn { border-color: var(--accent); color: var(--accent); }
+  .pvrow .sub { margin-left: auto; font-size: var(--t-2xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .pvrow .revlink { margin-left: auto; font-size: var(--t-2xs); color: var(--accent); cursor: pointer; border: 1px solid var(--accent-strong); background: var(--accent-tint); padding: 2px 8px; border-radius: var(--r-full); }
+  .pvrow .revlink:hover { background: var(--accent-tint-2); }
+
+  .gatecard { animation: fadein .25s var(--ease); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); padding: var(--s-8) var(--s-10); display: flex; flex-direction: column; gap: var(--s-6); max-width: 320px; box-shadow: var(--shadow-md); }
+  .gatecard .gt { font-size: var(--t-md); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .gatecard .gt .ok { color: var(--success); }
+  .gatecard .gd { font-size: var(--t-xs); color: var(--text-2); line-height: 1.5; }
+  .gatecard .countdown { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .gatecard .row { display: flex; gap: var(--s-5); }
+  .gatecard .row .btn { flex: 1; justify-content: center; }
+
+  /* full takeover (B) / review overlay */
+  .takeover { position: absolute; inset: 0; background: var(--canvas); display: none; flex-direction: column; z-index: 20; animation: fadein .2s var(--ease); }
+  .takeover.show { display: flex; }
+  .tk-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-10); padding: var(--s-16); }
+  .tk-foot { flex: none; border-top: 1px solid var(--border); padding: var(--s-8) var(--s-12); display: flex; align-items: center; gap: var(--s-6); background: var(--chrome); }
+
+  /* review panels (condensed 028 / 029) */
+  .review { width: 560px; max-width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s-10) var(--s-12); box-shadow: var(--shadow-pop); }
+  .review h3 { font-size: var(--t-lg); font-weight: 600; margin-bottom: var(--s-3); }
+  .review .meta { font-size: var(--t-xs); color: var(--text-muted); margin-bottom: var(--s-8); }
+  .tscript { font-size: var(--t-md); line-height: 1.85; color: var(--text); background: var(--canvas); border: 1px solid var(--border-faint); border-radius: var(--r-sm); padding: var(--s-8); }
+  .tscript .seg { color: var(--text-faint); font-family: var(--mono); font-size: var(--t-2xs); margin-right: 8px; }
+  .lc-amber { border-bottom: 2px solid var(--warning); cursor: text; } .lc-red { border-bottom: 2px solid var(--danger); cursor: text; }
+  .wf { display: flex; align-items: flex-end; gap: 2px; height: 70px; background: var(--canvas); border: 1px solid var(--border-faint); border-radius: var(--r-sm); padding: var(--s-5); }
+  .wf i { flex: 1; background: var(--accent); border-radius: 1px; opacity: 0.8; } .wf i.cut { background: var(--danger); opacity: 0.55; cursor: pointer; } .wf i.cut:hover { opacity: 0.9; }
+  .statline { display: flex; gap: var(--s-8); font-size: var(--t-sm); margin-bottom: var(--s-6); }
+  .statline b { color: var(--text); font-variant-numeric: tabular-nums; } .statline .down { color: var(--success); font-weight: 600; }
+  .legend { display: flex; gap: var(--s-8); font-size: var(--t-2xs); color: var(--text-muted); margin-top: var(--s-5); }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+  /* results (024-B) */
+  .results { display: flex; gap: var(--s-12); align-items: center; animation: fadein .3s var(--ease); }
+  .results.small { gap: var(--s-8); }
+  .reel { border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.4 0.07 150), oklch(0.22 0.03 160)); box-shadow: var(--shadow-md); position: relative; display: grid; place-items: center; flex: none; }
+  .reel::after { content: "▶"; font-size: 24px; color: rgba(255,255,255,.85); }
+  .results.big .reel { width: 280px; height: 498px; } .results.small .reel { width: 130px; height: 231px; }
+  .rmeta h2 { font-size: var(--t-xl); font-weight: 700; margin-bottom: var(--s-3); }
+  .rmeta .filecard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-6) var(--s-8); margin: var(--s-8) 0; font-family: var(--mono); font-size: var(--t-xs); color: var(--text-2); display: flex; align-items: center; gap: var(--s-6); }
+  .rmeta .ractions { display: flex; gap: var(--s-5); }
+
+  .note { font-size: var(--t-xs); color: var(--text-2); background: var(--accent-tint-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-8); line-height: 1.5; }
+  .note b { color: var(--text); }
+
+  /* toggle (C) */
+  .togwrap { display: inline-flex; align-items: center; gap: 8px; font-size: var(--t-sm); color: var(--text-2); margin-right: var(--s-4); }
+  .tog { width: 36px; height: 20px; border-radius: var(--r-full); background: var(--surface-2); border: 1px solid var(--border-strong); position: relative; cursor: pointer; transition: all var(--dur) var(--ease); flex: none; }
+  .tog::after { content: ""; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-2); transition: all var(--dur) var(--ease); }
+  .tog.on { background: var(--accent-tint); border-color: var(--accent-strong); } .tog.on::after { left: 17px; background: var(--accent); }
+
+  /* vnav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 031 · run-flow spine</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ · Inline-first (review = pull)</button>
+  <button class="vtab" onclick="show('b',this)">B · Wizard con compuertas (review = push)</button>
+  <button class="vtab" onclick="show('c',this)">C · Híbrido (toggle por render)</button>
+  <span class="hint">Apretá <b style="color:var(--action)">▶ Render</b> en cada variante para vivir el flujo</span>
+</nav>
+
+<!-- ════════ A · inline-first ════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr" id="hdr-a"></header>
+  <div class="body" id="body-a"></div>
+</div>
+
+<!-- ════════ B · gated wizard ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr" id="hdr-b"></header>
+  <div class="body" id="body-b"></div>
+</div>
+
+<!-- ════════ C · hybrid ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr" id="hdr-c"></header>
+  <div class="body" id="body-c"></div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// ── shared step model (Audio is instant/pre; the 3 real steps drive the bar) ──
+const STEPS = [
+  { key:'audio',        label:'Audio',         review:false, instant:true },
+  { key:'transcripcion',label:'Transcripción', review:true },
+  { key:'silencios',    label:'Silencios',     review:true },
+  { key:'render',       label:'Render',        review:false },
+];
+const REVIEW_STEPS = STEPS.filter(s=>s.review).map(s=>s.key);
+
+function ringSvg(pct){ const r=40,c=2*Math.PI*r,off=c*(1-pct/100);
+  return `<svg width="92" height="92"><circle cx="46" cy="46" r="${r}" fill="none" stroke="var(--border)" stroke-width="6"/><circle cx="46" cy="46" r="${r}" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset .25s var(--ease)"/></svg>`; }
+
+function railHtml(idx){ // idx = index into STEPS of current step
+  return `<div class="steprail">`+STEPS.map((s,i)=>{
+    const cls = i<idx?'done':i===idx?'cur':'';
+    const n = i<idx?'✓':(s.instant?'✓':i);
+    return `${i?'<span class="sep"></span>':''}<span class="s ${cls}"><span class="n">${n}</span>${s.label}</span>`;
+  }).join('')+`</div>`;
+}
+
+// review panel bodies (condensed 028 / 029)
+function reviewBody(stepKey){
+  if(stepKey==='transcripcion') return `
+    <h3>Revisá la transcripción</h3>
+    <div class="meta">Whisper · español · 38 palabras con confianza marcada</div>
+    <div class="tscript">
+      <span class="seg">0:02</span>Hola, hoy te traigo tres <span class="lc-amber">trucos</span> de edición que uso todos los días para que tus <span class="lc-red">reels</span> se vean profesionales.
+      <span class="seg">0:09</span>El primero es el más importante: <span class="lc-amber">cortá</span> todos los silencios.
+    </div>
+    <div class="legend"><span><span class="sw" style="background:var(--warning)"></span>confianza media (&lt;0.78)</span><span><span class="sw" style="background:var(--danger)"></span>baja (&lt;0.6) — revisar</span><span style="color:var(--text-faint)">tocá una palabra para corregir</span></div>`;
+  // silencios
+  const bars = Array.from({length:54}, (_,i)=>{
+    const cut = [8,9,10,21,22,23,24,38,39,47,48].includes(i);
+    const h = cut ? 8 : 25 + Math.round(Math.abs(Math.sin(i*1.3))*55);
+    return `<i class="${cut?'cut':''}" style="height:${h}%"></i>`;
+  }).join('');
+  return `
+    <h3>Revisá los cortes de silencio</h3>
+    <div class="meta">silence-cutter · 14 cortes detectados</div>
+    <div class="statline">Duración: <b>1:48</b> → <b>1:14</b> <span class="down">−0:34</span></div>
+    <div class="wf">${bars}</div>
+    <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>voz</span><span><span class="sw" style="background:var(--danger)"></span>silencio quitado</span><span style="color:var(--text-faint)">tocá un bloque rojo para devolverlo</span></div>`;
+}
+function confirmLabel(stepKey){ return stepKey==='transcripcion' ? 'Confirmar transcripción →' : 'Confirmar cortes →'; }
+
+// ════════ flow engine ════════
+function makeFlow(id, opts){
+  const hdr = document.getElementById('hdr-'+id);
+  const body = document.getElementById('body-'+id);
+  const st = {
+    phase:'idle',      // idle | running | gate | review | done
+    step:0,            // index into STEPS
+    prog:0,
+    mode: opts.mode,   // 'soft' (auto-advance w/ countdown) | 'hard' (block on Confirmar)
+    chrome: opts.chrome, // 'inline' | 'takeover'
+    toggle: opts.toggle || false, // C only
+    countdown:0,
+    reviewKey:null,
+    reviewedFrom:null, // phase to return to after closing review
+    timer:null, cd:null,
+  };
+
+  function clearTimers(){ clearInterval(st.timer); clearInterval(st.cd); st.timer=null; st.cd=null; }
+
+  function reset(){ clearTimers(); st.phase='idle'; st.step=0; st.prog=0; st.countdown=0; st.reviewKey=null; paint(); }
+
+  function play(){
+    // C: decide rigor from the toggle at press time
+    if(opts.toggle){ st.mode = st.toggle ? 'hard' : 'soft'; st.chrome = st.toggle ? 'takeover' : 'inline'; }
+    st.phase='running'; st.step=1; st.prog=0; paint(); runStep();
+  }
+
+  function runStep(){
+    clearTimers();
+    st.timer=setInterval(()=>{
+      st.prog=Math.min(100, st.prog+ (STEPS[st.step].key==='render'?4:7));
+      if(st.prog>=100){ clearTimers(); stepComplete(); }
+      else paint();
+    }, 90);
+  }
+
+  function stepComplete(){
+    const cur=STEPS[st.step];
+    if(cur.review){ enterGate(); }
+    else { advance(); }
+  }
+
+  function enterGate(){
+    st.phase='gate'; paint();
+    if(st.mode==='soft'){
+      st.countdown=3;
+      st.cd=setInterval(()=>{ st.countdown--; if(st.countdown<=0){ clearInterval(st.cd); advance(); } else paint(); }, 1000);
+    }
+    // hard: wait for Confirmar (no timer)
+  }
+
+  function advance(){
+    clearTimers();
+    if(st.step>=STEPS.length-1){ st.phase='done'; paint(); return; }
+    st.step++; st.prog=0; st.phase='running'; paint(); runStep();
+  }
+
+  function openReview(){ clearInterval(st.cd); st.reviewedFrom=st.phase; st.reviewKey=STEPS[st.step].key; st.phase='review'; paint(); }
+  function closeReview(){ st.phase='gate'; st.reviewKey=null; paint(); if(st.mode==='soft'){ st.countdown=3; clearInterval(st.cd); st.cd=setInterval(()=>{ st.countdown--; if(st.countdown<=0){clearInterval(st.cd);advance();} else paint(); },1000);} }
+  function confirmFromReview(){ st.reviewKey=null; advance(); }
+  function skipReviews(){ st.mode='soft'; if(st.phase==='gate'||st.phase==='review'){ advance(); } } // turn the rest into auto
+
+  // ── painters ──
+  function editorHtml(){
+    return `<div class="ed">
+      <div class="col stagecol" id="stage-${id}">
+        <div class="stage9x16"><div class="ttl">3 trucos de edición</div><div class="capword">tus <b>reels</b></div></div>
+        <div class="runover" id="runover-${id}"></div>
+      </div>
+      <div class="col ctrlcol">
+        <div class="tabhint"><span>Títulos</span><span>Overlays</span><span>Subtítulos</span><span class="push">Video</span></div>
+        <div class="ghostrow lg"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="ghostrow"></div>
+        <div class="placard" style="margin-top:auto">Editor — pantalla canónica 027 (abstraída · este sketch resuelve el FLUJO, no el editor)</div>
+      </div>
+      <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+    </div>`;
+  }
+
+  function paint(){
+    // ── HEADER ──
+    let right='';
+    const inWizard = st.chrome==='takeover' && (st.phase==='running'||st.phase==='gate'||st.phase==='review');
+    if(st.phase==='done'){
+      right = st.chrome==='takeover'
+        ? `<button class="btn btn-out" onclick="F_${id}.reset()">← Volver al editor</button>`
+        : `<span class="chip done"><span class="dot"></span>✓ Reel listo</span><button class="btn btn-out" onclick="F_${id}.reset()">Editar de nuevo</button>`;
+    } else if(inWizard){
+      right = `${railHtml(st.step)}<button class="btn btn-ghost" onclick="F_${id}.skip()">Saltar revisión</button><button class="btn btn-cancel" onclick="F_${id}.reset()">Salir</button>`;
+    } else if(st.phase==='running'||st.phase==='gate'||st.phase==='review'){
+      right = `<span class="chip run"><span class="dot"></span>Procesando…</span><button class="btn btn-cancel" onclick="F_${id}.reset()">Cancelar</button>`;
+    } else { // idle
+      const tog = opts.toggle ? `<span class="togwrap">Revisar cada paso<span class="tog ${st.toggle?'on':''}" onclick="F_${id}.flip()"></span></span>` : '';
+      right = `${tog}<span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span><button class="btn btn-out">Guardar config</button><button class="btn btn-green" onclick="F_${id}.play()">▶ Render</button>`;
+    }
+    const showSwitch = !inWizard;
+    hdr.innerHTML = `<div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Editor</div></div></div>
+      ${showSwitch?`<div class="vswitch ${st.phase!=='idle'&&st.phase!=='done'?'dim':''}"><button class="on">Editor</button><button>Cola</button></div>`:''}
+      <div class="spacer"></div>${right}`;
+
+    // ── BODY ──
+    if(st.phase==='idle'){ body.innerHTML = editorHtml(); return; }
+
+    if(st.chrome==='inline' && (st.phase==='running'||st.phase==='gate')){
+      body.innerHTML = editorHtml();
+      const sc=document.getElementById('stage-'+id); sc.classList.add('dim');
+      const ov=document.getElementById('runover-'+id); ov.classList.add('show');
+      // vertical pipeline + ring + (gate card)
+      const pv = STEPS.slice(1).map((s,i)=>{ const realIdx=i+1; const done=realIdx<st.step; const cur=realIdx===st.step;
+        const sub = done?`<span class="revlink" onclick="F_${id}.review('${s.key}')">Revisar</span>`:(cur?`<span class="sub">${st.prog}%</span>`:`<span class="sub">en espera</span>`);
+        return `<div class="pvrow ${done?'done':cur?'cur':''}"><span class="pn">${done?'✓':realIdx}</span>${s.label}${s.review||done?sub:(cur?`<span class="sub">${st.prog}%</span>`:'')}</div>`;
+      }).join('');
+      let gate='';
+      if(st.phase==='gate'){
+        const k=STEPS[st.step].key; const nm=STEPS[st.step].label;
+        gate = `<div class="gatecard"><div class="gt"><span class="ok">✓</span>${nm} lista</div>
+          <div class="gd">Seguimos con <b>${STEPS[st.step+1].label}</b> <span class="countdown">en ${st.countdown}s…</span> — o revisá antes de continuar.</div>
+          <div class="row"><button class="btn btn-out" onclick="F_${id}.review('${k}')">Revisar ${nm.toLowerCase()}</button><button class="btn btn-green" onclick="F_${id}.advance()">Continuar →</button></div></div>`;
+      }
+      ov.innerHTML = `<div class="ring">${ringSvg(st.prog)}<span class="pct">${gate?'':st.prog+'%'}</span></div>
+        ${gate||`<div class="pvert">${pv}</div>`}`;
+      return;
+    }
+
+    if(st.chrome==='takeover' && (st.phase==='running'||st.phase==='gate')){
+      let inner;
+      if(st.phase==='running'){
+        inner = `<div class="ring">${ringSvg(st.prog)}<span class="pct">${st.prog}%</span></div>
+          <div style="text-align:center"><div style="font-size:var(--t-lg);font-weight:600">${STEPS[st.step].label}…</div>
+          <div class="note" style="margin-top:var(--s-6)">Cada paso del pipeline es <b>inspeccionable</b>: al terminar, se abre la revisión y vos confirmás antes de seguir.</div></div>`;
+      } else { // gate (hard)
+        inner = `<div class="review">${reviewBody(STEPS[st.step].key)}</div>`;
+      }
+      body.innerHTML = `<div class="takeover show"><div class="tk-body">${inner}</div>
+        <div class="tk-foot"><span class="chip ${st.phase==='gate'?'':'run'}">${st.phase==='gate'?'Esperando tu confirmación':'<span class="dot"></span>Procesando…'}</span><div class="spacer"></div>
+        ${st.phase==='gate'?`<button class="btn btn-ghost" onclick="F_${id}.skip()">Saltar y autocompletar</button><button class="btn btn-green" onclick="F_${id}.advance()">${confirmLabel(STEPS[st.step].key)}</button>`:''}</div></div>`;
+      return;
+    }
+
+    if(st.phase==='review'){
+      const k=st.reviewKey;
+      if(st.chrome==='takeover'){ // already shown inline in gate for takeover; reuse gate render
+        st.phase='gate'; paint(); return;
+      }
+      body.innerHTML = editorHtml();
+      body.insertAdjacentHTML('beforeend', `<div class="takeover show"><div class="tk-body"><div class="review">${reviewBody(k)}</div></div>
+        <div class="tk-foot"><button class="btn btn-out" onclick="F_${id}.closeReview()">← Volver al render</button><div class="spacer"></div>
+        <span class="note" style="border:none;background:none;color:var(--text-muted)">Revisión opcional — el render sigue en cuanto confirmás</span>
+        <button class="btn btn-green" onclick="F_${id}.confirmReview()">${confirmLabel(k)}</button></div></div>`);
+      return;
+    }
+
+    if(st.phase==='done'){
+      if(st.chrome==='takeover'){
+        body.innerHTML = `<div class="takeover show"><div class="tk-body"><div class="results big">
+          <div class="reel"></div>
+          <div class="rmeta"><h2>Reel listo para publicar</h2>
+          <div class="filecard">📄 reel-3-trucos.mp4 · 1080×1920 · 1:14 · 9.4 MB</div>
+          <div class="ractions"><button class="btn btn-out">⤓ Descargar</button><button class="btn btn-out">▶ Reproducir</button><button class="btn btn-out">↻ Re-render</button></div>
+          <div class="note" style="margin-top:var(--s-8)">La columna de metadata IA se despierta acá (026-C) — el pago del flujo.</div></div>
+        </div></div></div>`;
+      } else {
+        body.innerHTML = editorHtml();
+        const sc=document.getElementById('stage-'+id); sc.classList.add('dim');
+        const ov=document.getElementById('runover-'+id); ov.classList.add('show');
+        ov.innerHTML = `<div class="results small"><div class="reel"></div>
+          <div class="rmeta"><h2 style="font-size:var(--t-lg)">✓ Reel listo</h2>
+          <div class="filecard" style="margin:var(--s-5) 0">reel-3-trucos.mp4 · 1:14</div>
+          <div class="ractions"><button class="btn btn-green">Abrir resultado →</button><button class="btn btn-out">⤓</button></div>
+          <div class="note" style="margin-top:var(--s-5)">Quedaste <b>en el editor</b>. El resultado grande (024-B) se abre si querés.</div></div></div>`;
+      }
+      return;
+    }
+  }
+
+  paint();
+  // expose
+  return { play, reset, advance, skip:skipReviews, review:openReview, closeReview, confirmReview:confirmFromReview,
+           flip:()=>{ st.toggle=!st.toggle; paint(); } };
+}
+
+const F_a = makeFlow('a', { mode:'soft', chrome:'inline' });
+const F_b = makeFlow('b', { mode:'hard', chrome:'takeover' });
+const F_c = makeFlow('c', { mode:'soft', chrome:'inline', toggle:true });
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

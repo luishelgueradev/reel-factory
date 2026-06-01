@@ -1,12 +1,13 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030)
-**Sketches processed:** 30 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032)
+**Sketches processed:** 32 (all)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
 Overlays list-forward), Subtitle Styling, Caption Animation Preview, Title Styling (+ entrance timing),
 Video Effects/Transitions, Timeline (frontier), Font Picker, Header Action Zone, States & Save,
 First-Run/Empty, Responsive Reflow, Motion, Preview Manipulation, Render Surface, Render Last-Mile
 (frontier), Metadata/AI Column (AI phase), Pipeline-Step Inspection (frontier), Batch Queue (frontier/ops),
+Pipeline Run-Flow Spine (integration), Pipeline Settings Home (processing params),
 North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-Star v3 (027, current canonical)
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
@@ -43,6 +44,8 @@ North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-S
 | 028 | transcript-review | B | Pipeline-Step Inspection (frontier) |
 | 029 | silence-cut-review | B | Pipeline-Step Inspection (frontier) |
 | 030 | batch-queue | A | Batch Queue / Multi-Job (frontier/ops) |
+| 031 | pipeline-run-flow-spine | A | Pipeline Run-Flow Spine (integration, frontier) |
+| 032 | pipeline-settings-home | A | Pipeline Settings Home (processing params, frontier) |
 
 ## Excluded Sketches
 _None._
@@ -158,6 +161,37 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   switch. **Honest about `MAX_CONCURRENT_JOBS=1`.** Beat the **kanban (030-B** — oversells parallelism the
   pipeline lacks, then has to hard-cap "Procesando" at 1) and the active-hero+strip (030-C). Anti-pattern:
   hide/apologize for the limit; dress the OOM as a generic error; a second action-green on queue chrome.
+- **Pipeline run-flow spine (integration / frontier):** the four independently-sketched winners made
+  *contradicting* navigation choices never composed together — 010-A inline render ("no modal") vs
+  028-B/029-B full-screen review takeovers w/ step-rail + "Confirmar →" gates vs 024-B results takeover
+  vs 030 Editor⇄Cola switch. 031 reduces the whole thing to one axis — **is inspection a PULL or a
+  PUSH?** — and answers **PULL** (031-A). **Inline-first:** render runs on the **dimmed stage, no
+  wizard**; the run stays **in-editor** so the Editor⇄Cola switch persists and "mid-render" reads in
+  place. Each reviewable step **soft-pauses (3s auto-continue + a "Revisar" pull** opening 028/029 on
+  demand); lands on a **small in-stage results card**, the big 024-B takeover opens **only if asked**.
+  Crucially **coherent with single-job/batch (030):** a queued batch **runs auto** (can't gate each
+  job), you only ever gate the **one foreground job** — A models exactly that; B's forced wizard can't.
+  **One green at a time** (Render idle → Confirmar/Continuar in-flow). Beat the **forced gated wizard
+  (031-B**, too heavy per render — its takeover chrome survives as *what a pulled review looks like*)
+  and the **per-render toggle (031-C**, defers the decision instead of making one). **Build calibration:**
+  the 3s soft-pause is a placeholder — validate against real Whisper/cut latency; keep "Revisar"
+  reachable for the *whole* step, not a fixed 3s window. Anti-pattern: wizard-every-render; push-gate a
+  batch; change app-mode to render; a second in-flow green.
+- **Pipeline settings home (processing params / frontier, scope-expanding beyond Phase 22):** the params
+  that drive `pipeline-config.json` — **Whisper model** (tiny→large-v3, *medium* REC), **language** (es
+  fixed), **silence sensitivity** (threshold/min-dur/padding), **output** (1080×1920 9:16 **🔒 in v1**,
+  FPS, H.264) — had **no home in any of the 31 prior sketches** (the tabs all configure the *look*).
+  Resolved to a **slide-over "⚙ Procesamiento" sheet** (032-A) reusing the **016 font-picker
+  shared-component idiom** — a header gear opens a right-anchored sheet over the editor; settings live
+  one click off the per-element tabs, get real room (6 model chips + live tradeoff hints + sensitivity
+  scale breathe), dismiss returns to the look-work untouched. Writes `pipeline-config.json` (same
+  `ACTIVE_PIPELINE_CONFIG_PATH` propagation as Studio-saved config). **Green discipline:** the gear is
+  neutral → **accent when open** (never green); Aplicar = green, Cancelar = outline. Beat the **5th tab
+  (032-B** — breaks the per-element tab contract, muddies the "per-frame vs global" reading the
+  right-pushed Video tab established) and the **Render popover (032-C** — overloads the now-load-bearing
+  render action from 031-A; kept as the "settings at the moment of commit" alt). **Honest 9:16 lock:** a
+  visible *disabled* select with a 🔒 caption beats hiding the constraint. Anti-pattern: 5th tab; couple
+  config to Render; hide the lock; green the gear; invent a new slide-over pattern.
 
 ## Open Sub-Problems
 - ~~**Font picker** for 26 fonts with live previews~~ — **resolved by sketch 016-C** (slide-over gallery).
@@ -185,8 +219,20 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   029-B** (full-screen per-cut review w/ waveform). Frontier / scope-expanding; the core-value made inspectable.
 - ~~The "por lotes" promise has no multi-video / job-status surface~~ — **sketched as 030-A** (queue list,
   honest single-job concurrency). Frontier / ops; may belong outside the Studio for a one-person tool.
+- ~~The render/inspection/results/queue winners make contradicting navigation choices never composed
+  together — what's the actual flow when you hit Render?~~ — **resolved by sketch 031-A** (inline-first,
+  review = pull: render on the dimmed stage, soft-pause + "Revisar" per reviewable step, batch runs auto,
+  one green at a time). The integration spine that reconciles 010/028/029/024/030.
+- ~~The pipeline params (Whisper model, language, silence sensitivity, output res/codec) have no home in
+  any sketch~~ — **resolved by sketch 032-A** (slide-over "⚙ Procesamiento" sheet reusing the 016
+  font-picker idiom; off the per-element tabs; writes `pipeline-config.json`). Scope-expanding beyond
+  Phase 22 — the marker for *where* settings land when built.
+- **Build-time watch (031-A):** the 3s soft-pause countdown is a placeholder — calibrate against real
+  `faster-whisper` + `silence-cutter` latency; keep the "Revisar" pull reachable for the whole step, not
+  a fixed 3s window after completion.
 - **Frontier / next-milestone:** the **timeline** (020-C), the committed-vs-frontier scope line
   (007 drag, 010 render), the **render last-mile** results screen (024-B), the **AI metadata column**
-  (026-C), the two **pipeline-step inspection** surfaces (028-B transcript / 029-B silence-cut), and the
-  **batch queue** (030-A) are validated *directions*, not Phase-22 control-panel deliverables. The two
-  pipeline-step reviews are the strongest delivery on the "cada paso es inspeccionable" promise in AGENTS.md.
+  (026-C), the two **pipeline-step inspection** surfaces (028-B transcript / 029-B silence-cut), the
+  **batch queue** (030-A), the **run-flow spine** (031-A), and the **pipeline settings sheet** (032-A)
+  are validated *directions*, not Phase-22 control-panel deliverables. The two pipeline-step reviews +
+  the run-flow spine are the strongest delivery on the "cada paso es inspeccionable" promise in AGENTS.md.

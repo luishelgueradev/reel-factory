@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 032 — pipeline settings home</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slidein { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+
+  /* ── header ── */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); position: relative; z-index: 5; }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .spacer { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--warning); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 15px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-green { background: var(--action); color: #08220f; border-color: transparent; }
+  .btn-green:hover { background: var(--action-hover); }
+  .gear { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 7px 12px; border-radius: var(--r-sm); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .gear:hover { background: var(--surface-hover); color: var(--text); }
+  .gear.open { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+  /* split render (C) */
+  .rsplit { display: inline-flex; }
+  .rsplit .btn-green { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .rsplit .rgear { background: var(--action); color: #08220f; border: 1px solid transparent; border-left: 1px solid #08220f3a; border-top-right-radius: var(--r-sm); border-bottom-right-radius: var(--r-sm); padding: 0 11px; cursor: pointer; font-size: 13px; }
+  .rsplit .rgear:hover { background: var(--action-hover); }
+  .rsplit .rgear.open { background: var(--action-hover); }
+
+  /* ── editor placeholder ── */
+  .body { flex: 1; min-height: 0; display: flex; position: relative; }
+  .ed { flex: 1; display: flex; gap: 1px; background: var(--border-faint); min-width: 0; }
+  .ed .col { background: var(--canvas); padding: var(--s-10); display: flex; flex-direction: column; }
+  .ed .stagecol { flex: 0 1 340px; align-items: center; justify-content: center; background: var(--stage); }
+  .stage9x16 { width: 190px; height: 338px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .stage9x16 .cap { position: absolute; bottom: 50px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 16px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .stage9x16 .cap b { color: var(--accent); }
+  .ed .ctrlcol { flex: 1; min-width: 0; gap: var(--s-6); }
+  .ed .metacol { flex: 0 0 230px; background: var(--surface); align-items: center; justify-content: center; }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 8px 12px; text-align: center; }
+  .tabbar { display: flex; gap: var(--s-3); margin-bottom: var(--s-6); border-bottom: 1px solid var(--border-faint); padding-bottom: var(--s-5); }
+  .tabbar span { font-size: var(--t-sm); padding: 6px 11px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; white-space: nowrap; }
+  .tabbar span.on { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); font-weight: 600; }
+  .tabbar span.push { margin-left: auto; }
+  .ghostrow { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); margin-bottom: var(--s-4); }
+  .ghostrow.lg { height: 52px; }
+  .placard { font-size: var(--t-2xs); color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; margin-top: auto; }
+
+  /* ════════ shared SETTINGS content ════════ */
+  .settings { display: flex; flex-direction: column; gap: var(--s-10); }
+  .sgroup { display: flex; flex-direction: column; gap: var(--s-6); }
+  .sgroup > .gh { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 7px; }
+  .sgroup > .gh .gi { color: var(--accent); }
+  .srow { display: flex; flex-direction: column; gap: var(--s-3); }
+  .srow .rl { font-size: var(--t-sm); color: var(--text-2); display: flex; align-items: center; gap: 7px; }
+  .srow .rl .info { color: var(--text-faint); font-size: var(--t-2xs); }
+  .hintline { font-size: var(--t-2xs); color: var(--text-faint); }
+  .hintline b { color: var(--text-2); font-weight: 600; }
+
+  /* model chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .mchip { position: relative; font: inherit; font-size: var(--t-xs); color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); padding: 6px 11px; border-radius: var(--r-sm); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .mchip:hover { background: var(--surface-hover); }
+  .mchip.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  .mchip .rec { position: absolute; top: -7px; right: -6px; font-size: 8px; background: var(--accent); color: var(--stage); font-weight: 700; padding: 1px 5px; border-radius: var(--r-full); letter-spacing: .04em; }
+
+  /* select */
+  .sel { font: inherit; font-size: var(--t-sm); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; cursor: pointer; width: 100%; }
+  .sel:focus { outline: none; border-color: var(--accent-strong); }
+  .sel:disabled { color: var(--text-muted); cursor: default; }
+  .lock { font-size: var(--t-2xs); color: var(--text-faint); }
+
+  /* slider */
+  .slider { display: flex; align-items: center; gap: var(--s-6); }
+  .slider input { flex: 1; accent-color: var(--accent); }
+  .slider .sv { font-size: var(--t-sm); color: var(--text); font-variant-numeric: tabular-nums; min-width: 88px; text-align: right; }
+  .scalelbl { display: flex; justify-content: space-between; font-size: var(--t-2xs); color: var(--text-faint); }
+
+  .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); }
+
+  /* ════════ A — slide-over sheet ════════ */
+  .scrim { position: absolute; inset: 0; background: oklch(0.12 0.02 280 / 0.5); display: none; z-index: 8; animation: fadein .2s var(--ease); }
+  .scrim.show { display: block; }
+  .sheet { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; background: var(--surface); border-left: 1px solid var(--border-strong); box-shadow: var(--shadow-pop); z-index: 9; display: none; flex-direction: column; }
+  .sheet.show { display: flex; animation: slidein .24s var(--ease); }
+  .sheet-h { flex: none; display: flex; align-items: center; gap: var(--s-5); padding: var(--s-8) var(--s-10); border-bottom: 1px solid var(--border); }
+  .sheet-h h3 { font-size: var(--t-md); font-weight: 600; flex: 1; }
+  .sheet-h .x { font: inherit; font-size: 18px; color: var(--text-muted); background: none; border: none; cursor: pointer; line-height: 1; }
+  .sheet-h .x:hover { color: var(--text); }
+  .sheet-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+  .sheet-foot { flex: none; padding: var(--s-6) var(--s-10); border-top: 1px solid var(--border); display: flex; gap: var(--s-5); }
+  .sheet-foot .btn { flex: 1; justify-content: center; }
+
+  /* ════════ C — popover on render ════════ */
+  .pop { position: absolute; top: calc(52px + var(--s-5)); right: var(--s-12); width: 340px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); z-index: 9; display: none; flex-direction: column; }
+  .pop.show { display: flex; animation: pop .18s var(--ease); }
+  .pop::before { content: ""; position: absolute; top: -7px; right: 26px; width: 12px; height: 12px; background: var(--surface); border-left: 1px solid var(--border-strong); border-top: 1px solid var(--border-strong); transform: rotate(45deg); }
+  .pop-h { font-size: var(--t-sm); font-weight: 600; padding: var(--s-7) var(--s-10) var(--s-5); color: var(--text); border-bottom: 1px solid var(--border-faint); }
+  .pop-h .sub { font-size: var(--t-2xs); color: var(--text-faint); font-weight: 400; margin-top: 2px; }
+  .pop-body { padding: var(--s-8) var(--s-10); max-height: 420px; overflow-y: auto; }
+  .pop-foot { padding: var(--s-6) var(--s-10); border-top: 1px solid var(--border-faint); display: flex; gap: var(--s-5); align-items: center; }
+  .pop-foot .btn-green { flex: 1; justify-content: center; }
+
+  .note { font-size: var(--t-xs); color: var(--text-2); background: var(--accent-tint-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-8); line-height: 1.5; }
+  .note b { color: var(--text); }
+
+  /* vnav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 032 · settings home</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ · Hoja "⚙ Procesamiento"</button>
+  <button class="vtab" onclick="show('b',this)">B · 5ª pestaña "Procesamiento"</button>
+  <button class="vtab" onclick="show('c',this)">C · Popover en Render</button>
+  <span class="hint">Modelo Whisper · idioma · sensibilidad de silencios · salida → ¿dónde viven?</span>
+</nav>
+
+<!-- ════════ A — slide-over sheet ════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Editor</div></div></div>
+    <div class="spacer"></div>
+    <button class="gear" id="gear-a" onclick="toggleSheet()">⚙ Procesamiento</button>
+    <span class="chip"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body">
+    <div class="ed">
+      <div class="col stagecol"><div class="stage9x16"><div class="cap">tus <b>reels</b></div></div></div>
+      <div class="col ctrlcol">
+        <div class="tabbar"><span class="on">Títulos</span><span>Overlays</span><span>Subtítulos</span><span class="push">Video</span></div>
+        <div class="ghostrow lg"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="ghostrow"></div>
+        <div class="placard">Las 4 pestañas = el LOOK. Los ajustes del pipeline viven aparte (hoja ⚙).</div>
+      </div>
+      <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+    </div>
+    <div class="scrim" id="scrim-a" onclick="toggleSheet()"></div>
+    <aside class="sheet" id="sheet-a">
+      <div class="sheet-h"><h3>⚙ Ajustes de procesamiento</h3><button class="x" onclick="toggleSheet()">✕</button></div>
+      <div class="sheet-body" id="set-a"></div>
+      <div class="sheet-foot"><button class="btn btn-out" onclick="toggleSheet()">Cancelar</button><button class="btn btn-green" onclick="toggleSheet()">Aplicar</button></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════ B — 5th tab ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Editor</div></div></div>
+    <div class="spacer"></div>
+    <span class="chip"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body">
+    <div class="ed">
+      <div class="col stagecol"><div class="stage9x16"><div class="cap">tus <b>reels</b></div></div></div>
+      <div class="col ctrlcol">
+        <div class="tabbar" id="tabbar-b">
+          <span data-t="titulos">Títulos</span><span data-t="overlays">Overlays</span><span data-t="subs">Subtítulos</span>
+          <span data-t="proc" class="on">Procesamiento</span><span data-t="video" class="push">Video</span>
+        </div>
+        <div id="tabcontent-b"></div>
+      </div>
+      <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ C — popover on render ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Editor</div></div></div>
+    <div class="spacer"></div>
+    <span class="chip"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <div class="rsplit">
+      <button class="btn btn-green">▶ Render</button>
+      <button class="rgear" id="rgear-c" onclick="togglePop()">⚙</button>
+    </div>
+  </header>
+  <div class="body">
+    <div class="ed">
+      <div class="col stagecol"><div class="stage9x16"><div class="cap">tus <b>reels</b></div></div></div>
+      <div class="col ctrlcol">
+        <div class="tabbar"><span class="on">Títulos</span><span>Overlays</span><span>Subtítulos</span><span class="push">Video</span></div>
+        <div class="ghostrow lg"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="ghostrow"></div>
+        <div class="placard">Los ajustes viven en el punto de decisión: el botón Render (encaja con el spine 031-A, inline).</div>
+      </div>
+      <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+    </div>
+    <div class="scrim" id="scrim-c" onclick="togglePop()"></div>
+    <div class="pop" id="pop-c">
+      <div class="pop-h">Ajustes de este render<div class="sub">se guardan en pipeline-config.json</div></div>
+      <div class="pop-body" id="set-c"></div>
+      <div class="pop-foot"><button class="btn btn-green" onclick="togglePop()">▶ Render con estos ajustes →</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// ── real grounding: AGENTS.md Whisper table + pipeline-config (silencedetect, 9:16 H.264) ──
+const MODELS = [
+  { k:'tiny',    rec:false, hint:'el más rápido · precisión baja — sólo pruebas' },
+  { k:'base',    rec:false, hint:'muy rápido · precisión baja' },
+  { k:'small',   rec:false, hint:'rápido · buena en CPU · español ok' },
+  { k:'medium',  rec:true,  hint:'equilibrio velocidad/precisión · multilingüe — recomendado' },
+  { k:'large-v3',rec:false, hint:'el más preciso · lento · pide GPU (~10 GB)' },
+  { k:'turbo',   rec:false, hint:'rápido y muy preciso · sólo GPU' },
+];
+let model = 'medium';
+
+function settingsHtml(scope){
+  const chips = MODELS.map(m=>`<button class="mchip ${m.k===model?'on':''}" onclick="pickModel('${m.k}','${scope}')">${m.k}${m.rec?'<span class="rec">REC</span>':''}</button>`).join('');
+  const hint = MODELS.find(m=>m.k===model).hint;
+  return `<div class="settings">
+    <div class="sgroup">
+      <div class="gh"><span class="gi">◷</span>Transcripción (Whisper)</div>
+      <div class="srow"><div class="rl">Modelo</div><div class="chips">${chips}</div><div class="hintline" id="mhint-${scope}"><b>${model}</b> — ${hint}</div></div>
+      <div class="srow"><div class="rl">Idioma</div>
+        <select class="sel"><option>Español (es) — fijado</option><option>Detección automática</option><option>Inglés (en)</option></select>
+        <div class="hintline">Fijar el idioma mejora la precisión y se saltea la detección.</div></div>
+    </div>
+    <div class="sgroup">
+      <div class="gh"><span class="gi">◢</span>Cortes de silencio</div>
+      <div class="srow"><div class="rl">Sensibilidad <span class="info">umbral de silencio</span></div>
+        <div class="slider"><input type="range" min="0" max="100" value="55" oninput="this.nextElementSibling.textContent=sensLbl(this.value)"><span class="sv">equilibrado</span></div>
+        <div class="scalelbl"><span>conservador (corta menos)</span><span>agresivo (corta más)</span></div></div>
+      <div class="twocol">
+        <div class="srow"><div class="rl">Silencio mínimo</div><select class="sel"><option>0.3 s</option><option selected>0.5 s</option><option>0.8 s</option><option>1.0 s</option></select></div>
+        <div class="srow"><div class="rl">Margen (padding)</div><select class="sel"><option>0 ms</option><option selected>80 ms</option><option>150 ms</option></select></div>
+      </div>
+    </div>
+    <div class="sgroup">
+      <div class="gh"><span class="gi">▢</span>Salida</div>
+      <div class="twocol">
+        <div class="srow"><div class="rl">Resolución</div><select class="sel" disabled><option>1080 × 1920 · 9:16</option></select><div class="lock">🔒 vertical 9:16 en v1</div></div>
+        <div class="srow"><div class="rl">FPS</div><select class="sel"><option>24</option><option selected>30</option><option>60</option></select></div>
+      </div>
+      <div class="srow"><div class="rl">Códec</div><select class="sel"><option selected>H.264 (mejor compatibilidad)</option><option>H.265 / HEVC</option></select></div>
+    </div>
+  </div>`;
+}
+function sensLbl(v){ v=+v; return v<25?'conservador':v<45?'suave':v<70?'equilibrado':v<88?'agresivo':'máximo'; }
+function pickModel(k, scope){ model=k; ['a','c','b'].forEach(s=>{ const el=document.getElementById('set-'+s); if(el) el.innerHTML=settingsHtml(s); }); }
+
+// inject settings into A and C
+document.getElementById('set-a').innerHTML = settingsHtml('a');
+document.getElementById('set-c').innerHTML = settingsHtml('c');
+
+// ── A: slide-over ──
+function toggleSheet(){
+  const open = document.getElementById('sheet-a').classList.toggle('show');
+  document.getElementById('scrim-a').classList.toggle('show', open);
+  document.getElementById('gear-a').classList.toggle('open', open);
+}
+// ── C: popover ──
+function togglePop(){
+  const open = document.getElementById('pop-c').classList.toggle('show');
+  document.getElementById('scrim-c').classList.toggle('show', open);
+  document.getElementById('rgear-c').classList.toggle('open', open);
+}
+
+// ── B: 5th tab ──
+const otherTabHtml = (name)=>`<div class="settings"><div class="ghostrow lg"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="placard" style="margin-top:var(--s-8)">Pestaña «${name}» — el LOOK por-elemento (abstraída)</div></div>`;
+function paintTabB(t){
+  const host=document.getElementById('tabcontent-b');
+  if(t==='proc'){ host.innerHTML = settingsHtml('b') + `<div class="note" style="margin-top:var(--s-10)">⚠ Estas son globales del pipeline (no por-elemento) — rompen el contrato de las otras pestañas, que configuran un título / overlay / subtítulo puntual.</div>`; }
+  else { const names={titulos:'Títulos',overlays:'Overlays',subs:'Subtítulos',video:'Video'}; host.innerHTML=otherTabHtml(names[t]); }
+}
+document.querySelectorAll('#tabbar-b span').forEach(s=>s.addEventListener('click',()=>{
+  document.querySelectorAll('#tabbar-b span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); paintTabB(s.dataset.t);
+}));
+paintTabB('proc');
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

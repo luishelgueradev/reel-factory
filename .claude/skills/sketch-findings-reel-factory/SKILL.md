@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, animated caption preview, title entrance timing, overlays tab density, font picker, header action zone, render surface, render last-mile/results screen, AI metadata column, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star v3 canonical screen w/ live preview & scope boundary, pipeline-step inspection (transcript & silence-cut review), batch queue / multi-job status). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, animated caption preview, title entrance timing, overlays tab density, font picker, header action zone, render surface, render last-mile/results screen, AI metadata column, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star v3 canonical screen w/ live preview & scope boundary, pipeline-step inspection (transcript & silence-cut review), batch queue / multi-job status, pipeline run-flow spine (render·inspection·results·queue reconciled), pipeline settings home / processing-params sheet). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -33,7 +33,12 @@ that finally wakes the long-dormant right column), 2026-06-01 (sketches 027–03
 folds the live caption preview into the canonical screen and supersedes 023, the two **pipeline-step
 inspection** surfaces — full-screen transcript review and silence-cut review that make the
 "inspeccionable" promise legible — and the **batch queue / multi-job status** view that's honest about
-the single-job `MAX_CONCURRENT_JOBS=1` / Chrome-OOM constraint).
+the single-job `MAX_CONCURRENT_JOBS=1` / Chrome-OOM constraint), 2026-06-01 (sketches 031–032: the
+**pipeline run-flow spine** that reconciles the independently-sketched render / inspection / results /
+queue winners into one *inline-first, review-as-pull* navigation model, and the **pipeline settings
+home** — a slide-over "⚙ Procesamiento" sheet (reusing the 016 font-picker idiom) that finally gives
+the non-look processing params, Whisper model / language / silence sensitivity / output, a home off the
+per-element tabs).
 </context>
 
 <design_direction>
@@ -104,6 +109,8 @@ generate/copy use **accent (blue)**, never the reserved action-green.
 | North-Star Composite (superseded) | references/north-star-composite.md | ⚠️ **Superseded by north-star-v2/v3.** Historical 015 capstone of the 001–014 era: 013-B header + 001-D shell + 3 tabs + 007 drag + 010 render, A↔B scope boundary. Plan-split rule originates here; the screen itself is stale (3 tabs, no timeline) |
 | Pipeline-Step Inspection (frontier) | references/pipeline-inspection.md | ⚠️ Scope-expanding. **Full-screen review *steps*** (not in-shell tabs) make the "inspeccionable" promise legible: shared **step-rail** (Audio→Transcripción→Silencios→Render) + single **"Confirmar … →"** green. **Transcript (028-B):** document read-through, click-to-edit, confidence underlines (amber<0.78/red<0.6) — the *legit* confidence use vs dropped auto-zoom. **Silence cuts (029-B):** before/after stat + waveform w/ removed silences in red (click-restore) + per-cut list w/ source badges (×2/ffmpeg/whisper) + toggles. Makes core-value inspectable. Anti-pattern: cram into shell; flat-tone underline; free-restore if re-render |
 | Batch Queue / Multi-Job (frontier/ops) | references/batch-queue.md | ⚠️ Scope-expanding / ops. **Queue list (030-A):** sectioned rows (Procesando ahora w/ inline pipeline+ETA · En espera numbered+drag · Fallaron w/ real OOM+retry · Terminados+download) + an **ambient concurrency banner** stating "un video a la vez" plainly. Honest about `MAX_CONCURRENT_JOBS=1` / Chrome-OOM. Reached via Editor⇄Cola switch. Anti-pattern: kanban (oversells parallelism); hide/apologize for the limit; second action-green |
+| Pipeline Run-Flow Spine (integration) | references/run-flow-spine.md | ⚠️ Scope-expanding / integration. **Inline-first, review = PULL (031-A):** 010-A stays the spine — render runs on the dimmed stage (no wizard), run stays in-editor so the Editor⇄Cola switch persists; each reviewable step soft-pauses (3s auto-continue + a "Revisar" pull opening 028/029 on demand); small in-stage results, big 024-B takeover opens only if asked. Honest with single-job/batch (a queued batch runs auto; you only gate the one foreground job). One green at a time (Render→Confirmar). Reconciles 010/028/029/024/030. Anti-pattern: forced wizard per render (031-B); push-gate a batch; second green; ship the literal 3s window unchecked |
+| Pipeline Settings Home (processing params) | references/pipeline-settings.md | ⚠️ Scope-expanding (beyond Phase 22 look-polish). **Slide-over "⚙ Procesamiento" sheet (032-A):** reuses the 016 font-picker idiom to home the *non-look* params — Whisper model (6 chips + tradeoff hints, REC on medium), language (es fixed), silence sensitivity (conservador→máximo), output (9:16 🔒 in v1, FPS, H.264) — off the per-element tabs. Writes `pipeline-config.json`. Green discipline: gear neutral→accent-when-open, Aplicar green. Anti-pattern: 5th tab (breaks per-element contract); Render popover (overloads the run action); hide the 9:16 lock; green the gear |
 
 ## Theme
 
@@ -145,6 +152,8 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/028-transcript-review/index.html` — winner `#v-b` (full-screen transcript read-through; frontier / scope-expanding)
 - `sources/029-silence-cut-review/index.html` — winner `#v-b` (full-screen per-cut review; frontier / scope-expanding)
 - `sources/030-batch-queue/index.html` — winner `#v-a` (queue list; frontier / ops, honest single-job constraint)
+- `sources/031-pipeline-run-flow-spine/index.html` — winner `#v-a` (inline-first / review = pull; **playable** — press ▶ Render)
+- `sources/032-pipeline-settings-home/index.html` — winner `#v-a` (slide-over "⚙ Procesamiento" sheet)
 </findings_index>
 
 <metadata>
@@ -180,4 +189,6 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 028-transcript-review (winner B — full-screen Whisper transcript read-through; frontier, scope-expanding)
 - 029-silence-cut-review (winner B — full-screen per-cut review; frontier, core-value, scope-expanding)
 - 030-batch-queue (winner A — queue list; frontier/ops, honest single-job concurrency)
+- 031-pipeline-run-flow-spine (winner A — inline-first / review = pull; integration of render·inspection·results·queue; frontier, scope-expanding)
+- 032-pipeline-settings-home (winner A — slide-over "⚙ Procesamiento" sheet; processing params off the per-element tabs; scope-expanding beyond Phase 22)
 </metadata>

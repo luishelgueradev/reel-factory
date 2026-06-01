@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 013 — header action zone</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text);
+         font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* header */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-8);
+         padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm);
+         background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+         display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-spacer { flex: 1; }
+  .hdr-actions { display: flex; gap: var(--s-6); align-items: center; flex: none; }
+
+  /* status chip (008-B) */
+  .statuschip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-sm); font-weight: 500; padding: 5px 11px; border-radius: var(--r-full); white-space: nowrap; }
+  .statuschip .sdot { width: 7px; height: 7px; border-radius: 50%; }
+  .statuschip[data-s=clean]  { color: var(--text-muted); }
+  .statuschip[data-s=clean] .sdot { background: var(--success); }
+  .statuschip[data-s=dirty]  { color: var(--warning); background: oklch(0.80 0.12 78 / 0.12); }
+  .statuschip[data-s=dirty] .sdot { background: var(--warning); box-shadow: 0 0 0 3px oklch(0.80 0.12 78 / 0.22); }
+  .statuschip[data-s=saving] { color: var(--text-2); }
+  .statuschip[data-s=saved]  { color: var(--success); background: oklch(0.72 0.14 150 / 0.12); }
+  .spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--text-faint); border-top-color: var(--text); animation: spin 0.7s linear infinite; }
+
+  /* Guardar = ALWAYS an outline button (never the second green) */
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm);
+         border: 1px solid var(--border-strong); background: transparent; color: var(--text-2); cursor: pointer;
+         transition: background var(--dur) var(--ease), color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
+  .btn:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+
+  /* Render = THE green primary (010-A) — the surface's true primary action */
+  .render-cta { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: var(--t-md); font-weight: 600;
+        padding: 7px 16px; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--action); color: oklch(0.16 0.02 150); cursor: pointer;
+        transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .render-cta:hover:not(:disabled) { background: var(--action-hover); }
+  .render-cta:disabled { opacity: 0.55; cursor: not-allowed; }
+  .render-cta .tri { font-size: 11px; }
+  .render-cta .gspin { width: 12px; height: 12px; border: 2px solid oklch(0.16 0.02 150); border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; }
+
+  /* header inline render progress (variant C) */
+  .hdr-prog { display: flex; align-items: center; gap: var(--s-5); min-width: 220px; }
+  .hdr-prog .lbl { font-size: var(--t-sm); color: var(--text-2); white-space: nowrap; }
+  .hdr-prog .lbl b { color: var(--accent); font-weight: 600; }
+  .hdr-prog .bar { flex: 1; height: 5px; border-radius: var(--r-full); background: var(--surface-hover); overflow: hidden; min-width: 90px; }
+  .hdr-prog .bar > i { display: block; height: 100%; background: var(--accent); border-radius: var(--r-full); transition: width var(--dur) var(--ease); }
+  .hdr-prog .pctnum { font-size: var(--t-sm); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent); min-width: 38px; text-align: right; }
+  .hdr-prog .cancel { font: inherit; font-size: var(--t-xs); color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 10px; cursor: pointer; }
+
+  /* zone separator (variant B) */
+  .zone-div { width: 1px; height: 24px; background: var(--border); flex: none; }
+
+  /* work area */
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { position: relative; flex: 0 1 470px; background: var(--stage); display: flex; flex-direction: column;
+           align-items: center; justify-content: center; padding: var(--s-12); border-right: 1px solid var(--border); min-width: 0; }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 600px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%),
+                       radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%),
+                       linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); }
+  .pv-title { position: absolute; top: 9%; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 16px; border-radius: var(--r-sm);
+           background: oklch(0.20 0.03 280 / 0.82); backdrop-filter: blur(3px); font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .pv-cap { position: absolute; bottom: 13%; left: 8%; right: 8%; text-align: center; z-index: 40; font-weight: 800; font-size: 24px; line-height: 1.15; text-shadow: 0 2px 12px oklch(0.12 0 0 / 0.85); }
+  .pv-cap .on { color: var(--accent); }
+  .stage-meta { margin-top: var(--s-8); display: flex; gap: var(--s-6); align-items: center; color: var(--text-muted); font-size: var(--t-xs); }
+  .pill { padding: 3px 9px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+  /* render-on-stage overlay (010-A) */
+  .stage-overlay { position: absolute; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: var(--s-10); padding: var(--s-16); background: oklch(0.165 0.022 280 / 0.86); backdrop-filter: blur(6px);
+        opacity: 0; pointer-events: none; transition: opacity var(--dur) var(--ease); }
+  .stage-overlay.show { opacity: 1; pointer-events: auto; }
+  .ring-wrap { position: relative; width: 128px; height: 128px; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-wrap .pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--t-2xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ring-wrap .pct small { display: block; font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
+  .steps { display: flex; flex-direction: column; gap: var(--s-3); width: 100%; max-width: 280px; }
+  .step { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-4) var(--s-5); border-radius: var(--r-sm); font-size: var(--t-sm); color: var(--text-muted); }
+  .step .dot { width: 18px; height: 18px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 10px; border: 1px solid var(--border-strong); color: var(--text-faint); }
+  .step.done { color: var(--text-2); } .step.done .dot { background: var(--success); border-color: transparent; color: var(--stage); }
+  .step.active { color: var(--text); background: var(--accent-tint-2); } .step.active .dot { border-color: var(--accent); color: var(--accent); }
+  .step.active .dot .s { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--accent); border-top-color: transparent; animation: spin 0.7s linear infinite; }
+  .step .tool { margin-left: auto; font-size: var(--t-2xs); color: var(--text-faint); font-family: var(--mono); }
+  .done-card { text-align: center; }
+  .done-card .check { width: 56px; height: 56px; margin: 0 auto var(--s-6); border-radius: 50%; background: oklch(0.72 0.14 150 / 0.16); border: 1px solid var(--success); display: grid; place-items: center; font-size: 26px; color: var(--success); }
+  .done-card .t1 { font-size: var(--t-lg); font-weight: 600; }
+  .done-card .meta2 { font-size: var(--t-xs); color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .done-actions { display: flex; gap: var(--s-5); justify-content: center; margin-top: var(--s-10); flex-wrap: wrap; }
+  .da { font: inherit; font-size: var(--t-sm); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+  .da.prim { background: var(--accent); color: var(--stage); border-color: transparent; font-weight: 600; }
+  .fail-card .check { background: oklch(0.63 0.185 25 / 0.15); border-color: var(--danger); color: var(--danger); }
+  .fail-card .t2 { font-size: var(--t-xs); color: var(--text-muted); margin: 6px auto 0; max-width: 30ch; line-height: 1.5; }
+
+  /* controls */
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab { appearance: none; border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500; color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab .ct { margin-left: 6px; font-size: var(--t-2xs); color: var(--text-faint); }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .row { display: grid; grid-template-columns: 84px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 9px; width: 100%; }
+  .inp:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+
+  /* metadata */
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; flex: 0 0 320px; }
+  .meta-h { padding: var(--s-10) var(--s-10) var(--s-6); }
+  .meta-h .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .meta-h h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta-h p { font-size: var(--t-xs); color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+  .meta-body { flex: 1; overflow-y: auto; padding: var(--s-6) var(--s-10) var(--s-12); display: flex; flex-direction: column; gap: var(--s-8); }
+  .ghost { opacity: 0.5; pointer-events: none; }
+  .gh-label { font-size: var(--t-2xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-3); }
+  .gh-box { background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: var(--s-6); color: var(--text-faint); font-size: var(--t-sm); }
+  .gh-line { height: 9px; border-radius: var(--r-full); background: var(--surface-2); margin: 7px 0; }
+  .gh-line.w70 { width: 70%; } .gh-line.w90 { width: 90%; }
+
+  /* chrome */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  .jumpers { position: fixed; bottom: 12px; left: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; display: flex; flex-direction: column; gap: 6px; }
+  .jrow { background: rgba(0,0,0,0.74); color: #fff; padding: 6px 9px; border-radius: 8px; display: flex; gap: 6px; align-items: center; opacity: 0.6; }
+  .jrow:hover { opacity: 1; }
+  .jrow .jl { color: #9aa; min-width: 52px; }
+  .jrow button { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+  .jrow button.on { background: var(--accent); color: #111; border-color: transparent; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 013 · header action zone</span>
+  <button class="vtab active" onclick="show('a',this)">A · Trio (chip · Guardar · Render)</button>
+  <button class="vtab" onclick="show('b',this)">B ★ · Split zones (status ⟍ actions)</button>
+  <button class="vtab" onclick="show('c',this)">C · Render-priority collapse</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">edit a control → dirty · save · render · jump states ↙</span>
+</nav>
+
+<div class="variant active" id="v-a"></div>
+<div class="variant" id="v-b"></div>
+<div class="variant" id="v-c"></div>
+
+<div class="jumpers">
+  <div class="jrow"><span class="jl">guardar</span>
+    <button data-save="clean">clean</button><button data-save="dirty">dirty</button><button data-save="saving">saving</button><button data-save="saved">saved</button></div>
+  <div class="jrow"><span class="jl">render</span>
+    <button data-render="idle">idle</button><button data-render="running">running</button><button data-render="done">done</button><button data-render="failed">failed</button></div>
+</div>
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  const STEPS = [
+    { id:'transcribe', label:'Transcripción',    tool:'Whisper' },
+    { id:'silence',    label:'Cortar silencios', tool:'FFmpeg'  },
+    { id:'render',     label:'Render 9:16',      tool:'Remotion'},
+  ];
+  const st = {
+    a:{ save:'dirty', render:'idle', prog:0, step:0 },
+    b:{ save:'dirty', render:'idle', prog:0, step:0 },
+    c:{ save:'dirty', render:'idle', prog:0, step:0 },
+  };
+  let timer = {};
+
+  // ── header actions (the reconciliation lives here) ──
+  function chip(s){
+    const inner = s==='dirty' ? `<span class="sdot"></span>Cambios sin guardar`
+                : s==='saving'? `<span class="spin"></span>Guardando…`
+                : s==='saved' ? `✓ Guardado recién`
+                : `<span class="sdot"></span>Todo guardado`;
+    return `<span class="statuschip" data-s="${s}">${inner}</span>`;
+  }
+  function guardarBtn(v){
+    // ALWAYS outline. disabled while saving or rendering (single-job).
+    const dis = (v.save==='saving' || v.render==='running');
+    const lbl = v.save==='saving' ? 'Guardando…' : 'Guardar config';
+    return `<button class="btn" data-save-go ${dis?'disabled':''}>${lbl}</button>`;
+  }
+  function renderBtn(v){
+    const running = v.render==='running';
+    const inner = running ? `<span class="gspin"></span>Renderizando…`
+                : v.render==='done' ? `<span class="tri">▶</span>Render de nuevo`
+                : v.render==='failed' ? `↻ Reintentar`
+                : `<span class="tri">▶</span>Render Video`;
+    return `<button class="render-cta" data-render-go ${running?'disabled':''}>${inner}</button>`;
+  }
+  function hdrProg(v){
+    return `<div class="hdr-prog"><span class="lbl">Renderizando · <b>${STEPS[v.step].label}</b></span>
+      <div class="bar"><i style="width:${v.prog}%"></i></div><span class="pctnum">${v.prog}%</span>
+      <button class="cancel" data-cancel>Cancelar</button></div>`;
+  }
+
+  function headerInner(vk){
+    const v = st[vk];
+    if (vk==='a') {
+      // Trio: chip · Guardar(outline) · Render(green), all right-aligned
+      return `<div class="hdr-spacer"></div><div class="hdr-actions">${chip(v.save)}${guardarBtn(v)}${renderBtn(v)}</div>`;
+    }
+    if (vk==='b') {
+      // Split zones: status on the LEFT (after brand), actions on the RIGHT
+      return `<div class="hdr-actions" style="margin-left:var(--s-4)">${chip(v.save)}</div>
+        <div class="hdr-spacer"></div>
+        <div class="hdr-actions">${guardarBtn(v)}<span class="zone-div"></span>${renderBtn(v)}</div>`;
+    }
+    // c: render-priority collapse — while running, save cluster collapses and header shows inline progress
+    if (v.render==='running') {
+      return `<div class="hdr-spacer"></div><div class="hdr-actions">${hdrProg(v)}</div>`;
+    }
+    return `<div class="hdr-spacer"></div><div class="hdr-actions">${chip(v.save)}${guardarBtn(v)}${renderBtn(v)}</div>`;
+  }
+
+  // ── stage render overlay ──
+  function ringSvg(pct){ const r=56,c=2*Math.PI*r,off=c*(1-pct/100);
+    return `<svg width="128" height="128"><circle cx="64" cy="64" r="${r}" fill="none" stroke="var(--border)" stroke-width="6"/>
+      <circle cx="64" cy="64" r="${r}" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"
+        stroke-dasharray="${c}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset var(--dur) var(--ease)"/></svg>`; }
+  function stepper(v){ return `<div class="steps">`+STEPS.map((s,i)=>{
+      const cls=i<v.step?'done':i===v.step&&v.render==='running'?'active':'';
+      const ic=i<v.step?'✓':i===v.step&&v.render==='running'?'<span class="s"></span>':i+1;
+      return `<div class="step ${cls}"><span class="dot">${ic}</span>${s.label}<span class="tool">${s.tool}</span></div>`;
+    }).join('')+`</div>`; }
+  function stageOverlay(v){
+    if (v.render==='idle') return '';
+    let inner='';
+    if (v.render==='running') inner = `<div class="ring-wrap">${ringSvg(v.prog)}<div class="pct">${v.prog}%<small>${STEPS[v.step].label}</small></div></div>${stepper(v)}`;
+    else if (v.render==='done') inner = `<div class="done-card"><div class="check">✓</div><div class="t1">Reel listo</div><div class="meta2">reel-final.mp4 · 1080×1920 · 8.4 MB · 00:42</div>
+        <div class="done-actions"><button class="da prim">⤓ Descargar MP4</button><button class="da">Ver</button></div></div>`;
+    else inner = `<div class="done-card fail-card"><div class="check">!</div><div class="t1">Falló el render</div>
+        <div class="t2">Remotion se quedó sin memoria en el frame 612. Probá bajar el supersampling o reintentá.</div>
+        <div class="done-actions"><button class="da prim">↻ Reintentar</button><button class="da">Ver log</button></div></div>`;
+    return `<div class="stage-overlay show">${inner}</div>`;
+  }
+
+  const bodyHTML = `
+    <div class="tabs"><button class="tab">Títulos<span class="ct">2</span></button><button class="tab">Overlays<span class="ct">3</span></button><button class="tab sel">Subtítulos</button></div>
+    <div class="ctrl-body">
+      <div class="sec"><div class="sec-h"><span class="num">1</span>Posición</div>
+        <div class="row"><label>Lugar</label><div class="seg"><button>Arriba</button><button>Centro</button><button class="on">Abajo</button></div></div></div>
+      <div class="sec"><div class="sec-h"><span class="num">2</span>Estilo</div>
+        <div class="row"><label>Tamaño</label><input type="range" min="24" max="120" value="58" class="dirty-src"></div>
+        <div class="row"><label>Peso</label><div class="seg dirty-src"><button>Reg</button><button class="on">Bold</button></div></div>
+        <div class="row"><label>Resalte</label><input class="inp dirty-src" value="#FFEA00"></div></div>
+      <div class="sec" style="margin-bottom:0"><div class="sec-h"><span class="num">3</span>Avanzado <span style="color:var(--text-faint);font-weight:500;text-transform:none;letter-spacing:0">· rara vez</span></div>
+        <div class="row"><label>Palabras/pág</label><input class="inp dirty-src" value="3"></div></div>
+    </div>`;
+  const metaHTML = `<aside class="meta"><div class="meta-h"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div>
+      <p>Generada con IA desde la transcripción.</p></div>
+    <div class="meta-body ghost"><div><div class="gh-label">Título</div><div class="gh-box">El truco de edición que cambió mis reels</div></div>
+      <div><div class="gh-label">Descripción</div><div class="gh-box"><div class="gh-line w90"></div><div class="gh-line w70"></div></div></div></div></aside>`;
+
+  function render(vk){
+    const v = st[vk];
+    document.getElementById('v-'+vk).innerHTML = `
+      <header class="hdr">
+        <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Subtítulos</div></div></div>
+        ${headerInner(vk)}
+      </header>
+      <div class="work">
+        <section class="stage">
+          <div class="phone"><div class="pv-title">Cómo edité este reel</div><div class="pv-cap"><span class="on">subtítulos</span> que enganchan</div></div>
+          <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">9:16</span><span class="pill">00:42</span></div>
+          ${stageOverlay(v)}
+        </section>
+        <section class="controls">${bodyHTML}</section>
+        ${metaHTML}
+      </div>`;
+    wire(vk);
+  }
+
+  function setSave(vk, s){ st[vk].save = s; render(vk);
+    if (s==='saving') setTimeout(()=>{ if(st[vk].save==='saving') setSave(vk,'saved'); }, 850);
+    if (s==='saved')  setTimeout(()=>{ if(st[vk].save==='saved')  setSave(vk,'clean'); }, 1600);
+  }
+  function runRender(vk){
+    const v = st[vk]; if (v.render==='running') return;
+    clearInterval(timer[vk]); v.render='running'; v.prog=0; v.step=0; render(vk);
+    timer[vk] = setInterval(()=>{
+      v.prog += Math.max(2, Math.round(7*Math.random()));
+      v.step = Math.min(STEPS.length-1, Math.floor(v.prog/(100/STEPS.length)));
+      if (v.prog>=100){ v.prog=100; clearInterval(timer[vk]); v.render='done'; }
+      render(vk);
+    }, 240);
+  }
+  function jumpRender(vk, ph){ clearInterval(timer[vk]); const v=st[vk];
+    if (ph==='running'){ v.render='running'; v.step=1; v.prog=46; }
+    else { v.render=ph; v.step= ph==='done'?STEPS.length:1; v.prog= ph==='done'?100:0; }
+    render(vk);
+  }
+
+  function wire(vk){
+    const root = document.getElementById('v-'+vk);
+    root.querySelectorAll('[data-save-go]').forEach(b=> b.onclick=()=> setSave(vk,'saving'));
+    root.querySelectorAll('[data-render-go]').forEach(b=> b.onclick=()=> runRender(vk));
+    root.querySelectorAll('[data-cancel]').forEach(b=> b.onclick=()=> jumpRender(vk,'idle'));
+    const markDirty = ()=>{ if (st[vk].save==='clean'||st[vk].save==='saved') setSave(vk,'dirty'); };
+    root.querySelectorAll('.dirty-src').forEach(el=>{
+      if (el.classList.contains('seg')) el.querySelectorAll('button').forEach(btn=> btn.addEventListener('click', ()=>{ el.querySelectorAll('button').forEach(x=>x.classList.remove('on')); btn.classList.add('on'); markDirty(); }));
+      else el.addEventListener('input', markDirty);
+    });
+    root.querySelectorAll('.seg:not(.dirty-src)').forEach(s=> s.querySelectorAll('button').forEach(b=> b.onclick=()=>{ s.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }));
+  }
+
+  ['a','b','c'].forEach(render);
+
+  function activeVk(){ return document.querySelector('.variant.active').id.slice(2); }
+  document.querySelectorAll('[data-save]').forEach(b=> b.onclick=()=>{ const vk=activeVk(); clearInterval(timer[vk]); st[vk].save=b.dataset.save; render(vk); });
+  document.querySelectorAll('[data-render]').forEach(b=> b.onclick=()=> jumpRender(activeVk(), b.dataset.render));
+
+  function show(id, btn){
+    document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+    document.getElementById('v-'+id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

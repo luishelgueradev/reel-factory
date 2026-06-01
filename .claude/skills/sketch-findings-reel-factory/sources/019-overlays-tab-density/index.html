@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 019 — overlays tab density</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text);
+         font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  /* ── header (013-B split zones) ── */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between;
+         padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm);
+         background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+         display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-4); align-items: center; }
+  .save-chip { display: inline-flex; align-items: center; gap: var(--s-3); font-size: var(--t-xs);
+               padding: var(--s-2) var(--s-5); border-radius: var(--r-full); color: var(--warning); }
+  .save-chip .dot { width: 6px; height: 6px; border-radius: var(--r-full); background: currentColor; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm);
+         border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer;
+         transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .btn:hover { background: var(--surface-hover); color: var(--text); }
+  .btn.green { background: var(--action); border-color: transparent; color: oklch(0.16 0.02 150); font-weight: 600; }
+
+  /* ── work area ── */
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { flex: 0 1 420px; background: var(--stage); display: flex; flex-direction: column;
+           align-items: center; justify-content: center; padding: var(--s-12); border-right: 1px solid var(--border); min-width: 0; }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 600px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%),
+                       radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%),
+                       linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); }
+  .pv-cap { position: absolute; bottom: 12%; left: 7%; right: 7%; text-align: center; z-index: 60;
+            font-family: 'Plus Jakarta Sans', var(--font); font-weight: 800; font-size: 27px; line-height: 1.15; color: #fff;
+            text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .pv-cap .on { color: #ffea00; }
+  /* the overlay element living on the preview */
+  .pv-ov { position: absolute; z-index: 40; border-radius: var(--r-xs); display: grid; place-items: center;
+           font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.04em; color: oklch(0.22 0.02 280);
+           box-shadow: 0 4px 14px rgba(0,0,0,.35); transition: outline-color var(--dur) var(--ease); outline: 2px solid transparent; }
+  .pv-ov.sel { outline-color: var(--accent); }
+  .pv-ov.logo  { top: 6%; left: 6%; width: 92px; height: 46px; background: linear-gradient(135deg, #ffd36e, #ff9e5e); }
+  .pv-ov.badge { top: 5%; right: 6%; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #8ee6c8, #4fb6d8); }
+  .pv-ov.behind { z-index: 30; opacity: 0.85; }
+  .stage-meta { margin-top: var(--s-8); display: flex; gap: var(--s-6); color: var(--text-muted); font-size: var(--t-xs); }
+  .pill { padding: 3px 9px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+
+  /* ── controls column ── */
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab { border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500;
+         color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+
+  /* TabLead / TabForm skeleton (012-B) */
+  .tab-lead { margin-bottom: var(--s-10); }
+  .tab-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6) var(--s-12); align-items: start; }
+  .colwrap { display: flex; flex-direction: column; min-width: 0; }
+
+  /* sections / atoms (locked vocabulary) */
+  .sec { margin-bottom: var(--s-10); }
+  .sec:last-child { margin-bottom: 0; }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700;
+           letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .sec-h .note { color: var(--text-faint); font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .row { display: grid; grid-template-columns: 78px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row:last-child { margin-bottom: 0; }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .inp { font: inherit; font-size: var(--t-md); color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 9px; width: 100%; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .rng { display: grid; grid-template-columns: 1fr 46px; align-items: center; gap: var(--s-5); }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+  .rng output { font-size: var(--t-xs); color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; }
+  .xy { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  .xy .field { display: grid; grid-template-columns: 14px 1fr; align-items: center; gap: var(--s-3); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 4px 8px; }
+  .xy .field span { font-size: var(--t-xs); color: var(--text-faint); }
+  .xy .field input { font: inherit; font-size: var(--t-md); color: var(--text); background: none; border: none; width: 100%; font-variant-numeric: tabular-nums; }
+  /* 9-point preset grid (003-B) */
+  .pgrid { display: inline-grid; grid-template-columns: repeat(3, 30px); grid-auto-rows: 30px; gap: 3px; }
+  .pgrid button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: var(--r-xs); cursor: pointer; font-size: 13px; display: grid; place-items: center; transition: all var(--dur) var(--ease); }
+  .pgrid button:hover { border-color: var(--border-strong); color: var(--text); }
+  .pgrid button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  /* ── overlay list (the TabLead) ── */
+  .ov-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-5); }
+  .ov-head .cap { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+  .ov-head .count { font-size: var(--t-2xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .ov-list { display: flex; flex-direction: column; gap: var(--s-4); }
+  .ov-card { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-4) var(--s-5); border-radius: var(--r-sm);
+             background: var(--surface); border: 1px solid var(--border); cursor: pointer; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .ov-card:hover { border-color: var(--border-strong); }
+  .ov-card.sel { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .ov-card .grip { color: var(--text-faint); font-size: var(--t-md); cursor: grab; flex: none; }
+  .ov-thumb { width: 38px; height: 38px; border-radius: var(--r-xs); flex: none; display: grid; place-items: center;
+              font-size: 9px; font-weight: 800; color: oklch(0.22 0.02 280); }
+  .ov-thumb.logo  { background: linear-gradient(135deg, #ffd36e, #ff9e5e); }
+  .ov-thumb.badge { background: linear-gradient(135deg, #8ee6c8, #4fb6d8); }
+  .ov-meta { flex: 1; min-width: 0; }
+  .ov-meta .nm { font-size: var(--t-sm); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ov-meta .sub { font-size: var(--t-2xs); color: var(--text-faint); font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .ov-badge { font-size: var(--t-2xs); padding: 2px 7px; border-radius: var(--r-full); flex: none; font-weight: 600;
+              background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+  .ov-badge.front { color: var(--accent); border-color: var(--accent-strong); background: var(--accent-tint); }
+  .ov-del { color: var(--text-faint); background: none; border: none; cursor: pointer; font-size: var(--t-md); padding: 2px 4px; flex: none; }
+  .ov-del:hover { color: var(--danger); }
+  .ov-add { margin-top: var(--s-5); width: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s-4);
+            font: inherit; font-size: var(--t-sm); font-weight: 500; color: var(--text-2); cursor: pointer;
+            background: none; border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 9px;
+            transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+  .ov-add:hover { border-color: var(--accent-strong); color: var(--accent); }
+  .ov-add.disabled { opacity: 0.45; cursor: not-allowed; }
+  .ov-add.disabled:hover { border-color: var(--border-strong); color: var(--text-2); }
+
+  /* opacity swatch line (Estilo) */
+  .switchline { display: flex; align-items: center; gap: var(--s-5); }
+  .switch { position: relative; width: 30px; height: 17px; border-radius: var(--r-full); background: var(--surface-hover); border: 1px solid var(--border-strong); flex: none; cursor: pointer; }
+  .switch.on { background: var(--accent-tint); border-color: var(--accent-strong); }
+  .switch::after { content: ""; position: absolute; top: 1px; left: 1px; width: 13px; height: 13px; border-radius: 50%; background: var(--text-2); transition: transform var(--dur) var(--ease); }
+  .switch.on::after { transform: translateX(13px); background: var(--accent); }
+
+  /* B: in-form preview card */
+  .ov-preview { border-radius: var(--r-md); margin-bottom: var(--s-8); overflow: hidden; border: 1px solid var(--border);
+                background: linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.20 0.03 270)); aspect-ratio: 9/16; max-height: 200px;
+                position: relative; display: grid; place-items: center; }
+  .ov-preview .tagp { position: absolute; top: 6px; right: 8px; font-size: var(--t-2xs); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; }
+  .ov-preview .obj { width: 46%; height: 22%; border-radius: var(--r-xs); background: linear-gradient(135deg, #ffd36e, #ff9e5e); box-shadow: 0 6px 16px rgba(0,0,0,.4); outline: 2px solid var(--accent); }
+  .nudge { display: inline-grid; grid-template-columns: repeat(3, 24px); grid-auto-rows: 24px; gap: 2px; }
+  .nudge button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: var(--r-xs); cursor: pointer; font-size: 11px; }
+  .nudge button:hover { border-color: var(--border-strong); color: var(--text); }
+  .nudge .ctr { background: var(--surface-2); }
+
+  /* C: list-forward — fat cards with inline controls */
+  .ovc-list { display: flex; flex-direction: column; gap: var(--s-6); }
+  .ovc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-6); }
+  .ovc.sel { border-color: var(--accent-strong); }
+  .ovc-top { display: flex; align-items: center; gap: var(--s-5); margin-bottom: var(--s-6); }
+  .ovc-top .grip { color: var(--text-faint); cursor: grab; }
+  .ovc-thumb { width: 52px; height: 52px; border-radius: var(--r-sm); flex: none; display: grid; place-items: center; font-size: 10px; font-weight: 800; color: oklch(0.22 0.02 280); }
+  .ovc-thumb.logo { background: linear-gradient(135deg, #ffd36e, #ff9e5e); } .ovc-thumb.badge { background: linear-gradient(135deg, #8ee6c8, #4fb6d8); }
+  .ovc-name { flex: 1; min-width: 0; }
+  .ovc-name .nm { font-size: var(--t-md); color: var(--text); }
+  .ovc-name .sub { font-size: var(--t-2xs); color: var(--text-faint); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .ovc-inline { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-8); align-items: center; }
+  .ovc-inline .lbl { font-size: var(--t-xs); color: var(--text-muted); margin-bottom: 3px; }
+
+  /* lean-tab footer note (A) */
+  .lean-note { margin-top: var(--s-12); padding: var(--s-6); border-radius: var(--r-sm); border: 1px solid var(--border-faint);
+               background: var(--surface); font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; }
+  .lean-note b { color: var(--text-2); font-weight: 600; }
+
+  /* metadata column */
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); flex: 0 0 300px; padding: var(--s-10); }
+  .meta .row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .meta h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta p { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; }
+
+  /* variant nav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome);
+          border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .vtab:hover { background: var(--surface-hover); color: var(--text); }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; transition: opacity 0.2s; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 019 · overlays tab density</span>
+  <button class="vtab active" onclick="show('a',this)">A · Lean por diseño</button>
+  <button class="vtab" onclick="show('b',this)">B · Paridad enriquecida</button>
+  <button class="vtab" onclick="show('c',this)">C ★ Chosen · Lista protagonista</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">¿la tab lean se lee deliberada o subllena junto a las densas?</span>
+</nav>
+
+<!-- ════════════════ VARIANT A — lean by design ════════════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Overlays</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><button class="btn">Guardar config</button><button class="btn green">Render Video</button></div>
+  </header>
+  <div class="work">
+    <section class="stage"><div class="phone">
+        <div class="pv-ov logo sel">LOGO</div><div class="pv-ov badge behind">★</div>
+        <div class="pv-cap"><span>Subtítulos</span> <span class="on">que</span> <span>enganchan</span></div>
+      </div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">2 / 3 overlays</span></div></section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab sel">Overlays</button><button class="tab">Subtítulos</button></div>
+      <div class="ctrl-body">
+        <!-- TabLead: the overlay list -->
+        <div class="tab-lead">
+          <div class="ov-head"><span class="cap">Overlays</span><span class="count">2 / 3 · orden = pintado</span></div>
+          <div class="ov-list">
+            <div class="ov-card sel"><span class="grip">⠿</span><span class="ov-thumb logo">PNG</span><div class="ov-meta"><div class="nm">logo-marca.png</div><div class="sub">x 64 · y 110 · 92 px · 100%</div></div><span class="ov-badge front">Delante</span><button class="ov-del">✕</button></div>
+            <div class="ov-card"><span class="grip">⠿</span><span class="ov-thumb badge">PNG</span><div class="ov-meta"><div class="nm">sello-redondo.png</div><div class="sub">x 940 · y 96 · 56 px · 85%</div></div><span class="ov-badge">Detrás</span><button class="ov-del">✕</button></div>
+          </div>
+          <button class="ov-add">＋ Agregar overlay</button>
+        </div>
+        <!-- TabForm: deliberately lean, single column, generous -->
+        <div class="tab-form" style="grid-template-columns:1fr">
+          <div class="colwrap">
+            <div class="sec"><div class="sec-h"><span class="num">1</span>Posición</div>
+              <div class="row" style="grid-template-columns:auto 1fr; align-items:start"><label style="padding-top:3px">Anclaje</label>
+                <div class="pgrid"><button>↖</button><button>↑</button><button class="on">↗</button><button>←</button><button>•</button><button>→</button><button>↙</button><button>↓</button><button>↘</button></div></div>
+              <div class="row" style="margin-top:var(--s-6)"><label>X / Y</label>
+                <div class="xy"><div class="field"><span>X</span><input value="64"></div><div class="field"><span>Y</span><input value="110"></div></div></div>
+            </div>
+            <div class="sec"><div class="sec-h"><span class="num">2</span>Tamaño</div>
+              <div class="row"><label>Ancho</label><div class="rng"><input type="range" min="24" max="540" value="92"><output>92px</output></div></div>
+            </div>
+            <div class="sec"><div class="sec-h"><span class="num">3</span>Estilo</div>
+              <div class="row"><label>Capa</label><div class="seg"><button>Detrás del texto</button><button class="on">Delante</button></div></div>
+              <div class="row"><label>Opacidad</label><div class="rng"><input type="range" min="0" max="100" value="100"><output>100%</output></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="lean-note"><b>Por qué esta tab es corta:</b> un PNG sólo tiene posición, tamaño, capa y opacidad
+          (<code>PngOverlayConfig</code>). No se infla con controles inventados — el espacio en blanco es la señal de "esto es simple", no de "falta algo".</div>
+      </div>
+    </section>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA desde la transcripción.</p></aside>
+  </div>
+</div>
+
+<!-- ════════════════ VARIANT B — enriched parity ════════════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Overlays</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><button class="btn">Guardar config</button><button class="btn green">Render Video</button></div>
+  </header>
+  <div class="work">
+    <section class="stage"><div class="phone">
+        <div class="pv-ov logo sel">LOGO</div><div class="pv-ov badge behind">★</div>
+        <div class="pv-cap"><span>Subtítulos</span> <span class="on">que</span> <span>enganchan</span></div>
+      </div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">2 / 3 overlays</span></div></section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab sel">Overlays</button><button class="tab">Subtítulos</button></div>
+      <div class="ctrl-body">
+        <div class="tab-lead">
+          <div class="ov-head"><span class="cap">Overlays</span><span class="count">2 / 3 · orden = pintado</span></div>
+          <div class="ov-list">
+            <div class="ov-card sel"><span class="grip">⠿</span><span class="ov-thumb logo">PNG</span><div class="ov-meta"><div class="nm">logo-marca.png</div><div class="sub">x 64 · y 110 · 92 px · 100%</div></div><span class="ov-badge front">Delante</span><button class="ov-del">✕</button></div>
+            <div class="ov-card"><span class="grip">⠿</span><span class="ov-thumb badge">PNG</span><div class="ov-meta"><div class="nm">sello-redondo.png</div><div class="sub">x 940 · y 96 · 56 px · 85%</div></div><span class="ov-badge">Detrás</span><button class="ov-del">✕</button></div>
+          </div>
+          <button class="ov-add">＋ Agregar overlay</button>
+        </div>
+        <div class="tab-form">
+          <div class="colwrap">
+            <div class="sec"><div class="sec-h"><span class="num">1</span>Posición</div>
+              <!-- in-form mini preview to bring weight -->
+              <div class="ov-preview"><span class="tagp">vista del overlay</span><div class="obj"></div></div>
+              <div class="row"><label>Anclaje</label><div class="nudge"><button>↖</button><button>↑</button><button>↗</button><button>←</button><button class="ctr">•</button><button>→</button><button>↙</button><button>↓</button><button>↘</button></div></div>
+              <div class="row" style="margin-top:var(--s-6)"><label>X / Y</label>
+                <div class="xy"><div class="field"><span>X</span><input value="64"></div><div class="field"><span>Y</span><input value="110"></div></div></div>
+            </div>
+          </div>
+          <div class="colwrap">
+            <div class="sec"><div class="sec-h"><span class="num">2</span>Tamaño</div>
+              <div class="row"><label>Ancho</label><div class="rng"><input type="range" min="24" max="540" value="92"><output>92px</output></div></div>
+              <div class="row"><label>Escala</label><div class="seg"><button class="on">Libre</button><button>Bloqueada</button></div></div>
+              <div class="row"><label>Alto</label><input class="inp" value="46" disabled style="opacity:.6"></div>
+            </div>
+            <div class="sec"><div class="sec-h"><span class="num">3</span>Estilo</div>
+              <div class="row"><label>Capa</label><div class="seg"><button>Detrás</button><button class="on">Delante</button></div></div>
+              <div class="row"><label>Opacidad</label><div class="rng"><input type="range" min="0" max="100" value="100"><output>100%</output></div></div>
+              <div class="row"><label>Encaje</label><div class="seg"><button class="on">Contener</button><button>Cubrir</button></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA desde la transcripción.</p></aside>
+  </div>
+</div>
+
+<!-- ════════════════ VARIANT C — list forward ════════════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Overlays</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><button class="btn">Guardar config</button><button class="btn green">Render Video</button></div>
+  </header>
+  <div class="work">
+    <section class="stage"><div class="phone">
+        <div class="pv-ov logo sel">LOGO</div><div class="pv-ov badge behind">★</div>
+        <div class="pv-cap"><span>Subtítulos</span> <span class="on">que</span> <span>enganchan</span></div>
+      </div>
+      <div class="stage-meta"><span class="pill">1080 × 1920</span><span class="pill">2 / 3 overlays</span></div></section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab sel">Overlays</button><button class="tab">Subtítulos</button></div>
+      <div class="ctrl-body">
+        <div class="ov-head"><span class="cap">Overlays · controles por ítem</span><span class="count">2 / 3</span></div>
+        <div class="ovc-list">
+          <div class="ovc sel">
+            <div class="ovc-top"><span class="grip">⠿</span><span class="ovc-thumb logo">PNG</span><div class="ovc-name"><div class="nm">logo-marca.png</div><div class="sub">x 64 · y 110</div></div><button class="ov-del">✕</button></div>
+            <div class="ovc-inline">
+              <div><div class="lbl">Ancho · 92px</div><input type="range" min="24" max="540" value="92"></div>
+              <div><div class="lbl">Opacidad · 100%</div><input type="range" min="0" max="100" value="100"></div>
+              <div><div class="lbl">Capa</div><div class="seg"><button>Detrás</button><button class="on">Delante</button></div></div>
+              <div><div class="lbl">Anclaje</div><div class="seg"><button class="on">↗</button><button>•</button><button>↙</button></div></div>
+            </div>
+          </div>
+          <div class="ovc">
+            <div class="ovc-top"><span class="grip">⠿</span><span class="ovc-thumb badge">PNG</span><div class="ovc-name"><div class="nm">sello-redondo.png</div><div class="sub">x 940 · y 96</div></div><button class="ov-del">✕</button></div>
+            <div class="ovc-inline">
+              <div><div class="lbl">Ancho · 56px</div><input type="range" min="24" max="540" value="56"></div>
+              <div><div class="lbl">Opacidad · 85%</div><input type="range" min="0" max="100" value="85"></div>
+              <div><div class="lbl">Capa</div><div class="seg"><button class="on">Detrás</button><button>Delante</button></div></div>
+              <div><div class="lbl">Anclaje</div><div class="seg"><button class="on">↖</button><button>•</button><button>↘</button></div></div>
+            </div>
+          </div>
+        </div>
+        <button class="ov-add">＋ Agregar overlay</button>
+      </div>
+    </section>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA desde la transcripción.</p></aside>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  // interactivity: segmented + preset + range + list selection
+  document.querySelectorAll(".seg").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
+    g.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+  }));
+  document.querySelectorAll(".pgrid, .nudge").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
+    g.querySelectorAll("button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+  }));
+  document.querySelectorAll(".rng input[type=range]").forEach(r => {
+    const out = r.parentElement.querySelector("output");
+    if (out) { const unit = out.textContent.replace(/[\d.]/g,''); r.oninput = () => out.textContent = r.value + unit; }
+  });
+  document.querySelectorAll(".variant").forEach(v => {
+    v.querySelectorAll(".ov-card, .ovc").forEach(card => card.onclick = e => {
+      if (e.target.closest(".ov-del")) return;
+      v.querySelectorAll(".ov-card, .ovc").forEach(c => c.classList.remove("sel")); card.classList.add("sel");
+    });
+  });
+  function show(id, btn) {
+    document.querySelectorAll(".variant").forEach(v => v.classList.remove("active"));
+    document.getElementById("v-" + id).classList.add("active");
+    document.querySelectorAll(".vtab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+  }
+</script>
+</body>
+</html>

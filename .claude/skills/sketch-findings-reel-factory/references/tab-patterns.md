@@ -67,6 +67,33 @@ dense form identical to Titles/Subtitles:
 - **Cap of 3:** the "Agregar overlay" button disables at 3 with a quiet "Máximo 3" note — clear
   without nagging.
 
+### Overlays density resolved — list-forward (sketch 019-C — supersedes 004-A's list+form for this tab)
+004-A gave Overlays the shared **list + detail form** so it would match Titles/Subtitles. Sketch 019
+stress-tested that against the **real `PngOverlayConfig`** — `x` / `y` (px from top-left of 1080×1920),
+`displayWidth`, `opacity`, the `Capa: back/front` toggle (D-03), and the 3-overlay cap — and found it a
+**genuinely small schema** (5 fields). The question flipped from "does it survive density?" to "does a
+deliberately lean tab read as calm or as underfilled next to the dense Titles/Subtitles?" **Winner
+019-C: list-forward.**
+
+- **The list is the hero.** Each overlay is a **fat card** carrying its controls **inline**: width and
+  opacity sliders, a `Capa: Detrás/Delante` segmented, and an anchor segmented — all on the card. No
+  separate detail form below. You manipulate each overlay directly where it lives.
+- **Why it won:** with only 5 fields, a separate form felt like ceremony — you'd select a card just to
+  edit two sliders in a second place. Inline controls collapse select-then-edit into one gesture and the
+  tab reads as *intentionally* lean, not half-built. A short header (`Overlays · controles por ítem ·
+  2/3`) names the count; the `＋ Agregar overlay` button still respects the cap of 3.
+- **⚠ Consistency caveat (carry to build):** 019-C **departs from the `TabLead`/`TabForm` contract**
+  (012-B) that Titles and Subtitles share — there is no 2-col form slot, the controls live in the cards.
+  This was a deliberate schema-honest tradeoff (direct manipulation for a tiny schema beat forced
+  symmetry). **Revisit at build time:** if the inline-card Overlays tab reads as *off-pattern* next to
+  the two `TabLead`/`TabForm` tabs, fall back to **019-A** (lean-by-design: the shared list+form kept,
+  just single-column and generously spaced with a footer note explaining why it's short) — that variant
+  keeps the contract. 019-C is the chosen direction; 019-A is the named escape hatch.
+- Rejected **019-B (enriched parity)**: added an in-form preview, nudge pad, lock-aspect, and fit
+  (contain/cover) to bulk the tab up to the others' weight — but **lock-aspect / fit / nudge aren't in
+  `PngOverlayConfig`**. Inventing controls that don't map to real render props to manufacture visual
+  parity is the anti-pattern; honor the schema instead.
+
 ### Subtitles — condensed/expanding sample-text textarea (sketch 005-C)
 D-10 removes the standalone "Text" tab and moves the sample-text `<TextareaInput>` to the **top of
 the Subtitles tab**. The textarea is the one control much taller than the compact density rows, so it
@@ -120,6 +147,43 @@ var(--accent-tint); color: var(--accent); }`.
 .pv-ov.behind { opacity: 0.85; filter: saturate(0.8); }   /* legibility hint that this overlay sits behind the text band */
 .pv-ov.sel    { outline: 2px solid var(--accent); outline-offset: 2px; }
 ```
+
+### List-forward overlay cards (019-C) — inline controls, no separate form
+```css
+/* fat card per overlay; controls live inline, not in a detail form below */
+.ovc-list { display: flex; flex-direction: column; gap: var(--s-6); }
+.ovc      { background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--r-md); padding: var(--s-6); }
+.ovc.sel  { border-color: var(--accent-strong); }
+.ovc-top  { display: flex; align-items: center; gap: var(--s-5); margin-bottom: var(--s-6); }
+.ovc-top .grip  { color: var(--text-faint); cursor: grab; }   /* drag = paint order (D-04) */
+.ovc-thumb { width: 52px; height: 52px; border-radius: var(--r-sm); flex: none;
+             display: grid; place-items: center; font-size: 10px; font-weight: 800; }
+.ovc-name .nm  { font-size: var(--t-md); color: var(--text); }
+.ovc-name .sub { font-size: var(--t-2xs); color: var(--text-faint);
+                 font-variant-numeric: tabular-nums; margin-top: 2px; }   /* x/y readout */
+/* the inline control grid — width / opacity / Capa / anchor, 2-up */
+.ovc-inline { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-8); align-items: center; }
+.ovc-inline .lbl { font-size: var(--t-xs); color: var(--text-muted); margin-bottom: 3px; }
+```
+```html
+<div class="ovc-list">
+  <div class="ovc sel">
+    <div class="ovc-top"><span class="grip">⠿</span><span class="ovc-thumb logo">PNG</span>
+      <div class="ovc-name"><div class="nm">logo-marca.png</div><div class="sub">x 64 · y 110</div></div>
+      <button class="ov-del">✕</button></div>
+    <div class="ovc-inline">
+      <div><div class="lbl">Ancho · 92px</div><input type="range" min="24" max="540" value="92"></div>
+      <div><div class="lbl">Opacidad · 100%</div><input type="range" min="0" max="100" value="100"></div>
+      <div><div class="lbl">Capa</div><div class="seg"><button>Detrás</button><button class="on">Delante</button></div></div>
+      <div><div class="lbl">Anclaje</div><div class="seg"><button class="on">↗</button><button>•</button><button>↙</button></div></div>
+    </div>
+  </div>
+  <!-- …up to 3… --><button class="ov-add">＋ Agregar overlay</button>
+</div>
+```
+The `Capa` and anchor segmenteds reuse the standard `.seg` control. **Note this is the off-contract
+path** — it has no `.ctrl-2col` form slot; see the consistency caveat above.
 
 ### Condensed/expanding sample-text textarea (005-C)
 ```css
@@ -224,10 +288,18 @@ shipping treatment.
   (the card carries only a read-only Detrás/Delante *badge*).
 - **Don't carry the back-overlay dim into the exported render** — it's a preview-only legibility cue.
 - **Don't make single-column the desktop layout** — it's the responsive-collapse fallback only.
+- **019-B enriched parity (invented controls):** lock-aspect / fit (contain·cover) / nudge pad don't
+  exist in `PngOverlayConfig`. Don't manufacture controls to bulk a lean tab up to its neighbors' weight
+  — honor the schema; lean is fine when the schema is small.
+- **Don't force a separate detail form onto the Overlays tab just for symmetry** — with 5 real fields it
+  reads as ceremony (select-a-card-to-edit-elsewhere). 019-C puts the controls inline on the card. (But
+  do watch the contract tension — 019-A is the fallback if off-pattern bites.)
 
 ## Origin
 Synthesized from sketches: 004 (overlay list & layering, winner A), 005 (subtitles tab restructure,
 winner C), 006 (all-three-tabs coherence, winner A), 012 (subtitle density in shell, winner B — the
-`TabLead`/`TabForm` skeleton). Source files in `sources/004-overlay-list-and-layering/`,
-`sources/005-subtitles-tab-restructure/`, `sources/006-all-three-tabs-coherence/`,
-`sources/012-subtitle-density-in-shell/` (winners marked ★ in each variant nav).
+`TabLead`/`TabForm` skeleton), 019 (overlays tab density, winner C — list-forward; **supersedes 004-A's
+list+form for the Overlays tab**, with 019-A as the contract-preserving fallback). Source files in
+`sources/004-overlay-list-and-layering/`, `sources/005-subtitles-tab-restructure/`,
+`sources/006-all-three-tabs-coherence/`, `sources/012-subtitle-density-in-shell/`,
+`sources/019-overlays-tab-density/` (winners marked ★ in each variant nav).

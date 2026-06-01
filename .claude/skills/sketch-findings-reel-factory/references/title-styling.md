@@ -38,9 +38,47 @@ Mirror 011-C exactly so Titles and Subtitles read as *the same panel for a diffe
 build one set of components (`<PresetCards>`, `<Specimen>`, `<ColorRolePair>`, `<EffectRow>`) and both
 the Titles and Subtitles detail forms compose from it.
 
+### Entrance *timing* — numeric rows in the Tiempo section (sketch 022-B — winner)
+014-C settled the entrance **type** (the preset cards above). Sketch 022 answered **when / how long /
+how fast** — `startTimeMs`, `durationMs`, and entrance speed. **Winner 022-B: plain numeric rows**, no
+new surface.
+
+- The **Tiempo section** carries three rows that reuse the locked row vocabulary exactly:
+  - **Aparece** → `startTimeMs` — a `.timefield` (number input + `seg` unit suffix)
+  - **Dura** → `durationMs` — a `.timefield`
+  - **Velocidad** → entrance speed — a `Rápida / Normal / Lenta` **`.seg`** segmented
+- **Why blind-entry won over a seen-on-track approach:** for a single talking-head reel, typing `2.0 s`
+  is faster than dragging a block, and it adds **zero new affordances** — the rows are identical atoms to
+  every other control. The tab stays dense and calm.
+- **Division of labor with the global timeline (020-C):** the numeric rows **refine** timing; the global
+  timeline strip does **visual placement** (scrub to a moment, drag the title block to retime). Keeping
+  timing numeric here avoids a **second, per-title timeline idiom** competing with the global one — the
+  decisive reason A and C lost. See `references/timeline-temporal.md`.
+- Rejected **022-A (per-title mini-timeline)** and **022-C (timeline in the TabLead full-width slot)**:
+  both are more expressive (you *see* where the title falls) but introduce a per-title track that
+  pre-empts and duplicates the global timeline. One timeline idiom, not two.
+
 ## CSS Patterns
 
 All patterns use the shared tokens in `sources/themes/default.css`.
+
+### Numeric timing rows — Tiempo section (022-B)
+```css
+/* time input = number field + unit suffix; reuses the .row label/grid rhythm */
+.timefield { display: grid; grid-template-columns: 1fr auto; align-items: center;
+             background: var(--surface-2); border: 1px solid var(--border);
+             border-radius: var(--r-sm); padding: 4px 8px; }
+.timefield input { font: inherit; font-size: var(--t-md); color: var(--text); background: none;
+                   border: none; width: 100%; font-variant-numeric: tabular-nums; }
+.timefield .u { font-size: var(--t-2xs); color: var(--text-faint); }
+```
+```html
+<div class="sec"><div class="sec-h"><span class="num">2</span>Tiempo</div>
+  <div class="row"><label>Aparece</label><div class="timefield"><input value="2.0"><span class="u">seg</span></div></div>
+  <div class="row"><label>Dura</label><div class="timefield"><input value="3.0"><span class="u">seg</span></div></div>
+  <div class="row"><label>Velocidad</label><div class="seg"><button>Rápida</button><button class="on">Normal</button><button>Lenta</button></div></div>
+</div>
+```
 
 ### In-panel specimen — renders the BOXED title (014-C)
 ```css
@@ -125,8 +163,13 @@ The glyphs carry the meaning: `↑` Slide-up, `↓` Slide-down, `◍` Fade, `∅
   valid runner-up but the C transfer is cleaner and keeps one component set across both tabs.
 - **Don't drop the box from the specimen.** A title's box (bg/padding/radius) is invisible on a bare
   text specimen — the boxed render is what makes Caja controls legible.
+- **Don't add a per-title timeline/track for timing (022-A / 022-C).** It duplicates the global timeline
+  (020-C) and creates two competing timeline idioms. Keep timing as numeric rows; let the global strip
+  own visual placement.
 
 ## Origin
-Synthesized from sketch 014 (title-style-density, winner C). Builds on 011-C
-(`references/subtitle-styling.md`). Source file in `sources/014-title-style-density/` (winner `#v-c`,
-marked ★ in the variant nav). Real schema: `TitleStyleProps` in `pipeline-config.ts`.
+Synthesized from sketch 014 (title-style-density, winner C) and sketch 022 (title-entrance-timing,
+winner B — numeric timing rows). Builds on 011-C (`references/subtitle-styling.md`); pairs with the
+global timeline in `references/timeline-temporal.md`. Source files in `sources/014-title-style-density/`
+(winner `#v-c`) and `sources/022-title-entrance-timing/` (winner `#v-b`, marked ★ in each variant nav).
+Real schema: `TitleStyleProps` + `TitleConfig` (`startTimeMs` / `durationMs`) in `pipeline-config.ts`.

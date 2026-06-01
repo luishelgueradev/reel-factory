@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, font picker, header action zone, render surface, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star composite & scope boundary). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, title entrance timing, overlays tab density, font picker, header action zone, render surface, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star composite & scope boundary). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -23,7 +23,9 @@ subtitle styling control density against the full real caption schema), 2026-06-
 the TabLead/TabForm coherence skeleton, the reconciled header action zone, title styling density, and
 the north-star composite with its committed-vs-frontier scope boundary), 2026-06-01 (sketches 016–018:
 the slide-over font-picker shared component, the first-run/empty-workspace cold start, and the
-responsive breakpoint reflow rule for the dense tabs).
+responsive breakpoint reflow rule for the dense tabs), 2026-06-01 (sketches 019–022: the list-forward
+Overlays tab against its small real schema, the frontier timeline strip, the minimal transitions
+"Video" tab with auto-emphasis-zoom dropped as a product decision, and numeric title entrance timing).
 </context>
 
 <design_direction>
@@ -59,9 +61,11 @@ The realized synthesis is **sketch 001 variant D** — it folds in 002-A's alway
 | Workspace Shell & Layout | references/workspace-shell.md | 3-column shell: content-sized preview (`flex:0 1 470px`) · controls grow into 2 internal columns · persistent (non-collapsing) 320px metadata placeholder |
 | Control Panel Density & Disclosure | references/control-panel-density.md | Always-open titled sections, Posición→Estilo→Avanzado, hairline dividers; no collapse/accordion (height absorbed by 2-col layout) |
 | Position Presets (shared component) | references/position-presets.md | 9-point arrow-button grid (↖↑↗ …), size-aware X/Y math vs 1080×1920 top-left anchor, inputs flash on apply |
-| Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; **TabLead/TabForm skeleton (012-B)** = the two slots every tab fills, the buildable form of the rule; Overlays = list+form with Detrás/Delante layer toggle (D-03) & drag-reorder paint order (D-04); Subtitles = condensed/expanding sample-text textarea (D-10) |
+| Per-Tab Structure & Coherence | references/tab-patterns.md | Coherence rule: lists (Titles/Overlays) + Subtitles textarea span full width, the Posición→Estilo→Avanzado form is always 2-col; **TabLead/TabForm skeleton (012-B)** = the two slots every tab fills; Subtitles = condensed/expanding sample-text textarea (D-10). **Overlays resolved list-forward (019-C):** fat per-item cards with inline width/opacity/Capa/anchor, no separate form (small real schema) — *departs from the TabLead/TabForm contract; 019-A = contract-preserving fallback if it reads off-pattern at build* |
 | Subtitle Styling (dense controls) | references/subtitle-styling.md | Layout-mode = preset cards (not dropdown) leading the section, in-panel live specimen, 2×2 color-role matrix, collapsible Glow/Fondo effect-rows; validated against the real ~20-field caption schema from `pipeline-config.ts` (011-C). Anti-pattern: flat ~20 rows = the wall |
-| Title Styling (dense controls) | references/title-styling.md | Titles = **boxed text card + entrance animation**. Specimen showing the box + **entrance preset cards** (Slide↑/↓·Fade·Ninguna) + 1×2 Texto/Caja color pairing + collapsible Glow (014-C). The 011-C vocabulary transfers: mode-cards→entrance-cards, color-matrix→box/text, effect-rows→glow. One component kit for both tabs. Anti-pattern: flat ~16 rows = the same wall |
+| Title Styling (dense controls) | references/title-styling.md | Titles = **boxed text card + entrance animation**. Specimen + **entrance preset cards** (Slide↑/↓·Fade·Ninguna) + 1×2 Texto/Caja color pairing + collapsible Glow (014-C); 011-C kit transfers. **Entrance timing = numeric Aparece/Dura/Velocidad rows in Tiempo (022-B)** — global timeline does visual placement, rows refine; no per-title track. Anti-pattern: flat ~16 rows = the wall |
+| Video Effects — Transitions Tab | references/video-effects.md | **Auto-emphasis-zoom DROPPED** (product decision — Whisper confidence ≠ emphasis, off-brand). Survivor `TransitionConfig` (1.08× push / crop-shift masking silence cuts) lives in a **minimal "Video" 4th tab (021-A)**: transition type cards w/ looping motion preview + Duración. Anti-pattern: rebuild `detectZoomEvents`; flashy preview; over-fill the thin tab |
+| Timeline / Temporal Axis (frontier) | references/timeline-temporal.md | ⚠️ Scope-expanding / likely next-milestone. **Strip under stage+controls (020-C):** Títulos/Overlays/Subtítulos lanes below preview+controls, **metadata column keeps full height**. Track surface (not cards), scrub-to-preview + drag-to-retime. Middle ground vs preview-only scrubber (A) / full-width dock (B). One timeline idiom — pairs with 022-B numeric rows |
 | Font Picker (shared component) | references/font-picker.md | **Slide-over gallery sheet** (016-C) opened from a current-font trigger: search + category chips (Sans/Condensada/Display/Serif/Script/Mono) over a 2-up grid of cards each rendering the **sample text in its own face**, against the real 26-font `AVAILABLE_FONTS`. Selection = blue; self-contained, drops into Títulos + Subtítulos. Resolves the picker 011 flagged. Anti-pattern: inline scroll-box / popover (too cramped for 26 live specimens) |
 | First-Run & Empty Workspace | references/first-run-empty-workspace.md | Cold start = **dropzone on the stage + dense controls live on their defaults** (017-B), framed by a "valores por defecto" banner. Single green = the upload action; Guardar disabled, Render ghosted; metadata column persists "Próximamente". Not gated, not a welcome takeover |
 | Responsive Breakpoint Reflow | references/responsive-reflow.md | At the narrow (~360px) column, **reflow the multi-up grids** (018-B): 2-col form → 1-col, mode/entrance cards → 2×2, font grid → 1-up, color matrix stays 2×2. **002-A's always-open rule stays intact** (no disclosure-under-pressure). One reflow rule across all three tabs |
@@ -100,6 +104,10 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/016-font-picker/index.html` — winner `#v-c` (slide-over gallery; shared component)
 - `sources/017-first-run-empty-workspace/index.html` — winner `#v-b` (controls live with defaults)
 - `sources/018-dense-tabs-at-breakpoint/index.html` — winner `#v-b` (reflow the multi-up grids)
+- `sources/019-overlays-tab-density/index.html` — winner `#v-c` (list-forward; 019-A = contract-preserving fallback)
+- `sources/020-timeline-scrubber/index.html` — winner `#v-c` (strip under stage+controls; frontier / scope-expanding)
+- `sources/021-video-effects-surface/index.html` — winner `#v-a` (minimal "Video" tab; auto-zoom dropped)
+- `sources/022-title-entrance-timing/index.html` — winner `#v-b` (numeric timing rows)
 </findings_index>
 
 <metadata>
@@ -123,4 +131,8 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 016-font-picker (winner C — slide-over gallery, shared component)
 - 017-first-run-empty-workspace (winner B — controls live with defaults)
 - 018-dense-tabs-at-breakpoint (winner B — reflow the multi-up grids)
+- 019-overlays-tab-density (winner C — list-forward; 019-A contract-preserving fallback)
+- 020-timeline-scrubber (winner C — strip under stage+controls; frontier, scope-expanding)
+- 021-video-effects-surface (winner A — minimal "Video" tab; auto-emphasis-zoom dropped)
+- 022-title-entrance-timing (winner B — numeric timing rows)
 </metadata>

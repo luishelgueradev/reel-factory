@@ -1,10 +1,11 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018)
-**Sketches processed:** 18 (all)
-**Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm),
-Subtitle Styling, Title Styling, Font Picker, Header Action Zone, States & Save, First-Run/Empty,
-Responsive Reflow, Motion, Preview Manipulation, Render Surface, North-Star Composite
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022)
+**Sketches processed:** 22 (all)
+**Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
+Overlays list-forward), Subtitle Styling, Title Styling (+ entrance timing), Video Effects/Transitions,
+Timeline (frontier), Font Picker, Header Action Zone, States & Save, First-Run/Empty, Responsive
+Reflow, Motion, Preview Manipulation, Render Surface, North-Star Composite
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
 ## Included Sketches
@@ -28,6 +29,10 @@ Responsive Reflow, Motion, Preview Manipulation, Render Surface, North-Star Comp
 | 016 | font-picker | C | Font Picker |
 | 017 | first-run-empty-workspace | B | First-Run & Empty Workspace |
 | 018 | dense-tabs-at-breakpoint | B | Responsive Breakpoint Reflow |
+| 019 | overlays-tab-density | C | Tab Patterns (Overlays list-forward) |
+| 020 | timeline-scrubber | C | Timeline / Temporal (frontier) |
+| 021 | video-effects-surface | A | Video Effects — Transitions Tab |
+| 022 | title-entrance-timing | B | Title Styling (entrance timing) |
 
 ## Excluded Sketches
 _None._
@@ -68,6 +73,26 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
 - **Responsive reflow:** at the narrow (~360px) column, **reflow the multi-up grids** — 2-col form →
   1-col, mode/entrance cards → 2×2, font grid → 1-up, color matrix stays 2×2 — 018-B. **002-A's
   always-open rule stays intact** (no disclosure-under-pressure). One reflow rule across all three tabs.
+- **Overlays tab (dense vs lean):** the real `PngOverlayConfig` is a *small* schema (x/y, width,
+  opacity, Capa, cap 3), so Overlays goes **list-forward** — fat per-item cards with inline
+  width/opacity/Capa/anchor, no separate detail form — 019-C. ⚠ **Departs from the TabLead/TabForm
+  contract** the other tabs share; **019-A (lean shared list+form)** is the named fallback if the
+  off-pattern card reads wrong at build. Anti-pattern: 019-B inventing controls (lock-aspect/fit/nudge)
+  not in the schema just for parity.
+- **Title entrance timing:** plain **numeric rows** — Aparece (`startTimeMs`) / Dura (`durationMs`) /
+  Velocidad — in the Tiempo section — 022-B. Division of labor with the global timeline (020-C): the
+  timeline does **visual placement**, numeric rows **refine**. One timeline idiom; no per-title track
+  (rejected 022-A/C).
+- **Video effects / transitions:** **auto-emphasis-zoom DROPPED** (product decision 2026-06-01 — fired
+  on Whisper confidence dips = mumbled words, not emphasis; off-brand; memory `auto-zoom-dropped`).
+  Survivor `TransitionConfig` (1.08× push / crop-shift masking silence cuts) lives in a **minimal
+  "Video" 4th tab** — transition type cards w/ looping motion preview + Duración — 021-A. Anti-pattern:
+  rebuild `detectZoomEvents`; flashy preview; over-fill the thin tab (B/C are fallbacks if it stays
+  one control).
+- **Timeline (frontier / likely next-milestone):** a **strip under stage+controls** (Títulos/Overlays/
+  Subtítulos lanes), **metadata column keeps full height** — 020-C. Track surface (not cards),
+  scrub-to-preview + drag-to-retime. Middle ground vs preview-only scrubber (020-A) / full-width
+  multi-track dock (020-B). Pairs with 022-B's numeric rows as the one timeline idiom.
 - **Motion:** calm 170ms two-tier timing — 009-A.
 - **Preview (frontier):** drag-to-position on the full preview, sharing the X/Y path — 007-A.
 - **Render (frontier):** on the dimmed preview + green-primary reassignment to Render — 010-A.
@@ -78,5 +103,12 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
 ## Open Sub-Problems
 - ~~**Font picker** for 26 fonts with live previews~~ — **resolved by sketch 016-C** (slide-over gallery).
 - ~~Responsive behavior of the dense tabs~~ — **resolved by sketch 018-B** (reflow the multi-up grids).
-- Still open: Title-animation timing/keyframe UI; zoom-segment editor; the metadata column's real
-  content (AI phase).
+- ~~Title-animation timing UI~~ — **resolved by sketch 022-B** (numeric Aparece/Dura/Velocidad rows).
+- ~~Zoom-segment editor~~ — **moot:** auto-emphasis-zoom **dropped** (021 / memory `auto-zoom-dropped`).
+  If emphasis-zoom is ever revived it needs a real signal (prosody/LLM/manual) + slow held push, as a
+  separate spike.
+- **Build-time watch (019-C):** the list-forward Overlays tab departs from the TabLead/TabForm contract
+  — confirm it reads on-pattern next to the other tabs, else fall back to 019-A.
+- **Frontier / next-milestone:** the **timeline** (020-C) and the committed-vs-frontier scope line
+  (007 drag, 010 render) are validated *directions*, not Phase-22 deliverables. Still open: the
+  metadata column's real content (AI phase).

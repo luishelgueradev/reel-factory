@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 020 — timeline / scrubber</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-actions { display: flex; gap: var(--s-4); align-items: center; }
+  .save-chip { display: inline-flex; align-items: center; gap: var(--s-3); font-size: var(--t-xs); padding: var(--s-2) var(--s-5); border-radius: var(--r-full); color: var(--warning); }
+  .save-chip .dot { width: 6px; height: 6px; border-radius: var(--r-full); background: currentColor; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); cursor: pointer; }
+  .btn.green { background: var(--action); border-color: transparent; color: oklch(0.16 0.02 150); font-weight: 600; }
+
+  /* layout: work area on top, optional timeline dock below */
+  .shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { flex: 0 1 420px; background: var(--stage); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--s-10); border-right: 1px solid var(--border); min-width: 0; gap: var(--s-6); }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 540px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%), radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%), linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); transition: transform 0.3s var(--ease); }
+  .phone.zoomed { transform: scale(1.06); }
+  .pv-title { position: absolute; top: 22%; left: 9%; right: 9%; z-index: 60; background: oklch(0.22 0.02 280 / 0.92); border-radius: 12px; padding: 12px 16px; text-align: center; font-family: 'Plus Jakarta Sans', var(--font); font-weight: 800; font-size: 20px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.4); transition: opacity 0.28s var(--ease), transform 0.28s var(--ease); }
+  .pv-title.hidden { opacity: 0; transform: translateY(18px); }
+  .pv-ov { position: absolute; z-index: 40; border-radius: var(--r-xs); display: grid; place-items: center; font-size: var(--t-2xs); font-weight: 800; color: oklch(0.22 0.02 280); box-shadow: 0 4px 14px rgba(0,0,0,.35); transition: opacity 0.28s var(--ease); }
+  .pv-ov.logo { top: 6%; left: 6%; width: 84px; height: 42px; background: linear-gradient(135deg, #ffd36e, #ff9e5e); }
+  .pv-ov.badge { top: 5%; right: 6%; width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #8ee6c8, #4fb6d8); }
+  .pv-ov.hidden { opacity: 0; }
+  .pv-cap { position: absolute; bottom: 12%; left: 7%; right: 7%; text-align: center; z-index: 50; font-family: 'Plus Jakarta Sans', var(--font); font-weight: 800; font-size: 25px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .pv-cap .on { color: #ffea00; }
+
+  /* transport (play + clock) under the preview */
+  .transport { display: flex; align-items: center; gap: var(--s-5); width: 100%; max-width: 320px; }
+  .play { width: 34px; height: 34px; border-radius: 50%; flex: none; border: 1px solid var(--accent-strong); background: var(--accent-tint); color: var(--accent); cursor: pointer; display: grid; place-items: center; font-size: 13px; }
+  .clock { font-size: var(--t-sm); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .clock b { color: var(--text); }
+
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); flex: none; }
+  .tab { border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500; color: var(--text-muted); padding: 13px 14px 11px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .num { width: 16px; height: 16px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: var(--t-2xs); color: var(--text-2); }
+  .row { display: grid; grid-template-columns: 78px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; gap: 2px; margin-bottom: var(--s-5); }
+  .seg button { flex: 1; font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px; border-radius: var(--r-xs); cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .ph-row { display:flex; flex-direction:column; gap: var(--s-4); }
+  .ghost { color: var(--text-faint); font-size: var(--t-xs); line-height: 1.5; }
+
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); flex: 0 0 300px; padding: var(--s-10); }
+  .meta .row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .meta h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta p { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; }
+
+  /* ══════════════ THE TIMELINE (shared track styling) ══════════════ */
+  .tl-dock { flex: none; background: var(--chrome); border-top: 1px solid var(--border-strong); }
+  .tl-bar { display: flex; align-items: center; justify-content: space-between; padding: var(--s-5) var(--s-10); }
+  .tl-bar .ttl { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: var(--s-5); }
+  .tl-bar .z { display: flex; gap: 2px; }
+  .tl-bar .z button, .tl-collapse { font: inherit; font-size: var(--t-xs); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xs); padding: 3px 8px; cursor: pointer; }
+  .tl-grid { display: grid; grid-template-columns: 92px 1fr; }
+  .tl-gutter { border-right: 1px solid var(--border); }
+  .tl-gutter .glabel { height: 26px; display: flex; align-items: center; gap: var(--s-3); padding: 0 var(--s-8) 0 var(--s-10); font-size: var(--t-2xs); color: var(--text-2); border-top: 1px solid var(--border-faint); }
+  .tl-gutter .glabel .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .tl-gutter .ruler-sp { height: 20px; }
+  .tl-lanes { position: relative; overflow: hidden; }
+  .ruler { height: 20px; display: flex; position: relative; border-bottom: 1px solid var(--border-faint); }
+  .ruler .tk { flex: 1; border-left: 1px solid var(--border-faint); font-size: 9px; color: var(--text-faint); padding: 3px 0 0 4px; font-variant-numeric: tabular-nums; }
+  .lane { height: 26px; border-top: 1px solid var(--border-faint); position: relative; }
+  .blk { position: absolute; top: 4px; bottom: 4px; border-radius: var(--r-xs); font-size: 9px; font-weight: 700; color: oklch(0.20 0.02 280); display: flex; align-items: center; padding: 0 6px; overflow: hidden; white-space: nowrap; cursor: grab; }
+  .blk.title { background: var(--accent); color: oklch(0.18 0.03 250); }
+  .blk.ov { background: linear-gradient(135deg, #ffd36e, #ff9e5e); }
+  .blk.ov.b2 { background: linear-gradient(135deg, #8ee6c8, #4fb6d8); }
+  .blk.sub { background: var(--surface-hover); color: var(--text-2); border: 1px solid var(--border); }
+  .zmark { position: absolute; top: 3px; bottom: 3px; width: 10px; transform: translateX(-50%); border-radius: 2px; background: var(--warning); display:grid; place-items:center; font-size:8px; color: oklch(0.2 0.02 80); cursor: pointer; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); z-index: 9; pointer-events: none; }
+  .playhead::before { content: ""; position: absolute; top: -1px; left: -5px; width: 12px; height: 7px; border-radius: 2px; background: var(--text); }
+  .tl-scrub-wrap { padding: var(--s-3) var(--s-10) var(--s-8) 92px; }
+  .tl-scrub { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  .tl-scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); cursor: pointer; }
+
+  /* A: scrubber-only ribbon under preview */
+  .ribbon { width: 100%; max-width: 320px; }
+  .ribbon .track { position: relative; height: 8px; border-radius: var(--r-full); background: var(--surface-hover); overflow: hidden; }
+  .ribbon .seg-fill { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: var(--r-full); }
+  .ribbon .markers { position: relative; height: 16px; margin-top: 3px; }
+  .ribbon .zt { position: absolute; transform: translateX(-50%); font-size: 8px; color: var(--warning); }
+  .active-now { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-3); min-height: 20px; }
+  .chip-now { font-size: var(--t-2xs); padding: 2px 7px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); color: var(--text-2); }
+  .chip-now.t { color: var(--accent); border-color: var(--accent-strong); }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 020 · timeline / scrubber</span>
+  <button class="vtab active" onclick="show('a',this)">A · Scrubber bajo el preview</button>
+  <button class="vtab" onclick="show('b',this)">B · Dock multipista full-width</button>
+  <button class="vtab" onclick="show('c',this)">C ★ Chosen · Tira bajo stage+controles</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">¿dónde vive el tiempo en el shell 001-D? · scrubeá para ver</span>
+</nav>
+
+<!-- ════════════════ VARIANT A — scrubber-only under preview ════════════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Editor</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><button class="btn">Guardar config</button><button class="btn green">Render Video</button></div>
+  </header>
+  <div class="shell"><div class="work">
+    <section class="stage">
+      <div class="phone" data-phone>
+        <div class="pv-title" data-title>Oferta por hoy</div>
+        <div class="pv-ov logo" data-ov="logo">LOGO</div>
+        <div class="pv-ov badge" data-ov="badge">★</div>
+        <div class="pv-cap"><span>Subtítulos</span> <span class="on">que</span> <span>enganchan</span></div>
+      </div>
+      <div class="transport"><button class="play" data-play>▶</button><span class="clock"><b data-clock>0:00.0</b> / 0:10.0</span></div>
+      <!-- the only timeline in A: a thin scrubber + "active now" chips -->
+      <div class="ribbon">
+        <div class="track"><div class="seg-fill" data-fill style="left:0;width:0"></div></div>
+        <input type="range" class="tl-scrub" data-scrub min="0" max="100" value="0" style="margin-top:6px">
+        <div class="active-now" data-now style="margin-top:var(--s-5)"></div>
+      </div>
+    </section>
+    <section class="controls">
+      <div class="tabs"><button class="tab sel">Títulos</button><button class="tab">Overlays</button><button class="tab">Subtítulos</button></div>
+      <div class="ctrl-body">
+        <div class="sec-h"><span class="num">1</span>Título seleccionado</div>
+        <div class="ph-row">
+          <div class="seg"><button class="on">Oferta por hoy</button><button>Seguime</button></div>
+          <p class="ghost">El scrubber bajo el preview te deja saltar a cualquier momento y ver qué hay en pantalla — sin volver el editor
+            una mesa de edición. Para mover títulos en el tiempo seguís usando los controles (Aparece / Dura). Es el toque más liviano:
+            el tiempo se <i>previsualiza</i>, no se <i>edita</i> en una pista.</p>
+        </div>
+      </div>
+    </section>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA desde la transcripción.</p></aside>
+  </div></div>
+</div>
+
+<!-- ════════════════ VARIANT B — full-width multi-track dock ════════════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Editor</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><button class="btn">Guardar config</button><button class="btn green">Render Video</button></div>
+  </header>
+  <div class="shell">
+    <div class="work">
+      <section class="stage">
+        <div class="phone" data-phone>
+          <div class="pv-title" data-title>Oferta por hoy</div>
+          <div class="pv-ov logo" data-ov="logo">LOGO</div>
+          <div class="pv-ov badge" data-ov="badge">★</div>
+          <div class="pv-cap"><span>Subtítulos</span> <span class="on">que</span> <span>enganchan</span></div>
+        </div>
+        <div class="transport"><button class="play" data-play>▶</button><span class="clock"><b data-clock>0:00.0</b> / 0:10.0</span></div>
+      </section>
+      <section class="controls">
+        <div class="tabs"><button class="tab sel">Títulos</button><button class="tab">Overlays</button><button class="tab">Subtítulos</button></div>
+        <div class="ctrl-body">
+          <div class="sec-h"><span class="num">1</span>Título · "Oferta por hoy"</div>
+          <p class="ghost">Seleccioná un bloque en la línea de tiempo para enfocar sus controles. Mové el bloque para cambiar
+            cuándo aparece; estirá los bordes para su duración. Subtítulos = cobertura automática (no se edita por bloque).</p>
+        </div>
+      </section>
+      <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA desde la transcripción.</p></aside>
+    </div>
+    <!-- the dock spans the full width under all three columns -->
+    <div class="tl-dock">
+      <div class="tl-bar">
+        <span class="ttl">▤ Línea de tiempo <span style="color:var(--text-faint);font-weight:500;letter-spacing:0;text-transform:none">· 0:10 · 3 pistas</span></span>
+        <span class="z"><button>−</button><button>Ajustar</button><button>＋</button><button class="tl-collapse">Ocultar ⌄</button></span>
+      </div>
+      <div class="tl-grid">
+        <div class="tl-gutter">
+          <div class="ruler-sp"></div>
+          <div class="glabel"><span class="sw" style="background:var(--accent)"></span>Títulos</div>
+          <div class="glabel"><span class="sw" style="background:#ffb36e"></span>Overlays</div>
+          <div class="glabel"><span class="sw" style="background:var(--surface-hover)"></span>Subtítulos</div>
+        </div>
+        <div class="tl-lanes" data-lanes>
+          <div class="ruler"><span class="tk">0:00</span><span class="tk">0:02</span><span class="tk">0:04</span><span class="tk">0:06</span><span class="tk">0:08</span></div>
+          <div class="lane"><div class="blk title" style="left:20%;width:30%">Oferta por hoy</div><div class="blk title" style="left:70%;width:20%">Seguime</div></div>
+          <div class="lane"><div class="blk ov" style="left:0;width:100%">logo-marca.png</div><div class="blk ov b2" style="left:40%;width:40%">sello</div></div>
+          <div class="lane"><div class="blk sub" style="left:2%;width:96%">subtítulos · palabra por palabra (auto)</div></div>
+          <div class="playhead" data-ph style="left:0"></div>
+        </div>
+      </div>
+      <div class="tl-scrub-wrap"><input type="range" class="tl-scrub" data-scrub min="0" max="100" value="0"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ VARIANT C — strip under stage+controls (metadata stays full height) ════════════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16 · Editor</div></div></div>
+    <div class="hdr-actions"><span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><button class="btn">Guardar config</button><button class="btn green">Render Video</button></div>
+  </header>
+  <div class="shell"><div class="work">
+    <!-- left+center wrapped so the strip sits under them, not under metadata -->
+    <div style="flex:1 1 auto; display:flex; flex-direction:column; min-width:0;">
+      <div style="flex:1; display:flex; min-height:0;">
+        <section class="stage" style="flex:0 1 400px">
+          <div class="phone" data-phone>
+            <div class="pv-title" data-title>Oferta por hoy</div>
+            <div class="pv-ov logo" data-ov="logo">LOGO</div>
+            <div class="pv-ov badge" data-ov="badge">★</div>
+            <div class="pv-cap"><span>Subtítulos</span> <span class="on">que</span> <span>enganchan</span></div>
+          </div>
+          <div class="transport"><button class="play" data-play>▶</button><span class="clock"><b data-clock>0:00.0</b> / 0:10.0</span></div>
+        </section>
+        <section class="controls">
+          <div class="tabs"><button class="tab sel">Títulos</button><button class="tab">Overlays</button><button class="tab">Subtítulos</button></div>
+          <div class="ctrl-body">
+            <div class="sec-h"><span class="num">1</span>Título seleccionado</div>
+            <p class="ghost">La tira temporal vive bajo el preview + controles, con las pistas de Títulos, Overlays y la cobertura de
+              Subtítulos. La columna de metadata mantiene su altura completa a la derecha — el punto medio entre el scrubber liviano (A)
+              y la mesa de edición full-width (B).</p>
+          </div>
+        </section>
+      </div>
+      <div class="tl-dock">
+        <div class="tl-bar"><span class="ttl">▤ Tiempo <span style="color:var(--text-faint);font-weight:500;letter-spacing:0;text-transform:none">· 0:10</span></span>
+          <span class="z"><button class="tl-collapse">Ocultar ⌄</button></span></div>
+        <div class="tl-grid">
+          <div class="tl-gutter">
+            <div class="ruler-sp"></div>
+            <div class="glabel"><span class="sw" style="background:var(--accent)"></span>Títulos</div>
+            <div class="glabel"><span class="sw" style="background:#ffb36e"></span>Overlays</div>
+            <div class="glabel"><span class="sw" style="background:var(--surface-hover)"></span>Subtítulos</div>
+          </div>
+          <div class="tl-lanes" data-lanes>
+            <div class="ruler"><span class="tk">0:00</span><span class="tk">0:02</span><span class="tk">0:04</span><span class="tk">0:06</span><span class="tk">0:08</span></div>
+            <div class="lane"><div class="blk title" style="left:20%;width:30%">Oferta por hoy</div><div class="blk title" style="left:70%;width:20%">Seguime</div></div>
+            <div class="lane"><div class="blk ov" style="left:0;width:100%">logo-marca.png</div><div class="blk ov b2" style="left:40%;width:40%">sello</div></div>
+            <div class="lane"><div class="blk sub" style="left:2%;width:96%">subtítulos · auto</div></div>
+            <div class="playhead" data-ph style="left:0"></div>
+          </div>
+        </div>
+        <div class="tl-scrub-wrap" style="padding-left:92px"><input type="range" class="tl-scrub" data-scrub min="0" max="100" value="0"></div>
+      </div>
+    </div>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA desde la transcripción.</p></aside>
+  </div></div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  const CLIP = 10;
+  // element windows (% of clip): title1 20-50, title2 70-90, badge 40-80, logo 0-100, zooms at 30/60
+  function fmt(s){ const m=Math.floor(s/60); const r=(s%60).toFixed(1); return m+":"+(r<10?"0":"")+r; }
+  document.querySelectorAll(".variant").forEach(v => {
+    const scrub = v.querySelector("[data-scrub]"); if (!scrub) return;
+    const ph = v.querySelector("[data-ph]"), fill = v.querySelector("[data-fill]");
+    const clock = v.querySelector("[data-clock]"), phone = v.querySelector("[data-phone]");
+    const title = v.querySelector("[data-title]"), badge = v.querySelector('[data-ov="badge"]');
+    const now = v.querySelector("[data-now]");
+    let playing = false, raf;
+    function apply(pct){
+      const t = CLIP*pct/100;
+      if (ph) ph.style.left = pct+"%";
+      if (fill) { fill.style.left="0"; fill.style.width=pct+"%"; }
+      if (clock) clock.textContent = fmt(t);
+      const tIn = pct>=20 && pct<=50, bIn = pct>=40 && pct<=80;
+      if (title) title.classList.toggle("hidden", !tIn);
+      if (badge) badge.classList.toggle("hidden", !bIn);
+      if (now) {
+        const items = ['<span class="chip-now">logo-marca.png</span>'];
+        if (tIn) items.unshift('<span class="chip-now t">Título: Oferta por hoy</span>');
+        if (bIn) items.push('<span class="chip-now">sello-redondo.png</span>');
+        now.innerHTML = items.join("");
+      }
+    }
+    scrub.oninput = () => { playing=false; apply(+scrub.value); };
+    // click on lanes to scrub
+    const lanes = v.querySelector("[data-lanes]");
+    if (lanes) lanes.onclick = e => { const r=lanes.getBoundingClientRect(); const pct=Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)); scrub.value=pct; apply(pct); };
+    const play = v.querySelector("[data-play]");
+    if (play) play.onclick = () => {
+      playing = !playing; play.textContent = playing ? "❚❚" : "▶";
+      cancelAnimationFrame(raf);
+      function step(){ if(!playing) return; let p=+scrub.value+0.6; if(p>=100){p=0;} scrub.value=p; apply(p); raf=requestAnimationFrame(step); }
+      if (playing) step();
+    };
+    apply(0);
+  });
+  function show(id, btn) {
+    document.querySelectorAll(".variant").forEach(v => v.classList.remove("active"));
+    document.getElementById("v-" + id).classList.add("active");
+    document.querySelectorAll(".vtab").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+  }
+</script>
+</body>
+</html>

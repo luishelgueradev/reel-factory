@@ -1,13 +1,13 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026)
-**Sketches processed:** 26 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030)
+**Sketches processed:** 30 (all)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
 Overlays list-forward), Subtitle Styling, Caption Animation Preview, Title Styling (+ entrance timing),
 Video Effects/Transitions, Timeline (frontier), Font Picker, Header Action Zone, States & Save,
 First-Run/Empty, Responsive Reflow, Motion, Preview Manipulation, Render Surface, Render Last-Mile
-(frontier), Metadata/AI Column (AI phase), North-Star Composite (015, superseded), North-Star v2
-(023, current canonical)
+(frontier), Metadata/AI Column (AI phase), Pipeline-Step Inspection (frontier), Batch Queue (frontier/ops),
+North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-Star v3 (027, current canonical)
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
 ## Included Sketches
@@ -35,10 +35,14 @@ First-Run/Empty, Responsive Reflow, Motion, Preview Manipulation, Render Surface
 | 020 | timeline-scrubber | C | Timeline / Temporal (frontier) |
 | 021 | video-effects-surface | A | Video Effects — Transitions Tab |
 | 022 | title-entrance-timing | B | Title Styling (entrance timing) |
-| 023 | north-star-v2 | B | North-Star v2 (current canonical, supersedes 015) |
+| 023 | north-star-v2 | B | North-Star v2 (superseded by 027) |
 | 024 | render-last-mile | B | Render Last-Mile / Output (frontier) |
 | 025 | caption-animation-preview | C | Caption Animation Preview |
 | 026 | metadata-ai-column | C | Metadata / AI Column (AI phase) |
+| 027 | north-star-v3 | B | North-Star v3 (current canonical, supersedes 023) |
+| 028 | transcript-review | B | Pipeline-Step Inspection (frontier) |
+| 029 | silence-cut-review | B | Pipeline-Step Inspection (frontier) |
+| 030 | batch-queue | A | Batch Queue / Multi-Job (frontier/ops) |
 
 ## Excluded Sketches
 _None._
@@ -124,6 +128,36 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   (turns red over limit, e.g. Shorts ≤100) + platform hashtags. Editable in place; lands on 024-B's
   results screen. **Green discipline: Generar/Regenerar/copiar = accent (blue), NEVER action-green** —
   the named test of the sketch. Reserved for the AI phase; justifies the column's reserved ~320–340px.
+- **North star v3 (current canonical, supersedes 023 & 015):** 023-B's committed slice refreshed so the
+  **caption plays** — 027-B. Folds 025-C's live preview into the full composite: in-panel specimen loops
+  the *style*, stage transport scrubs the *real moment*, **both at once**. The finding: the two
+  simultaneous animations **stay ambient — no focus-discipline needed** (variant C's auto-pause read as
+  "the panel went dead," not relief). One `paint()`, two drivers; the `.rdot` blink is the only animated
+  attention-grabber. Ship B; frontier layers (007 drag · 010 render · 020 timeline · awake metadata)
+  bolt on. v2's shell/4-tab/timeline CSS is unchanged — v3 only swaps the frozen specimen for the live one.
+- **Pipeline-step inspection (frontier / scope-expanding):** the two invisible intermediate outputs earn
+  **full-screen review *steps*** (not in-shell tabs), sharing one idiom — a header **step-rail**
+  (Audio→Transcripción→Silencios→Render) + a single **"Confirmar … →"** green per surface. Both rejected
+  their in-shell variant (cramped / over-reuses the timeline).
+  - **Transcript review (028-B):** document-style read-through, ▶ per segment, **click-to-edit any word**.
+    **Confidence is the legit flag** (vs the dropped auto-zoom that misread it as emphasis): two-tier
+    underline, dotted **amber `<0.78`** / dotted **red `<0.6`** + tint, a "N dudosas" counter ticking down.
+    Beat the triage queue (028-C, kept as power-user alt — it skips the 90% Whisper got right, can't catch
+    a *confidently wrong* word).
+  - **Silence-cut review (029-B):** core-value made inspectable. Before/after stat (`1:48 → 1:12 · −0:36`,
+    `to` in accent), a **waveform with every removed silence in red** (click to restore → green), a per-cut
+    list (mono range · red duration-bar · **source badge** ×2/ffmpeg/whisper · quitado⇄devuelto toggle).
+    Source badge earns trust ("two detectors agreed"), not noise. Beat the sensitivity dial (029-C, kept as
+    the "tune the knob, don't micromanage" alt). **Honesty note:** if restoring re-runs `silence-cutter`,
+    surface that cost (029-C's "Volver a analizar" is the truthful model).
+- **Batch queue / multi-job (frontier / ops):** the "por lotes" promise vs a strictly single-job pipeline,
+  honestly — **queue list**, 030-A. Sectioned rows: **Procesando ahora** (one expanded, inline 3-step
+  pipeline + progress + ETA) · **En espera** (numbered, drag-to-reorder) · **Fallaron** (the **real OOM**
+  error + single ↻ Reintentar) · **Terminados** (⤓ download). An **ambient accent-tinted concurrency
+  banner** states *"un video a la vez"* plainly (two renders OOM Chrome). Reached via an Editor⇄Cola header
+  switch. **Honest about `MAX_CONCURRENT_JOBS=1`.** Beat the **kanban (030-B** — oversells parallelism the
+  pipeline lacks, then has to hard-cap "Procesando" at 1) and the active-hero+strip (030-C). Anti-pattern:
+  hide/apologize for the limit; dress the OOM as a generic error; a second action-green on queue chrome.
 
 ## Open Sub-Problems
 - ~~**Font picker** for 26 fonts with live previews~~ — **resolved by sketch 016-C** (slide-over gallery).
@@ -140,8 +174,19 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   by sketch 024-B** (full-screen results takeover; metadata column wakes).
 - ~~The metadata column's real content (AI phase)~~ — **sketched as 026-C** (per-platform AI metadata).
   Still **reserved for the AI phase**, not Phase-22 committed scope — but its shape is now drawn.
-- **Build-time watch (023-B):** confirm the timeline strip lives *inside* `.leftcol` (work column) so
-  the metadata column keeps full height, and that the 4th "Video" tab reads as "global" pushed right.
+- **Build-time watch (023-B / 027-B):** confirm the timeline strip lives *inside* `.leftcol` (work
+  column) so the metadata column keeps full height, the 4th "Video" tab reads as "global" pushed right,
+  and the live caption preview stays ambient (no focus-discipline) once real footage plays.
+- ~~The canonical screen still shows a frozen caption (023 predates 025)~~ — **resolved by sketch 027-B**
+  (north-star v3 folds the live preview in; supersedes 023 as the canonical screen).
+- ~~No surface reviews the Whisper transcript / lets you fix mishears before captions render~~ —
+  **sketched as 028-B** (full-screen transcript read-through; confidence-flagged). Frontier / scope-expanding.
+- ~~No surface shows what the silence-cutter removed or lets you toggle a cut back~~ — **sketched as
+  029-B** (full-screen per-cut review w/ waveform). Frontier / scope-expanding; the core-value made inspectable.
+- ~~The "por lotes" promise has no multi-video / job-status surface~~ — **sketched as 030-A** (queue list,
+  honest single-job concurrency). Frontier / ops; may belong outside the Studio for a one-person tool.
 - **Frontier / next-milestone:** the **timeline** (020-C), the committed-vs-frontier scope line
-  (007 drag, 010 render), the **render last-mile** results screen (024-B), and the **AI metadata
-  column** (026-C) are validated *directions*, not Phase-22 control-panel deliverables.
+  (007 drag, 010 render), the **render last-mile** results screen (024-B), the **AI metadata column**
+  (026-C), the two **pipeline-step inspection** surfaces (028-B transcript / 029-B silence-cut), and the
+  **batch queue** (030-A) are validated *directions*, not Phase-22 control-panel deliverables. The two
+  pipeline-step reviews are the strongest delivery on the "cada paso es inspeccionable" promise in AGENTS.md.

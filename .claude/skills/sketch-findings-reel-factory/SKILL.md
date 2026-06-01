@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, animated caption preview, title entrance timing, overlays tab density, font picker, header action zone, render surface, render last-mile/results screen, AI metadata column, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star v2 canonical screen & scope boundary). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, animated caption preview, title entrance timing, overlays tab density, font picker, header action zone, render surface, render last-mile/results screen, AI metadata column, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star v3 canonical screen w/ live preview & scope boundary, pipeline-step inspection (transcript & silence-cut review), batch queue / multi-job status). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -29,7 +29,11 @@ Overlays tab against its small real schema, the frontier timeline strip, the min
 2026-06-01 (sketches 023–026: the recomposed **north-star v2** that supersedes 015 as the canonical
 screen, the **render last-mile** results takeover that closes the core-value loop, the **animated
 caption preview** that retires static subtitle specimens, and the **per-platform AI metadata column**
-that finally wakes the long-dormant right column).
+that finally wakes the long-dormant right column), 2026-06-01 (sketches 027–030: **north-star v3** that
+folds the live caption preview into the canonical screen and supersedes 023, the two **pipeline-step
+inspection** surfaces — full-screen transcript review and silence-cut review that make the
+"inspeccionable" promise legible — and the **batch queue / multi-job status** view that's honest about
+the single-job `MAX_CONCURRENT_JOBS=1` / Chrome-OOM constraint).
 </context>
 
 <design_direction>
@@ -56,12 +60,14 @@ chroma. See `references/states-and-save-feedback.md` and `references/render-expo
 The realized synthesis is **sketch 001 variant D** — it folds in 002-A's always-open sections and
 003-B's arrow presets into the real shell.
 
-**Current canonical screen is sketch 023-B (north-star v2), which supersedes 015** — recomposed after
-016–022 with a **4-tab bar** (Títulos · Overlays · Subtítulos · **Video** pushed right via
-`margin-left:auto` to read "per-frame vs global"), the timeline strip living *inside* the work column
-so the metadata column keeps full height, list-forward overlays, and the font slide-over. **The
-subtitle/caption preview now plays** the word-by-word highlight (025-C: in-panel specimen loops the
-*style*, stage transport scrubs the *real moment* — static specimens retired). **The render's payoff is
+**Current canonical screen is sketch 027-B (north-star v3), which supersedes 023 (v2) and 015** —
+023-B's committed slice recomposed after 016–022, then refreshed so the caption **plays**: a **4-tab
+bar** (Títulos · Overlays · Subtítulos · **Video** pushed right via `margin-left:auto` to read
+"per-frame vs global"), the timeline strip living *inside* the work column so the metadata column keeps
+full height, list-forward overlays, and the font slide-over. **The subtitle/caption preview now plays**
+the word-by-word highlight (025-C: in-panel specimen loops the *style*, stage transport scrubs the
+*real moment* — static specimens retired; v3 folds this live preview into the canonical composite and
+confirms the two simultaneous animations stay ambient, no focus-discipline needed). **The render's payoff is
 a full-screen results takeover** (024-B: the finished reel big + playable with file + AI metadata
 gathered) that closes the core-value loop. The persistent right column's awake form is **per-platform
 AI metadata** (026-C: TikTok/Reels/Shorts with per-platform char limits + hashtags) — reserved for the
@@ -93,8 +99,11 @@ generate/copy use **accent (blue)**, never the reserved action-green.
 | Render / Export Surface (frontier) | references/render-export-surface.md | ⚠️ Scope-expanding. Render on the dimmed preview (progress ring + 3-step pipeline → "Reel listo"), no modal; Render takes the green primary; single-job constraint surfaced; OOM-aware failure. **Continues into render-last-mile** |
 | Render Last-Mile / Output (frontier) | references/render-last-mile.md | ⚠️ Scope-expanding. Where the finished reel lands: **full-screen results takeover (024-B)** — reel big + playable, file card (download · path · play · re-render) + AI metadata gathered as one "done, publish" moment. Metadata column **wakes**. Single-job re-render; download = accent not green |
 | Metadata / AI Column (AI phase) | references/metadata-ai-column.md | ⚠️ AI-phase / forward-looking. The awakened right column: **per-platform tabs (026-C)** TikTok/Reels/Shorts, each with tailored caption + char-limit counter (red over limit) + hashtags. Editable in place; lands on 024-B. **Green discipline: Generar/copiar = accent, never action-green** |
-| North-Star v2 — Canonical Screen | references/north-star-v2.md | **CURRENT canonical screen (023-B), supersedes 015.** Recomposed post-016–022: 4-tab bar (Video pushed right), timeline strip *inside* work column (metadata keeps full height), list-forward overlays, font sheet, numeric timing. Strip places / rows refine — coordinated not redundant. Ship B, frontier layers (007/010/020) bolt on |
-| North-Star Composite (superseded) | references/north-star-composite.md | ⚠️ **Superseded by north-star-v2 (023).** Historical 015 capstone of the 001–014 era: 013-B header + 001-D shell + 3 tabs + 007 drag + 010 render, A↔B scope boundary. Plan-split rule originates here; the screen itself is stale (3 tabs, no timeline) |
+| North-Star v3 — Canonical Screen | references/north-star-v3.md | **CURRENT canonical screen (027-B), supersedes 023 & 015.** 023-B's committed slice with the **caption now playing** (025-C live preview folded in): one `paint()`, two drivers; the two simultaneous animations stay ambient — **no focus-discipline needed** (variant C's auto-pause read as "panel went dead"). Ship B; frontier layers (007/010/020/awake-metadata) bolt on |
+| North-Star v2 — Canonical (superseded) | references/north-star-v2.md | ⚠️ **Superseded by north-star-v3 (027).** Pre-live-preview composite (frozen specimen) + source of the shell/4-tab/timeline CSS (unchanged in v3): 4-tab bar (Video pushed right), timeline strip *inside* work column, list-forward overlays, font sheet, numeric timing. Scope-line + coherence findings still hold |
+| North-Star Composite (superseded) | references/north-star-composite.md | ⚠️ **Superseded by north-star-v2/v3.** Historical 015 capstone of the 001–014 era: 013-B header + 001-D shell + 3 tabs + 007 drag + 010 render, A↔B scope boundary. Plan-split rule originates here; the screen itself is stale (3 tabs, no timeline) |
+| Pipeline-Step Inspection (frontier) | references/pipeline-inspection.md | ⚠️ Scope-expanding. **Full-screen review *steps*** (not in-shell tabs) make the "inspeccionable" promise legible: shared **step-rail** (Audio→Transcripción→Silencios→Render) + single **"Confirmar … →"** green. **Transcript (028-B):** document read-through, click-to-edit, confidence underlines (amber<0.78/red<0.6) — the *legit* confidence use vs dropped auto-zoom. **Silence cuts (029-B):** before/after stat + waveform w/ removed silences in red (click-restore) + per-cut list w/ source badges (×2/ffmpeg/whisper) + toggles. Makes core-value inspectable. Anti-pattern: cram into shell; flat-tone underline; free-restore if re-render |
+| Batch Queue / Multi-Job (frontier/ops) | references/batch-queue.md | ⚠️ Scope-expanding / ops. **Queue list (030-A):** sectioned rows (Procesando ahora w/ inline pipeline+ETA · En espera numbered+drag · Fallaron w/ real OOM+retry · Terminados+download) + an **ambient concurrency banner** stating "un video a la vez" plainly. Honest about `MAX_CONCURRENT_JOBS=1` / Chrome-OOM. Reached via Editor⇄Cola switch. Anti-pattern: kanban (oversells parallelism); hide/apologize for the limit; second action-green |
 
 ## Theme
 
@@ -128,10 +137,14 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/020-timeline-scrubber/index.html` — winner `#v-c` (strip under stage+controls; frontier / scope-expanding)
 - `sources/021-video-effects-surface/index.html` — winner `#v-a` (minimal "Video" tab; auto-zoom dropped)
 - `sources/022-title-entrance-timing/index.html` — winner `#v-b` (numeric timing rows)
-- `sources/023-north-star-v2/index.html` — winner `#v-b` (committed slice; **current canonical**, supersedes 015)
+- `sources/023-north-star-v2/index.html` — winner `#v-b` (committed slice; superseded by 027)
 - `sources/024-render-last-mile/index.html` — winner `#v-b` (full-screen results takeover; frontier / scope-expanding)
 - `sources/025-caption-animation-preview/index.html` — winner `#v-c` (loop + transport; specimens now animate)
 - `sources/026-metadata-ai-column/index.html` — winner `#v-c` (per-platform AI metadata; AI-phase / forward-looking)
+- `sources/027-north-star-v3/index.html` — winner `#v-b` (committed slice + live preview; **current canonical**, supersedes 023)
+- `sources/028-transcript-review/index.html` — winner `#v-b` (full-screen transcript read-through; frontier / scope-expanding)
+- `sources/029-silence-cut-review/index.html` — winner `#v-b` (full-screen per-cut review; frontier / scope-expanding)
+- `sources/030-batch-queue/index.html` — winner `#v-a` (queue list; frontier / ops, honest single-job constraint)
 </findings_index>
 
 <metadata>
@@ -159,8 +172,12 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 020-timeline-scrubber (winner C — strip under stage+controls; frontier, scope-expanding)
 - 021-video-effects-surface (winner A — minimal "Video" tab; auto-emphasis-zoom dropped)
 - 022-title-entrance-timing (winner B — numeric timing rows)
-- 023-north-star-v2 (winner B — committed slice; current canonical screen, supersedes 015)
+- 023-north-star-v2 (winner B — committed slice; superseded as canonical by 027)
 - 024-render-last-mile (winner B — full-screen results takeover; frontier, scope-expanding)
 - 025-caption-animation-preview (winner C — loop + transport; static subtitle specimens retired)
 - 026-metadata-ai-column (winner C — per-platform AI metadata tabs; AI-phase, forward-looking)
+- 027-north-star-v3 (winner B — committed slice + live caption preview; current canonical screen, supersedes 023)
+- 028-transcript-review (winner B — full-screen Whisper transcript read-through; frontier, scope-expanding)
+- 029-silence-cut-review (winner B — full-screen per-cut review; frontier, core-value, scope-expanding)
+- 030-batch-queue (winner A — queue list; frontier/ops, honest single-job concurrency)
 </metadata>

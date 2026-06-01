@@ -1,10 +1,15 @@
-# North-Star v2 — Updated Canonical Screen
+# North-Star v2 — Recomposed Canonical (superseded by v3)
 
-The **current canonical screen** for the Phase 22 redesign, recomposed *after* the seven decisions
-016–022 landed. **Supersedes `north-star-composite.md` (sketch 015)** as the screen the real React
-build targets — 015 predated the 4th "Video" tab, the timeline strip, list-forward overlays, the font
-slide-over, and numeric title timing, so its composite went stale. Read every per-area reference
-first; this one only proves they still cohere as one tool and re-draws the ship-now / frontier line.
+> ⚠️ **Superseded by `north-star-v3.md` (sketch 027).** v2's canonical drawing predates sketch 025 and
+> still shows a **frozen** caption specimen; v3 folds in the **live word-by-word preview**. Use v3 as
+> the screen the build targets. v2 stays as the pre-live-preview composite and the source of the shell /
+> 4-tab / timeline CSS (unchanged in v3). The scope-line and coherence findings below still hold.
+
+The canonical screen *recomposed after the seven decisions 016–022 landed*. **Supersedes
+`north-star-composite.md` (sketch 015)** — 015 predated the 4th "Video" tab, the timeline strip,
+list-forward overlays, the font slide-over, and numeric title timing, so its composite went stale.
+Read every per-area reference first; this one only proves they still cohere as one tool and re-draws
+the ship-now / frontier line.
 
 ## Design Decisions
 

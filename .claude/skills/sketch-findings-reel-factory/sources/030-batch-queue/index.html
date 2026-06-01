@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 030 — batch queue / multi-job status</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-8); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  /* view switch (studio | cola) */
+  .vswitch { display: flex; gap: 2px; margin-left: var(--s-8); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; }
+  .vswitch button { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px 12px; border-radius: var(--r-xs); cursor: pointer; }
+  .vswitch button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .hdr-spacer { flex: 1; }
+  .addbtn { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 15px; border-radius: var(--r-sm); border: 1px solid var(--accent-strong); background: var(--accent-tint); color: var(--accent); cursor: pointer; }
+  .addbtn:hover { background: var(--accent-tint-2); }
+
+  /* concurrency banner — the honest single-job rule */
+  .concbar { flex: none; display: flex; align-items: center; gap: var(--s-5); padding: var(--s-5) var(--s-12); background: var(--accent-tint-2); border-bottom: 1px solid var(--border); font-size: var(--t-xs); color: var(--text-2); }
+  .concbar .ic { color: var(--accent); }
+  .concbar b { color: var(--text); font-weight: 600; }
+
+  /* summary chips */
+  .summary { display: flex; gap: var(--s-6); }
+  .schip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-2); }
+  .schip .d { width: 8px; height: 8px; border-radius: 2px; }
+  .d.queued { background: var(--text-muted); } .d.active { background: var(--accent); } .d.completed { background: var(--success); } .d.failed { background: var(--danger); }
+
+  /* status atom */
+  .st { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-xs); font-weight: 600; padding: 3px 10px; border-radius: var(--r-full); }
+  .st.queued { color: var(--text-muted); background: var(--surface-2); }
+  .st.active { color: var(--accent); background: var(--accent-tint); }
+  .st.completed { color: var(--success); background: oklch(0.72 0.14 150 / 0.13); }
+  .st.failed { color: var(--danger); background: oklch(0.63 0.185 25 / 0.12); }
+  .st .spin { width: 10px; height: 10px; border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+
+  .thumb { width: 36px; height: 48px; border-radius: var(--r-xs); flex: none; background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); position: relative; overflow: hidden; }
+  .thumb::after { content: "▶"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; color: oklch(0.9 0.02 280 / 0.5); }
+  .thumb.done { background: linear-gradient(180deg, oklch(0.4 0.07 150), oklch(0.24 0.04 160)); } .thumb.done::after { content: "✓"; color: var(--success); }
+  .thumb.fail::after { content: "!"; color: var(--danger); font-weight: 800; }
+  .fn { font-size: var(--t-sm); color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .jid { font-family: var(--mono); font-size: var(--t-2xs); color: var(--text-faint); }
+
+  /* pipeline mini steps */
+  .psteps { display: flex; align-items: center; gap: 5px; }
+  .psteps .ps { font-size: var(--t-2xs); color: var(--text-faint); display: inline-flex; align-items: center; gap: 4px; }
+  .psteps .ps .pn { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); display: grid; place-items: center; font-size: 8px; }
+  .psteps .ps.done { color: var(--text-2); } .psteps .ps.done .pn { background: var(--success); border-color: transparent; color: var(--stage); }
+  .psteps .ps.cur { color: var(--accent); } .psteps .ps.cur .pn { border-color: var(--accent); color: var(--accent); }
+  .psteps .pl { width: 10px; height: 1px; background: var(--border); }
+
+  .progress { height: 5px; border-radius: var(--r-full); background: var(--surface-2); overflow: hidden; }
+  .progress i { display: block; height: 100%; background: var(--accent); transition: width .25s var(--ease); }
+  .errline { font-size: var(--t-xs); color: var(--danger); display: flex; align-items: center; gap: 6px; }
+  .ibtn { font: inherit; font-size: var(--t-xs); color: var(--text-2); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--r-xs); padding: 4px 9px; cursor: pointer; }
+  .ibtn:hover { background: var(--surface-2); color: var(--text); }
+  .ibtn.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* ════════ A — queue list ════════ */
+  .listwrap { flex: 1; overflow-y: auto; padding: var(--s-10) var(--s-12); }
+  .list-section-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: var(--s-10) 0 var(--s-6); }
+  .list-section-h:first-child { margin-top: 0; }
+  .list-section-h .cnt { margin-left: auto; font-weight: 600; color: var(--text-faint); text-transform: none; letter-spacing: 0; }
+  .jrow { display: grid; grid-template-columns: 16px 36px 1fr auto; gap: var(--s-6); align-items: center; padding: var(--s-6); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); margin-bottom: var(--s-5); }
+  .jrow.activej { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .jrow.failj { border-color: oklch(0.63 0.185 25 / 0.4); }
+  .jrow .drag { color: var(--text-faint); cursor: grab; font-size: 14px; }
+  .jrow .main { min-width: 0; }
+  .jrow .main .topl { display: flex; align-items: center; gap: var(--s-5); margin-bottom: 5px; }
+  .jrow .right { display: flex; align-items: center; gap: var(--s-6); }
+  .jrow .activebody { grid-column: 3 / -1; margin-top: var(--s-5); display: flex; flex-direction: column; gap: var(--s-5); }
+  .jrow .activebody .pbar-row { display: flex; align-items: center; gap: var(--s-6); }
+  .jrow .activebody .pbar-row .progress { flex: 1; }
+  .jrow .activebody .eta { font-size: var(--t-xs); color: var(--text-2); font-variant-numeric: tabular-nums; flex: none; }
+
+  /* ════════ B — kanban ════════ */
+  .kan { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-8); padding: var(--s-10) var(--s-12); min-height: 0; }
+  .kcol { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+  .kcol-h { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-6) var(--s-8); border-bottom: 1px solid var(--border-faint); font-size: var(--t-sm); font-weight: 600; }
+  .kcol-h .kc { margin-left: auto; font-size: var(--t-xs); color: var(--text-faint); background: var(--surface-2); border-radius: var(--r-full); padding: 1px 8px; }
+  .kcol-body { flex: 1; overflow-y: auto; padding: var(--s-6); display: flex; flex-direction: column; gap: var(--s-5); }
+  .kcard { background: var(--canvas); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-6); }
+  .kcard.activej { border-color: var(--accent-strong); }
+  .kcard .kf { display: flex; align-items: center; gap: var(--s-5); margin-bottom: var(--s-5); }
+  .kcard .kmeta { font-size: var(--t-2xs); color: var(--text-faint); }
+  .kempty { font-size: var(--t-xs); color: var(--text-faint); text-align: center; padding: var(--s-10) 0; }
+
+  /* ════════ C — active hero + strip ════════ */
+  .chero { flex: none; padding: var(--s-12); border-bottom: 1px solid var(--border); display: flex; gap: var(--s-12); align-items: center; }
+  .chero .bigthumb { width: 120px; height: 160px; border-radius: var(--r-md); flex: none; background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .chero .bigthumb .scan { position: absolute; left: 0; right: 0; height: 30%; background: linear-gradient(180deg, transparent, var(--accent-tint), transparent); animation: scanmove 2.2s var(--ease) infinite; }
+  @keyframes scanmove { 0% { top: -30%; } 100% { top: 100%; } }
+  .chero .cmid { flex: 1; min-width: 0; }
+  .chero .cmid .now { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--s-4); }
+  .chero .cmid h2 { font-size: var(--t-xl); font-weight: 700; }
+  .chero .cmid .ringrow { display: flex; align-items: center; gap: var(--s-10); margin-top: var(--s-8); }
+  .ring { position: relative; width: 76px; height: 76px; flex: none; } .ring svg { transform: rotate(-90deg); }
+  .ring .pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--t-md); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cstrip-wrap { flex: 1; overflow-y: auto; padding: var(--s-10) var(--s-12); }
+  .cstrip-h { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); display: flex; align-items: center; }
+  .cstrip-h .cnt { margin-left: auto; font-weight: 600; color: var(--text-faint); text-transform: none; letter-spacing: 0; }
+  .crow { display: grid; grid-template-columns: 28px 1fr auto auto; gap: var(--s-6); align-items: center; padding: var(--s-5) var(--s-6); border-bottom: 1px solid var(--border-faint); }
+  .crow .num { font-family: var(--mono); font-size: var(--t-xs); color: var(--text-faint); }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 030 · batch queue</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ Chosen · Lista de cola (1 activa + en espera)</button>
+  <button class="vtab" onclick="show('b',this)">B · Tablero Kanban por estado</button>
+  <button class="vtab" onclick="show('c',this)">C · Hero del job activo + tira</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">"individual y por lotes" · 1 job a la vez (OOM) · honestidad del límite</span>
+</nav>
+
+<!-- ════════ A — queue list ════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Lotes</div></div></div>
+    <div class="vswitch"><button>Editor</button><button class="on">Cola</button></div>
+    <div class="hdr-spacer"></div>
+    <div class="summary" id="sum-a"></div>
+    <button class="addbtn" style="margin-left:var(--s-8)">＋ Agregar videos</button>
+  </header>
+  <div class="concbar"><span class="ic">⚙</span>El pipeline procesa <b>un video a la vez</b> — cada job levanta Chrome headless para renderizar, y dos en paralelo agotan la RAM. Los demás esperan en orden.</div>
+  <div class="listwrap" id="list-a"></div>
+</div>
+
+<!-- ════════ B — kanban ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Lotes</div></div></div>
+    <div class="vswitch"><button>Editor</button><button class="on">Cola</button></div>
+    <div class="hdr-spacer"></div>
+    <div class="summary" id="sum-b"></div>
+    <button class="addbtn" style="margin-left:var(--s-8)">＋ Agregar videos</button>
+  </header>
+  <div class="concbar"><span class="ic">⚙</span>Sólo <b>1 columna "Procesando"</b> puede tener un job — el pipeline es de un job a la vez. La cola alimenta a Procesando de a uno.</div>
+  <div class="kan" id="kan-b"></div>
+</div>
+
+<!-- ════════ C — active hero + strip ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Lotes</div></div></div>
+    <div class="vswitch"><button>Editor</button><button class="on">Cola</button></div>
+    <div class="hdr-spacer"></div>
+    <div class="summary" id="sum-c"></div>
+    <button class="addbtn" style="margin-left:var(--s-8)">＋ Agregar videos</button>
+  </header>
+  <div class="chero" id="chero"></div>
+  <div class="cstrip-wrap">
+    <div class="cstrip-h">En la cola y terminados <span class="cnt" id="cstrip-cnt"></span></div>
+    <div id="cstrip"></div>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  // Real shape: BatchJob { jobId, filename, status: queued|active|completed|failed, currentStep?, error? }
+  const STEPS = ['Transcripción','Silencios','Render'];
+  const jobs = [
+    { jobId:'a1f3', filename:'entrevista-juan.mp4', status:'completed', dur:'0:48' },
+    { jobId:'b2e8', filename:'tip-edicion-03.mp4', status:'completed', dur:'1:02' },
+    { jobId:'c7d1', filename:'reel-lanzamiento.mp4', status:'active', step:2, prog:62, eta:'~40s' },
+    { jobId:'d9a4', filename:'detras-de-camara.mp4', status:'failed', error:'Render agotó la memoria (OOM) — Chrome headless. Reintentá solo.' },
+    { jobId:'e5c2', filename:'pregunta-respuesta.mp4', status:'queued' },
+    { jobId:'f0b7', filename:'cierre-semana.mov', status:'queued' },
+  ];
+  const order = ['active','queued','completed','failed'];
+  function byStatus(s){ return jobs.filter(j=>j.status===s); }
+  function count(s){ return byStatus(s).length; }
+
+  function summary(){ return order.map(s=>{ const n=count(s); const lbl={active:'activo',queued:'en espera',completed:'listos',failed:'fallaron'}[s]; return n?`<span class="schip"><span class="d ${s}"></span>${n} ${lbl}</span>`:''; }).filter(Boolean).join(''); }
+  function pstepsHtml(step){ return `<div class="psteps">`+STEPS.map((s,i)=>`${i?'<span class=pl></span>':''}<span class="ps ${i<step?'done':i===step?'cur':''}"><span class="pn">${i<step?'✓':i+1}</span>${s}</span>`).join('')+`</div>`; }
+  function stAtom(j){
+    if(j.status==='active') return `<span class="st active"><span class="spin"></span>${STEPS[j.step]}</span>`;
+    if(j.status==='completed') return `<span class="st completed">✓ Listo · ${j.dur}</span>`;
+    if(j.status==='failed') return `<span class="st failed">✕ Falló</span>`;
+    return `<span class="st queued">En espera</span>`;
+  }
+
+  // ── A ──
+  function renderA(){
+    document.getElementById('sum-a').innerHTML=summary();
+    const host=document.getElementById('list-a');
+    let h='';
+    const act=byStatus('active'), q=byStatus('queued'), done=byStatus('completed'), fail=byStatus('failed');
+    if(act.length){ h+=`<div class="list-section-h">Procesando ahora</div>`; act.forEach(j=>{
+      h+=`<div class="jrow activej"><span class="drag"></span><div class="thumb"></div>
+        <div class="main"><div class="topl"><span class="fn">${j.filename}</span><span class="jid">#${j.jobId}</span></div>${pstepsHtml(j.step)}</div>
+        <div class="right">${stAtom(j)}<button class="ibtn danger">Cancelar</button></div>
+        <div class="activebody"><div class="pbar-row"><div class="progress"><i style="width:${j.prog}%"></i></div><span class="eta">${j.prog}% · ${j.eta}</span></div></div></div>`; }); }
+    if(q.length){ h+=`<div class="list-section-h">En espera <span class="cnt">${q.length} · arrastrá para reordenar</span></div>`; q.forEach((j,i)=>{
+      h+=`<div class="jrow"><span class="drag">⠿</span><div class="thumb"></div>
+        <div class="main"><div class="topl"><span class="fn">${i+1}. ${j.filename}</span><span class="jid">#${j.jobId}</span></div></div>
+        <div class="right">${stAtom(j)}<button class="ibtn">Quitar</button></div></div>`; }); }
+    if(fail.length){ h+=`<div class="list-section-h">Fallaron <span class="cnt">${fail.length}</span></div>`; fail.forEach(j=>{
+      h+=`<div class="jrow failj"><span class="drag"></span><div class="thumb fail"></div>
+        <div class="main"><div class="topl"><span class="fn">${j.filename}</span><span class="jid">#${j.jobId}</span></div><div class="errline">⚠ ${j.error}</div></div>
+        <div class="right">${stAtom(j)}<button class="ibtn">↻ Reintentar</button></div></div>`; }); }
+    if(done.length){ h+=`<div class="list-section-h">Terminados <span class="cnt">${done.length}</span></div>`; done.forEach(j=>{
+      h+=`<div class="jrow"><span class="drag"></span><div class="thumb done"></div>
+        <div class="main"><div class="topl"><span class="fn">${j.filename}</span><span class="jid">#${j.jobId}</span></div></div>
+        <div class="right">${stAtom(j)}<button class="ibtn">⤓ Descargar</button></div></div>`; }); }
+    host.innerHTML=h;
+  }
+
+  // ── B ──
+  function renderB(){
+    document.getElementById('sum-b').innerHTML=summary();
+    const cols=[['queued','En espera'],['active','Procesando'],['completed','Listos'],['failed','Fallaron']];
+    document.getElementById('kan-b').innerHTML = cols.map(([s,lbl])=>{
+      const items=byStatus(s);
+      const body = items.length? items.map(j=>`<div class="kcard ${s==='active'?'activej':''}">
+          <div class="kf"><div class="thumb ${s==='completed'?'done':s==='failed'?'fail':''}"></div><span class="fn">${j.filename}</span></div>
+          ${s==='active'?pstepsHtml(j.step)+`<div class="progress" style="margin-top:var(--s-5)"><i style="width:${j.prog}%"></i></div>`:''}
+          ${s==='failed'?`<div class="errline" style="margin-top:var(--s-4)">⚠ OOM en render</div>`:''}
+          ${s==='completed'?`<div class="kmeta">${j.dur} · listo para publicar</div>`:''}
+          ${s==='queued'?`<div class="kmeta">#${j.jobId} · esperando turno</div>`:''}
+        </div>`).join('') : `<div class="kempty">—</div>`;
+      const lock = s==='active'?` <span class="kmeta" style="font-weight:400">· máx 1</span>`:'';
+      return `<div class="kcol"><div class="kcol-h"><span class="d ${s}" style="width:8px;height:8px;border-radius:2px"></span>${lbl}${lock}<span class="kc">${items.length}</span></div><div class="kcol-body">${body}</div></div>`;
+    }).join('');
+  }
+
+  // ── C ──
+  function ringSvg(pct){ const r=33,c=2*Math.PI*r,off=c*(1-pct/100);
+    return `<svg width="76" height="76"><circle cx="38" cy="38" r="${r}" fill="none" stroke="var(--border)" stroke-width="5"/><circle cx="38" cy="38" r="${r}" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset .25s var(--ease)"/></svg>`; }
+  function renderC(){
+    document.getElementById('sum-c').innerHTML=summary();
+    const j=byStatus('active')[0];
+    document.getElementById('chero').innerHTML = j? `
+      <div class="bigthumb"><div class="scan"></div></div>
+      <div class="cmid"><div class="now">● Procesando ahora · 1 a la vez</div><h2>${j.filename}</h2>
+        <div style="margin-top:var(--s-6)">${pstepsHtml(j.step)}</div>
+        <div class="ringrow"><div class="ring">${ringSvg(j.prog)}<span class="pct">${j.prog}%</span></div>
+          <div><div style="font-size:var(--t-md);color:var(--text);font-weight:600">${STEPS[j.step]}</div><div style="font-size:var(--t-sm);color:var(--text-muted);margin-top:3px">Queda ${j.eta} · luego sigue la cola</div>
+            <button class="ibtn danger" style="margin-top:var(--s-6)">Cancelar este job</button></div></div></div>` : `<div class="cmid"><h2>Sin jobs activos</h2></div>`;
+    const rest=[...byStatus('queued'),...byStatus('failed'),...byStatus('completed')];
+    document.getElementById('cstrip-cnt').textContent=`${rest.length} jobs`;
+    document.getElementById('cstrip').innerHTML = rest.map((j,i)=>`
+      <div class="crow"><span class="num">${j.status==='queued'?(i+1):''}</span>
+        <div style="display:flex;align-items:center;gap:var(--s-5);min-width:0"><div class="thumb ${j.status==='completed'?'done':j.status==='failed'?'fail':''}" style="width:28px;height:38px"></div><div style="min-width:0"><div class="fn">${j.filename}</div>${j.status==='failed'?`<div class="errline">⚠ ${j.error}</div>`:`<div class="jid">#${j.jobId}</div>`}</div></div>
+        ${stAtom(j)}
+        <button class="ibtn">${j.status==='completed'?'⤓ Descargar':j.status==='failed'?'↻ Reintentar':'Quitar'}</button></div>`).join('');
+  }
+
+  renderA(); renderB(); renderC();
+
+  // fake live progress on the active job
+  setInterval(()=>{
+    const j=byStatus('active')[0]; if(!j) return;
+    j.prog=Math.min(99, j.prog+Math.round(2+Math.random()*3));
+    j.step=Math.min(STEPS.length-1, Math.floor(j.prog/(100/STEPS.length)));
+    const eta=Math.max(3, Math.round((100-j.prog)*0.6)); j.eta='~'+eta+'s';
+    renderA(); renderB(); renderC();
+  }, 900);
+
+  function show(id, btn){
+    document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+    document.getElementById('v-'+id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

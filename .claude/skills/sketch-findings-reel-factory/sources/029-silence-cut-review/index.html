@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 029 — silence-cut review</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-8); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .hdr-spacer { flex: 1; }
+  .steprail { display: flex; align-items: center; gap: var(--s-4); font-size: var(--t-xs); }
+  .steprail .s { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); }
+  .steprail .s .n { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; background: var(--surface-2); color: var(--text-faint); border: 1px solid var(--border); }
+  .steprail .s.done .n { background: var(--success); color: var(--stage); border-color: transparent; }
+  .steprail .s.cur { color: var(--text); } .steprail .s.cur .n { background: var(--accent); color: var(--stage); border-color: transparent; }
+  .steprail .sep { width: 16px; height: 1px; background: var(--border); }
+
+  .footer { flex: none; height: 60px; display: flex; align-items: center; gap: var(--s-8); padding: 0 var(--s-12); background: var(--chrome); border-top: 1px solid var(--border); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 8px 15px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: transparent; color: var(--text-2); cursor: pointer; }
+  .btn:hover { background: var(--surface-2); color: var(--text); }
+  .cta { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: var(--t-md); font-weight: 600; padding: 9px 18px; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--action); color: oklch(0.16 0.02 150); cursor: pointer; }
+  .cta:hover { background: var(--action-hover); }
+  .play { width: 30px; height: 30px; border-radius: 50%; flex: none; border: 1px solid var(--accent-strong); background: var(--accent-tint); color: var(--accent); cursor: pointer; display: grid; place-items: center; font-size: 11px; }
+  .clock { font-size: var(--t-sm); color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+  /* ── stat headline ── */
+  .stat { display: flex; align-items: baseline; gap: var(--s-5); }
+  .stat .big { font-size: var(--t-2xl); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat .big .arrow { color: var(--text-faint); font-weight: 400; margin: 0 var(--s-3); }
+  .stat .big .to { color: var(--accent); }
+  .stat .delta { font-size: var(--t-sm); color: var(--success); font-weight: 600; }
+  .stat .sub { font-size: var(--t-sm); color: var(--text-muted); }
+
+  /* ── source badges ── */
+  .src { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: var(--r-full); }
+  .src.both { color: var(--success); background: oklch(0.72 0.14 150 / 0.14); }
+  .src.ffmpeg { color: var(--accent); background: var(--accent-tint); }
+  .src.whisper { color: var(--warning); background: oklch(0.80 0.12 78 / 0.14); }
+
+  /* ════════ B — full-screen review ════════ */
+  .reviewwrap { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: var(--s-12) var(--s-12) var(--s-16); }
+  .review { width: 100%; max-width: 860px; }
+  .review-intro h2 { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.015em; }
+  .review-intro p { font-size: var(--t-md); color: var(--text-2); margin-top: var(--s-4); line-height: 1.55; max-width: 64ch; }
+  .statbar { display: flex; align-items: center; gap: var(--s-12); margin: var(--s-12) 0; padding: var(--s-8) var(--s-10); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); }
+
+  /* waveform with removed silences */
+  .wfcard { margin-bottom: var(--s-12); }
+  .wfcard .wf-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-5); }
+  .wfcard .wf-h .lbl { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+  .wf { position: relative; height: 84px; border-radius: var(--r-md); background: var(--stage); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; }
+  .wf .bars { position: absolute; inset: 0; display: flex; align-items: center; gap: 1px; padding: 0 2px; }
+  .wf .bars b { flex: 1; background: var(--border-strong); border-radius: 1px; min-width: 1px; }
+  .wf .bars b.speech { background: var(--accent); opacity: 0.7; }
+  .sil { position: absolute; top: 0; bottom: 0; background: oklch(0.63 0.185 25 / 0.16); border-left: 1px solid oklch(0.63 0.185 25 / 0.5); border-right: 1px solid oklch(0.63 0.185 25 / 0.5); display: flex; align-items: flex-start; justify-content: center; cursor: pointer; transition: background var(--dur) var(--ease); }
+  .sil:hover { background: oklch(0.63 0.185 25 / 0.28); }
+  .sil.restored { background: oklch(0.72 0.14 150 / 0.10); border-color: oklch(0.72 0.14 150 / 0.4); }
+  .sil .tagmini { font-size: 8px; color: var(--danger); margin-top: 2px; white-space: nowrap; }
+  .sil.restored .tagmini { color: var(--success); }
+  .wf-legend { display: flex; gap: var(--s-8); margin-top: var(--s-5); font-size: var(--t-xs); color: var(--text-muted); }
+  .wf-legend .lk { display: inline-flex; align-items: center; gap: 6px; } .wf-legend .sw { width: 14px; height: 10px; border-radius: 2px; }
+
+  /* cut list */
+  .cuts-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .cuts-h .cnt { margin-left: auto; font-weight: 600; color: var(--text-faint); text-transform: none; letter-spacing: 0; }
+  .cut { display: grid; grid-template-columns: 28px 120px 1fr 80px 84px; align-items: center; gap: var(--s-6); padding: var(--s-5) var(--s-6); border-radius: var(--r-sm); border: 1px solid transparent; }
+  .cut:hover { background: var(--surface); }
+  .cut.restored { opacity: 0.6; }
+  .cut .pl { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-muted); display: grid; place-items: center; cursor: pointer; font-size: 9px; }
+  .cut .pl:hover { border-color: var(--accent-strong); color: var(--accent); }
+  .cut .rng { font-family: var(--mono); font-size: var(--t-xs); color: var(--text-2); }
+  .cut .durbar { height: 6px; border-radius: var(--r-full); background: var(--surface-2); position: relative; }
+  .cut .durbar i { display: block; height: 100%; border-radius: var(--r-full); background: var(--danger); opacity: 0.6; }
+  .cut .durtxt { font-size: var(--t-sm); color: var(--text); font-variant-numeric: tabular-nums; }
+  .toggle { width: 38px; height: 22px; border-radius: var(--r-full); background: var(--action); position: relative; cursor: pointer; flex: none; transition: background var(--dur) var(--ease); justify-self: end; }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 18px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform var(--dur) var(--ease); }
+  .toggle.off { background: var(--surface-hover); } .toggle.off::after { transform: translateX(-16px); }
+  .cut .tgwrap { justify-self: end; display: flex; align-items: center; gap: var(--s-4); }
+  .cut .tglbl { font-size: 9px; color: var(--text-faint); text-transform: uppercase; }
+
+  /* ════════ C — aggregate + sensitivity ════════ */
+  .shell { flex: 1; display: flex; min-height: 0; }
+  .stage { flex: 0 1 360px; background: var(--stage); display: flex; align-items: center; justify-content: center; padding: var(--s-10); border-right: 1px solid var(--border); }
+  .phone { position: relative; aspect-ratio: 9/16; height: min(100%, 470px); border-radius: 16px; overflow: hidden; background: linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270)); box-shadow: var(--shadow-pop); display: grid; place-items: center; }
+  .phone .pl-big { width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--accent-strong); background: oklch(0.16 0.02 280 / 0.5); color: var(--accent); display: grid; place-items: center; font-size: 16px; cursor: pointer; }
+  .cpanel { flex: 1; overflow-y: auto; padding: var(--s-12); max-width: 560px; }
+  .cpanel h2 { font-size: var(--t-xl); font-weight: 700; }
+  .cpanel .lead { font-size: var(--t-md); color: var(--text-2); margin: var(--s-4) 0 var(--s-10); line-height: 1.55; }
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); display: flex; align-items: center; gap: var(--s-5); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .row { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-6); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .row .lbnote { font-size: var(--t-2xs); color: var(--text-faint); }
+  .rng2 { display: grid; grid-template-columns: 1fr 58px; align-items: center; gap: var(--s-5); }
+  input[type=range].sl { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range].sl::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+  .rng2 output { font-size: var(--t-xs); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: right; }
+  .reanalyze { font: inherit; font-size: var(--t-sm); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm); border: 1px solid var(--accent-strong); background: var(--accent-tint); color: var(--accent); cursor: pointer; }
+  .disclose { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 6px; }
+  .disclose .car { transition: transform var(--dur) var(--ease); } .disclose.open .car { transform: rotate(90deg); }
+  .cutmini { display: none; margin-top: var(--s-6); } .cutmini.open { display: block; }
+  .cutmini .cm { display: flex; align-items: center; gap: var(--s-5); padding: var(--s-3) 0; font-size: var(--t-sm); color: var(--text-2); border-top: 1px solid var(--border-faint); }
+  .cutmini .cm .mono { font-family: var(--mono); font-size: var(--t-xs); color: var(--text-faint); }
+  .cutmini .cm .restore { margin-left: auto; font: inherit; font-size: var(--t-xs); color: var(--accent); background: none; border: 1px solid var(--border); border-radius: var(--r-xs); padding: 3px 8px; cursor: pointer; }
+
+  /* ════════ A — timeline lane ════════ */
+  .a-stagewrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .a-top { flex: 1; display: flex; align-items: center; justify-content: center; background: var(--stage); padding: var(--s-10); }
+  .a-top .phone { height: min(100%, 440px); }
+  .a-note { padding: var(--s-6) var(--s-12); background: var(--surface); border-top: 1px solid var(--border-faint); border-bottom: 1px solid var(--border-faint); font-size: var(--t-sm); color: var(--text-2); }
+  .a-note b { color: var(--text); }
+  .tl-dock { flex: none; background: var(--chrome); border-top: 1px solid var(--border-strong); padding: var(--s-6) var(--s-12) var(--s-10); }
+  .tl-bar { display: flex; align-items: center; gap: var(--s-6); margin-bottom: var(--s-6); }
+  .tl-bar .ttl { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+  .tl-bar .legend2 { margin-left: auto; display: flex; gap: var(--s-6); font-size: var(--t-xs); color: var(--text-muted); }
+  .lane-orig { position: relative; height: 46px; border-radius: var(--r-sm); background: var(--stage); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; }
+  .lane-orig .seg-sp { position: absolute; top: 8px; bottom: 8px; background: var(--accent); opacity: 0.55; border-radius: 2px; }
+  .lane-orig .gap { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, oklch(0.63 0.185 25 / 0.18) 0 5px, transparent 5px 10px); border-left: 1px dashed oklch(0.63 0.185 25 / 0.6); border-right: 1px dashed oklch(0.63 0.185 25 / 0.6); cursor: pointer; }
+  .lane-orig .gap.restored { background: repeating-linear-gradient(45deg, oklch(0.72 0.14 150 / 0.16) 0 5px, transparent 5px 10px); border-color: oklch(0.72 0.14 150 / 0.6); }
+  .lane-cut { position: relative; height: 22px; margin-top: var(--s-4); border-radius: var(--r-sm); background: var(--stage); border: 1px solid var(--border); overflow: hidden; }
+  .lane-cut i { position: absolute; top: 4px; bottom: 4px; left: 1%; right: 1%; background: var(--surface-hover); border-radius: 2px; }
+  .lane-lbl { font-size: var(--t-2xs); color: var(--text-faint); margin: var(--s-5) 0 var(--s-2); }
+  .a-pop { position: fixed; z-index: 50; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); padding: var(--s-6); width: 220px; display: none; }
+  .a-pop.show { display: block; }
+  .a-pop .rng { font-family: var(--mono); font-size: var(--t-xs); color: var(--text-2); margin-bottom: var(--s-4); }
+  .a-pop .restore { width: 100%; font: inherit; font-size: var(--t-sm); padding: 6px; border-radius: var(--r-sm); border: 1px solid var(--accent-strong); background: var(--accent-tint); color: var(--accent); cursor: pointer; }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 029 · silence-cut review</span>
+  <button class="vtab" onclick="show('a',this)">A · Lane de silencios en la tira (020-C)</button>
+  <button class="vtab active" onclick="show('b',this)">B ★ Chosen · Revisión de cortes (pantalla completa)</button>
+  <button class="vtab" onclick="show('c',this)">C · Resumen + dial de sensibilidad</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">"elimina silencios" es el titular · ¿qué saqué? ¿devuelvo alguno?</span>
+</nav>
+
+<!-- ════════ B — full-screen cut review ════════ -->
+<div class="variant active" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Revisar cortes de silencio</div></div></div>
+    <div class="hdr-spacer"></div>
+    <div class="steprail">
+      <span class="s done"><span class="n">✓</span>Audio</span><span class="sep"></span>
+      <span class="s done"><span class="n">✓</span>Transcripción</span><span class="sep"></span>
+      <span class="s cur"><span class="n">3</span>Silencios</span><span class="sep"></span>
+      <span class="s"><span class="n">4</span>Render</span>
+    </div>
+  </header>
+  <div class="reviewwrap">
+    <div class="review">
+      <div class="review-intro"><h2>Revisá los silencios que quité</h2>
+        <p>Detecté los silencios cruzando <b>FFmpeg</b> (nivel de audio) con <b>Whisper</b> (pausas entre palabras).
+          Cada bloque rojo es un silencio que saqué. Escuchá el empalme, y si corté algo que respiraba bien,
+          devolvelo con el interruptor.</p></div>
+      <div class="statbar">
+        <div class="stat"><span class="big">1:48<span class="arrow">→</span><span class="to" data-newdur>1:12</span></span></div>
+        <div class="stat"><span class="delta" data-delta>−0:36 más corto</span></div>
+        <div class="stat"><span class="sub" data-kept>14 silencios quitados · 0 devueltos</span></div>
+      </div>
+      <div class="wfcard">
+        <div class="wf-h"><span class="lbl">Audio original · los bloques rojos se quitan</span></div>
+        <div class="wf"><div class="bars" id="wf-bars"></div><div id="wf-sils"></div></div>
+        <div class="wf-legend"><span class="lk"><span class="sw" style="background:var(--accent);opacity:.7"></span>Voz</span>
+          <span class="lk"><span class="sw" style="background:oklch(0.63 0.185 25 / 0.4)"></span>Silencio quitado</span>
+          <span class="lk" style="color:var(--text-faint)">tocá un bloque para devolverlo</span></div>
+      </div>
+      <div class="cuts-h">Cortes <span class="cnt" data-cutcnt>14 silencios</span></div>
+      <div id="cutlist"></div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="play">▶</div><span class="clock"><b>0:00</b>  / 1:14</span>
+    <div class="hdr-spacer"></div>
+    <button class="btn">↺ Restaurar todos</button>
+    <button class="cta">Confirmar cortes →</button>
+  </div>
+</div>
+
+<!-- ════════ C — aggregate + sensitivity ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Cortar silencios</div></div></div>
+    <div class="hdr-spacer"></div>
+    <div class="steprail">
+      <span class="s done"><span class="n">✓</span>Audio</span><span class="sep"></span>
+      <span class="s done"><span class="n">✓</span>Transcripción</span><span class="sep"></span>
+      <span class="s cur"><span class="n">3</span>Silencios</span><span class="sep"></span>
+      <span class="s"><span class="n">4</span>Render</span>
+    </div>
+  </header>
+  <div class="shell">
+    <section class="stage"><div class="phone"><div class="pl-big">▶</div></div></section>
+    <section class="cpanel">
+      <h2>Quité 34 s de silencio</h2>
+      <p class="lead">Tu video pasó de <b>1:48 a 1:14</b> sacando 14 pausas. Si quedó muy cortado o muy suelto,
+        movés la sensibilidad y vuelvo a analizar. La mayoría no toca cortes uno por uno.</p>
+      <div class="sec"><div class="sec-h">Sensibilidad</div>
+        <div class="row"><label>Umbral de silencio<div class="lbnote">qué tan bajo cuenta como silencio</div></label><div class="rng2"><input type="range" class="sl" min="-50" max="-20" value="-35" data-thr><output>−35 dB</output></div></div>
+        <div class="row"><label>Duración mínima<div class="lbnote">pausas más cortas se ignoran</div></label><div class="rng2"><input type="range" class="sl" min="100" max="1000" value="400" data-mindur><output>400 ms</output></div></div>
+        <div class="row"><label>Aire alrededor<div class="lbnote">deja respiración antes/después</div></label><div class="rng2"><input type="range" class="sl" min="0" max="300" value="80" data-pad><output>80 ms</output></div></div>
+        <div class="row"><label></label><button class="reanalyze" data-reanalyze>↻ Volver a analizar</button></div>
+      </div>
+      <div class="sec"><button class="disclose" data-disclose><span class="car">▸</span>Ver los 14 cortes</button>
+        <div class="cutmini" id="cutmini"></div></div>
+    </section>
+  </div>
+  <div class="footer">
+    <div class="hdr-spacer"></div>
+    <button class="btn">Volver</button>
+    <button class="cta">Confirmar cortes →</button>
+  </div>
+</div>
+
+<!-- ════════ A — timeline lane ════════ -->
+<div class="variant" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16</div></div></div>
+    <div class="hdr-spacer"></div>
+    <div class="steprail">
+      <span class="s done"><span class="n">✓</span>Audio</span><span class="sep"></span>
+      <span class="s done"><span class="n">✓</span>Transcripción</span><span class="sep"></span>
+      <span class="s cur"><span class="n">3</span>Silencios</span><span class="sep"></span>
+      <span class="s"><span class="n">4</span>Render</span>
+    </div>
+  </header>
+  <div class="a-stagewrap">
+    <div class="a-top"><div class="phone"><div class="pl-big">▶</div></div></div>
+    <div class="a-note">Saqué <b>0:34</b> de silencio en <b>14 cortes</b> · 1:48 → <b>1:14</b>. La lane <b>Silencios</b> de la tira muestra lo quitado — tocá un bloque rojo para devolverlo.</div>
+    <div class="tl-dock">
+      <div class="tl-bar"><span class="ttl">▤ Silencios</span><span class="legend2"><span>◼ voz</span><span style="color:var(--danger)">▦ silencio quitado</span><span style="color:var(--text-faint)">tocá para devolver</span></span></div>
+      <div class="lane-lbl">Original · 1:48</div>
+      <div class="lane-orig" id="lane-orig"></div>
+      <div class="lane-lbl">Resultado · 1:14</div>
+      <div class="lane-cut"><i></i></div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="play">▶</div><span class="clock"><b>0:00</b>  / 1:14</span>
+    <div class="hdr-spacer"></div>
+    <button class="cta">Confirmar cortes →</button>
+  </div>
+  <div class="a-pop" id="a-pop"><div class="rng" data-poprng></div><button class="restore" data-poprestore>↺ Devolver este silencio</button></div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  // Real shape: SilenceCut { original_start, original_end, new_start, new_end, duration, source, cumulative_shift }
+  const TOTAL = 108; // original seconds (1:48)
+  function mk(os, dur, source){ return { original_start:os, original_end:os+dur, duration:dur, source }; }
+  const RAW = [
+    mk(3.4,1.8,'both'), mk(7.9,2.4,'both'), mk(12.1,1.2,'ffmpeg'), mk(18.6,3.1,'both'),
+    mk(24.0,1.5,'both'), mk(29.7,2.2,'both'), mk(36.2,1.9,'whisper'), mk(43.0,4.2,'both'),
+    mk(51.5,1.3,'both'), mk(58.8,2.7,'both'), mk(67.0,3.5,'both'), mk(78.4,1.6,'ffmpeg'),
+    mk(88.1,2.9,'both'), mk(98.5,3.8,'both'),
+  ];
+  // compute cumulative_shift + new positions
+  let acc=0; RAW.forEach(c=>{ c.new_start=c.original_start-acc; acc+=c.duration; c.cumulative_shift=acc; c.restored=false; });
+  const SRCLBL = { both:'FFmpeg + Whisper', ffmpeg:'FFmpeg', whisper:'Whisper' };
+  function fmt(s){ const m=Math.floor(s/60); const sec=(s%60); return m+':'+sec.toFixed(0).padStart(2,'0'); }
+  function fmtMs(s){ return s.toFixed(1)+'s'; }
+
+  function removedTotal(){ return RAW.filter(c=>!c.restored).reduce((a,c)=>a+c.duration,0); }
+  function restoredCount(){ return RAW.filter(c=>c.restored).length; }
+
+  // ── B ──
+  function buildWaveB(){
+    const bars=document.getElementById('wf-bars'); const N=180;
+    // mark which bars fall in a silence
+    bars.innerHTML = Array.from({length:N},(_,i)=>{
+      const t=i/N*TOTAL; const inSil=RAW.some(c=>!c.restored && t>=c.original_start && t<c.original_end);
+      const h = inSil ? 6 : (14+Math.abs(Math.sin(i*0.7)+Math.sin(i*0.23))*36);
+      return `<b class="${inSil?'':'speech'}" style="height:${h}%"></b>`;
+    }).join('');
+    const sils=document.getElementById('wf-sils');
+    sils.innerHTML = RAW.map((c,i)=>`<div class="sil ${c.restored?'restored':''}" data-sil="${i}" style="left:${c.original_start/TOTAL*100}%;width:${c.duration/TOTAL*100}%"><span class="tagmini">${c.restored?'↩':'−'+c.duration.toFixed(1)}</span></div>`).join('');
+    sils.querySelectorAll('[data-sil]').forEach(el=> el.onclick=()=>{ RAW[+el.dataset.sil].restored=!RAW[+el.dataset.sil].restored; refreshB(); });
+  }
+  function buildCutsB(){
+    const host=document.getElementById('cutlist'); const maxd=Math.max(...RAW.map(c=>c.duration));
+    host.innerHTML = RAW.map((c,i)=>`
+      <div class="cut ${c.restored?'restored':''}" data-cut="${i}">
+        <span class="pl">▶</span>
+        <span class="rng">${fmt(c.original_start)}–${fmt(c.original_end)}</span>
+        <span class="durbar"><i style="width:${c.duration/maxd*100}%"></i></span>
+        <span class="durtxt">−${fmtMs(c.duration)} <span class="src ${c.source}" style="margin-left:6px">${c.source==='both'?'×2':c.source}</span></span>
+        <span class="tgwrap"><span class="tglbl">${c.restored?'devuelto':'quitado'}</span><span class="toggle ${c.restored?'off':''}" data-tg="${i}"></span></span>
+      </div>`).join('');
+    host.querySelectorAll('[data-tg]').forEach(el=> el.onclick=()=>{ RAW[+el.dataset.tg].restored=!RAW[+el.dataset.tg].restored; refreshB(); });
+  }
+  function refreshB(){
+    buildWaveB(); buildCutsB();
+    const newDur=TOTAL-removedTotal();
+    document.querySelector('[data-newdur]').textContent=fmt(newDur);
+    document.querySelector('[data-delta]').textContent='−'+fmt(removedTotal())+' más corto';
+    document.querySelector('[data-kept]').textContent=`${RAW.length-restoredCount()} silencios quitados · ${restoredCount()} devueltos`;
+    document.querySelector('[data-cutcnt]').textContent=`${RAW.length} silencios · ${restoredCount()} devueltos`;
+  }
+
+  // ── C ──
+  function buildC(){
+    const host=document.getElementById('cutmini');
+    host.innerHTML = RAW.map((c,i)=>`<div class="cm"><span class="mono">${fmt(c.original_start)}</span> silencio de ${fmtMs(c.duration)} <span class="src ${c.source}" style="margin-left:4px">${c.source==='both'?'×2':c.source}</span><button class="restore" data-crestore="${i}">${c.restored?'↩ devuelto':'devolver'}</button></div>`).join('');
+    host.querySelectorAll('[data-crestore]').forEach(b=> b.onclick=()=>{ RAW[+b.dataset.crestore].restored=!RAW[+b.dataset.crestore].restored; buildC(); });
+  }
+  document.querySelector('[data-disclose]').onclick=function(){ this.classList.toggle('open'); document.getElementById('cutmini').classList.toggle('open'); };
+  document.querySelectorAll('#v-c .rng2 input').forEach(r=>{ const out=r.parentElement.querySelector('output'); r.oninput=()=>{ const u=r.dataset.thr!==undefined?' dB':r.dataset.pad!==undefined||r.dataset.mindur!==undefined?' ms':''; out.textContent=r.value+u; }; });
+  document.querySelector('[data-reanalyze]').onclick=function(){ this.textContent='↻ Analizando…'; const s=this; setTimeout(()=>{ s.textContent='↻ Volver a analizar'; }, 900); };
+  document.querySelector('#v-c .pl-big').onclick=function(){ this.textContent=this.textContent==='▶'?'❚❚':'▶'; };
+
+  // ── A ──
+  function buildA(){
+    const lane=document.getElementById('lane-orig');
+    // speech segments = the gaps between silences
+    let html=''; let prev=0;
+    RAW.forEach((c)=>{ const w=(c.original_start-prev)/TOTAL*100; html+=`<div class="seg-sp" style="left:${prev/TOTAL*100}%;width:${w}%"></div>`; prev=c.original_end; });
+    html+=`<div class="seg-sp" style="left:${prev/TOTAL*100}%;width:${(TOTAL-prev)/TOTAL*100}%"></div>`;
+    html+=RAW.map((c,i)=>`<div class="gap ${c.restored?'restored':''}" data-gap="${i}" style="left:${c.original_start/TOTAL*100}%;width:${c.duration/TOTAL*100}%"></div>`).join('');
+    lane.innerHTML=html;
+    lane.querySelectorAll('[data-gap]').forEach(el=> el.onclick=(e)=>{ const i=+el.dataset.gap; const c=RAW[i]; const pop=document.getElementById('a-pop'); pop.querySelector('[data-poprng]').innerHTML=`${fmt(c.original_start)}–${fmt(c.original_end)} · ${fmtMs(c.duration)}<br><span class="src ${c.source}" style="display:inline-block;margin-top:4px">${SRCLBL[c.source]}</span>`; const btn=pop.querySelector('[data-poprestore]'); btn.textContent=c.restored?'↩ Quitar de nuevo':'↺ Devolver este silencio'; btn.onclick=()=>{ c.restored=!c.restored; buildA(); pop.classList.remove('show'); }; pop.style.left=Math.min(e.clientX, window.innerWidth-240)+'px'; pop.style.top=(e.clientY-110)+'px'; pop.classList.add('show'); });
+  }
+  document.addEventListener('click',e=>{ if(!e.target.closest('#a-pop') && !e.target.closest('[data-gap]')) document.getElementById('a-pop')?.classList.remove('show'); });
+  document.querySelector('#v-a .pl-big').onclick=function(){ this.textContent=this.textContent==='▶'?'❚❚':'▶'; };
+
+  refreshB(); buildC(); buildA();
+
+  function show(id, btn){
+    document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+    document.getElementById('v-'+id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

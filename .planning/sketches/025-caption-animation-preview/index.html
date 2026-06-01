@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 025 — caption animation preview</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; flex-direction: column; }
+
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-8); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 700; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .save-chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); padding: 5px 11px; border-radius: var(--r-full); color: var(--warning); background: oklch(0.80 0.12 78 / 0.12); margin-left: var(--s-4); }
+  .save-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .hdr-spacer { flex: 1; }
+  .hdr-actions { display: flex; gap: var(--s-6); align-items: center; }
+  .zone-div { width: 1px; height: 24px; background: var(--border); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 500; padding: 7px 14px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: transparent; color: var(--text-2); cursor: pointer; }
+  .render-cta { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 7px 16px; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--action); color: oklch(0.16 0.02 150); cursor: pointer; }
+
+  .work { flex: 1; display: flex; min-height: 0; }
+  .stage { position: relative; flex: 0 1 430px; background: var(--stage); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--s-10); border-right: 1px solid var(--border); min-width: 0; gap: var(--s-6); }
+  .phone { position: relative; aspect-ratio: 9 / 16; height: min(100%, 540px); border-radius: 18px; overflow: hidden;
+           background: radial-gradient(120% 70% at 50% 18%, oklch(0.42 0.07 250), transparent 60%), radial-gradient(90% 60% at 50% 95%, oklch(0.30 0.06 320), transparent 70%), linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.18 0.03 270));
+           box-shadow: var(--shadow-pop), inset 0 0 0 1px oklch(0.6 0.02 280 / 0.18); }
+  .cap-stage { position: absolute; bottom: 13%; left: 6%; right: 6%; text-align: center; font-family: "Plus Jakarta Sans", var(--font); font-weight: 800; font-size: 27px; line-height: 1.18; }
+  .live-tag { position: absolute; top: 12px; left: 12px; z-index: 3; font-size: var(--t-2xs); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; background: oklch(0.16 0.02 280 / 0.6); padding: 3px 8px; border-radius: var(--r-full); display: inline-flex; align-items: center; gap: 5px; }
+  .live-tag .rdot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); } .live-tag.playing .rdot { animation: blink 1s steps(2) infinite; } @keyframes blink { 50% { opacity: 0.2; } }
+
+  /* the animated word — shared across stage + specimen */
+  .w { color: #fff; transition: color 90ms linear, transform 130ms var(--ease); display: inline-block; }
+  .w.on { color: #ffea00; transform: scale(1.08); text-shadow: 0 0 18px oklch(0.9 0.18 95 / 0.55); }
+  .w.pending { opacity: 0.35; }
+  .cap-stage .w { text-shadow: 0 2px 12px rgba(0,0,0,.85); } .cap-stage .w.on { text-shadow: 0 0 22px oklch(0.9 0.18 95 / 0.6), 0 2px 12px rgba(0,0,0,.85); }
+
+  .transport { display: flex; align-items: center; gap: var(--s-5); width: 100%; max-width: 320px; }
+  .play { width: 34px; height: 34px; border-radius: 50%; flex: none; border: 1px solid var(--accent-strong); background: var(--accent-tint); color: var(--accent); cursor: pointer; display: grid; place-items: center; font-size: 13px; }
+  .scrub { -webkit-appearance: none; flex: 1; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  .scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); cursor: pointer; }
+  .clock { font-size: var(--t-xs); color: var(--text-2); font-variant-numeric: tabular-nums; flex: none; }
+  .hint { font-size: var(--t-2xs); color: var(--text-faint); text-align: center; max-width: 320px; }
+  .hint b { color: var(--accent); font-weight: 600; }
+
+  .controls { display: flex; flex-direction: column; min-width: 0; background: var(--canvas); flex: 1 1 auto; }
+  .tabs { display: flex; gap: 2px; padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .tab { border: none; background: none; font: inherit; font-size: var(--t-md); font-weight: 500; color: var(--text-muted); padding: 13px 13px 11px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab.sel { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .ctrl-body { flex: 1; overflow-y: auto; padding: var(--s-10); }
+
+  .sec { margin-bottom: var(--s-10); }
+  .sec-h { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--s-6); }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .sec-h .note { color: var(--text-faint); font-weight: 500; text-transform: none; letter-spacing: 0; margin-left: auto; }
+  .ta { font: inherit; font-size: var(--t-md); line-height: 1.5; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-6); width: 100%; resize: none; height: 60px; margin-bottom: var(--s-3); }
+  .ta:focus { outline: none; border-color: var(--accent-strong); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .ta-meta { font-size: var(--t-2xs); color: var(--accent); display: inline-flex; align-items: center; gap: 5px; }
+  .ta-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  /* specimen with its own play affordance */
+  .specimen { position: relative; border-radius: var(--r-md); overflow: hidden; background: linear-gradient(180deg, oklch(0.30 0.04 255), oklch(0.20 0.03 270)); border: 1px solid var(--border); min-height: 92px; display: grid; place-items: center; padding: var(--s-10) var(--s-8); margin-bottom: var(--s-10); }
+  .specimen .sp-cap { font-family: "Plus Jakarta Sans", var(--font); font-weight: 800; font-size: 22px; text-align: center; line-height: 1.2; }
+  .sp-bar { position: absolute; top: 8px; left: 9px; right: 9px; display: flex; align-items: center; justify-content: space-between; }
+  .sp-tag { font-size: var(--t-2xs); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; }
+  .sp-play { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--accent-strong); background: oklch(0.16 0.02 280 / 0.5); color: var(--accent); cursor: pointer; display: grid; place-items: center; font-size: 10px; }
+  .sp-loop { position: absolute; bottom: 7px; left: 0; right: 0; height: 2px; }
+  .sp-loop i { display: block; height: 100%; background: var(--accent); width: 0; }
+  .modecards { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-4); }
+  .modecard { padding: var(--s-5) var(--s-3) var(--s-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; text-align: center; }
+  .modecard.on { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .modecard .mc-vis { height: 24px; border-radius: var(--r-xs); background: var(--stage); display: grid; place-items: center; margin-bottom: var(--s-4); font-size: 9px; font-weight: 800; }
+  .mc-vis .a { color: #ffea00; } .mc-vis .b { color: #fff; opacity: 0.6; } .mc-vis .bar { background: var(--accent); color: var(--stage); padding: 1px 4px; border-radius: 2px; }
+  .modecard .mc-nm { font-size: var(--t-2xs); color: var(--text-2); font-weight: 600; } .modecard.on .mc-nm { color: var(--accent); }
+  .row { display: grid; grid-template-columns: 86px 1fr; align-items: center; gap: var(--s-6); margin-bottom: var(--s-5); }
+  .row > label { font-size: var(--t-sm); color: var(--text-2); }
+  .rng { display: grid; grid-template-columns: 1fr 42px; align-items: center; gap: var(--s-5); }
+  input[type=range].mini { -webkit-appearance: none; width: 100%; height: 4px; border-radius: var(--r-full); background: var(--surface-hover); }
+  input[type=range].mini::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+  .rng output { font-size: var(--t-xs); color: var(--text-2); font-variant-numeric: tabular-nums; text-align: right; }
+  .why { margin-top: var(--s-8); padding: var(--s-6); border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); font-size: var(--t-xs); line-height: 1.6; color: var(--text-muted); } .why b { color: var(--text-2); }
+
+  .meta { background: var(--chrome); border-left: 1px solid var(--border); flex: 0 0 280px; padding: var(--s-10); }
+  .meta .row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .meta h2 { font-size: var(--t-md); font-weight: 600; }
+  .soon { font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--accent-tint); padding: 3px 8px; border-radius: var(--r-full); }
+  .meta p { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; }
+  #tools:hover { opacity: 1; }
+  #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 025 · caption animation preview</span>
+  <button class="vtab" onclick="show('a',this)">A · Specimen que reproduce (loop)</button>
+  <button class="vtab" onclick="show('b',this)">B · El preview manda (transporte)</button>
+  <button class="vtab active" onclick="show('c',this)">C ★ Chosen · Specimen en loop + transporte real</button>
+  <span style="margin-left:auto;color:var(--text-faint);font-size:var(--t-2xs)">la animación palabra-por-palabra es el punto del reel · ¿dónde se previsualiza?</span>
+</nav>
+
+<!-- shared subtitles tab markup is duplicated per variant so each can animate independently -->
+
+<!-- ════════ A — specimen plays the animation; stage shows a static frame ════════ -->
+<div class="variant" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16</div></div></div>
+    <span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><div class="hdr-spacer"></div>
+    <div class="hdr-actions"><button class="btn">Guardar config</button><span class="zone-div"></span><button class="render-cta">▶ Render Video</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="phone"><span class="live-tag">vista previa</span><div class="cap-stage" data-cap></div></div>
+      <div class="hint">El stage muestra un <b>cuadro fijo</b> — la animación se siente en el specimen del panel →</div>
+    </section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button><button class="tab">Video</button></div>
+      <div class="ctrl-body">
+        <div class="sec"><div class="sec-h">Texto de muestra</div>
+          <textarea class="ta" data-text>Así enganchan los subtítulos palabra por palabra</textarea>
+          <span class="ta-meta"><span class="dot"></span>Alimenta los subtítulos · no se exporta</span></div>
+        <div class="specimen">
+          <div class="sp-bar"><span class="sp-tag">vista en vivo · animado</span><button class="sp-play" data-spplay>❚❚</button></div>
+          <div class="sp-cap" data-cap></div>
+          <div class="sp-loop"><i data-loop></i></div>
+        </div>
+        <div class="sec"><div class="sec-h">Modo de subtítulo</div><div class="modecards" data-modes>
+            <div class="modecard on" data-mode="tiktok"><div class="mc-vis"><span class="a">pa</span><span class="b">labra</span></div><div class="mc-nm">TikTok</div></div>
+            <div class="modecard" data-mode="bar"><div class="mc-vis"><span class="bar">barra</span></div><div class="mc-nm">Barra</div></div>
+            <div class="modecard" data-mode="phrase"><div class="mc-vis"><span class="b">frase</span></div><div class="mc-nm">Frase</div></div>
+            <div class="modecard" data-mode="karaoke"><div class="mc-vis"><span class="a">k</span><span class="b">oke</span></div><div class="mc-nm">Karaoke</div></div></div></div>
+        <div class="sec"><div class="sec-h">Ritmo <span class="note">vista previa</span></div>
+          <div class="row"><label>Velocidad</label><div class="rng"><input type="range" class="mini" min="50" max="200" value="100" data-speed><output>1.0×</output></div></div></div>
+        <div class="why"><b>El specimen es el lugar de la animación.</b> Repite en loop continuo así juzgás el ritmo del resaltado
+          sin tocar nada — el modo y la velocidad se ven al instante. El stage queda como referencia de encuadre fijo.</div>
+      </div>
+    </section>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA.</p></aside>
+  </div>
+</div>
+
+<!-- ════════ B — the stage preview drives it via a transport; specimen is static style ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16</div></div></div>
+    <span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><div class="hdr-spacer"></div>
+    <div class="hdr-actions"><button class="btn">Guardar config</button><span class="zone-div"></span><button class="render-cta">▶ Render Video</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="phone"><span class="live-tag" data-livetag><span class="rdot"></span>en reproducción</span><div class="cap-stage" data-cap></div></div>
+      <div class="transport"><button class="play" data-play>▶</button><input type="range" class="scrub" data-scrub min="0" max="100" value="0"><span class="clock" data-clock>0:00</span></div>
+      <div class="hint">El <b>preview real</b> reproduce la animación · scrubeá para ir palabra por palabra</div>
+    </section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button><button class="tab">Video</button></div>
+      <div class="ctrl-body">
+        <div class="sec"><div class="sec-h">Texto de muestra</div>
+          <textarea class="ta" data-text>Así enganchan los subtítulos palabra por palabra</textarea>
+          <span class="ta-meta"><span class="dot"></span>Alimenta los subtítulos · no se exporta</span></div>
+        <div class="specimen" style="min-height:72px">
+          <span class="sp-tag" style="position:absolute;top:7px;right:9px">muestra de estilo · sin animar</span>
+          <div class="sp-cap" data-capstatic></div></div>
+        <div class="sec"><div class="sec-h">Modo de subtítulo</div><div class="modecards" data-modes>
+            <div class="modecard on" data-mode="tiktok"><div class="mc-vis"><span class="a">pa</span><span class="b">labra</span></div><div class="mc-nm">TikTok</div></div>
+            <div class="modecard" data-mode="bar"><div class="mc-vis"><span class="bar">barra</span></div><div class="mc-nm">Barra</div></div>
+            <div class="modecard" data-mode="phrase"><div class="mc-vis"><span class="b">frase</span></div><div class="mc-nm">Frase</div></div>
+            <div class="modecard" data-mode="karaoke"><div class="mc-vis"><span class="a">k</span><span class="b">oke</span></div><div class="mc-nm">Karaoke</div></div></div></div>
+        <div class="why"><b>La animación vive en el preview, atada a la reproducción.</b> El specimen muestra sólo el estilo en
+          reposo (tipografía, color, tamaño). Para ver el resaltado tocás ▶ o scrubeás el preview — el mismo transporte que
+          la tira temporal (020). Una sola fuente de verdad para el tiempo; el panel no compite.</div>
+      </div>
+    </section>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA.</p></aside>
+  </div>
+</div>
+
+<!-- ════════ C — division of labor: specimen loops style, stage transport scrubs timing ════════ -->
+<div class="variant active" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1><div class="tag">Vertical 9:16</div></div></div>
+    <span class="save-chip"><span class="dot"></span>Cambios sin guardar</span><div class="hdr-spacer"></div>
+    <div class="hdr-actions"><button class="btn">Guardar config</button><span class="zone-div"></span><button class="render-cta">▶ Render Video</button></div>
+  </header>
+  <div class="work">
+    <section class="stage">
+      <div class="phone"><span class="live-tag" data-livetag><span class="rdot"></span>en reproducción</span><div class="cap-stage" data-cap></div></div>
+      <div class="transport"><button class="play" data-play>▶</button><input type="range" class="scrub" data-scrub min="0" max="100" value="0"><span class="clock" data-clock>0:00</span></div>
+      <div class="hint">Stage = <b>tiempo real</b> (scrub) · specimen = <b>loop de estilo</b> (panel) →</div>
+    </section>
+    <section class="controls">
+      <div class="tabs"><button class="tab">Títulos</button><button class="tab">Overlays</button><button class="tab sel">Subtítulos</button><button class="tab">Video</button></div>
+      <div class="ctrl-body">
+        <div class="sec"><div class="sec-h">Texto de muestra</div>
+          <textarea class="ta" data-text>Así enganchan los subtítulos palabra por palabra</textarea>
+          <span class="ta-meta"><span class="dot"></span>Alimenta los subtítulos · no se exporta</span></div>
+        <div class="specimen">
+          <div class="sp-bar"><span class="sp-tag">vista en vivo · loop de estilo</span><button class="sp-play" data-spplay>❚❚</button></div>
+          <div class="sp-cap" data-cap></div>
+          <div class="sp-loop"><i data-loop></i></div>
+        </div>
+        <div class="sec"><div class="sec-h">Modo de subtítulo</div><div class="modecards" data-modes>
+            <div class="modecard on" data-mode="tiktok"><div class="mc-vis"><span class="a">pa</span><span class="b">labra</span></div><div class="mc-nm">TikTok</div></div>
+            <div class="modecard" data-mode="bar"><div class="mc-vis"><span class="bar">barra</span></div><div class="mc-nm">Barra</div></div>
+            <div class="modecard" data-mode="phrase"><div class="mc-vis"><span class="b">frase</span></div><div class="mc-nm">Frase</div></div>
+            <div class="modecard" data-mode="karaoke"><div class="mc-vis"><span class="a">k</span><span class="b">oke</span></div><div class="mc-nm">Karaoke</div></div></div></div>
+        <div class="why"><b>División de trabajo (como 022-B + 020-C).</b> El specimen repite el resaltado en loop para juzgar el
+          <i>estilo</i> sin pensar en el tiempo; el transporte del stage scrubea el <i>momento real</i> del video. Cada
+          superficie hace una cosa — el riesgo es que dos animaciones a la vez compitan por la atención. Mirá ambas →</div>
+      </div>
+    </section>
+    <aside class="meta"><div class="row1"><h2>Metadata de redes</h2><span class="soon">Próximamente</span></div><p>Generada con IA.</p></aside>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+  function words(v){ return (v.querySelector('[data-text]')?.value.trim() || 'palabra por palabra').split(/\s+/); }
+  function curMode(v){ return v.querySelector('.modecard.on')?.dataset.mode || 'tiktok'; }
+
+  // render the caption words into a target el, highlighting up to `idx` per the mode
+  function paint(target, ws, idx, mode){
+    if (!target) return;
+    if (mode==='phrase'){ target.innerHTML = `<span class="w on" style="transform:none">${ws.join(' ')}</span>`; return; }
+    target.innerHTML = ws.map((w,i)=>{
+      if (mode==='tiktok') return `<span class="w${i===idx?' on':''}">${w}</span>`;
+      if (mode==='karaoke') return `<span class="w${i<=idx?' on':''}">${w}</span>`;
+      if (mode==='bar') return `<span class="w${i===idx?' on':''}">${w}</span>`;
+      return `<span class="w">${w}</span>`;
+    }).join(' ');
+  }
+
+  // A & C specimen: continuous loop
+  function loopSpecimen(v, speedSel){
+    const cap = v.querySelector('.specimen [data-cap]'); if(!cap) return;
+    let idx=0, playing=true, raf, last=0, acc=0;
+    const loopbar = v.querySelector('[data-loop]');
+    const btn = v.querySelector('[data-spplay]');
+    function speed(){ const s=v.querySelector('[data-speed]'); return s? +s.value/100 : 1; }
+    function tick(ts){
+      if(!playing) return;
+      if(!last) last=ts; const dt=ts-last; last=ts;
+      acc += dt*speed();
+      const step=420;
+      const ws=words(v);
+      if (acc>=step){ acc=0; idx=(idx+1)%(ws.length+1); }
+      paint(cap, ws, idx>=ws.length?-1:idx, curMode(v));
+      if (loopbar) loopbar.style.width = ((idx/(ws.length))*100)+'%';
+      raf=requestAnimationFrame(tick);
+    }
+    raf=requestAnimationFrame(tick);
+    if(btn) btn.onclick=()=>{ playing=!playing; btn.textContent=playing?'❚❚':'▶'; if(playing){ last=0; raf=requestAnimationFrame(tick); } };
+    v.querySelectorAll('[data-modes] .modecard').forEach(c=> c.addEventListener('click',()=>{ v.querySelectorAll('[data-modes] .modecard').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }));
+    v.querySelector('[data-speed]')?.addEventListener('input', e=> e.target.parentElement.querySelector('output').textContent=(+e.target.value/100).toFixed(1)+'×');
+    v.querySelector('[data-text]')?.addEventListener('input', ()=>{ idx=0; });
+  }
+
+  // B & C stage: transport-driven
+  function transportStage(v){
+    const cap = v.querySelector('.cap-stage[data-cap]') || v.querySelector('.phone [data-cap]'); if(!cap) return;
+    const scrub=v.querySelector('[data-scrub]'), play=v.querySelector('[data-play]'), clock=v.querySelector('[data-clock]'), tag=v.querySelector('[data-livetag]');
+    let playing=false, raf;
+    function apply(pct){
+      const ws=words(v); const idx=Math.min(ws.length-1, Math.floor(pct/100*ws.length));
+      paint(cap, ws, idx, curMode(v));
+      if(clock){ const t=10*pct/100; clock.textContent='0:'+Math.floor(t).toString().padStart(2,'0'); }
+    }
+    if(scrub) scrub.oninput=()=>{ playing=false; if(play)play.textContent='▶'; if(tag)tag.classList.remove('playing'); apply(+scrub.value); };
+    if(play) play.onclick=()=>{ playing=!playing; play.textContent=playing?'❚❚':'▶'; if(tag)tag.classList.toggle('playing',playing); cancelAnimationFrame(raf);
+      function step(){ if(!playing)return; let p=+scrub.value+0.7; if(p>=100)p=0; scrub.value=p; apply(p); raf=requestAnimationFrame(step); } if(playing) step(); };
+    v.querySelectorAll('[data-modes] .modecard').forEach(c=> c.addEventListener('click',()=>{ v.querySelectorAll('[data-modes] .modecard').forEach(x=>x.classList.remove('on')); c.classList.add('on'); apply(+scrub.value); }));
+    v.querySelector('[data-text]')?.addEventListener('input', ()=>apply(+scrub.value));
+    apply(0);
+  }
+
+  // static style reference (B specimen)
+  function staticSpecimen(v){
+    const cap=v.querySelector('[data-capstatic]'); if(!cap) return;
+    const ws=words(v); paint(cap, ws, 2, 'tiktok');
+    v.querySelector('[data-text]')?.addEventListener('input', ()=> paint(cap, words(v), 2, 'tiktok'));
+  }
+
+  const A=document.getElementById('v-a'), B=document.getElementById('v-b'), C=document.getElementById('v-c');
+  // A: stage shows static frame (idx=2), specimen loops
+  paint(A.querySelector('.cap-stage[data-cap]'), words(A), 2, 'tiktok');
+  A.querySelector('[data-text]').addEventListener('input', ()=> paint(A.querySelector('.cap-stage[data-cap]'), words(A), 2, curMode(A)));
+  A.querySelectorAll('[data-modes] .modecard').forEach(c=> c.addEventListener('click',()=> paint(A.querySelector('.cap-stage[data-cap]'), words(A), 2, curMode(A))));
+  loopSpecimen(A);
+  // B: transport stage + static specimen
+  transportStage(B); staticSpecimen(B);
+  // C: both
+  transportStage(C); loopSpecimen(C);
+
+  function show(id, btn){
+    document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+    document.getElementById('v-'+id).classList.add('active');
+    document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

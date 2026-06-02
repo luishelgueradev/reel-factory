@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 036 — command palette / keyboard model</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); flex-direction: column; }
+  .variant.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes palin { from { opacity: 0; transform: translateY(-10px) scale(0.985); } to { opacity: 1; transform: none; } }
+  @keyframes keyflash { 0% { background: var(--accent-tint); color: var(--accent); } 100% {} }
+  @keyframes toastin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* shared chrome */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .spacer { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.dirty { color: var(--warning); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-green { background: var(--action); color: #08220f; border-color: transparent; }
+  .kbd { font-family: var(--mono); font-size: var(--t-2xs); font-weight: 600; background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--r-xs); padding: 1px 6px; color: var(--text-2); min-width: 18px; display: inline-flex; align-items: center; justify-content: center; }
+  .kpill { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 4px 9px; font-size: var(--t-xs); color: var(--text-muted); cursor: pointer; }
+  .kpill:hover { color: var(--text); border-color: var(--border-strong); }
+
+  /* abstracted editor with tabs that actually switch via keyboard */
+  .subbar { height: 38px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--canvas); border-bottom: 1px solid var(--border-faint); }
+  .ctabs { display: flex; gap: var(--s-3); }
+  .ctab { font-size: var(--t-xs); padding: 5px 11px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+  .ctab.on { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); }
+  .ctab.on.flash { animation: keyflash .5s var(--ease); }
+  .ctab .num { font-family: var(--mono); font-size: 9px; opacity: 0.7; }
+  .ctab.push { margin-left: auto; }
+
+  .body { flex: 1; min-height: 0; display: flex; gap: 1px; background: var(--border-faint); position: relative; }
+  .col { background: var(--canvas); padding: var(--s-10); display: flex; flex-direction: column; }
+  .stagecol { flex: 0 1 320px; align-items: center; justify-content: center; background: var(--stage); }
+  .ctrlcol { flex: 1; gap: var(--s-5); }
+  .metacol { flex: 0 0 220px; background: var(--surface); align-items: center; justify-content: center; }
+  .stage9x16 { width: 184px; height: 327px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .stage9x16 .ttl { position: absolute; top: 30px; left: 14px; right: 14px; text-align: center; font-weight: 700; font-size: 12px; background: rgba(0,0,0,.45); padding: 5px; border-radius: 5px; }
+  .stage9x16 .capword { position: absolute; bottom: 46px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 15px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .stage9x16 .capword b { color: var(--accent); }
+  .placard { font-size: var(--t-2xs); color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; }
+  .tabname { font-size: var(--t-md); font-weight: 600; color: var(--text); margin-bottom: var(--s-3); }
+  .ghostrow { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); }
+  .ghostrow.lg { height: 50px; }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 8px 12px; text-align: center; }
+
+  /* prompt to open */
+  .openhint { position: absolute; left: 50%; bottom: var(--s-12); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; font-size: var(--t-sm); color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-full); padding: 8px 16px; box-shadow: var(--shadow-md); z-index: 5; }
+
+  /* ── command palette (A & B) ── */
+  .palscrim { position: fixed; inset: 0; background: oklch(0.12 0.02 280 / 0.55); display: none; z-index: 300; align-items: flex-start; justify-content: center; padding-top: 12vh; animation: fadein .12s var(--ease); }
+  .palscrim.show { display: flex; }
+  .pal { width: 580px; max-width: 92vw; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); overflow: hidden; animation: palin .18s var(--ease); display: flex; flex-direction: column; max-height: 64vh; }
+  .pal .pin { display: flex; align-items: center; gap: var(--s-6); padding: var(--s-8) var(--s-10); border-bottom: 1px solid var(--border); }
+  .pal .pin .mag { color: var(--text-muted); font-size: 16px; }
+  .pal .pin input { flex: 1; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: var(--t-lg); }
+  .pal .pin input::placeholder { color: var(--text-faint); }
+  .pal .pin .esc { font-size: var(--t-2xs); color: var(--text-faint); }
+  .pal .plist { overflow-y: auto; padding: var(--s-4); }
+  .pal .grp { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; padding: var(--s-5) var(--s-5) var(--s-3); }
+  .pcmd { display: flex; align-items: center; gap: var(--s-6); padding: 9px 10px; border-radius: var(--r-sm); cursor: pointer; }
+  .pcmd.sel { background: var(--accent-tint); }
+  .pcmd .ci { width: 24px; text-align: center; font-size: 15px; color: var(--text-2); flex: none; }
+  .pcmd.sel .ci { color: var(--accent); }
+  .pcmd .cl { font-size: var(--t-md); color: var(--text); }
+  .pcmd .cl em { font-style: normal; color: var(--accent); font-weight: 700; }
+  .pcmd.sel .cl { color: var(--text); }
+  .pcmd .csub { font-size: var(--t-xs); color: var(--text-muted); }
+  .pcmd .ck { margin-left: auto; display: flex; gap: 4px; }
+  .pcmd.primary .ci { color: var(--action); }
+  .pal .pfoot { border-top: 1px solid var(--border); padding: var(--s-5) var(--s-10); display: flex; align-items: center; gap: var(--s-8); font-size: var(--t-2xs); color: var(--text-muted); }
+  .pal .pfoot .fk { display: inline-flex; align-items: center; gap: 5px; }
+  .pal .noresult { padding: var(--s-12); text-align: center; color: var(--text-faint); font-size: var(--t-sm); }
+
+  /* ── cheat sheet (B) ── */
+  .cheatscrim { position: fixed; inset: 0; background: oklch(0.12 0.02 280 / 0.55); display: none; z-index: 300; align-items: center; justify-content: center; animation: fadein .12s var(--ease); }
+  .cheatscrim.show { display: flex; }
+  .cheat { width: 640px; max-width: 92vw; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); padding: var(--s-10) var(--s-12); animation: palin .18s var(--ease); }
+  .cheat h3 { font-size: var(--t-lg); font-weight: 600; margin-bottom: var(--s-8); display: flex; align-items: center; gap: var(--s-5); }
+  .cheat .grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4) var(--s-12); }
+  .cheat .cg { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; grid-column: 1/-1; margin-top: var(--s-5); }
+  .cheat .cr { display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-sm); color: var(--text-2); }
+  .cheat .cr .lab { flex: 1; }
+  .cheat .cr .keys { display: flex; gap: 4px; }
+
+  /* ── direct-bindings ambient hints (C) ── */
+  .ambient { position: absolute; right: var(--s-10); bottom: var(--s-10); width: 244px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-6) var(--s-8); font-size: var(--t-xs); box-shadow: var(--shadow-md); z-index: 5; }
+  .ambient .ah { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: var(--s-5); }
+  .ambient .ar { display: flex; align-items: center; gap: var(--s-5); margin-bottom: var(--s-3); color: var(--text-2); }
+  .ambient .ar .lab { flex: 1; }
+  .chordcue { position: fixed; left: 50%; bottom: 16vh; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent-strong); border-radius: var(--r-md); padding: var(--s-5) var(--s-10); font-size: var(--t-md); color: var(--text); box-shadow: var(--shadow-pop); z-index: 250; display: none; animation: toastin .15s var(--ease); }
+  .chordcue.show { display: block; }
+  .chordcue b { color: var(--accent); font-family: var(--mono); }
+
+  /* action confirm toast (all variants) */
+  .actoast { position: fixed; left: 50%; bottom: var(--s-12); transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-full); padding: 9px 18px; font-size: var(--t-sm); color: var(--text); box-shadow: var(--shadow-pop); z-index: 400; display: none; align-items: center; gap: 9px; animation: toastin .16s var(--ease); }
+  .actoast.show { display: flex; }
+  .actoast .ic { color: var(--accent); }
+
+  /* vnav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 036 · command palette</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ · Paleta ⌘K</button>
+  <button class="vtab" onclick="show('b',this)">B · Paleta + hoja de atajos</button>
+  <button class="vtab" onclick="show('c',this)">C · Bindings directos (sin overlay)</button>
+  <span class="hint">Tocá <span class="kbd">⌘</span><span class="kbd">K</span> (o Ctrl+K). En B probá <span class="kbd">?</span>. En C probá <span class="kbd">1</span>–<span class="kbd">4</span>, <span class="kbd">G</span> luego <span class="kbd">R</span></span>
+</nav>
+
+<!-- ════════ A · palette only ════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="spacer"></div>
+    <span class="kpill" onclick="openPal('a')">⌘ <span style="margin-left:2px">Comandos</span> <span class="kbd" style="margin-left:4px">⌘K</span></span>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="subbar"><div class="ctabs" id="tabs-a"></div></div>
+  <div class="body" id="body-a"></div>
+</div>
+
+<!-- ════════ B · palette + cheat sheet ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="spacer"></div>
+    <span class="kpill" onclick="openPal('b')">⌘ Comandos <span class="kbd" style="margin-left:4px">⌘K</span></span>
+    <span class="kpill" onclick="openCheat()" title="Atajos">? Atajos</span>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="subbar"><div class="ctabs" id="tabs-b"></div></div>
+  <div class="body" id="body-b"></div>
+</div>
+
+<!-- ════════ C · direct bindings ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar <span class="kbd" style="margin-left:4px">⌘S</span></button>
+    <button class="btn btn-green">▶ Render <span class="kbd" style="margin-left:4px;background:rgba(0,0,0,.15);border-color:rgba(0,0,0,.2);color:#08220f">G R</span></button>
+  </header>
+  <div class="subbar"><div class="ctabs" id="tabs-c"></div></div>
+  <div class="body" id="body-c"></div>
+</div>
+
+<!-- shared palette overlay -->
+<div class="palscrim" id="palscrim" onclick="closePal()">
+  <div class="pal" onclick="event.stopPropagation()">
+    <div class="pin"><span class="mag">⌕</span><input id="palinput" placeholder="Buscar acción o ir a…" autocomplete="off"><span class="esc"><span class="kbd">esc</span></span></div>
+    <div class="plist" id="pallist"></div>
+    <div class="pfoot"><span class="fk"><span class="kbd">↑</span><span class="kbd">↓</span> navegar</span><span class="fk"><span class="kbd">↵</span> ejecutar</span><span class="fk"><span class="kbd">esc</span> cerrar</span></div>
+  </div>
+</div>
+
+<!-- cheat sheet overlay (B) -->
+<div class="cheatscrim" id="cheatscrim" onclick="closeCheat()">
+  <div class="cheat" onclick="event.stopPropagation()">
+    <h3>⌨ Atajos de teclado</h3>
+    <div class="grid">
+      <div class="cg">Navegación</div>
+      <div class="cr"><span class="lab">Paleta de comandos</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">K</span></span></div>
+      <div class="cr"><span class="lab">Tab Títulos · Overlays · Subtítulos · Video</span><span class="keys"><span class="kbd">1</span>–<span class="kbd">4</span></span></div>
+      <div class="cr"><span class="lab">Ir a la Cola</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">2</span></span></div>
+      <div class="cr"><span class="lab">Procesamiento (⚙)</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">,</span></span></div>
+      <div class="cg">Acciones</div>
+      <div class="cr"><span class="lab">Render</span><span class="keys"><span class="kbd">G</span><span class="kbd">R</span></span></div>
+      <div class="cr"><span class="lab">Guardar config</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">S</span></span></div>
+      <div class="cr"><span class="lab">Aplicar un estilo</span><span class="keys"><span class="kbd">G</span><span class="kbd">E</span></span></div>
+      <div class="cr"><span class="lab">Buscar fuente</span><span class="keys"><span class="kbd">G</span><span class="kbd">F</span></span></div>
+    </div>
+    <p style="margin-top:var(--s-8);font-size:var(--t-xs);color:var(--text-faint)">La paleta (⌘K) es la red de descubrimiento; esta hoja es el mapa para memorizar. Las acciones frecuentes tienen binding directo.</p>
+  </div>
+</div>
+
+<div class="chordcue" id="chordcue"></div>
+<div class="actoast" id="actoast"></div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+const TABS = [{k:'tit',label:'Títulos'},{k:'ov',label:'Overlays'},{k:'sub',label:'Subtítulos'},{k:'vid',label:'Video',push:true}];
+const TABFIELDS = { tit:['Posición','Estilo del texto','Caja','Animación de entrada'], ov:['Lista de overlays','Capa','Ancho · Opacidad'], sub:['Texto de muestra','Modo de resaltado','Colores','Glow / Fondo'], vid:['Transición entre cortes','Duración'] };
+const state = { a:{tab:'tit'}, b:{tab:'tit'}, c:{tab:'tit'} };
+
+// command registry (what the palette searches)
+const COMMANDS = [
+  { grp:'Ir a', ic:'1', label:'Tab: Títulos', sub:'editar el título', keys:['1'], run:v=>setTab(v,'tit') },
+  { grp:'Ir a', ic:'2', label:'Tab: Overlays', sub:'PNG sobre el video', keys:['2'], run:v=>setTab(v,'ov') },
+  { grp:'Ir a', ic:'3', label:'Tab: Subtítulos', sub:'captions palabra-por-palabra', keys:['3'], run:v=>setTab(v,'sub') },
+  { grp:'Ir a', ic:'4', label:'Tab: Video', sub:'transiciones entre cortes', keys:['4'], run:v=>setTab(v,'vid') },
+  { grp:'Ir a', ic:'≣', label:'Ir a la Cola', sub:'estado de los renders', keys:['⌘','2'], run:v=>toast('Iría a la Cola') },
+  { grp:'Ir a', ic:'✓', label:'Ir a Resultados', sub:'último reel renderizado', keys:['⌘','3'], run:v=>toast('Iría a Resultados') },
+  { grp:'Acciones', ic:'▶', label:'Render', sub:'generar el reel', keys:['G','R'], primary:true, run:v=>toast('▶ Render iniciado') },
+  { grp:'Acciones', ic:'⤓', label:'Guardar config', sub:'persistir cambios', keys:['⌘','S'], run:v=>toast('✓ Config guardada') },
+  { grp:'Estilos', ic:'◫', label:'Aplicar estilo: Mi estilo TikTok', sub:'preset guardado', keys:['G','E'], run:v=>toast('Estilo aplicado: Mi estilo TikTok') },
+  { grp:'Estilos', ic:'◫', label:'Aplicar estilo: Podcast clips', sub:'preset guardado', keys:[], run:v=>toast('Estilo aplicado: Podcast clips') },
+  { grp:'Estilos', ic:'＋', label:'Guardar el actual como estilo…', sub:'capturar los 4 tabs', keys:[], run:v=>toast('Guardaría el estilo actual') },
+  { grp:'Configuración', ic:'⚙', label:'Procesamiento…', sub:'Whisper · idioma · silencio · salida', keys:['⌘',','], run:v=>toast('Abriría ⚙ Procesamiento') },
+  { grp:'Configuración', ic:'𝐀', label:'Buscar fuente…', sub:'galería de 26 fuentes', keys:['G','F'], run:v=>toast('Abriría la galería de fuentes') },
+  { grp:'Ayuda', ic:'?', label:'Ver atajos de teclado', sub:'hoja de referencia', keys:['?'], run:v=>{ if(curVar==='b') openCheat(); else toast('Mostraría atajos'); } },
+];
+
+function renderEditor(v){
+  const tab=state[v].tab; const tname=TABS.find(t=>t.k===tab).label;
+  const fields=TABFIELDS[tab].map(f=>`<div class="ghostrow"></div>`).join('');
+  document.getElementById('tabs-'+v).innerHTML = TABS.map((t,i)=>`<div class="ctab ${t.k===tab?'on':''} ${t.push?'push':''}" id="tab-${v}-${t.k}" onclick="setTab('${v}','${t.k}')">${t.label}<span class="num">${i+1}</span></div>`).join('');
+  const ambient = v==='c' ? `<div class="ambient"><div class="ah">Teclas (siempre visibles)</div>
+    <div class="ar"><span class="lab">Tabs</span><span class="keys"><span class="kbd">1</span>–<span class="kbd">4</span></span></div>
+    <div class="ar"><span class="lab">Render</span><span class="keys"><span class="kbd">G</span> <span class="kbd">R</span></span></div>
+    <div class="ar"><span class="lab">Guardar</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">S</span></span></div>
+    <div class="ar"><span class="lab">Estilo · Fuente</span><span class="keys"><span class="kbd">G</span> <span class="kbd">E</span>/<span class="kbd">F</span></span></div>
+    <div class="ar" style="margin-bottom:0"><span class="lab">Cola · ⚙</span><span class="keys"><span class="kbd">⌘</span><span class="kbd">2</span> · <span class="kbd">⌘</span><span class="kbd">,</span></span></div></div>` : '';
+  const openhint = v==='c' ? '' : `<div class="openhint">Tocá <span class="kbd">⌘</span><span class="kbd">K</span> para abrir la paleta de comandos</div>`;
+  document.getElementById('body-'+v).innerHTML = `
+    <div class="col stagecol"><div class="stage9x16"><div class="ttl">3 trucos de edición</div><div class="capword">tus <b>reels</b></div></div></div>
+    <div class="col ctrlcol"><div class="tabname">${tname}</div>${fields}<div class="ghostrow lg"></div><div class="placard" style="margin-top:auto">Editor 027 abstraído — los tabs cambian con el teclado</div></div>
+    <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+    ${openhint}${ambient}`;
+}
+function setTab(v, k){ state[v].tab=k; renderEditor(v); const el=document.getElementById('tab-'+v+'-'+k); if(el){ el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),500);} }
+
+// ── palette ──
+let curVar='a', palOpen=false, palSel=0, palFiltered=[];
+function openPal(v){ curVar=v; palOpen=true; palSel=0; document.getElementById('palinput').value=''; filterPal(''); document.getElementById('palscrim').classList.add('show'); setTimeout(()=>document.getElementById('palinput').focus(),20); }
+function closePal(){ palOpen=false; document.getElementById('palscrim').classList.remove('show'); }
+function filterPal(q){
+  q=q.trim().toLowerCase();
+  palFiltered = COMMANDS.filter(c=> !q || (c.label+' '+c.sub+' '+c.grp).toLowerCase().includes(q));
+  palSel=0; renderPal(q);
+}
+function hl(text,q){ if(!q) return text; const i=text.toLowerCase().indexOf(q); if(i<0) return text; return text.slice(0,i)+'<em>'+text.slice(i,i+q.length)+'</em>'+text.slice(i+q.length); }
+function renderPal(q){
+  const list=document.getElementById('pallist');
+  if(!palFiltered.length){ list.innerHTML=`<div class="noresult">Sin resultados para "<b>${q}</b>"</div>`; return; }
+  let html='', lastGrp='', idx=0;
+  palFiltered.forEach(c=>{
+    if(c.grp!==lastGrp){ html+=`<div class="grp">${c.grp}</div>`; lastGrp=c.grp; }
+    const keys = c.keys.length? `<span class="ck">${c.keys.map(k=>`<span class="kbd">${k}</span>`).join('')}</span>`:'';
+    html+=`<div class="pcmd ${c.primary?'primary':''} ${idx===palSel?'sel':''}" data-i="${idx}" onclick="runFiltered(${idx})" onmousemove="hover(${idx})"><span class="ci">${c.ic}</span><div><div class="cl">${hl(c.label,q)}</div><div class="csub">${c.sub}</div></div>${keys}</div>`;
+    idx++;
+  });
+  list.innerHTML=html;
+  const sel=list.querySelector('.pcmd.sel'); if(sel) sel.scrollIntoView({block:'nearest'});
+}
+function hover(i){ palSel=i; document.querySelectorAll('#pallist .pcmd').forEach(e=>e.classList.toggle('sel', +e.dataset.i===i)); }
+function runFiltered(i){ const c=palFiltered[i]; if(!c) return; closePal(); c.run(curVar); }
+
+// ── cheat sheet (B) ──
+function openCheat(){ document.getElementById('cheatscrim').classList.add('show'); }
+function closeCheat(){ document.getElementById('cheatscrim').classList.remove('show'); }
+
+// ── action toast ──
+let toastTimer=null;
+function toast(msg){ const t=document.getElementById('actoast'); t.innerHTML=`<span class="ic">●</span>${msg}`; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1800); }
+
+// ── chord cue (C) ──
+let chordTimer=null;
+function chordCue(txt){ const c=document.getElementById('chordcue'); c.innerHTML=txt; c.classList.add('show'); clearTimeout(chordTimer); chordTimer=setTimeout(()=>c.classList.remove('show'),1400); }
+function hideChord(){ document.getElementById('chordcue').classList.remove('show'); clearTimeout(chordTimer); }
+
+// ── keyboard engine ──
+let chordPending=null, chordReset=null;
+document.addEventListener('keydown', e=>{
+  // palette open: ⌘K / Ctrl+K everywhere (A & B)
+  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); if(curVar!=='c') openPal(curVar); return; }
+  if(palOpen){
+    if(e.key==='Escape'){ closePal(); return; }
+    if(e.key==='ArrowDown'){ e.preventDefault(); palSel=Math.min(palFiltered.length-1,palSel+1); renderPalSel(); return; }
+    if(e.key==='ArrowUp'){ e.preventDefault(); palSel=Math.max(0,palSel-1); renderPalSel(); return; }
+    if(e.key==='Enter'){ e.preventDefault(); runFiltered(palSel); return; }
+    return; // let input handle typing
+  }
+  if(document.getElementById('cheatscrim').classList.contains('show')){ if(e.key==='Escape') closeCheat(); return; }
+  // cheat sheet (B)
+  if(e.key==='?' && curVar==='b'){ openCheat(); return; }
+  // direct bindings (all variants, but C is the showcase)
+  if(e.metaKey||e.ctrlKey){
+    if(e.key.toLowerCase()==='s'){ e.preventDefault(); toast('✓ Config guardada'); return; }
+    if(e.key===','){ e.preventDefault(); toast('Abriría ⚙ Procesamiento'); return; }
+    if(e.key==='2'){ e.preventDefault(); toast('Iría a la Cola'); return; }
+    return;
+  }
+  if(chordPending){
+    const k=e.key.toLowerCase(); hideChord(); clearTimeout(chordReset);
+    if(chordPending==='g'){
+      if(k==='r'){ toast('▶ Render iniciado'); }
+      else if(k==='e'){ toast('Estilo aplicado: Mi estilo TikTok'); }
+      else if(k==='f'){ toast('Abriría la galería de fuentes'); }
+      else toast('Acorde cancelado');
+    }
+    chordPending=null; return;
+  }
+  if(['1','2','3','4'].includes(e.key)){ setTab(curVar, TABS[+e.key-1].k); return; }
+  if(e.key.toLowerCase()==='g'){ chordPending='g'; chordCue('<b>G</b> luego… <span class="kbd">R</span> render · <span class="kbd">E</span> estilo · <span class="kbd">F</span> fuente'); chordReset=setTimeout(()=>{chordPending=null;hideChord();},1500); return; }
+});
+function renderPalSel(){ document.querySelectorAll('#pallist .pcmd').forEach(e=>e.classList.toggle('sel', +e.dataset.i===palSel)); const sel=document.querySelector('#pallist .pcmd.sel'); if(sel) sel.scrollIntoView({block:'nearest'}); }
+document.getElementById('palinput').addEventListener('input', e=>filterPal(e.target.value));
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  curVar=id; closePal(); closeCheat();
+}
+
+renderEditor('a'); renderEditor('b'); renderEditor('c');
+</script>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 034 — style presets (save a look)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&family=Bebas+Neue&family=Archivo+Black&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); flex-direction: column; }
+  .variant.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes sheetin { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes flash { 0% { box-shadow: 0 0 0 0 var(--accent-tint); } 100% { box-shadow: 0 0 0 8px transparent; } }
+
+  /* shared chrome */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .spacer { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.dirty { color: var(--warning); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-out:disabled { opacity: 0.4; cursor: default; }
+  .btn-green { background: var(--action); color: #08220f; border-color: transparent; }
+  .btn-green:hover { background: var(--action-hover); }
+  .btn-acc { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+  .btn-acc:hover { background: var(--accent-tint-2); }
+  .btn-sm { padding: 5px 11px; font-size: var(--t-xs); }
+  .iconbtn { font: inherit; width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; font-size: 15px; transition: all var(--dur) var(--ease); flex: none; }
+  .iconbtn:hover { background: var(--surface-hover); color: var(--text); }
+
+  /* abstracted editor */
+  .body { flex: 1; min-height: 0; display: flex; gap: 1px; background: var(--border-faint); }
+  .col { background: var(--canvas); padding: var(--s-10); display: flex; flex-direction: column; }
+  .stagecol { flex: 0 1 340px; align-items: center; justify-content: center; background: var(--stage); gap: var(--s-6); }
+  .ctrlcol { flex: 1; gap: var(--s-5); }
+  .metacol { flex: 0 0 220px; background: var(--surface); align-items: center; justify-content: center; }
+  .stage9x16 { width: 200px; height: 356px; border-radius: var(--r-md); box-shadow: var(--shadow-md); position: relative; overflow: hidden; transition: background var(--dur2,300ms) var(--ease); }
+  .stage9x16 .ttl { position: absolute; top: 38px; left: 16px; right: 16px; text-align: center; font-weight: 700; font-size: 13px; padding: 6px; border-radius: 5px; transition: all var(--dur) var(--ease); }
+  .stage9x16 .capword { position: absolute; bottom: 54px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 18px; text-shadow: 0 2px 8px rgba(0,0,0,.6); transition: all var(--dur) var(--ease); }
+  .placard { font-size: var(--t-2xs); color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; }
+  .ghostrow { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); }
+  .ghostrow.lg { height: 50px; }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 8px 12px; text-align: center; }
+  .applied { font-size: var(--t-xs); color: var(--text-2); }
+  .applied b { color: var(--accent); }
+
+  /* ── A: header preset bar ── */
+  .preset-trigger { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 10px 5px 8px; cursor: pointer; font-size: var(--t-sm); color: var(--text); transition: all var(--dur) var(--ease); }
+  .preset-trigger:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+  .preset-trigger .pl { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .preset-trigger .pv { font-weight: 600; }
+  .preset-trigger .mod { color: var(--warning); font-size: var(--t-2xs); font-weight: 600; }
+  .preset-trigger .car { color: var(--text-muted); font-size: 10px; }
+  .dropdown { position: absolute; top: 50px; width: 248px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); padding: var(--s-3); z-index: 60; display: none; animation: fadein .14s var(--ease); }
+  .dropdown.show { display: block; }
+  .dropdown .ph { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; padding: var(--s-3) var(--s-5) var(--s-2); }
+  .pitem { display: flex; align-items: center; gap: var(--s-5); padding: 7px 9px; border-radius: var(--r-xs); cursor: pointer; }
+  .pitem:hover { background: var(--surface-hover); }
+  .pitem.on { background: var(--accent-tint); }
+  .pitem .sw { width: 26px; height: 26px; border-radius: var(--r-xs); flex: none; display: grid; place-items: center; font-weight: 800; font-size: 11px; }
+  .pitem .pn { font-size: var(--t-sm); color: var(--text); font-weight: 500; }
+  .pitem.on .pn { color: var(--accent); }
+  .pitem .pmeta { font-size: var(--t-2xs); color: var(--text-muted); }
+  .pitem .chk { margin-left: auto; color: var(--accent); }
+  .dropdown .div { height: 1px; background: var(--border-faint); margin: var(--s-3) 0; }
+  .dropdown .save-as { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: var(--r-xs); cursor: pointer; color: var(--accent); font-size: var(--t-sm); font-weight: 500; }
+  .dropdown .save-as:hover { background: var(--accent-tint-2); }
+  .dropdown .save-as:disabled, .dropdown .save-as.dis { color: var(--text-faint); cursor: default; }
+
+  /* ── B: slide-over gallery (016/032 idiom) ── */
+  .scrim { position: fixed; inset: 46px 0 0; background: oklch(0.12 0.02 280 / 0.5); display: none; z-index: 80; }
+  .scrim.show { display: block; }
+  .sheet { position: absolute; top: 0; right: 0; bottom: 0; width: 440px; background: var(--surface); border-left: 1px solid var(--border-strong); box-shadow: var(--shadow-pop); display: flex; flex-direction: column; animation: sheetin .26s var(--ease); }
+  .sheet .sh-h { padding: var(--s-8) var(--s-10); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: var(--s-5); }
+  .sheet .sh-h h3 { font-size: var(--t-lg); font-weight: 600; }
+  .sheet .sh-h .ct { font-size: var(--t-xs); color: var(--text-muted); }
+  .sheet .sh-b { flex: 1; overflow-y: auto; padding: var(--s-10); display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); align-content: start; }
+  .pcard { background: var(--canvas); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-5); cursor: pointer; transition: all var(--dur) var(--ease); position: relative; }
+  .pcard:hover { border-color: var(--border-strong); }
+  .pcard.on { border-color: var(--accent-strong); box-shadow: 0 0 0 1px var(--accent-strong); }
+  .pcard .thumb { height: 124px; border-radius: var(--r-sm); position: relative; overflow: hidden; margin-bottom: var(--s-5); }
+  .pcard .thumb .tt { position: absolute; top: 14px; left: 8px; right: 8px; text-align: center; font-size: 9px; font-weight: 700; padding: 3px; border-radius: 3px; }
+  .pcard .thumb .cw { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 13px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+  .pcard .pn { font-size: var(--t-sm); font-weight: 600; color: var(--text); }
+  .pcard .pmeta { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 2px; }
+  .pcard.on .badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: var(--stage); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-full); }
+  .pcard .rowact { display: none; gap: 6px; margin-top: var(--s-5); }
+  .pcard.on .rowact { display: flex; }
+  .pcard.newcard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-4); border-style: dashed; color: var(--accent); min-height: 192px; font-weight: 600; }
+  .pcard.newcard .big { font-size: 28px; }
+  .pcard.newcard .sub { font-size: var(--t-2xs); color: var(--text-muted); font-weight: 400; text-align: center; line-height: 1.4; }
+  .sheet .sh-f { padding: var(--s-8) var(--s-10); border-top: 1px solid var(--border); font-size: var(--t-xs); color: var(--text-faint); line-height: 1.5; }
+
+  /* ── C: first-run strip + recall ── */
+  .firstrun { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-12); padding: var(--s-16); text-align: center; }
+  .firstrun .dz { width: 280px; height: 150px; border: 2px dashed var(--border-strong); border-radius: var(--r-lg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-4); color: var(--text-2); }
+  .firstrun .dz .big { font-size: 30px; }
+  .firstrun h2 { font-size: var(--t-lg); font-weight: 600; }
+  .firstrun .stripwrap { width: 100%; max-width: 720px; }
+  .firstrun .striplabel { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: var(--s-5); }
+  .strip { display: flex; gap: var(--s-6); justify-content: center; flex-wrap: wrap; }
+  .scard { width: 132px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-4); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .scard:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+  .scard.on { border-color: var(--accent-strong); box-shadow: 0 0 0 1px var(--accent-strong); }
+  .scard .thumb { height: 100px; border-radius: var(--r-sm); position: relative; overflow: hidden; margin-bottom: var(--s-4); }
+  .scard .thumb .tt { position: absolute; top: 12px; left: 6px; right: 6px; text-align: center; font-size: 8px; font-weight: 700; padding: 2px; border-radius: 3px; }
+  .scard .thumb .cw { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 11px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+  .scard .pn { font-size: var(--t-xs); font-weight: 600; text-align: center; }
+  .recall { display: inline-flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-full); padding: 4px 6px 4px 11px; font-size: var(--t-xs); color: var(--text-2); }
+  .recall .pn { color: var(--text); font-weight: 600; }
+  .recall .x { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--text-muted); }
+  .recall .x:hover { background: var(--surface-2); color: var(--text); }
+
+  /* vnav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 034 · style presets</span>
+  <button class="vtab active" onclick="show('a',this)">A ★ · Barra de preset en header</button>
+  <button class="vtab" onclick="show('b',this)">B · Galería slide-over</button>
+  <button class="vtab" onclick="show('c',this)">C · Strip en arranque + recall</button>
+  <span class="hint">Aplicá un look y miralo cambiar en el preview · "Modificado" aparece si tocás algo después</span>
+</nav>
+
+<!-- ════════ A · header preset bar ════════ -->
+<div class="variant active" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div style="position:relative">
+      <div class="preset-trigger" id="trig-a" onclick="toggleDD(event)">
+        <span class="pl">Estilo</span><span class="pv" id="trigname-a">Mi estilo TikTok</span><span class="mod" id="trigmod-a" style="display:none">· Modificado</span><span class="car">▾</span>
+      </div>
+      <div class="dropdown" id="dd-a"></div>
+    </div>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body" id="body-a"></div>
+</div>
+
+<!-- ════════ B · slide-over gallery ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <button class="btn btn-out btn-sm" style="margin-left:var(--s-4)" onclick="openSheet()">◫ Estilos</button>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body" id="body-b"></div>
+</div>
+
+<!-- ════════ C · first-run strip + recall ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <span id="recall-c" style="margin-left:var(--s-4)"></span>
+    <div class="spacer"></div>
+    <span class="chip" style="color:var(--text-muted)"><span class="dot"></span>Sin video</span>
+    <button class="btn btn-out" disabled>Guardar config</button>
+    <button class="btn btn-out" disabled style="opacity:.4">Render</button>
+  </header>
+  <div class="firstrun" id="body-c"></div>
+</div>
+
+<!-- shared slide-over for B -->
+<div class="scrim" id="scrim" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sh-h"><span style="font-size:17px">◫</span><h3>Estilos guardados</h3><span class="ct" id="sheet-ct"></span><div class="spacer"></div><button class="iconbtn" onclick="closeSheet()">✕</button></div>
+    <div class="sh-b" id="sheet-body"></div>
+    <div class="sh-f">Un estilo guarda los 4 tabs a la vez (Títulos · Overlays · Subtítulos · Video). Aplicarlo pisa la config actual. <b style="color:var(--text-2)">Aplicar/Guardar usan azul</b> — el verde queda reservado a Render.</div>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// ── the saved looks (each = a full multi-tab configuration, here distilled to a visible "look") ──
+const PRESETS = [
+  { id:'tiktok', name:'Mi estilo TikTok',  meta:'Bebas · amarillo · glow', bg:'linear-gradient(180deg,oklch(0.3 0.08 320),oklch(0.18 0.04 300))', cap:'#ffe14d', capFont:"'Bebas Neue',sans-serif", ttlBg:'rgba(0,0,0,.5)', ttlColor:'#fff' },
+  { id:'podcast',name:'Podcast clips',     meta:'Inter · blanco · caja',   bg:'linear-gradient(180deg,oklch(0.34 0.05 255),oklch(0.2 0.03 280))', cap:'#ffffff', capFont:"var(--font)", ttlBg:'var(--accent)', ttlColor:'#08220f' },
+  { id:'bold',   name:'Titular grande',    meta:'Archivo · cian · sin caja',bg:'linear-gradient(180deg,oklch(0.28 0.06 200),oklch(0.16 0.03 220))', cap:'#7fe9ff', capFont:"'Archivo Black',sans-serif", ttlBg:'transparent', ttlColor:'#7fe9ff' },
+  { id:'hand',   name:'Casual manuscrito', meta:'Caveat · crema · suave',  bg:'linear-gradient(180deg,oklch(0.32 0.04 60),oklch(0.18 0.02 40))', cap:'#fff3d6', capFont:"'Caveat',cursive", ttlBg:'rgba(0,0,0,.35)', ttlColor:'#fff3d6' },
+];
+// per-variant state
+const S = { a:{ cur:'tiktok', dirty:false }, b:{ cur:'tiktok', dirty:false }, c:{ cur:null, dirty:false } };
+
+function preset(id){ return PRESETS.find(p=>p.id===id); }
+
+function stageHtml(p){
+  if(!p) return `<div class="stage9x16" style="background:var(--stage);display:grid;place-items:center"><span style="color:var(--text-faint);font-size:var(--t-xs)">sin estilo</span></div>`;
+  return `<div class="stage9x16" id="stage" style="background:${p.bg}">
+    <div class="ttl" style="background:${p.ttlBg};color:${p.ttlColor}">3 trucos de edición</div>
+    <div class="capword" style="color:${p.cap};font-family:${p.capFont}">tus <span style="opacity:.85">reels</span></div>
+  </div>`;
+}
+function editorBody(v){
+  const st=S[v]; const p=preset(st.cur);
+  const appliedLine = st.cur
+    ? `<div class="applied">Estilo activo: <b>${p.name}</b>${st.dirty?' <span style="color:var(--warning)">(modificado)</span>':''}</div>`
+    : `<div class="applied" style="color:var(--text-faint)">Sin estilo aplicado — usando valores por defecto</div>`;
+  return `${stageHtml(p)}${appliedLine}`;
+}
+
+function renderEditor(v){
+  document.getElementById('body-'+v).innerHTML = `
+    <div class="col stagecol">${editorBody(v)}</div>
+    <div class="col ctrlcol">
+      <div class="placard">Tab Títulos (abstraído) — un estilo guarda los 4 tabs juntos</div>
+      <div class="ghostrow lg"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="ghostrow"></div>
+      <button class="btn btn-out btn-sm" style="align-self:flex-start;margin-top:var(--s-3)" onclick="tweak('${v}')">✎ Editar un control (simular cambio)</button>
+      <div class="placard" style="margin-top:auto">Editor 027 abstraído</div>
+    </div>
+    <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>`;
+}
+function tweak(v){ S[v].dirty=true; refresh(v); }
+
+function applyPreset(v, id){ S[v].cur=id; S[v].dirty=false; refresh(v); }
+
+function refresh(v){
+  if(v==='a'){ renderEditor('a'); buildDD();
+    const p=preset(S.a.cur); document.getElementById('trigname-a').textContent = p?p.name:'Sin estilo';
+    document.getElementById('trigmod-a').style.display = S.a.dirty?'inline':'none';
+  }
+  if(v==='b'){ renderEditor('b'); buildSheet(); }
+  if(v==='c'){ renderC(); }
+}
+
+// ── A dropdown ──
+function buildDD(){
+  const items = PRESETS.map(p=>`<div class="pitem ${S.a.cur===p.id?'on':''}" onclick="applyPreset('a','${p.id}');closeDD()">
+    <div class="sw" style="background:${p.bg};color:${p.cap}">Aa</div>
+    <div><div class="pn">${p.name}</div><div class="pmeta">${p.meta}</div></div>
+    ${S.a.cur===p.id?'<span class="chk">✓</span>':''}</div>`).join('');
+  const saveAs = S.a.dirty
+    ? `<div class="save-as" onclick="alert('Guardaría la config actual como nuevo estilo');closeDD()">＋ Guardar el actual como estilo…</div>`
+    : `<div class="save-as dis">＋ Guardar el actual como estilo… <span style="margin-left:auto;font-size:var(--t-2xs)">(sin cambios)</span></div>`;
+  document.getElementById('dd-a').innerHTML = `<div class="ph">Aplicar un estilo</div>${items}<div class="div"></div>${saveAs}`;
+}
+function toggleDD(e){ e.stopPropagation(); document.getElementById('dd-a').classList.toggle('show'); }
+function closeDD(){ document.getElementById('dd-a').classList.remove('show'); }
+
+// ── B sheet gallery ──
+function buildSheet(){
+  document.getElementById('sheet-ct').textContent = `${PRESETS.length} estilos`;
+  const cards = PRESETS.map(p=>`<div class="pcard ${S.b.cur===p.id?'on':''}" onclick="applyPreset('b','${p.id}')">
+    ${S.b.cur===p.id?'<span class="badge">Activo</span>':''}
+    <div class="thumb" style="background:${p.bg}"><div class="tt" style="background:${p.ttlBg};color:${p.ttlColor}">3 trucos</div><div class="cw" style="color:${p.cap};font-family:${p.capFont}">reels</div></div>
+    <div class="pn">${p.name}</div><div class="pmeta">${p.meta}</div>
+    <div class="rowact"><button class="btn btn-out btn-sm" onclick="event.stopPropagation()">Renombrar</button><button class="btn btn-out btn-sm" onclick="event.stopPropagation()">Duplicar</button></div>
+  </div>`).join('');
+  const newc = `<div class="pcard newcard" onclick="alert('Guardaría la config actual como nuevo estilo')"><span class="big">＋</span>Guardar el actual<span class="sub">Captura los 4 tabs como un estilo nuevo</span></div>`;
+  document.getElementById('sheet-body').innerHTML = cards + newc;
+}
+function openSheet(){ buildSheet(); document.getElementById('scrim').classList.add('show'); }
+function closeSheet(){ document.getElementById('scrim').classList.remove('show'); }
+
+// ── C first-run strip + recall ──
+function renderC(){
+  const st=S.c;
+  if(!st.cur){
+    const strip = PRESETS.map(p=>`<div class="scard" onclick="applyPreset('c','${p.id}')">
+      <div class="thumb" style="background:${p.bg}"><div class="tt" style="background:${p.ttlBg};color:${p.ttlColor}">3 trucos</div><div class="cw" style="color:${p.cap};font-family:${p.capFont}">reels</div></div>
+      <div class="pn">${p.name}</div></div>`).join('');
+    document.getElementById('body-c').innerHTML = `
+      <div class="dz"><span class="big">⤓</span><span>Soltá un MP4 para empezar</span></div>
+      <div class="stripwrap"><div class="striplabel">…o arrancá desde un estilo guardado</div><div class="strip">${strip}
+        <div class="scard" onclick="applyPreset('c','_default')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-2)"><div class="thumb" style="background:var(--stage);display:grid;place-items:center;color:var(--text-faint);font-size:var(--t-2xs)">por defecto</div><div class="pn">Empezar limpio</div></div>
+      </div></div>`;
+    document.getElementById('recall-c').innerHTML='';
+  } else {
+    const p = st.cur==='_default'? null : preset(st.cur);
+    document.getElementById('body-c').innerHTML = `<div style="display:flex;gap:var(--s-12);align-items:center">
+      <div class="col stagecol" style="background:none;padding:0">${stageHtml(p)}</div>
+      <div style="max-width:30ch"><h2 style="font-size:var(--t-lg);margin-bottom:var(--s-5)">Listo para tu video</h2>
+      <p style="font-size:var(--t-sm);color:var(--text-2);line-height:1.6">Arrancaste desde <b style="color:var(--accent)">${p?p.name:'valores por defecto'}</b>. Soltá un MP4 y la config ya está puesta. Cambiá lo que quieras; el recall en el header muestra de qué estilo venís.</p>
+      <button class="btn btn-out btn-sm" style="margin-top:var(--s-6)" onclick="applyPreset('c',null)">← Elegir otro estilo</button></div></div>`;
+    document.getElementById('recall-c').innerHTML = `<span class="recall">Desde <span class="pn">${p?p.name:'por defecto'}</span><span class="x" onclick="applyPreset('c',null)">✕</span></span>`;
+  }
+}
+
+document.addEventListener('click', ()=>closeDD());
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeDD(); closeSheet(); } });
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+refresh('a'); refresh('b'); renderC();
+</script>
+</body>
+</html>

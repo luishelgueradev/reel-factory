@@ -1,14 +1,16 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032)
-**Sketches processed:** 32 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032) · 2026-06-02 (sketches 033–036)
+**Sketches processed:** 36 (all)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
 Overlays list-forward), Subtitle Styling, Caption Animation Preview, Title Styling (+ entrance timing),
 Video Effects/Transitions, Timeline (frontier), Font Picker, Header Action Zone, States & Save,
 First-Run/Empty, Responsive Reflow, Motion, Preview Manipulation, Render Surface, Render Last-Mile
 (frontier), Metadata/AI Column (AI phase), Pipeline-Step Inspection (frontier), Batch Queue (frontier/ops),
 Pipeline Run-Flow Spine (integration), Pipeline Settings Home (processing params),
-North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-Star v3 (027, current canonical)
+App Nav Shell v4 (left activity rail; supersedes 027 as the app map), Style Presets (save-a-look),
+Background Render/Batch Notifications (toast + Cola-badge), Command Palette / Keyboard Model (⌘K),
+North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-Star v3 (027, current canonical Editor screen)
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
 ## Included Sketches
@@ -46,6 +48,10 @@ North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-S
 | 030 | batch-queue | A | Batch Queue / Multi-Job (frontier/ops) |
 | 031 | pipeline-run-flow-spine | A | Pipeline Run-Flow Spine (integration, frontier) |
 | 032 | pipeline-settings-home | A | Pipeline Settings Home (processing params, frontier) |
+| 033 | nav-shell-v4 | B | App Nav Shell v4 (left activity rail; supersedes 027 as the app map) |
+| 034 | style-presets | A | Style Presets (save-a-look across 4 tabs; frontier/repeat-use) |
+| 035 | background-notifications | D | Background Render/Batch Notifications (toast + Cola-badge; frontier/ops) |
+| 036 | command-palette | A | Command Palette / Keyboard Model (⌘K palette; frontier/power-user) |
 
 ## Excluded Sketches
 _None._
@@ -193,6 +199,58 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   visible *disabled* select with a 🔒 caption beats hiding the constraint. Anti-pattern: 5th tab; couple
   config to Render; hide the lock; green the gear; invent a new slide-over pattern.
 
+- **App nav shell v4 (consistency / north-star recompose — supersedes 027 as the *app map*):** the
+  canonical Editor screen (027) was frozen before the queue (030), run spine (031) and settings sheet
+  (032) bolted three navigation entry points onto the 013-B header (Editor⇄Cola switch · ⚙ trigger ·
+  "Revisar" pull) it was never designed to carry. Resolved to a **left 56px activity rail** (033-B) that
+  owns whole-app wayfinding — **Editor · Cola · Resultados · ⚙ · ?** — so the header becomes the
+  **purely-contextual bar of the current destination** (content tabs are **editor-only**, never app
+  chrome). The Linear/Figma separation of *app-navigation* from *screen-actions*: header stays legible,
+  scales to more destinations, active rail button = `accent-tint` + a 3px accent spine, hover labels keep
+  terse icons un-cryptic. Beat **header-resident (033-A** — densifies the header, app-switch competes with
+  editor actions; kept as fallback) and the **hybrid ⋯-menu (033-C** — buries the Resultados payoff). 027
+  stays the canonical *Editor screen*; 033 is the shell it hangs in. **Green discipline:** Render the only
+  green; rail neutral/accent; ⚙ accent-when-open; Aplicar green only inside its sheet. Anti-pattern: pile
+  app-nav into the header; bury Resultados behind ⋯; leak content tabs off-editor; green the rail.
+- **Style presets (save-a-look / frontier, repeat-use):** first-run (017-B) starts every video from
+  defaults, but this is a **batch/repeat-use** tool — a pro shouldn't re-dial the look weekly. Resolved to
+  an **always-visible header preset bar** (034-A): `Estilo: [Mi estilo TikTok ▾]`, where a saved look is a
+  **full four-tab configuration** (swatch/thumbnail renders a real mini-specimen — title box + caption
+  word in the look's font/colors — not just a swatch). The **Modificado** divergence state (amber, inline
+  in the trigger) **coexists with the save chip** without a second alarm — *diverged-from-preset* vs
+  *unsaved-to-disk* are different facts, both low-chroma; applying a preset clears Modificado. "Guardar el
+  actual como estilo…" is **gated on divergence**. Beat the **slide-over gallery (034-B** — kept as the
+  *management* surface: rename/duplicate, real thumbnails) and the **first-run strip (034-C** — its
+  *recall chip* "Desde X ✕" folds into A). **Green discipline:** Aplicar/Guardar-como/Duplicar = accent or
+  outline, never action-green. Anti-pattern: preset-as-swatch; Modificado-as-alarm; hide the active look
+  behind an open action; frame presets as one-time onboarding; green any preset control.
+- **Background render / batch notifications (async-ops / frontier):** the run spine (031) keeps the
+  *foreground* render inline on the stage where you watch it, but the queue (030) runs *other* jobs while
+  you're elsewhere — completion/OOM must reach you off-stage, honestly framed (it earns its keep mainly
+  for **queued-batch**, since foreground renders you watch). Resolved to a **synthesis** (035-D):
+  **A's transient toast covers *the moment*** (success auto-dismisses ~5s w/ Abrir/⤓ Descargar; the **OOM
+  failure persists** w/ Reintentar/Ver-en-cola, naming the real single-job / Chrome-RAM cause plainly,
+  calm `--danger` icon not a red banner) **+ C's Cola-badge tally is *the durable record*** (`✓3 ✕1` on
+  the Editor⇄Cola switch, the persistent truth that survives the toast). **Zero new header chrome** — no
+  bell (B's notification center held in reserve for if batch volume ever justifies a durable log; reads
+  "enterprise" for a per-session tool). **Green discipline:** success = `--success` (not action-green),
+  every action link = accent, the reserved green never appears in a notification. Anti-pattern:
+  auto-dismiss failures; generic error; ship a bell; rely on the quiet badge alone; green a toast.
+- **Command palette / keyboard model (power-user / frontier):** the direction names **Linear/Figma/Raycast**
+  and *"the tool disappears into the task"* — a keyboard-first register no prior sketch felt. Resolved to a
+  **⌘K palette only** (036-A): a Raycast-style centered overlay, fuzzy search over **grouped** commands
+  (Ir a · Acciones · Estilos · Configuración · Ayuda) with **inline shortcut hints** (so it's
+  self-teaching), keyboard-complete (↑↓/↵/esc) and pointer-optional (a `⌘K` header pill). The **command
+  set is honest** — every row maps to an action that exists elsewhere (tabs 1–4, Render, presets 034,
+  queue 030, settings 032, fonts 016); **no palette-only powers**. Beat **palette+cheatsheet (036-B** —
+  the palette already shows shortcuts, so a separate `?` map is redundant; kept in reserve as a graduation
+  aid) and **direct-bindings-only (036-C** — no discovery surface = unlearnable for the burst-use user;
+  but its **G-chord engine + chord cue + ambient hints are kept as accelerators layered *under* the
+  palette** for power users). **Green discipline:** Render carries green as its **palette-row icon tint
+  only** — no command row, chord cue, or `kbd` badge turns green; selection stays `accent-tint` blue.
+  Anti-pattern: ship bindings-only as the model; invent palette-only powers; green a command row; build a
+  bolted-on search box instead of the real Raycast idiom.
+
 ## Open Sub-Problems
 - ~~**Font picker** for 26 fonts with live previews~~ — **resolved by sketch 016-C** (slide-over gallery).
 - ~~Responsive behavior of the dense tabs~~ — **resolved by sketch 018-B** (reflow the multi-up grids).
@@ -230,9 +288,26 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
 - **Build-time watch (031-A):** the 3s soft-pause countdown is a placeholder — calibrate against real
   `faster-whisper` + `silence-cutter` latency; keep the "Revisar" pull reachable for the whole step, not
   a fixed 3s window after completion.
+- ~~The whole-app wayfinding went stale once 030/031/032 accreted destinations the 013-B header was
+  never designed to carry~~ — **resolved by sketch 033-B** (left activity rail; app-nav vs screen-actions;
+  supersedes 027 as the *app map*). Consistency / north-star recompose.
+- ~~A batch/repeat-use tool re-dials the look from defaults every video, with no home for saved looks~~ —
+  **resolved by sketch 034-A** (always-visible header preset bar; a look = all 4 tabs; ambient Modificado
+  state). Frontier / repeat-use.
+- ~~Queued renders finish off-stage with no way for completion/OOM to reach you~~ — **resolved by sketch
+  035-D** (toast for the moment + Cola-badge tally as the durable record; OOM-honest; zero new chrome).
+  Frontier / async-ops.
+- ~~The Linear/Figma/Raycast direction is keyboard-first but no sketch felt the keyboard layer~~ —
+  **resolved by sketch 036-A** (⌘K command palette as the single discoverable entry point over an honest
+  command set; G-chord accelerators layered underneath). Frontier / power-user.
+- **Build-time watch (033-B):** confirm content tabs (Títulos/Overlays/Subtítulos/Video) appear **only in
+  the Editor** destination and never leak into the rail's Cola/Resultados contextual headers — the rail's
+  app-scope vs screen-scope clarity depends on it.
 - **Frontier / next-milestone:** the **timeline** (020-C), the committed-vs-frontier scope line
   (007 drag, 010 render), the **render last-mile** results screen (024-B), the **AI metadata column**
   (026-C), the two **pipeline-step inspection** surfaces (028-B transcript / 029-B silence-cut), the
-  **batch queue** (030-A), the **run-flow spine** (031-A), and the **pipeline settings sheet** (032-A)
-  are validated *directions*, not Phase-22 control-panel deliverables. The two pipeline-step reviews +
-  the run-flow spine are the strongest delivery on the "cada paso es inspeccionable" promise in AGENTS.md.
+  **batch queue** (030-A), the **run-flow spine** (031-A), the **pipeline settings sheet** (032-A), the
+  **app nav shell / left activity rail** (033-B), **style presets** (034-A), **background notifications**
+  (035-D), and the **⌘K command palette** (036-A) are validated *directions*, not Phase-22 control-panel
+  deliverables. The two pipeline-step reviews + the run-flow spine are the strongest delivery on the
+  "cada paso es inspeccionable" promise in AGENTS.md; 033-B is the whole-app frame the rest now hang in.

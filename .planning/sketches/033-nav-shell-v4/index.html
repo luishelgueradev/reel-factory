@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 033 — nav shell v4 (whole-app wayfinding)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes sheetin { from { transform: translateX(100%); } to { transform: none; } }
+
+  /* ─────────────── shared chrome vocabulary (013-B / 031) ─────────────── */
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .brand .tag { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px; }
+  .spacer { flex: 1; }
+
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.dirty { color: var(--warning); }
+
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-green { background: var(--action); color: #08220f; border-color: transparent; }
+  .btn-green:hover { background: var(--action-hover); }
+  .iconbtn { font: inherit; width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; font-size: 15px; transition: all var(--dur) var(--ease); flex: none; }
+  .iconbtn:hover { background: var(--surface-hover); color: var(--text); }
+  .iconbtn.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  /* Editor⇄Cola segmented switch (030) */
+  .vswitch { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; flex: none; }
+  .vswitch button { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px 13px; border-radius: var(--r-xs); cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+  .vswitch button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .vswitch .qbadge { font-size: var(--t-2xs); background: var(--surface-2); color: var(--text-muted); border-radius: var(--r-full); padding: 0 6px; min-width: 16px; text-align: center; }
+  .vswitch button.on .qbadge { background: var(--accent-strong); color: var(--stage); }
+
+  /* content tabs (Títulos/Overlays/Subtítulos/Video) */
+  .ctabs { display: flex; gap: var(--s-3); }
+  .ctabs span { font-size: var(--t-xs); padding: 5px 11px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+  .ctabs span.on { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); }
+  .ctabs span.push { margin-left: auto; }
+
+  /* ─────────────── the abstracted destinations (shared) ─────────────── */
+  .work { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .ed { flex: 1; display: flex; gap: 1px; background: var(--border-faint); }
+  .ed .col { background: var(--canvas); padding: var(--s-10); display: flex; flex-direction: column; }
+  .ed .stagecol { flex: 0 1 320px; align-items: center; justify-content: center; background: var(--stage); }
+  .ed .ctrlcol { flex: 1; gap: var(--s-5); }
+  .ed .metacol { flex: 0 0 230px; background: var(--surface); align-items: center; justify-content: center; }
+  .stage9x16 { width: 184px; height: 327px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .stage9x16 .ttl { position: absolute; top: 32px; left: 14px; right: 14px; text-align: center; font-weight: 700; font-size: 12px; background: rgba(0,0,0,.45); padding: 5px; border-radius: 5px; }
+  .stage9x16 .capword { position: absolute; bottom: 48px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 15px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .stage9x16 .capword b { color: var(--accent); }
+  .placard { font-size: var(--t-2xs); color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; }
+  .ghostrow { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); }
+  .ghostrow.lg { height: 50px; }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 8px 12px; text-align: center; }
+
+  /* queue destination (abstracted 030) */
+  .cola { flex: 1; overflow-y: auto; padding: var(--s-12) var(--s-16); }
+  .cola .banner { font-size: var(--t-xs); color: var(--text-2); background: var(--accent-tint-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-8); margin-bottom: var(--s-10); display: flex; align-items: center; gap: 8px; }
+  .cola h3 { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin: var(--s-10) 0 var(--s-5); }
+  .jobrow { display: flex; align-items: center; gap: var(--s-6); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-6) var(--s-8); margin-bottom: var(--s-4); font-size: var(--t-sm); }
+  .jobrow .jt { color: var(--text); font-weight: 500; } .jobrow .jm { color: var(--text-muted); font-size: var(--t-xs); }
+  .jobrow.active { border-color: var(--accent-strong); }
+  .jobrow .bar { flex: 1; height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; max-width: 180px; }
+  .jobrow .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .jobrow .st { font-size: var(--t-2xs); }
+  .jobrow .st.fail { color: var(--danger); } .jobrow .st.done { color: var(--success); }
+
+  /* results destination (abstracted 024-B) */
+  .results { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s-12); padding: var(--s-16); }
+  .reel { width: 240px; height: 427px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.4 0.07 150), oklch(0.22 0.03 160)); box-shadow: var(--shadow-md); display: grid; place-items: center; flex: none; }
+  .reel::after { content: "▶"; font-size: 26px; color: rgba(255,255,255,.85); }
+  .rmeta h2 { font-size: var(--t-xl); font-weight: 700; margin-bottom: var(--s-4); }
+  .rmeta .filecard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-8); margin: var(--s-6) 0; font-family: var(--mono); font-size: var(--t-xs); color: var(--text-2); }
+  .rmeta .ractions { display: flex; gap: var(--s-5); margin-top: var(--s-6); }
+
+  .vhint { font-size: var(--t-2xs); color: var(--text-faint); padding: var(--s-3) 0; text-align: center; border-top: 1px solid var(--border-faint); background: var(--canvas); flex: none; }
+  .vhint b { color: var(--text-muted); }
+
+  /* ═══════════ A — header-resident (everything in the top bar) ═══════════ */
+  .hdrA { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .hdrA .subbar { height: 38px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--canvas); border-bottom: 1px solid var(--border-faint); }
+  #v-a { flex-direction: column; }
+  .colA { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  /* ═══════════ B — left activity rail (Linear/Figma idiom) ═══════════ */
+  .rail { width: 56px; flex: none; background: var(--chrome); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: var(--s-6) 0; gap: var(--s-3); }
+  .rail .rlogo { width: 30px; height: 30px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; color: var(--stage); margin-bottom: var(--s-6); }
+  .railbtn { width: 40px; height: 40px; border-radius: var(--r-sm); border: none; background: none; color: var(--text-muted); cursor: pointer; display: grid; place-items: center; font-size: 17px; position: relative; transition: all var(--dur) var(--ease); }
+  .railbtn:hover { background: var(--surface-2); color: var(--text); }
+  .railbtn.on { background: var(--accent-tint); color: var(--accent); }
+  .railbtn.on::before { content: ""; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--accent); }
+  .railbtn .lab { position: absolute; left: 48px; top: 50%; transform: translateY(-50%); background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font-size: var(--t-xs); font-weight: 500; padding: 4px 9px; border-radius: var(--r-xs); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity var(--dur); box-shadow: var(--shadow-md); z-index: 50; }
+  .railbtn:hover .lab { opacity: 1; }
+  .railbtn .rdot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .rail .rsp { flex: 1; }
+  .hdrB { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .hdrB .ctxname { font-size: var(--t-md); font-weight: 600; color: var(--text); }
+  .colB { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  /* ═══════════ C — hybrid (Editor⇄Cola header segment + app menu) ═══════════ */
+  .hdrC { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .hdrC .subbar { height: 38px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--canvas); border-bottom: 1px solid var(--border-faint); }
+  #v-c { flex-direction: column; }
+  .colC { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .appmenu { position: absolute; top: 50px; right: var(--s-12); width: 230px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); padding: var(--s-3); z-index: 60; display: none; animation: fadein .15s var(--ease); }
+  .appmenu.show { display: block; }
+  .appmenu .mi { display: flex; align-items: center; gap: var(--s-5); padding: 8px 10px; border-radius: var(--r-xs); font-size: var(--t-sm); color: var(--text-2); cursor: pointer; }
+  .appmenu .mi:hover { background: var(--surface-hover); color: var(--text); }
+  .appmenu .mi .ig { width: 18px; text-align: center; }
+  .appmenu .mi .mk { margin-left: auto; font-size: var(--t-2xs); color: var(--text-faint); font-family: var(--mono); }
+  .appmenu .div { height: 1px; background: var(--border-faint); margin: var(--s-3) 0; }
+
+  /* ─────────────── settings slide-over (032 idiom, shared) ─────────────── */
+  .scrim { position: fixed; inset: 46px 0 0; background: oklch(0.12 0.02 280 / 0.5); display: none; z-index: 80; }
+  .scrim.show { display: block; }
+  .sheet { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; background: var(--surface); border-left: 1px solid var(--border-strong); box-shadow: var(--shadow-pop); display: flex; flex-direction: column; animation: sheetin .26s var(--ease); }
+  .sheet .sh-h { padding: var(--s-8) var(--s-10); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: var(--s-5); }
+  .sheet .sh-h h3 { font-size: var(--t-lg); font-weight: 600; }
+  .sheet .sh-b { flex: 1; overflow-y: auto; padding: var(--s-10); font-size: var(--t-sm); color: var(--text-2); }
+  .sheet .sh-b .lab { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin: var(--s-8) 0 var(--s-4); }
+  .sheet .sh-b .ghostrow { margin-bottom: var(--s-4); }
+  .sheet .sh-f { padding: var(--s-8) var(--s-10); border-top: 1px solid var(--border); display: flex; gap: var(--s-5); }
+
+  /* vnav + tools (sketch harness) */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 033 · nav shell v4</span>
+  <button class="vtab" onclick="show('a',this)">A · Todo en el header</button>
+  <button class="vtab active" onclick="show('b',this)">B ★ · Riel de actividad (izq.)</button>
+  <button class="vtab" onclick="show('c',this)">C · Híbrido (switch + menú app)</button>
+  <span class="hint">Cambiá de destino (Editor · Cola · Resultados) y abrí <b style="color:var(--accent)">⚙</b> en cada variante</span>
+</nav>
+
+<!-- ════════ A · header-resident ════════ -->
+<div class="variant" id="v-a">
+  <header class="hdrA">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="vswitch" id="sw-a">
+      <button class="on" onclick="dest('a','editor')">Editor</button>
+      <button onclick="dest('a','cola')">Cola <span class="qbadge">3</span></button>
+      <button onclick="dest('a','resultados')">Resultados</button>
+    </div>
+    <div class="spacer"></div>
+    <span class="chip dirty" id="chip-a"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="iconbtn" title="Procesamiento" onclick="openSheet('a')">⚙</button>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="subbar" id="subbar-a">
+    <div class="ctabs"><span class="on">Títulos</span><span>Overlays</span><span>Subtítulos</span><span class="push">Video</span></div>
+  </div>
+  <div class="colA" id="main-a"></div>
+  <div class="vhint">A — el header carga <b>todo</b>: marca · switch Editor⇄Cola⇄Resultados · ⚙ · acciones; los 4 tabs de contenido bajan a una sub-barra. Una sola fila de navegación, pero el header se vuelve denso.</div>
+</div>
+
+<!-- ════════ B · left activity rail ════════ -->
+<div class="variant active" id="v-b">
+  <nav class="rail" id="rail-b">
+    <div class="rlogo">R</div>
+    <button class="railbtn on" onclick="dest('b','editor')" data-d="editor">✎<span class="lab">Editor</span></button>
+    <button class="railbtn" onclick="dest('b','cola')" data-d="cola">≣<span class="lab">Cola · 3 en proceso</span><span class="rdot"></span></button>
+    <button class="railbtn" onclick="dest('b','resultados')" data-d="resultados">✓<span class="lab">Resultados</span></button>
+    <div class="rsp"></div>
+    <button class="railbtn" onclick="openSheet('b')">⚙<span class="lab">Procesamiento</span></button>
+    <button class="railbtn" title="Ayuda / atajos">?<span class="lab">Atajos (⌘K)</span></button>
+  </nav>
+  <div class="colB" style="flex:1">
+    <header class="hdrB" id="hdrctx-b">
+      <span class="ctxname" id="ctxname-b">Editor</span>
+      <div class="ctabs" id="ctabs-b"><span class="on">Títulos</span><span>Overlays</span><span>Subtítulos</span><span class="push">Video</span></div>
+      <div class="spacer"></div>
+      <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+      <button class="btn btn-out">Guardar config</button>
+      <button class="btn btn-green">▶ Render</button>
+    </header>
+    <div class="colB" id="main-b" style="flex:1"></div>
+    <div class="vhint">B — el <b>riel de actividad</b> separa "¿dónde estoy en la app?" (Editor · Cola · Resultados · ⚙) del header contextual (tabs + estado + acciones de la pantalla actual). El idioma Linear/Figma; el header queda limpio y escala a más destinos.</div>
+  </div>
+</div>
+
+<!-- ════════ C · hybrid ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdrC">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="vswitch" id="sw-c">
+      <button class="on" onclick="dest('c','editor')">Editor</button>
+      <button onclick="dest('c','cola')">Cola <span class="qbadge">3</span></button>
+    </div>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+    <button class="iconbtn" id="ov-c" title="Menú de la app" onclick="toggleMenu(event)">⋯</button>
+    <div class="appmenu" id="menu-c">
+      <div class="mi" onclick="dest('c','resultados');closeMenu()"><span class="ig">✓</span>Resultados <span class="mk">⌘3</span></div>
+      <div class="mi" onclick="openSheet('c');closeMenu()"><span class="ig">⚙</span>Procesamiento <span class="mk">⌘,</span></div>
+      <div class="div"></div>
+      <div class="mi"><span class="ig">⌘</span>Paleta de comandos <span class="mk">⌘K</span></div>
+      <div class="mi"><span class="ig">?</span>Atajos de teclado <span class="mk">?</span></div>
+    </div>
+  </header>
+  <div class="subbar">
+    <div class="ctabs"><span class="on">Títulos</span><span>Overlays</span><span>Subtítulos</span><span class="push">Video</span></div>
+  </div>
+  <div class="colC" id="main-c"></div>
+  <div class="vhint">C — el <b>switch Editor⇄Cola</b> (los dos modos frecuentes) vive en el header; lo set-once-ish (Resultados · ⚙ · paleta · atajos) se repliega en un menú "⋯". Pocas piezas visibles, lo raro escondido pero alcanzable.</div>
+</div>
+
+<!-- shared settings slide-over -->
+<div class="scrim" id="scrim" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sh-h"><span style="font-size:18px">⚙</span><h3>Procesamiento</h3><div class="spacer"></div><button class="iconbtn" onclick="closeSheet()">✕</button></div>
+    <div class="sh-b">
+      <div class="lab">Modelo Whisper</div>
+      <div class="ghostrow lg"></div>
+      <div class="lab">Idioma · Sensibilidad de silencio</div>
+      <div class="ghostrow"></div><div class="ghostrow"></div>
+      <div class="lab">Salida</div>
+      <div class="ghostrow"></div>
+      <p style="margin-top:var(--s-8);font-size:var(--t-xs);color:var(--text-faint);line-height:1.6">Sketch 032 abstraído — el sheet "⚙ Procesamiento" se abre <b style="color:var(--text-2)">igual desde cualquier destino</b>; es un parámetro global, no de una pantalla.</p>
+    </div>
+    <div class="sh-f"><button class="btn btn-out" style="flex:1;justify-content:center" onclick="closeSheet()">Cancelar</button><button class="btn btn-green" style="flex:1;justify-content:center" onclick="closeSheet()">Aplicar</button></div>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// ── abstracted destination renderers (shared across variants) ──
+function editorHtml(){
+  return `<div class="work"><div class="ed">
+    <div class="col stagecol"><div class="stage9x16"><div class="ttl">3 trucos de edición</div><div class="capword">tus <b>reels</b></div></div></div>
+    <div class="col ctrlcol"><div class="ghostrow lg"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="ghostrow"></div>
+      <div class="placard" style="margin-top:auto">Editor — pantalla canónica 027 (abstraída)</div></div>
+    <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+  </div></div>`;
+}
+function colaHtml(){
+  return `<div class="work"><div class="cola">
+    <div class="banner">⚠ <span><b>Un video a la vez.</b> El render corre en un container de Chrome headless; dos en paralelo agotan la RAM y fallan (OOM).</span></div>
+    <h3>Procesando ahora</h3>
+    <div class="jobrow active"><span class="jt">entrevista-marzo.mp4</span><div class="bar"><i style="width:62%"></i></div><span class="jm">Render · 62% · ~40s</span></div>
+    <h3>En espera</h3>
+    <div class="jobrow"><span style="color:var(--text-muted)">1</span><span class="jt">clip-podcast-07.mp4</span><div class="spacer"></div><span class="jm">en cola</span></div>
+    <div class="jobrow"><span style="color:var(--text-muted)">2</span><span class="jt">reel-promo.mp4</span><div class="spacer"></div><span class="jm">en cola</span></div>
+    <h3>Fallaron</h3>
+    <div class="jobrow"><span class="jt">demo-largo.mp4</span><div class="spacer"></div><span class="st fail">✕ OOM al renderizar</span><button class="btn btn-out" style="padding:4px 10px;font-size:var(--t-xs)">Reintentar</button></div>
+    <div class="placard" style="margin-top:var(--s-10)">Cola — sketch 030 abstraído</div>
+  </div></div>`;
+}
+function resultadosHtml(){
+  return `<div class="work"><div class="results">
+    <div class="reel"></div>
+    <div class="rmeta"><h2>Reel listo para publicar</h2>
+      <div class="filecard">📄 reel-3-trucos.mp4 · 1080×1920 · 1:14 · 9.4 MB</div>
+      <div class="ractions"><button class="btn btn-out">⤓ Descargar</button><button class="btn btn-out">▶ Reproducir</button><button class="btn btn-out">↻ Re-render</button></div>
+      <p style="margin-top:var(--s-8);font-size:var(--t-xs);color:var(--text-faint);max-width:38ch;line-height:1.6">Resultados — sketch 024-B abstraído. Acá despierta la columna de metadata IA (026-C).</p>
+    </div>
+  </div></div>`;
+}
+const RENDER = { editor: editorHtml, cola: colaHtml, resultados: resultadosHtml };
+
+// per-variant current destination
+const cur = { a:'editor', b:'editor', c:'editor' };
+function dest(v, d){
+  cur[v]=d;
+  document.getElementById('main-'+v).innerHTML = RENDER[d]();
+  // A: highlight switch
+  if(v==='a'){ document.querySelectorAll('#sw-a button').forEach(b=>b.classList.remove('on')); const i={editor:0,cola:1,resultados:2}[d]; document.querySelectorAll('#sw-a button')[i].classList.add('on');
+    document.getElementById('subbar-a').style.display = d==='editor'?'flex':'none'; }
+  // B: highlight rail + ctx name + tabs visibility
+  if(v==='b'){ document.querySelectorAll('#rail-b .railbtn[data-d]').forEach(b=>b.classList.toggle('on', b.dataset.d===d));
+    document.getElementById('ctxname-b').textContent = {editor:'Editor',cola:'Cola de procesamiento',resultados:'Resultados'}[d];
+    document.getElementById('ctabs-b').style.display = d==='editor'?'flex':'none'; }
+  // C: highlight switch (editor/cola only; resultados via menu)
+  if(v==='c'){ document.querySelectorAll('#sw-c button').forEach(b=>b.classList.remove('on'));
+    if(d==='editor') document.querySelectorAll('#sw-c button')[0].classList.add('on');
+    if(d==='cola') document.querySelectorAll('#sw-c button')[1].classList.add('on');
+    document.querySelector('#v-c .subbar').style.display = d==='editor'?'flex':'none'; }
+}
+
+function openSheet(){ document.getElementById('scrim').classList.add('show'); }
+function closeSheet(){ document.getElementById('scrim').classList.remove('show'); }
+function toggleMenu(e){ e.stopPropagation(); document.getElementById('menu-c').classList.toggle('show'); }
+function closeMenu(){ document.getElementById('menu-c').classList.remove('show'); }
+document.addEventListener('click', ()=>closeMenu());
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeSheet(); closeMenu(); } });
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// init all three
+dest('a','editor'); dest('b','editor'); dest('c','editor');
+</script>
+</body>
+</html>

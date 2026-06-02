@@ -1,7 +1,7 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032) · 2026-06-02 (sketches 033–036) · 2026-06-02 (sketches 037–039)
-**Sketches processed:** 39 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032) · 2026-06-02 (sketches 033–036) · 2026-06-02 (sketches 037–039) · 2026-06-02 (sketches 040–043)
+**Sketches processed:** 43 (all)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
 Overlays list-forward), PNG Overlay Acquisition (Phase 21), Subtitle Styling, Caption Animation Preview,
 Title Styling (+ entrance timing), Video Effects/Transitions, Timeline (frontier), Font Picker,
@@ -12,7 +12,9 @@ Pipeline Run-Flow Spine (integration), Pipeline Settings Home (processing params
 App Nav Shell v4 (left activity rail), Style Presets (save-a-look),
 Background Render/Batch Notifications (toast + Cola-badge), Command Palette / Keyboard Model (⌘K),
 North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-Star v3 (027, superseded),
-North-Star v4 (037, current canonical Editor screen — real editor in the rail shell)
+North-Star v4 (037, current canonical Editor screen — real editor in the rail shell),
+Error & Failure States (040, inline-at-source), Modal-Stack Choreography (041, z-ladder/integration),
+Direct-Manipulation Canvas (042, frontier), Intro/Outro Home (043, dormant/scope-gated)
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
 ## Included Sketches
@@ -57,6 +59,10 @@ North-Star v4 (037, current canonical Editor screen — real editor in the rail 
 | 037 | north-star-v4 | B | North-Star v4 (real editor in the rail shell; current canonical Editor screen, supersedes 027) |
 | 038 | resultados-library | A | Resultados Library/History (uniform gallery + featured-latest hero graft; frontier) |
 | 039 | overlay-png-acquire | B | PNG Overlay Acquisition (drop onto canvas; checkerboard transparency; 3-cap; Phase 21) |
+| 040 | error-failure-states | A | Error & Failure States (inline at source; danger never action-green; C's takeover folds in for fatal) |
+| 041 | modal-stack-choreography | B | Modal-Stack Choreography (z-ladder + C's destinations graft; integration over the 6 floating surfaces) |
+| 042 | direct-manipulation-canvas | C | Direct-Manipulation Canvas (hybrid: resize handles + 9-anchor snap + layer chips; frontier/scope-expanding) |
+| 043 | intro-outro-home | B | Intro/Outro Home (timeline endcaps; dormant Phase-6 / scope-gated; C = Video-tab fallback) |
 
 ## Excluded Sketches
 _None._
@@ -374,6 +380,39 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   transparency → place) was never sketched~~ — **resolved by sketch 039-B** (drop onto the 9:16 canvas /
   acquire = place; checkerboard transparency so alpha reads; calm 3-overlay cap; flows into 019-C cards).
   Phase 21, live.
+- **Error & failure states:** **inline at the source** — each fault surfaces where it originated
+  (dropzone reject w/ the real `ffprobe`/codec reason; Whisper-down as a calm panel over the dimmed
+  stage, "el resto del editor sigue funcionando"; save-failed flips the header chip→`No se guardó` and
+  the button→`Reintentar guardado`) — 040-A. **No global error chrome; context explains the fault.**
+  Danger is its own **low-chroma red, never the reserved action-green**; the real cause line
+  (ECONNREFUSED/ENOSPC/signal 9) sits mono+muted under the plain-language explanation. **C's takeover
+  idiom folds into A** for the genuinely fatal blocks (Whisper/disk/OOM). Completes the off-happy-path
+  coverage (008 happy-off + 035 OOM completion). Anti-pattern: a header banner for a small recoverable
+  fault (040-B over-weights it); alarm-red; locking the whole editor on a transcription fault.
+- **Modal-stack choreography (integration):** one **z-ladder** governs the six independently-sketched
+  floating surfaces — toast 60 (never traps focus, survives a takeover) ▸ palette 40 (opens **over** a
+  sheet, Esc returns to it) ▸ takeover 30 (owns the screen, clears floats but the toast) ▸ sheet 20
+  (scrim + Esc, one sheet at a time) — 041-B. The build encodes the ladder literally as `Z = {…}`
+  constants. **C's "takeovers are *destinations*" reframe grafts on** (results/review are reached via the
+  rail/run-flow per 031/033, so the ladder really governs only toast/palette/sheet). Anti-pattern: two
+  sheets at once; a takeover killing the toast; the palette *replacing* (not stacking over) a sheet
+  (041-A's loss); scrimming the toast.
+- **Direct-manipulation canvas (frontier):** the complete on-canvas editing model = **hybrid** — resize
+  **handles** for size (the one thing the panel does worst) + position still **snaps to the 9 anchors**
+  with guides (the shared X/Y path, canvas px → 1080×1920 at ×4) + an on-canvas **layer-chip stack** to
+  pick an overlapped element — 042-C. Caption stays bottom-anchored (not free-dragged). Realizes the 007
+  drag frontier while keeping "global places / panel refines" (020-C/022-B/025-C). Anti-pattern: full
+  Figma box-transform (A, over-chrome); resize-as-slider (B, indirect); drag/numeric X-Y divergence;
+  covered elements unselectable.
+- **Intro/outro home (DORMANT / scope-gated):** ⚠️ a *dormant* Phase-6 capability with **no
+  `intro`/`outro` section in `pipeline-config.json` — confirm revival is in scope before building.** If
+  revived: **timeline endcaps** — intro/outro as blocks bracketing the timeline body track (whole-clip
+  category, like transitions, not per-element); tap → config in panel — 043-B. **Depends on the 020-C
+  timeline frontier shipping**, so until then **C (Video-tab section) is the fallback host** and A (5th
+  tab) is the heavier alternative; B is a *layer* on C/A, not standalone. The sketch is **also evidence
+  the feature may stay cut** as general-editor scope-creep on a talking-head reel maker. Anti-pattern:
+  building without an explicit revival decision; filing it among the per-element tabs; greening the
+  enable toggles.
 - **Build-time watch (037-B):** the one dense header row carries a lot (preset + 4 tabs + status + 2
   actions) — validate against real label widths; if it overflows, fall back to **037-A** (preset in a
   sub-bar with the tabs, two calm rows). And confirm the 035-D `✓3 ✕1` tally reads legibly on the rail

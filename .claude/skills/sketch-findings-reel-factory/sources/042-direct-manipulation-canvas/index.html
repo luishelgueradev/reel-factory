@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 042 — direct-manipulation canvas</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; user-select: none; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; }
+
+  .rail { width: 56px; flex: none; background: var(--chrome); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: var(--s-6) 0; gap: var(--s-3); }
+  .rlogo { width: 30px; height: 30px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; color: var(--stage); margin-bottom: var(--s-6); }
+  .railbtn { width: 40px; height: 40px; border-radius: var(--r-sm); border: none; background: none; color: var(--text-muted); display: grid; place-items: center; font-size: 17px; }
+  .railbtn.on { background: var(--accent-tint); color: var(--accent); }
+  .rail .rsp { flex: 1; }
+  .colwrap { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .ctxname { font-size: var(--t-md); font-weight: 600; }
+  .spacer { flex: 1; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-green { background: var(--action); color: #08220f; }
+  .ctabs { display: flex; gap: var(--s-3); margin-left: var(--s-6); }
+  .ctab { font-size: var(--t-xs); padding: 5px 11px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); cursor:pointer; }
+  .ctab.on { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); }
+
+  .work { flex: 1; min-height: 0; display: flex; gap: 1px; background: var(--border-faint); }
+  .col { background: var(--canvas); display: flex; flex-direction: column; min-height: 0; }
+  .stagecol { flex: 1; align-items: center; justify-content: center; background: var(--stage); padding: var(--s-10); }
+  .ctrlcol { flex: 0 0 320px; padding: var(--s-8); overflow-y: auto; }
+  .metacol { flex: 0 0 200px; background: var(--surface); align-items: center; justify-content: center; }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 10px 14px; text-align: center; line-height: 1.5; }
+
+  /* ── the 9:16 canvas ── */
+  .canvas { width: 270px; height: 480px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.36 0.05 250), oklch(0.19 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .el { position: absolute; cursor: grab; }
+  .el:active { cursor: grabbing; }
+  .el.title { font-family: 'Bebas Neue', sans-serif; letter-spacing: .03em; color: #fff; background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 5px; font-size: 19px; white-space: nowrap; }
+  .el.png { width: 60px; height: 60px; border-radius: 8px; background: conic-gradient(from 45deg, #ff6b9d, #ffd36b, #6bffb0, #6bb5ff, #ff6b9d); display: grid; place-items: center; font-size: 10px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .el.cap { left: 14px; right: 14px; bottom: 60px; text-align: center; font-weight: 800; font-size: 17px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.65); cursor: grab; }
+  .el.cap .lit { color: var(--accent); }
+
+  /* selection treatments */
+  .el.sel { z-index: 5; }
+  /* A & C: bounding box + resize handles */
+  .el.sel.boxed { outline: 1.5px solid var(--accent); outline-offset: 2px; }
+  .handle { position: absolute; width: 9px; height: 9px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 2px; z-index: 6; }
+  .handle.nw { left: -6px; top: -6px; cursor: nwse-resize; } .handle.ne { right: -6px; top: -6px; cursor: nesw-resize; }
+  .handle.sw { left: -6px; bottom: -6px; cursor: nesw-resize; } .handle.se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+  /* B: ring only, no handles */
+  .el.sel.ringed { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 7px; }
+
+  /* snap guides + 9 anchors */
+  .guide { position: absolute; background: var(--accent); opacity: .85; z-index: 4; pointer-events: none; }
+  .guide.v { width: 1px; top: 0; bottom: 0; } .guide.h { height: 1px; left: 0; right: 0; }
+  .anchor { position: absolute; width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--accent); transform: translate(-50%, -50%); opacity: 0; transition: opacity .12s; pointer-events: none; z-index: 3; }
+  .canvas.snapping .anchor { opacity: .35; }
+  .anchor.hot { opacity: 1; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-tint); }
+
+  /* on-canvas layer chip stack (C) for overlapping */
+  .layerchip { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; gap: 3px; z-index: 7; }
+  .layerchip .lc { width: 22px; height: 18px; border-radius: 4px; background: oklch(0.2 0.02 280 / .85); border: 1px solid var(--border-strong); font-size: 9px; color: var(--text-2); display: grid; place-items: center; cursor: pointer; }
+  .layerchip .lc.cur { border-color: var(--accent); color: var(--accent); }
+
+  .el .badge { position: absolute; top: -17px; left: 0; font-size: 8px; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); background: oklch(0.2 0.02 280 / .9); padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .el.sel .badge { display: block; } .el .badge { display: none; }
+
+  /* control column reflecting selection */
+  .seclabel { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; margin: var(--s-6) 0 var(--s-5); display: flex; align-items: center; gap: 6px; }
+  .seclabel:first-child { margin-top: 0; }
+  .seclabel::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .selhead { font-size: var(--t-md); font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: var(--s-6); }
+  .selhead .di { width: 22px; height: 22px; border-radius: var(--r-xs); background: var(--surface-2); display: grid; place-items: center; font-size: 12px; }
+  .selhead .none { color: var(--text-faint); font-weight: 400; font-size: var(--t-sm); }
+  .form2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-6); }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: var(--t-2xs); color: var(--text-muted); }
+  .field .inp { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; padding: 0 9px; font-size: var(--t-sm); color: var(--text-2); }
+  .field .inp.flash { box-shadow: 0 0 0 2px var(--accent-strong); transition: box-shadow .4s; }
+  /* 9-point preset grid (003-B) */
+  .presetgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 96px; }
+  .pcell { aspect-ratio: 1; border: 1px solid var(--border); border-radius: var(--r-xs); background: var(--surface); color: var(--text-muted); display: grid; place-items: center; cursor: pointer; font-size: 11px; }
+  .pcell:hover { border-color: var(--border-strong); color: var(--text); }
+  .pcell.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+  .rangerow { display: flex; align-items: center; gap: 10px; }
+  .rangerow input { flex: 1; }
+  .rangerow .rv { font-family: var(--mono); font-size: var(--t-xs); color: var(--text-2); width: 44px; text-align: right; }
+  .layerseg { display: flex; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+  .layerseg button { flex: 1; font: inherit; font-size: var(--t-xs); padding: 6px; background: var(--surface); border: none; color: var(--text-2); cursor: pointer; }
+  .layerseg button.on { background: var(--accent-tint); color: var(--accent); }
+
+  .vhint { font-size: var(--t-2xs); color: var(--text-faint); padding: var(--s-4) var(--s-10); text-align: center; border-top: 1px solid var(--border-faint); background: var(--canvas); flex: none; line-height: 1.5; }
+  .vhint b { color: var(--text-muted); }
+  .colwrap > .vhint { flex: none; }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 042 · direct-manipulation canvas</span>
+  <button class="vtab" onclick="show('a',this)">A · Caja + handles (Figma)</button>
+  <button class="vtab" onclick="show('b',this)">B · Anclas + tamaño en panel</button>
+  <button class="vtab active" onclick="show('c',this)">C ★ · Híbrido (handles+anclas+chips)</button>
+  <span class="hint">Arrastrá los elementos en el lienzo · seleccioná · el modelo completo de manipulación on-canvas</span>
+</nav>
+
+<div class="variant" id="v-a"></div>
+<div class="variant" id="v-b"></div>
+<div class="variant active" id="v-c"></div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// Elements on the 9:16 canvas (real schema): title (x/y px), png overlay (x/y, displayWidth, layer), caption (anchored).
+// CANVAS px → render px: 270×480 maps to 1080×1920 (×4). Position written as the same x/y the panel uses.
+const ANCHORS = [ {n:'↖',x:.12,y:.1},{n:'↑',x:.5,y:.1},{n:'↗',x:.88,y:.1},
+                  {n:'←',x:.12,y:.5},{n:'•',x:.5,y:.5},{n:'→',x:.88,y:.5},
+                  {n:'↙',x:.12,y:.9},{n:'↓',x:.5,y:.9},{n:'↘',x:.88,y:.9} ];
+
+function initVariant(v){
+  // each variant gets its own element model
+  return {
+    sel: 'title',
+    els: {
+      title: { type:'title', label:'Título', x:60, y:70, w:150, text:'3 trucos de edición' },
+      png:   { type:'png',   label:'Overlay PNG', x:150, y:120, size:60, opacity:1, layer:'front' },
+      cap:   { type:'cap',   label:'Subtítulos', text:'así <span class="lit">editás</span> rápido' },
+    },
+    snapping:false, hotAnchor:-1, guides:null,
+  };
+}
+const M = { a: initVariant('a'), b: initVariant('b'), c: initVariant('c') };
+
+const VHINT = {
+  a:'A — <b>caja + 8 handles estilo Figma</b>: click selecciona, drag mueve, handles redimensionan, guías de snap a anclas + bordes. El idioma completo de herramienta de diseño. Potente, pero más superficie de la que un panel denso necesita.',
+  b:'B — <b>anclas + tamaño en el panel</b>: el lienzo hace <b>colocación</b> (drag con snap a las 9 anclas, anillo sin handles), el panel hace <b>tamaño + capa</b>. Misma división de tareas que 020/022/025: "lo global coloca, el panel refina."',
+  c:'C — <b>híbrido</b>: handles para <b>tamaño</b> (lo que el panel hace peor) pero posición sigue con snap a las 9 anclas + guías; los elementos superpuestos muestran un <b>stack de chips de capa</b> on-canvas. Directo donde conviene, guiado donde el sistema de anclas ya manda.',
+};
+
+function shell(v){
+  return `<nav class="rail"><div class="rlogo">R</div><button class="railbtn on">✎</button><button class="railbtn">≣</button><button class="railbtn">✓</button><div class="rsp"></div><button class="railbtn">⚙</button><button class="railbtn">?</button></nav>
+  <div class="colwrap">
+    <header class="hdr"><span class="ctxname">Editor</span>
+      <div class="ctabs"><span class="ctab ${M[v].sel==='title'?'on':''}" data-tab="title">Títulos</span><span class="ctab ${M[v].sel==='cap'?'on':''}" data-tab="cap">Subtítulos</span><span class="ctab ${M[v].sel==='png'?'on':''}" data-tab="png">Overlays</span></div>
+      <div class="spacer"></div><button class="btn btn-out" style="font-size:var(--t-xs);padding:6px 12px">Guardar</button><button class="btn btn-green" style="font-size:var(--t-xs);padding:6px 12px">▶ Render</button></header>
+    <div class="work">
+      <div class="col stagecol"><div class="canvas ${M[v].snapping?'snapping':''}" data-canvas>${canvasInner(v)}</div></div>
+      <div class="col ctrlcol">${controls(v)}</div>
+      <div class="col metacol"><div class="soon">Metadata<br>—próximamente—</div></div>
+    </div>
+    <div class="vhint">${VHINT[v]}</div>
+  </div>`;
+}
+
+function canvasInner(v){
+  const m = M[v]; let h = '';
+  // anchors (B & C show the 9-anchor field while snapping)
+  if(v!=='a' || m.snapping){ h += ANCHORS.map((a,i)=>`<div class="anchor ${m.hotAnchor===i?'hot':''}" style="left:${a.x*100}%;top:${a.y*100}%"></div>`).join(''); }
+  if(v==='a' && m.snapping){ h += ANCHORS.map((a,i)=>`<div class="anchor ${m.hotAnchor===i?'hot':''}" style="left:${a.x*100}%;top:${a.y*100}%"></div>`).join(''); }
+  // guides
+  if(m.guides){ if(m.guides.x!=null) h+=`<div class="guide v" style="left:${m.guides.x}px"></div>`; if(m.guides.y!=null) h+=`<div class="guide h" style="top:${m.guides.y}px"></div>`; }
+  // elements (paint order: cap, png/title by layer — keep simple)
+  const order = ['cap','title','png'];
+  order.forEach(k=>{ const e=m.els[k]; const seld = m.sel===k;
+    const boxClass = seld ? (v==='b' ? 'sel ringed' : 'sel boxed') : '';
+    if(k==='cap'){ h += `<div class="el cap ${boxClass}" data-el="cap"><span class="badge">${e.label}</span>${e.text}</div>`; }
+    else if(k==='title'){ h += `<div class="el title ${boxClass}" data-el="title" style="left:${e.x}px;top:${e.y}px"><span class="badge">${e.label}</span>${e.text}${handles(v,seld)}</div>`; }
+    else if(k==='png'){ h += `<div class="el png ${boxClass}" data-el="png" style="left:${e.x}px;top:${e.y}px;width:${e.size}px;height:${e.size}px;opacity:${e.opacity}"><span class="badge">${e.label}</span>PNG${handles(v,seld)}</div>`; }
+  });
+  // C: layer chip stack when title & png overlap
+  if(v==='c'){ const overlap = rectsOverlap(m.els.title, m.els.png); if(overlap){ h += `<div class="layerchip"><div class="lc ${m.sel==='png'?'cur':''}" data-el="png" title="PNG (adelante)">▣</div><div class="lc ${m.sel==='title'?'cur':''}" data-el="title" title="Título (atrás)">T</div></div>`; } }
+  return h;
+}
+function handles(v,seld){ if(!seld) return ''; if(v==='b') return ''; // B: no handles
+  return ['nw','ne','sw','se'].map(c=>`<div class="handle ${c}" data-handle="${c}"></div>`).join(''); }
+
+function rectsOverlap(a,b){ const aw=a.w||a.size||60, ah=28; const bw=b.size, bh=b.size; return a.x < b.x+bw && a.x+aw > b.x && a.y < b.y+bh && a.y+ah > b.y; }
+
+function controls(v){
+  const m = M[v]; const e = m.els[m.sel];
+  if(!e) return `<div class="selhead"><span class="none">Nada seleccionado — tocá un elemento</span></div>`;
+  const icon = e.type==='title'?'T':e.type==='png'?'▣':'☰';
+  let body = '';
+  // Position section — differs by variant
+  if(e.type!=='cap'){
+    const showXY = v==='a' || v==='c'; // anchors are the position UI in B; A/C also show numeric
+    body += `<div class="seclabel">Posición</div>
+      <div style="display:flex;gap:var(--s-8);align-items:flex-start;margin-bottom:var(--s-3)">
+        <div class="presetgrid">${ANCHORS.map((a,i)=>`<div class="pcell ${m.hotAnchor===i?'on':''}" data-anchor="${i}">${a.n}</div>`).join('')}</div>
+        ${ v!=='b' ? `<div style="flex:1"><div class="form2"><div class="field"><label>X (px)</label><div class="inp" id="x-${v}">${Math.round(e.x*4)}</div></div><div class="field"><label>Y (px)</label><div class="inp" id="y-${v}">${Math.round(e.y*4)}</div></div></div></div>` : `<div style="flex:1;font-size:var(--t-2xs);color:var(--text-faint);line-height:1.5">Arrastrá en el lienzo o tocá una ancla. El tamaño se ajusta abajo.</div>` }
+      </div>`;
+  }
+  // Size — where it lives differs
+  if(e.type==='png'){
+    if(v==='b'){ body += `<div class="seclabel">Tamaño</div><div class="rangerow"><input type="range" min="30" max="120" value="${e.size}" data-size><span class="rv">${e.size}px</span></div>`; }
+    else { body += `<div class="seclabel">Tamaño</div><div class="rangerow"><input type="range" min="30" max="120" value="${e.size}" data-size><span class="rv">${e.size}px</span></div><div style="font-size:var(--t-2xs);color:var(--text-faint);margin-top:4px">…o arrastrá los handles de las esquinas.</div>`; }
+    body += `<div class="seclabel">Opacidad</div><div class="rangerow"><input type="range" min="0" max="100" value="${e.opacity*100}" data-op><span class="rv">${Math.round(e.opacity*100)}%</span></div>`;
+    body += `<div class="seclabel">Capa</div><div class="layerseg"><button class="${e.layer==='back'?'on':''}" data-layer="back">Detrás del texto</button><button class="${e.layer==='front'?'on':''}" data-layer="front">Delante</button></div>`;
+  } else if(e.type==='title'){
+    body += `<div class="seclabel">Texto</div><div class="field"><div class="inp">${e.text}</div></div>`;
+    body += `<div class="seclabel">Tamaño · Caja</div><div class="form2"><div class="field"><label>Tamaño</label><div class="inp">19 px</div></div><div class="field"><label>Radio caja</label><div class="inp">5 px</div></div></div>`;
+  } else {
+    body += `<div class="seclabel">Subtítulos</div><div style="font-size:var(--t-xs);color:var(--text-2);line-height:1.6">Anclados al borde inferior — la posición se ajusta con el offset, no arrastrando libremente (cubren ancho completo).</div>`;
+  }
+  return `<div class="selhead"><span class="di">${icon}</span>${e.label}</div>${body}`;
+}
+
+// ── drag logic ──
+let drag = null;
+document.addEventListener('mousedown', e=>{
+  const v = e.target.closest('.variant')?.id.split('-')[1]; if(!v) return;
+  const handle = e.target.closest('[data-handle]');
+  const elNode = e.target.closest('[data-el]');
+  if(handle && (v==='a'||v==='c')){ const el=handle.closest('[data-el]'); const key=el.getAttribute('data-el'); if(M[v].els[key].type==='png'){ drag={v,key,mode:'resize',corner:handle.getAttribute('data-handle'),sx:e.clientX,sy:e.clientY,start:M[v].els[key].size}; e.preventDefault(); return; } }
+  if(elNode){ const key=elNode.getAttribute('data-el'); M[v].sel=key; const el=M[v].els[key];
+    if(el.type!=='cap'){ const rect=elNode.closest('[data-canvas]').getBoundingClientRect(); drag={v,key,mode:'move',ox:e.clientX-rect.left-el.x,oy:e.clientY-rect.top-el.y,rect}; M[v].snapping=true; }
+    paint(v); e.preventDefault(); return; }
+});
+document.addEventListener('mousemove', e=>{
+  if(!drag) return; const v=drag.v, el=M[v].els[drag.key];
+  if(drag.mode==='move'){
+    let nx = e.clientX - drag.rect.left - drag.ox; let ny = e.clientY - drag.rect.top - drag.oy;
+    nx = Math.max(0, Math.min(270-(el.w||el.size||40), nx)); ny = Math.max(0, Math.min(480-(el.size||28), ny));
+    // snap to nearest anchor within 18px
+    const ew = (el.w||el.size||60), eh=(el.size||28); const cx=nx+ew/2, cy=ny+eh/2;
+    let hot=-1, gx=null, gy=null;
+    ANCHORS.forEach((a,i)=>{ const ax=a.x*270, ay=a.y*480; if(Math.abs(cx-ax)<18 && Math.abs(cy-ay)<18){ hot=i; nx=ax-ew/2; ny=ay-eh/2; gx=ax; gy=ay; } });
+    el.x=nx; el.y=ny; M[v].hotAnchor=hot; M[v].guides=(hot>=0)?{x:gx,y:gy}:null;
+    paint(v);
+  } else if(drag.mode==='resize'){
+    const d = (drag.corner==='se'||drag.corner==='ne') ? (e.clientX-drag.sx) : -(e.clientX-drag.sx);
+    el.size = Math.max(30, Math.min(120, drag.start + d)); paint(v);
+  }
+});
+document.addEventListener('mouseup', ()=>{ if(drag){ const v=drag.v; M[v].snapping=false; M[v].guides=null; setTimeout(()=>{M[v].hotAnchor=-1; paint(v);}, 600); paint(v); drag=null; } });
+
+document.addEventListener('click', e=>{
+  const v = e.target.closest('.variant')?.id.split('-')[1]; if(!v) return;
+  const tab = e.target.closest('[data-tab]'); if(tab){ M[v].sel=tab.getAttribute('data-tab'); paint(v); return; }
+  const chip = e.target.closest('.lc'); if(chip){ M[v].sel=chip.getAttribute('data-el'); paint(v); return; }
+  const anc = e.target.closest('[data-anchor]'); if(anc){ const i=+anc.getAttribute('data-anchor'); const el=M[v].els[M[v].sel]; if(el&&el.type!=='cap'){ const ew=(el.w||el.size||60),eh=(el.size||28); el.x=ANCHORS[i].x*270-ew/2; el.y=ANCHORS[i].y*480-eh/2; M[v].hotAnchor=i; M[v].snapping=true; paint(v); setTimeout(()=>{M[v].hotAnchor=-1;M[v].snapping=false;paint(v);},700);} return; }
+  const layer = e.target.closest('[data-layer]'); if(layer){ M[v].els[M[v].sel].layer=layer.getAttribute('data-layer'); paint(v); return; }
+});
+document.addEventListener('input', e=>{
+  const v = e.target.closest('.variant')?.id.split('-')[1]; if(!v) return;
+  if(e.target.hasAttribute('data-size')){ M[v].els.png.size=+e.target.value; paint(v); }
+  if(e.target.hasAttribute('data-op')){ M[v].els.png.opacity=+e.target.value/100; paint(v); }
+});
+
+function paint(v){ document.getElementById('v-'+v).innerHTML = shell(v); }
+['a','b','c'].forEach(paint);
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(x=>x.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 037 — north-star v4 (real editor in the rail shell)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes sheetin { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes flashin { 0% { box-shadow: 0 0 0 2px var(--accent-strong); } 100% { box-shadow: 0 0 0 2px transparent; } }
+
+  /* ─────────────── the left activity rail (033-B, shared across variants) ─────────────── */
+  .rail { width: 56px; flex: none; background: var(--chrome); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: var(--s-6) 0; gap: var(--s-3); }
+  .rlogo { width: 30px; height: 30px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; color: var(--stage); margin-bottom: var(--s-6); }
+  .railbtn { width: 40px; height: 40px; border-radius: var(--r-sm); border: none; background: none; color: var(--text-muted); cursor: pointer; display: grid; place-items: center; font-size: 17px; position: relative; transition: all var(--dur) var(--ease); }
+  .railbtn:hover { background: var(--surface-2); color: var(--text); }
+  .railbtn.on { background: var(--accent-tint); color: var(--accent); }
+  .railbtn.on::before { content: ""; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--accent); }
+  .railbtn .lab { position: absolute; left: 48px; top: 50%; transform: translateY(-50%); background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font-size: var(--t-xs); font-weight: 500; padding: 4px 9px; border-radius: var(--r-xs); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity var(--dur); box-shadow: var(--shadow-md); z-index: 50; }
+  .railbtn:hover .lab { opacity: 1; }
+  /* 035-D tally REHOMED onto the rail Cola button (header vswitch is gone) */
+  .railbtn .tally { position: absolute; top: 2px; right: 2px; display: flex; gap: 2px; font-size: 8px; font-weight: 700; font-family: var(--mono); }
+  .railbtn .tally .ok { color: var(--success); } .railbtn .tally .er { color: var(--danger); }
+  .rail .rsp { flex: 1; }
+
+  /* ─────────────── the contextual header (no brand — rail owns it) ─────────────── */
+  .colwrap { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .ctxname { font-size: var(--t-md); font-weight: 600; color: var(--text); }
+  .spacer { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.dirty { color: var(--warning); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-green { background: var(--action); color: #08220f; border-color: transparent; }
+  .btn-green:hover { background: var(--action-hover); }
+  .btn-sm { padding: 5px 11px; font-size: var(--t-xs); }
+
+  /* content tabs (Títulos·Overlays·Subtítulos·Video) */
+  .ctabs { display: flex; gap: var(--s-3); }
+  .ctab { font-size: var(--t-xs); padding: 5px 11px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; transition: all var(--dur) var(--ease); }
+  .ctab:hover { color: var(--text-2); }
+  .ctab.on { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); }
+  .ctab.push { margin-left: auto; }
+
+  /* ── the preset affordance (034) — three placements explored ── */
+  .preset { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 5px 10px 5px 8px; cursor: pointer; font-size: var(--t-sm); color: var(--text); transition: all var(--dur) var(--ease); white-space: nowrap; }
+  .preset:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+  .preset .pl { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .preset .pv { font-weight: 600; }
+  .preset .mod { color: var(--warning); font-size: var(--t-2xs); font-weight: 600; }
+  .preset .car { color: var(--text-muted); font-size: 10px; }
+  .subbar { height: 40px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-10); background: var(--canvas); border-bottom: 1px solid var(--border-faint); }
+
+  /* ─────────────── the REAL dense editor body (027/023 composed for real) ─────────────── */
+  .body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .work { flex: 1; min-height: 0; display: flex; gap: 1px; background: var(--border-faint); }
+  .col { background: var(--canvas); display: flex; flex-direction: column; min-height: 0; }
+  .stagecol { flex: 0 1 360px; align-items: center; justify-content: center; background: var(--stage); padding: var(--s-10); }
+  .ctrlcol { flex: 1; padding: var(--s-8) var(--s-10); overflow-y: auto; }
+  .metacol { flex: 0 0 230px; background: var(--surface); align-items: center; justify-content: center; padding: var(--s-8); }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 10px 14px; text-align: center; line-height: 1.5; }
+
+  /* the stage with the LIVE caption (025-C: word-by-word highlight plays) */
+  .stage9x16 { width: 202px; height: 359px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .stage9x16 .ttl { position: absolute; top: 34px; left: 16px; right: 16px; text-align: center; font-weight: 700; font-size: 13px; background: rgba(0,0,0,.5); color: #fff; padding: 6px; border-radius: 5px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
+  .stage9x16 .cap { position: absolute; bottom: 52px; left: 8px; right: 8px; text-align: center; font-weight: 800; font-size: 18px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.65); line-height: 1.25; }
+  .stage9x16 .cap .w { transition: color .12s var(--ease); }
+  .stage9x16 .cap .w.lit { color: var(--accent); }
+  .transport { display: flex; align-items: center; gap: var(--s-4); margin-top: var(--s-6); width: 202px; }
+  .transport .pbtn { width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); display: grid; place-items: center; cursor: pointer; font-size: 11px; }
+  .transport .track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); position: relative; overflow: hidden; }
+  .transport .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 2px; }
+  .transport .tt { font-size: var(--t-2xs); color: var(--text-faint); font-family: var(--mono); }
+
+  /* the dense Subtitles tab (011-C) — the honest density stress, shown live */
+  .seclead { display: flex; align-items: center; gap: var(--s-5); margin-bottom: var(--s-6); }
+  .specimen { flex: 1; height: 58px; border-radius: var(--r-sm); background: oklch(0.22 0.03 280); border: 1px solid var(--border); display: grid; place-items: center; position: relative; overflow: hidden; }
+  .specimen .sc { font-weight: 800; font-size: 17px; color: #fff; }
+  .specimen .sc .w { transition: color .12s var(--ease); } .specimen .sc .w.lit { color: var(--accent); }
+  .specimen .badge { position: absolute; top: 5px; left: 7px; font-size: 8px; color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+  .seclabel { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; margin: var(--s-8) 0 var(--s-5); display: flex; align-items: center; gap: 6px; }
+  .seclabel::after { content: ""; flex: 1; height: 1px; background: var(--border-faint); }
+  .modegrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-4); }
+  .modecard { border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5); font-size: var(--t-xs); color: var(--text-2); cursor: pointer; text-align: center; background: var(--surface); transition: all var(--dur) var(--ease); }
+  .modecard:hover { border-color: var(--border-strong); }
+  .modecard.on { border-color: var(--accent-strong); background: var(--accent-tint); color: var(--accent); }
+  .modecard .mt { font-weight: 600; display: block; }
+  .form2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-6); }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: var(--t-2xs); color: var(--text-muted); }
+  .field .inp { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; padding: 0 9px; font-size: var(--t-sm); color: var(--text-2); }
+  .colormatrix { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); }
+  .swatchrow { display: flex; align-items: center; gap: var(--s-4); font-size: var(--t-xs); color: var(--text-2); }
+  .swatchrow .sw { width: 22px; height: 22px; border-radius: var(--r-xs); border: 1px solid var(--border-strong); flex: none; }
+  .effectrow { display: flex; align-items: center; justify-content: space-between; height: 34px; border-top: 1px solid var(--border-faint); font-size: var(--t-sm); color: var(--text-2); }
+  .effectrow .tog { width: 32px; height: 18px; border-radius: var(--r-full); background: var(--surface-2); position: relative; cursor: pointer; }
+  .effectrow .tog.on { background: var(--accent-strong); }
+  .effectrow .tog i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left var(--dur) var(--ease); }
+  .effectrow .tog.on i { left: 16px; }
+
+  /* ── rail-resident preset strip (variant C) ── */
+  .railpreset { width: 40px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border); padding: var(--s-3) 0; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: all var(--dur) var(--ease); }
+  .railpreset:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+  .railpreset .rsw { width: 22px; height: 22px; border-radius: var(--r-xs); background: linear-gradient(180deg, oklch(0.3 0.08 320), oklch(0.18 0.04 300)); display: grid; place-items: center; font-size: 9px; font-weight: 800; color: #ffe14d; }
+  .railpreset .rlab { font-size: 7px; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+  .railpreset .rmod { width: 5px; height: 5px; border-radius: 50%; background: var(--warning); }
+
+  /* preset dropdown (shared) */
+  .dropdown { position: absolute; width: 248px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); padding: var(--s-3); z-index: 120; display: none; animation: fadein .14s var(--ease); }
+  .dropdown.show { display: block; }
+  .dropdown .ph { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; padding: var(--s-3) var(--s-5) var(--s-2); }
+  .pitem { display: flex; align-items: center; gap: var(--s-5); padding: 7px 9px; border-radius: var(--r-xs); cursor: pointer; }
+  .pitem:hover { background: var(--surface-hover); }
+  .pitem.on { background: var(--accent-tint); }
+  .pitem .sw { width: 26px; height: 26px; border-radius: var(--r-xs); flex: none; display: grid; place-items: center; font-weight: 800; font-size: 11px; }
+  .pitem .pn { font-size: var(--t-sm); color: var(--text); font-weight: 500; }
+  .pitem.on .pn { color: var(--accent); }
+  .pitem .pmeta { font-size: var(--t-2xs); color: var(--text-muted); }
+  .pitem .chk { margin-left: auto; color: var(--accent); }
+  .dropdown .div { height: 1px; background: var(--border-faint); margin: var(--s-3) 0; }
+  .dropdown .saveas { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: var(--r-xs); cursor: pointer; color: var(--accent); font-size: var(--t-sm); font-weight: 500; }
+  .dropdown .saveas:hover { background: var(--accent-tint-2); }
+  .dropdown .saveas.dis { color: var(--text-faint); cursor: default; }
+
+  .vhint { font-size: var(--t-2xs); color: var(--text-faint); padding: var(--s-4) var(--s-10); text-align: center; border-top: 1px solid var(--border-faint); background: var(--canvas); flex: none; line-height: 1.5; }
+  .vhint b { color: var(--text-muted); }
+
+  /* vnav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 037 · north-star v4</span>
+  <button class="vtab" onclick="show('a',this)">A · Preset en sub-barra (con tabs)</button>
+  <button class="vtab active" onclick="show('b',this)">B ★ · Una fila densa (preset + tabs + acciones)</button>
+  <button class="vtab" onclick="show('c',this)">C · Preset en el riel (app-scope)</button>
+  <span class="hint">El editor REAL dentro del riel 033-B · ¿dónde vive el preset (034) y el tally <b style="color:var(--success)">✓3</b><b style="color:var(--danger)">✕1</b> (035)?</span>
+</nav>
+
+<!-- ════════ A · preset in a sub-bar with the tabs ════════ -->
+<div class="variant" id="v-a">
+  <nav class="rail">
+    <div class="rlogo">R</div>
+    <button class="railbtn on">✎<span class="lab">Editor</span></button>
+    <button class="railbtn">≣<span class="lab">Cola · 1 en proceso</span><span class="tally"><span class="ok">✓3</span><span class="er">✕1</span></span></button>
+    <button class="railbtn">✓<span class="lab">Resultados</span></button>
+    <div class="rsp"></div>
+    <button class="railbtn">⚙<span class="lab">Procesamiento</span></button>
+    <button class="railbtn">?<span class="lab">Atajos (⌘K)</span></button>
+  </nav>
+  <div class="colwrap">
+    <header class="hdr">
+      <span class="ctxname">Editor</span>
+      <div class="spacer"></div>
+      <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+      <button class="btn btn-out">Guardar config</button>
+      <button class="btn btn-green">▶ Render</button>
+    </header>
+    <div class="subbar">
+      <div style="position:relative">
+        <div class="preset" onclick="toggleDD('a',event)"><span class="pl">Estilo</span><span class="pv">Mi estilo TikTok</span><span class="mod">· Modificado</span><span class="car">▾</span></div>
+        <div class="dropdown" id="dd-a" style="top:34px;left:0"></div>
+      </div>
+      <div class="ctabs"><span class="ctab">Títulos</span><span class="ctab on">Subtítulos</span><span class="ctab">Overlays</span><span class="ctab push">Video</span></div>
+    </div>
+    <div class="body" id="body-a"></div>
+    <div class="vhint">A — el <b>preset</b> y los <b>tabs</b> comparten una sub-barra ("qué look · qué elemento"); el header queda para estado + Guardar + Render. El tally <b>✓3✕1</b> vive en el botón Cola del riel.</div>
+  </div>
+</div>
+
+<!-- ════════ B · one dense row ════════ -->
+<div class="variant active" id="v-b">
+  <nav class="rail">
+    <div class="rlogo">R</div>
+    <button class="railbtn on">✎<span class="lab">Editor</span></button>
+    <button class="railbtn">≣<span class="lab">Cola · 1 en proceso</span><span class="tally"><span class="ok">✓3</span><span class="er">✕1</span></span></button>
+    <button class="railbtn">✓<span class="lab">Resultados</span></button>
+    <div class="rsp"></div>
+    <button class="railbtn">⚙<span class="lab">Procesamiento</span></button>
+    <button class="railbtn">?<span class="lab">Atajos (⌘K)</span></button>
+  </nav>
+  <div class="colwrap">
+    <header class="hdr">
+      <div style="position:relative">
+        <div class="preset" onclick="toggleDD('b',event)"><span class="pl">Estilo</span><span class="pv">Mi estilo TikTok</span><span class="mod">· Modificado</span><span class="car">▾</span></div>
+        <div class="dropdown" id="dd-b" style="top:42px;left:0"></div>
+      </div>
+      <div class="ctabs" style="margin-left:var(--s-6)"><span class="ctab">Títulos</span><span class="ctab on">Subtítulos</span><span class="ctab">Overlays</span></div>
+      <div class="spacer"></div>
+      <span class="ctab" style="margin-right:var(--s-6)">Video</span>
+      <span class="chip dirty"><span class="dot"></span>Sin guardar</span>
+      <button class="btn btn-out">Guardar</button>
+      <button class="btn btn-green">▶ Render</button>
+    </header>
+    <div class="body" id="body-b"></div>
+    <div class="vhint">B — <b>una sola fila</b>: el preset toma el viejo hueco de la marca (que ahora vive en el riel), luego los tabs, luego estado + acciones. Lo más denso, idioma Linear. Riesgo: la fila se llena.</div>
+  </div>
+</div>
+
+<!-- ════════ C · preset on the rail (app-scope) ════════ -->
+<div class="variant" id="v-c">
+  <nav class="rail">
+    <div class="rlogo">R</div>
+    <div style="position:relative">
+      <div class="railpreset" onclick="toggleDD('c',event)"><div class="rsw">Aa</div><span class="rlab">Estilo</span><span class="rmod"></span></div>
+      <div class="dropdown" id="dd-c" style="top:0;left:48px"></div>
+    </div>
+    <div style="height:1px;background:var(--border);width:30px;margin:var(--s-3) 0"></div>
+    <button class="railbtn on">✎<span class="lab">Editor</span></button>
+    <button class="railbtn">≣<span class="lab">Cola · 1 en proceso</span><span class="tally"><span class="ok">✓3</span><span class="er">✕1</span></span></button>
+    <button class="railbtn">✓<span class="lab">Resultados</span></button>
+    <div class="rsp"></div>
+    <button class="railbtn">⚙<span class="lab">Procesamiento</span></button>
+    <button class="railbtn">?<span class="lab">Atajos (⌘K)</span></button>
+  </nav>
+  <div class="colwrap">
+    <header class="hdr">
+      <span class="ctxname">Editor</span>
+      <div class="ctabs" style="margin-left:var(--s-8)"><span class="ctab">Títulos</span><span class="ctab on">Subtítulos</span><span class="ctab">Overlays</span><span class="ctab push">Video</span></div>
+      <span class="chip dirty" style="margin-left:var(--s-6)"><span class="dot"></span>Sin guardar</span>
+      <button class="btn btn-out">Guardar</button>
+      <button class="btn btn-green">▶ Render</button>
+    </header>
+    <div class="body" id="body-c"></div>
+    <div class="vhint">C — el <b>preset es app-scope</b> (como ⚙): vive en el riel, arriba, con un mini-swatch + punto Modificado. El header queda limpio (tabs + estado + acciones). Pregunta: ¿un look es global como Procesamiento, o de editor?</div>
+  </div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// ── the live caption (025-C): one paint(), drives both stage + specimen ──
+const WORDS = ['así','editás','tus','reels','en','minutos'];
+let frame = 0;
+function paintCaption(){
+  const lit = frame % WORDS.length;
+  const html = WORDS.map((w,i)=>`<span class="w${i===lit?' lit':''}">${w}</span>`).join(' ');
+  document.querySelectorAll('.cap, .specimen .sc').forEach(el=>el.innerHTML = html);
+  document.querySelectorAll('.transport .track i').forEach(i=>i.style.width = `${(lit+1)/WORDS.length*100}%`);
+  document.querySelectorAll('.transport .tt').forEach(t=>t.textContent = `0:0${Math.min(9,lit+1)} / 0:14`);
+}
+let playing = true;
+setInterval(()=>{ if(playing){ frame++; paintCaption(); } }, 620);
+
+// ── the real dense editor body (Subtitles tab shown — the honest density test) ──
+function editorBody(){
+  return `<div class="work">
+    <div class="col stagecol">
+      <div class="stage9x16"><div class="ttl">3 trucos de edición</div><div class="cap"></div></div>
+      <div class="transport"><div class="pbtn" onclick="playing=!playing;this.textContent=playing?'❚❚':'▶'">❚❚</div><div class="track"><i></i></div><span class="tt"></span></div>
+    </div>
+    <div class="col ctrlcol">
+      <div class="seclead">
+        <div class="specimen"><span class="badge">muestra · loop</span><div class="sc"></div></div>
+      </div>
+      <div class="seclabel">Modo de resaltado</div>
+      <div class="modegrid">
+        <div class="modecard on"><span class="mt">Palabra</span>una a una</div>
+        <div class="modecard"><span class="mt">Frase</span>bloque</div>
+        <div class="modecard"><span class="mt">Karaoke</span>relleno</div>
+      </div>
+      <div class="seclabel">Tipografía · Tamaño</div>
+      <div class="form2">
+        <div class="field"><label>Fuente</label><div class="inp">Bebas Neue ▾</div></div>
+        <div class="field"><label>Peso</label><div class="inp">800 · Extrabold</div></div>
+        <div class="field"><label>Tamaño</label><div class="inp">18 px</div></div>
+        <div class="field"><label>Interlínea</label><div class="inp">1.25</div></div>
+      </div>
+      <div class="seclabel">Colores</div>
+      <div class="colormatrix">
+        <div class="swatchrow"><span class="sw" style="background:#fff"></span>Texto base</div>
+        <div class="swatchrow"><span class="sw" style="background:var(--accent)"></span>Resaltado</div>
+        <div class="swatchrow"><span class="sw" style="background:#0a0a14"></span>Contorno</div>
+        <div class="swatchrow"><span class="sw" style="background:transparent"></span>Fondo</div>
+      </div>
+      <div class="seclabel">Efectos</div>
+      <div class="effectrow"><span>Glow</span><div class="tog on" onclick="this.classList.toggle('on')"><i></i></div></div>
+      <div class="effectrow"><span>Caja de fondo</span><div class="tog" onclick="this.classList.toggle('on')"><i></i></div></div>
+    </div>
+    <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+  </div>`;
+}
+['a','b','c'].forEach(v=>{ document.getElementById('body-'+v).innerHTML = editorBody(); });
+paintCaption();
+
+// ── shared preset dropdown ──
+const PRESETS = [
+  { id:'tiktok', name:'Mi estilo TikTok', meta:'Bebas · amarillo · glow', sw:'background:linear-gradient(180deg,oklch(0.3 0.08 320),oklch(0.18 0.04 300));color:#ffe14d', on:true },
+  { id:'podcast',name:'Podcast clips', meta:'Inter · blanco · caja', sw:'background:linear-gradient(180deg,oklch(0.34 0.05 255),oklch(0.2 0.03 280));color:#fff' },
+  { id:'bold', name:'Titular grande', meta:'Archivo · cian', sw:'background:linear-gradient(180deg,oklch(0.28 0.06 200),oklch(0.16 0.03 220));color:#7fe9ff' },
+];
+function buildDD(v){
+  const items = PRESETS.map(p=>`<div class="pitem ${p.on?'on':''}"><div class="sw" style="${p.sw}">Aa</div><div><div class="pn">${p.name}</div><div class="pmeta">${p.meta}</div></div>${p.on?'<span class="chk">✓</span>':''}</div>`).join('');
+  document.getElementById('dd-'+v).innerHTML = `<div class="ph">Aplicar un estilo (los 4 tabs)</div>${items}<div class="div"></div><div class="saveas">＋ Guardar el actual como estilo…</div>`;
+}
+['a','b','c'].forEach(buildDD);
+function toggleDD(v,e){ e.stopPropagation(); document.querySelectorAll('.dropdown').forEach(d=>{ if(d.id!=='dd-'+v) d.classList.remove('show'); }); document.getElementById('dd-'+v).classList.toggle('show'); }
+document.addEventListener('click', ()=>document.querySelectorAll('.dropdown').forEach(d=>d.classList.remove('show')));
+
+// content-tab switching (visual only — all show the Subtitles dense tab)
+document.addEventListener('click', e=>{ const t=e.target.closest('.ctab'); if(!t) return; t.parentElement.querySelectorAll('.ctab').forEach(x=>x.classList.remove('on')); t.classList.add('on'); });
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

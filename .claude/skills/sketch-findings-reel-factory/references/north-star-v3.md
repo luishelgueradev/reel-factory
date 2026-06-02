@@ -1,6 +1,12 @@
-# North-Star v3 — Current Canonical Screen (live preview folded in)
+# North-Star v3 — Canonical Screen (live preview folded in) — SUPERSEDED
 
-The **current canonical screen** for the Phase 22 redesign. **Supersedes `north-star-v2.md` (sketch
+⚠️ **Superseded by `north-star-v4.md` (sketch 037)** as the canonical whole-screen Editor view. v3's
+*content* still holds — it's the live-preview milestone — but its **header-resident frame is stale**:
+sketch 033 moved the brand into a left activity rail and made the header purely-contextual, and 037
+recomposed this editor *inside* that rail shell. Read v4 for the current screen; keep v3 for the
+caption-animation coherence findings it settled.
+
+Historically the **canonical screen** for the Phase 22 redesign. **Superseded `north-star-v2.md` (sketch
 023)** as the screen the real React build targets. 023-B was composed *before* sketch 025 retired the
 static subtitle specimens, so its canonical drawing still froze the caption. v3 folds the **live
 word-by-word caption preview** into the same committed-scope slice and re-verifies coherence. Read

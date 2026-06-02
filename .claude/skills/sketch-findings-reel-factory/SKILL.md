@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-reel-factory
-description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, animated caption preview, title entrance timing, overlays tab density, font picker, header action zone, render surface, render last-mile/results screen, AI metadata column, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star v3 canonical screen w/ live preview & scope boundary, pipeline-step inspection (transcript & silence-cut review), batch queue / multi-job status, pipeline run-flow spine (render·inspection·results·queue reconciled), pipeline settings home / processing-params sheet, app-level nav shell / left activity rail, named style presets, background render/batch notifications, ⌘K command palette / keyboard model). Auto-loaded during UI implementation on reel-factory.
+description: Validated design decisions, CSS patterns, and visual direction from Phase 22 sketch experiments for the Remotion Studio control panel (3-column shell, control density, position presets, per-tab structure & TabLead/TabForm skeleton, subtitle & title styling controls, animated caption preview, title entrance timing, overlays tab density, PNG overlay acquisition (drop→preview→place, checkerboard transparency, 3-cap), font picker, header action zone, render surface, render last-mile/results screen, Resultados persistent library/history, AI metadata column, transitions Video tab, timeline strip, drag-to-position, first-run/empty workspace, responsive breakpoint reflow, north-star v4 canonical Editor screen (real editor in the rail shell) w/ live preview & scope boundary, pipeline-step inspection (transcript & silence-cut review), batch queue / multi-job status, pipeline run-flow spine (render·inspection·results·queue reconciled), pipeline settings home / processing-params sheet, app-level nav shell / left activity rail, named style presets, background render/batch notifications, ⌘K command palette / keyboard model). Auto-loaded during UI implementation on reel-factory.
 ---
 
 <context>
@@ -47,7 +47,16 @@ chip; **background render/batch notifications** — a synthesis of a transient t
 persists) + a durable Cola-badge tally (`✓3 ✕1`, the persistent record), zero new header chrome,
 honest about single-job-foreground vs queued-batch; and the **⌘K command palette** — a Raycast-style
 discoverable keyboard entry point over an honest command set, with C's G-chord accelerators kept layered
-underneath for power users).
+underneath for power users), 2026-06-02 (sketches 037–039: **north-star v4** — the *real* dense editor
+(027-B's live caption + dense Subtitles tab) recomposed **inside the 033-B rail shell**, resolving the
+recompose-staleness conflicts the rail created (the 034 preset rehomes to the header as an *editor-scoped*
+control; the 035-D `✓3 ✕1` tally rehomes onto the rail's Cola button) — **supersedes 027 as the canonical
+Editor screen**; the **Resultados persistent library** — the rail's previously-unkept promise drawn as a
+browsable gallery/history of finished reels grounded in the real `output/` dir (uniform 9:16 grid + a
+featured-latest hero grafted in, empty-state teaches the surface); and **PNG overlay acquisition** for the
+live Phase 21 feature — drop a PNG **onto the 9:16 canvas** (acquire = place, one gesture), transparency
+rendered as a **checkerboard** so alpha reads as transparent not black, the honest **3-overlay cap** as a
+calm disabled state, flowing into the 019-C list-forward cards).
 </context>
 
 <design_direction>
@@ -88,19 +97,33 @@ AI metadata** (026-C: TikTok/Reels/Shorts with per-platform char limits + hashta
 AI phase, but it justifies the column's reserved width. Green discipline held throughout: AI
 generate/copy use **accent (blue)**, never the reserved action-green.
 
-**The whole-app frame around the canonical Editor screen is now sketch 033-B (nav shell v4), which
-supersedes 027 as the *app map*** (027 stays the canonical *Editor* screen; 033 is the shell it hangs
-in). A **thin 56px left activity rail** owns app-level wayfinding — Editor · Cola · Resultados · ⚙ · ? —
-so the 013-B header becomes the **purely-contextual bar of the current destination** (content tabs are
-editor-only, never app chrome). This Linear/Figma separation of app-navigation from screen-actions was
-forced once 030 (queue), 031 (run spine) and 032 (settings) accreted destinations the header was never
-designed to carry. Hanging off that shell: **named style presets** (034-A — an always-visible header
-bar where a saved look captures all four tabs, with an ambient *Modificado* divergence state),
-**background render/batch notifications** (035-D — transient toast for the moment + durable Cola-badge
-tally for the record, OOM-honest, zero new chrome), and the **⌘K command palette** (036-A — the single
-discoverable keyboard entry point over an honest command set, the Linear/Raycast idiom the direction
-names, with G-chord accelerators layered underneath). Green discipline holds across all four: Render is
-the only green; the rail, preset affordances, notification links, and palette rows are all accent/neutral.
+**The whole-app frame around the canonical Editor screen is sketch 033-B (nav shell v4)** — a **thin 56px
+left activity rail** that owns app-level wayfinding — Editor · Cola · Resultados · ⚙ · ? — so the 013-B
+header becomes the **purely-contextual bar of the current destination** (content tabs are editor-only,
+never app chrome). This Linear/Figma separation of app-navigation from screen-actions was forced once 030
+(queue), 031 (run spine) and 032 (settings) accreted destinations the header was never designed to carry.
+Hanging off that shell: **named style presets** (034-A — an always-visible header bar where a saved look
+captures all four tabs, with an ambient *Modificado* divergence state), **background render/batch
+notifications** (035-D — transient toast for the moment + durable Cola-badge tally for the record,
+OOM-honest, zero new chrome), and the **⌘K command palette** (036-A — the single discoverable keyboard
+entry point over an honest command set, the Linear/Raycast idiom the direction names, with G-chord
+accelerators layered underneath). Green discipline holds across all four: Render is the only green; the
+rail, preset affordances, notification links, and palette rows are all accent/neutral.
+
+**The current canonical Editor screen is sketch 037-B (north-star v4), which supersedes 027 (v3).** v4
+composes the *real* dense editor (027-B's live caption + the dense Subtitles tab) **inside the 033-B rail
+shell** and resolves the conflicts that recompose created: the **034 preset rehomes to the header as an
+*editor-scoped* control** (one dense row — preset takes the brand's freed slot, then tabs, then status +
+Guardar + Render; a saved look is editor-scope, *not* app-global like ⚙), and the **035-D `✓3 ✕1` tally
+rehomes onto the rail's Cola button** (the header vswitch that hosted it is gone). 027's *content* still
+holds; its header-resident *frame* is stale. Two more surfaces settled here: the **Resultados persistent
+library** (038-A — the rail's previously-unkept promise drawn as a browsable gallery/history of finished
+reels grounded in the real `output/` dir; a uniform 9:16 grid with a **featured-latest hero grafted from
+C** to dodge card-grid monotony, the empty-state teaching the surface, the only green being its
+`Ir al editor →` CTA), and **PNG overlay acquisition** for the live Phase 21 feature (039-B — drop a PNG
+**onto the 9:16 canvas**, *acquire = place* in one gesture tied to the 007 drag frontier; **transparency
+as a checkerboard** so alpha reads transparent not black; the **3-overlay cap** as a calm disabled state;
+flowing into the 019-C list-forward cards). Green discipline holds: Render the only green throughout.
 </design_direction>
 
 <findings_index>
@@ -127,7 +150,10 @@ the only green; the rail, preset affordances, notification links, and palette ro
 | Render / Export Surface (frontier) | references/render-export-surface.md | ⚠️ Scope-expanding. Render on the dimmed preview (progress ring + 3-step pipeline → "Reel listo"), no modal; Render takes the green primary; single-job constraint surfaced; OOM-aware failure. **Continues into render-last-mile** |
 | Render Last-Mile / Output (frontier) | references/render-last-mile.md | ⚠️ Scope-expanding. Where the finished reel lands: **full-screen results takeover (024-B)** — reel big + playable, file card (download · path · play · re-render) + AI metadata gathered as one "done, publish" moment. Metadata column **wakes**. Single-job re-render; download = accent not green |
 | Metadata / AI Column (AI phase) | references/metadata-ai-column.md | ⚠️ AI-phase / forward-looking. The awakened right column: **per-platform tabs (026-C)** TikTok/Reels/Shorts, each with tailored caption + char-limit counter (red over limit) + hashtags. Editable in place; lands on 024-B. **Green discipline: Generar/copiar = accent, never action-green** |
-| North-Star v3 — Canonical Screen | references/north-star-v3.md | **CURRENT canonical screen (027-B), supersedes 023 & 015.** 023-B's committed slice with the **caption now playing** (025-C live preview folded in): one `paint()`, two drivers; the two simultaneous animations stay ambient — **no focus-discipline needed** (variant C's auto-pause read as "panel went dead"). Ship B; frontier layers (007/010/020/awake-metadata) bolt on |
+| North-Star v4 — Canonical Editor Screen | references/north-star-v4.md | **CURRENT canonical Editor screen (037-B), supersedes 027.** The *real* dense editor (027-B's live caption + dense Subtitles tab) recomposed **inside the 033-B rail shell**: one dense header row (preset takes the brand's freed slot → tabs → status + Guardar + Render); a saved look is **editor-scoped** (header, not the rail / not app-global); the **035-D `✓3 ✕1` tally rehomes onto the rail Cola button**. Render the only green. Fallback: A (preset sub-bar) if the one row overflows |
+| North-Star v3 — Canonical (superseded) | references/north-star-v3.md | ⚠️ **Superseded by north-star-v4 (037)** as the whole-screen view — its content holds, its header-resident *frame* is stale (the rail replaced it). The live-preview milestone (027-B): 023-B's slice with the caption playing (025-C), one `paint()` two drivers, two animations stay ambient (no focus-discipline; C's auto-pause read as "panel went dead"). Keep for the caption-coherence findings |
+| Resultados — Persistent Library / History (frontier) | references/resultados-library.md | ⚠️ Scope-expanding. The rail's previously-unkept Resultados promise when you **haven't** just rendered: a browsable library of finished reels grounded in the real `output/` dir. **Uniform 9:16 gallery (038-A) + a featured-latest hero grafted from C** (dodges card-grid monotony, bridges the 024-B takeover). Empty-state teaches the surface; **only green = the `Ir al editor →` CTA**; per-reel download/play/re-render = accent; per-platform 026-C badges; single-job re-render. B (file-manager list) kept as the management view |
+| PNG Overlay Acquisition (Phase 21) | references/overlay-png-acquire.md | **Phase 21 live.** Acquire→preview→place a PNG overlay. **Drop onto the 9:16 canvas (039-B): acquire = place**, one gesture (007 drag frontier); click = drop-to-center fallback. **Transparency as a checkerboard** (thumb + on-canvas backing) so alpha reads transparent not black — load-bearing. **3-overlay cap = calm disabled dropzone** (008-B state, amber counter, never error). Flows into the 019-C list cards. No modal (impeccable law); delete = quiet danger-on-hover; Render the only green. A (tab dropzone) / C (inline placement bar) are fallbacks |
 | North-Star v2 — Canonical (superseded) | references/north-star-v2.md | ⚠️ **Superseded by north-star-v3 (027).** Pre-live-preview composite (frozen specimen) + source of the shell/4-tab/timeline CSS (unchanged in v3): 4-tab bar (Video pushed right), timeline strip *inside* work column, list-forward overlays, font sheet, numeric timing. Scope-line + coherence findings still hold |
 | North-Star Composite (superseded) | references/north-star-composite.md | ⚠️ **Superseded by north-star-v2/v3.** Historical 015 capstone of the 001–014 era: 013-B header + 001-D shell + 3 tabs + 007 drag + 010 render, A↔B scope boundary. Plan-split rule originates here; the screen itself is stale (3 tabs, no timeline) |
 | Pipeline-Step Inspection (frontier) | references/pipeline-inspection.md | ⚠️ Scope-expanding. **Full-screen review *steps*** (not in-shell tabs) make the "inspeccionable" promise legible: shared **step-rail** (Audio→Transcripción→Silencios→Render) + single **"Confirmar … →"** green. **Transcript (028-B):** document read-through, click-to-edit, confidence underlines (amber<0.78/red<0.6) — the *legit* confidence use vs dropped auto-zoom. **Silence cuts (029-B):** before/after stat + waveform w/ removed silences in red (click-restore) + per-cut list w/ source badges (×2/ffmpeg/whisper) + toggles. Makes core-value inspectable. Anti-pattern: cram into shell; flat-tone underline; free-restore if re-render |
@@ -185,6 +211,9 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - `sources/034-style-presets/index.html` — winner `#v-a` (header preset bar; save-a-look across 4 tabs; frontier / repeat-use)
 - `sources/035-background-notifications/index.html` — winner `#v-d` (toast + Cola-badge synthesis; **playable** — use the dashed sim panel; frontier / async-ops)
 - `sources/036-command-palette/index.html` — winner `#v-a` (⌘K palette; **playable** — press ⌘K; frontier / power-user)
+- `sources/037-north-star-v4/index.html` — winner `#v-b` (real editor in the rail shell; **current canonical Editor screen**, supersedes 027; **playable** — caption plays, open the `Estilo ▾` preset)
+- `sources/038-resultados-library/index.html` — winner `#v-a` (uniform 9:16 gallery + featured-latest hero graft; toggle "ver vacío" for the empty state; frontier / scope-expanding)
+- `sources/039-overlay-png-acquire/index.html` — winner `#v-b` (drop PNG onto the canvas; **playable** — add PNGs, watch the checkerboard + 3/3 cap, ↺ reiniciar; Phase 21)
 </findings_index>
 
 <metadata>
@@ -226,4 +255,7 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 034-style-presets (winner A — header preset bar; named saved looks across all 4 tabs; frontier/repeat-use)
 - 035-background-notifications (winner D — toast + Cola-badge synthesis; OOM-honest async/batch completion; frontier/ops)
 - 036-command-palette (winner A — ⌘K palette as the single discoverable keyboard entry point; honest command set; frontier/power-user)
+- 037-north-star-v4 (winner B — real dense editor recomposed inside the 033-B rail shell; one dense header row; preset editor-scoped; 035-D tally rehomed to rail Cola button; current canonical Editor screen, supersedes 027)
+- 038-resultados-library (winner A — uniform 9:16 gallery + featured-latest hero graft; the rail's persistent Resultados destination; grounded in real output/; frontier/scope-expanding)
+- 039-overlay-png-acquire (winner B — drop PNG onto the canvas / acquire = place; checkerboard transparency; calm 3-overlay cap; flows into 019-C list cards; Phase 21)
 </metadata>

@@ -1,16 +1,18 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032) · 2026-06-02 (sketches 033–036)
-**Sketches processed:** 36 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032) · 2026-06-02 (sketches 033–036) · 2026-06-02 (sketches 037–039)
+**Sketches processed:** 39 (all)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
-Overlays list-forward), Subtitle Styling, Caption Animation Preview, Title Styling (+ entrance timing),
-Video Effects/Transitions, Timeline (frontier), Font Picker, Header Action Zone, States & Save,
-First-Run/Empty, Responsive Reflow, Motion, Preview Manipulation, Render Surface, Render Last-Mile
-(frontier), Metadata/AI Column (AI phase), Pipeline-Step Inspection (frontier), Batch Queue (frontier/ops),
+Overlays list-forward), PNG Overlay Acquisition (Phase 21), Subtitle Styling, Caption Animation Preview,
+Title Styling (+ entrance timing), Video Effects/Transitions, Timeline (frontier), Font Picker,
+Header Action Zone, States & Save, First-Run/Empty, Responsive Reflow, Motion, Preview Manipulation,
+Render Surface, Render Last-Mile (frontier), Resultados Library/History (frontier), Metadata/AI Column
+(AI phase), Pipeline-Step Inspection (frontier), Batch Queue (frontier/ops),
 Pipeline Run-Flow Spine (integration), Pipeline Settings Home (processing params),
-App Nav Shell v4 (left activity rail; supersedes 027 as the app map), Style Presets (save-a-look),
+App Nav Shell v4 (left activity rail), Style Presets (save-a-look),
 Background Render/Batch Notifications (toast + Cola-badge), Command Palette / Keyboard Model (⌘K),
-North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-Star v3 (027, current canonical Editor screen)
+North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-Star v3 (027, superseded),
+North-Star v4 (037, current canonical Editor screen — real editor in the rail shell)
 **Skill output:** `./.claude/skills/sketch-findings-reel-factory/`
 
 ## Included Sketches
@@ -52,6 +54,9 @@ North-Star Composite (015, superseded), North-Star v2 (023, superseded), North-S
 | 034 | style-presets | A | Style Presets (save-a-look across 4 tabs; frontier/repeat-use) |
 | 035 | background-notifications | D | Background Render/Batch Notifications (toast + Cola-badge; frontier/ops) |
 | 036 | command-palette | A | Command Palette / Keyboard Model (⌘K palette; frontier/power-user) |
+| 037 | north-star-v4 | B | North-Star v4 (real editor in the rail shell; current canonical Editor screen, supersedes 027) |
+| 038 | resultados-library | A | Resultados Library/History (uniform gallery + featured-latest hero graft; frontier) |
+| 039 | overlay-png-acquire | B | PNG Overlay Acquisition (drop onto canvas; checkerboard transparency; 3-cap; Phase 21) |
 
 ## Excluded Sketches
 _None._
@@ -250,6 +255,60 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
   only** — no command row, chord cue, or `kbd` badge turns green; selection stays `accent-tint` blue.
   Anti-pattern: ship bindings-only as the model; invent palette-only powers; green a command row; build a
   bolted-on search box instead of the real Raycast idiom.
+- **North-star v4 (current canonical Editor screen, supersedes 027):** the canonical Editor (027-B) was
+  drawn against the *old header-resident model*, but 033-B moved the brand into a left rail and made the
+  header purely-contextual — so 027's whole-screen frame went stale (its content didn't). Resolved by
+  composing the **real dense editor** (027-B's 025-C live caption + the 011-C dense Subtitles tab +
+  transport) **inside the 033-B rail shell** — 037-B. The recompose-staleness cadence (015→023→027) now at
+  the **whole-app** level, resolving real *conflicts* before the React shell builds off a stale picture:
+  (1) the **034 preset bar** lost its home beside the brand → rehomed to the **header** as **one dense
+  row** (preset takes the brand's freed left slot → Títulos/Subtítulos/Overlays → spacer → Video pushed
+  right → status + Guardar + Render), settling that **a saved look is *editor-scoped*** — rejected C which
+  put it on the rail as an app-global concept like ⚙; A (preset in a sub-bar with the tabs) kept as the
+  calmer fallback if the one row overflows real label widths. (2) the **035-D `✓3 ✕1` tally** lost its
+  home when the header Editor⇄Cola vswitch was deleted → rehomed onto the **rail's Cola button** (which
+  already carried a `.rdot` marker), small mono digits, `✓`=success / `✕`=danger. The real dense editor
+  **coheres** inside the rail shell — same screen everyone had from 027-B, not a different app. **Green
+  discipline:** Render the only green; preset, rail, tally, active states all accent/neutral.
+  **Supersedes `north-star-v3.md` as the canonical Editor screen** (v3 kept for its caption-coherence
+  findings). Anti-pattern: reference 027 as the current whole-screen view; put the preset on the rail;
+  leave the tally orphaned near a deleted action; overflow the one dense row; green anything but Render.
+- **Resultados as a persistent library / history (frontier, scope-expanding):** the 033-B rail lists
+  **Editor · Cola · Resultados** as persistent destinations, but Resultados was only ever drawn as the
+  post-render *takeover moment* (024-B). Click it when you *haven't* just rendered and there was no sketch
+  — for a repeat-use/batch tool with a real `output/` dir, the honest answer is **your past reels**, a
+  browsable library. Resolved to a **uniform 9:16 gallery grid** (038-A) — *but* A's own anti-pattern is
+  that identical cards read as monotony (the "SaaS card-grid" cliché, nothing distinguishes the latest
+  reel), so the winning build **grafts C's featured-latest hero**: the freshly-rendered reel big +
+  playable at the top (`● Recién renderizado`, the 024-B takeover as the default landing) over the uniform
+  grid of older reels — **bridges the post-render moment and the durable library**. Grounded in real
+  output: MP4 filenames, 1080×1920, durations, sizes, **per-platform metadata badges** (026-C
+  TikTok/Reels/Shorts ready-state). **Empty state teaches** what the destination is for without a
+  welcome-takeover (017-B idiom: "Todavía no renderizaste ningún reel"). **Green discipline:** the **only**
+  green is the empty-state `Ir al editor →` CTA (it routes into the render flow); every per-reel action
+  (download/play/re-render) is accent or outline. **Single-job honesty:** re-render re-enters the
+  one-at-a-time pipeline. Beat the pure uniform grid (monotony) and pure-C (complexity); **B
+  (file-manager list)** kept as the dense management view / view toggle. Anti-pattern: ship the pure
+  uniform grid; green a per-reel action; hide the single-job constraint; drop the per-platform metadata;
+  build a welcome-takeover empty state.
+- **PNG overlay acquisition (Phase 21, live):** the Overlays tab (019-C) was sketched managing *existing*
+  overlays, but the **acquisition moment** — drop/upload a PNG → see its transparency → place it on the
+  9:16 canvas → the empty→first transition — was never its focus. Resolved by **dropping the PNG directly
+  onto the 9:16 canvas** (039-B): it **lands where you drop it**, then appears in the list — **acquire =
+  place, one gesture**, tied to the 007 drag-to-position frontier (clicking the mini dropzone drops to
+  center as the pointer-free fallback). The load-bearing decision: **PNG transparency renders as a
+  checkerboard** — on the list-card thumb *and* as the on-canvas backing — so a logo with alpha reads as
+  transparent, **not a black box** (critical for Phase 21). The honest **3-overlay cap** (OOM-adjacent) is
+  a **calm disabled dropzone** + amber `N/3` counter matching the 008-B cap state, never an error. The
+  **empty→first transition teaches in place** (the tab's empty state *is* the acquire affordance, shrinking
+  to a mini "drop another" after the first), flowing into the **019-C list-forward cards** (checkerboard
+  thumb · width/opacity/Capa/9-point anchor from 003). The impeccable **no-modal law** shaped it: C's
+  `＋ Agregar` is reframed as an *inline* placement bar, not a modal — kept as the most-guided fallback;
+  **A (dropzone in the tab)** is the build's path of least resistance (reuses 019-C + 017's dropzone).
+  **Green discipline:** Render the only green; dropzone/add/confirm = accent/outline; **delete = quiet
+  danger-on-hover**, never a standing red button. Anti-pattern: render transparency as black; open a
+  file-picker modal; dress the 3/3 cap as an error; separate acquire from place for a precision tool;
+  bolt acquisition onto a separate uploader; give delete a standing red button.
 
 ## Open Sub-Problems
 - ~~**Font picker** for 26 fonts with live previews~~ — **resolved by sketch 016-C** (slide-over gallery).
@@ -303,11 +362,36 @@ shell synthesis is the 3-column layout from 001-D, and the whole vision composed
 - **Build-time watch (033-B):** confirm content tabs (Títulos/Overlays/Subtítulos/Video) appear **only in
   the Editor** destination and never leak into the rail's Cola/Resultados contextual headers — the rail's
   app-scope vs screen-scope clarity depends on it.
+- ~~027 (v3) was drawn against the old header-resident model; the rail (033) made its whole-screen frame
+  stale~~ — **resolved by sketch 037-B** (north-star v4: the real dense editor recomposed inside the
+  033-B rail shell; preset → header/editor-scoped, 035-D tally → rail Cola button). Supersedes 027 as the
+  canonical Editor screen.
+- ~~The rail promises Resultados as a persistent destination but only its post-render takeover (024-B) was
+  drawn — what's there when you open it later?~~ — **resolved by sketch 038-A** (a browsable library/
+  history of finished reels; uniform 9:16 gallery + a featured-latest hero grafted from C; empty-state
+  teaches the surface; grounded in real `output/`). Frontier / scope-expanding.
+- ~~The Overlays tab (019) managed *existing* overlays; the PNG **acquisition** moment (drop → preview
+  transparency → place) was never sketched~~ — **resolved by sketch 039-B** (drop onto the 9:16 canvas /
+  acquire = place; checkerboard transparency so alpha reads; calm 3-overlay cap; flows into 019-C cards).
+  Phase 21, live.
+- **Build-time watch (037-B):** the one dense header row carries a lot (preset + 4 tabs + status + 2
+  actions) — validate against real label widths; if it overflows, fall back to **037-A** (preset in a
+  sub-bar with the tabs, two calm rows). And confirm the 035-D `✓3 ✕1` tally reads legibly on the rail
+  Cola button rather than wanting to be back near an action.
+- **Build-time watch (038-A):** the winner is A's uniform grid **plus** C's featured-latest hero — don't
+  ship the pure uniform grid (its own monotony anti-pattern). Confirm the hero/grid rhythm reads, and
+  decide whether re-render warns about the single-job pipeline or defers to the queue (030).
+- **Build-time watch (039-B):** the checkerboard must back **both** the list-card thumb and the on-canvas
+  overlay so a transparent PNG never reads as a black box; confirm "lands where you drop it" (canvas drag)
+  is worth the plumbing over A's tab-dropzone fallback for the Phase-21 budget.
 - **Frontier / next-milestone:** the **timeline** (020-C), the committed-vs-frontier scope line
-  (007 drag, 010 render), the **render last-mile** results screen (024-B), the **AI metadata column**
-  (026-C), the two **pipeline-step inspection** surfaces (028-B transcript / 029-B silence-cut), the
-  **batch queue** (030-A), the **run-flow spine** (031-A), the **pipeline settings sheet** (032-A), the
-  **app nav shell / left activity rail** (033-B), **style presets** (034-A), **background notifications**
-  (035-D), and the **⌘K command palette** (036-A) are validated *directions*, not Phase-22 control-panel
-  deliverables. The two pipeline-step reviews + the run-flow spine are the strongest delivery on the
-  "cada paso es inspeccionable" promise in AGENTS.md; 033-B is the whole-app frame the rest now hang in.
+  (007 drag, 010 render), the **render last-mile** results screen (024-B), the **Resultados library**
+  (038-A), the **AI metadata column** (026-C), the two **pipeline-step inspection** surfaces (028-B
+  transcript / 029-B silence-cut), the **batch queue** (030-A), the **run-flow spine** (031-A), the
+  **pipeline settings sheet** (032-A), the **app nav shell / left activity rail** (033-B), **style
+  presets** (034-A), **background notifications** (035-D), and the **⌘K command palette** (036-A) are
+  validated *directions*, not Phase-22 control-panel deliverables. The two pipeline-step reviews + the
+  run-flow spine are the strongest delivery on the "cada paso es inspeccionable" promise in AGENTS.md;
+  033-B is the whole-app frame the rest hang in, and **037-B (north-star v4) is now the canonical Editor
+  screen inside it**. **PNG overlay acquisition (039-B) is the exception — it ships now for the live
+  Phase 21 feature**, not a future milestone.

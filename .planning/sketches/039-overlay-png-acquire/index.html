@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 039 — PNG overlay acquisition (drop → preview → place)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes landin { 0% { opacity: 0; transform: scale(0.82); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
+  @keyframes cardin { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+
+  /* rail (033-B, Editor active) */
+  .rail { width: 56px; flex: none; background: var(--chrome); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: var(--s-6) 0; gap: var(--s-3); }
+  .rlogo { width: 30px; height: 30px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; color: var(--stage); margin-bottom: var(--s-6); }
+  .railbtn { width: 40px; height: 40px; border-radius: var(--r-sm); border: none; background: none; color: var(--text-muted); cursor: pointer; display: grid; place-items: center; font-size: 17px; position: relative; transition: all var(--dur) var(--ease); }
+  .railbtn:hover { background: var(--surface-2); color: var(--text); }
+  .railbtn.on { background: var(--accent-tint); color: var(--accent); }
+  .railbtn.on::before { content: ""; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--accent); }
+  .railbtn .lab { position: absolute; left: 48px; top: 50%; transform: translateY(-50%); background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font-size: var(--t-xs); font-weight: 500; padding: 4px 9px; border-radius: var(--r-xs); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity var(--dur); box-shadow: var(--shadow-md); z-index: 50; }
+  .railbtn:hover .lab { opacity: 1; }
+  .rail .rsp { flex: 1; }
+
+  .colwrap { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .ctxname { font-size: var(--t-md); font-weight: 600; color: var(--text); }
+  .spacer { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.dirty { color: var(--warning); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-green { background: var(--action); color: #08220f; }
+  .btn-acc { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+  .btn-acc:hover { background: var(--accent-tint-2); }
+  .btn-sm { padding: 5px 11px; font-size: var(--t-xs); }
+  .ctabs { display: flex; gap: var(--s-3); margin-left: var(--s-8); }
+  .ctab { font-size: var(--t-xs); padding: 5px 11px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+  .ctab.on { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); }
+  .ctab.push { margin-left: auto; }
+
+  .work { flex: 1; min-height: 0; display: flex; gap: 1px; background: var(--border-faint); }
+  .col { background: var(--canvas); display: flex; flex-direction: column; min-height: 0; }
+  .stagecol { flex: 0 1 380px; align-items: center; justify-content: center; background: var(--stage); padding: var(--s-10); position: relative; }
+  .ctrlcol { flex: 1; padding: var(--s-8) var(--s-10); overflow-y: auto; }
+  .metacol { flex: 0 0 220px; background: var(--surface); align-items: center; justify-content: center; padding: var(--s-8); }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 10px 14px; text-align: center; line-height: 1.5; }
+
+  /* checkerboard = PNG transparency */
+  .checker { background-image: linear-gradient(45deg, oklch(0.5 0.01 280) 25%, transparent 25%), linear-gradient(-45deg, oklch(0.5 0.01 280) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, oklch(0.5 0.01 280) 75%), linear-gradient(-45deg, transparent 75%, oklch(0.5 0.01 280) 75%); background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0px; background-color: oklch(0.4 0.01 280); }
+
+  .stage9x16 { width: 210px; height: 373px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .stage9x16 .ttl { position: absolute; top: 34px; left: 16px; right: 16px; text-align: center; font-weight: 700; font-size: 13px; background: rgba(0,0,0,.5); color: #fff; padding: 6px; border-radius: 5px; }
+  .stage9x16 .cap { position: absolute; bottom: 50px; left: 8px; right: 8px; text-align: center; font-weight: 800; font-size: 17px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .stage9x16 .cap b { color: var(--accent); }
+  /* overlays composited on the stage */
+  .ov { position: absolute; animation: landin .34s var(--ease); cursor: grab; }
+  .ov.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ov.handle::after { content: ""; position: absolute; right: -4px; bottom: -4px; width: 9px; height: 9px; background: var(--accent); border: 1.5px solid var(--stage); border-radius: 2px; }
+  /* canvas dropzone (variant B) */
+  .canvasdrop { position: absolute; inset: var(--s-10); border: 2px dashed transparent; border-radius: var(--r-md); display: grid; place-items: center; pointer-events: none; transition: all var(--dur) var(--ease); }
+  .canvasdrop.armed { border-color: var(--accent-strong); background: var(--accent-tint-2); pointer-events: auto; }
+  .canvasdrop .cd { font-size: var(--t-sm); color: var(--accent); font-weight: 600; background: var(--surface); padding: 6px 12px; border-radius: var(--r-full); border: 1px solid var(--accent-strong); }
+
+  /* the Overlays controls column */
+  .tablabel { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: var(--s-5); display: flex; align-items: center; gap: 8px; }
+  .tablabel .cap-count { margin-left: auto; font-size: var(--t-2xs); color: var(--text-faint); font-family: var(--mono); text-transform: none; letter-spacing: 0; }
+  .tablabel .cap-count.full { color: var(--warning); }
+
+  /* dropzone (variant A — inline in the tab) */
+  .dropzone { border: 2px dashed var(--border-strong); border-radius: var(--r-md); padding: var(--s-12) var(--s-8); text-align: center; cursor: pointer; transition: all var(--dur) var(--ease); }
+  .dropzone:hover, .dropzone.armed { border-color: var(--accent-strong); background: var(--accent-tint-2); }
+  .dropzone .big { font-size: 26px; color: var(--text-muted); }
+  .dropzone:hover .big, .dropzone.armed .big { color: var(--accent); }
+  .dropzone .dt { font-size: var(--t-sm); color: var(--text-2); margin-top: var(--s-4); }
+  .dropzone .dsub { font-size: var(--t-2xs); color: var(--text-faint); margin-top: 3px; }
+  .dropzone.mini { padding: var(--s-6); }
+  .dropzone.disabled { opacity: 0.45; cursor: default; border-style: solid; }
+  .dropzone.disabled:hover { border-color: var(--border-strong); background: transparent; }
+
+  /* overlay list card (019-C list-forward) */
+  .ovcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5); margin-bottom: var(--s-5); animation: cardin .26s var(--ease); }
+  .ovcard.sel { border-color: var(--accent-strong); box-shadow: 0 0 0 1px var(--accent-strong); }
+  .ovcard .top { display: flex; align-items: center; gap: var(--s-5); }
+  .ovcard .thumb { width: 38px; height: 38px; border-radius: var(--r-xs); flex: none; display: grid; place-items: center; overflow: hidden; }
+  .ovcard .thumb .gfx { font-size: 18px; }
+  .ovcard .nm { font-size: var(--t-sm); font-weight: 600; color: var(--text); font-family: var(--mono); }
+  .ovcard .meta { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 1px; }
+  .ovcard .del { margin-left: auto; width: 24px; height: 24px; border-radius: var(--r-xs); border: none; background: none; color: var(--text-faint); cursor: pointer; font-size: 13px; }
+  .ovcard .del:hover { color: var(--danger); background: var(--surface-2); }
+  .ovcard .inlinerow { display: flex; gap: var(--s-5); margin-top: var(--s-5); align-items: center; }
+  .ovcard .miniprop { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .ovcard .miniprop label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ovcard .miniprop .v { height: 26px; border-radius: var(--r-xs); background: var(--canvas); border: 1px solid var(--border); display: flex; align-items: center; padding: 0 8px; font-size: var(--t-xs); color: var(--text-2); }
+  .seg { display: flex; background: var(--canvas); border: 1px solid var(--border); border-radius: var(--r-xs); padding: 2px; }
+  .seg button { font: inherit; font-size: 10px; padding: 3px 7px; border: none; background: none; color: var(--text-muted); border-radius: 3px; cursor: pointer; }
+  .seg button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .posmini { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; width: 56px; }
+  .posmini button { aspect-ratio: 1; border: 1px solid var(--border); background: var(--canvas); color: var(--text-faint); border-radius: 2px; font-size: 8px; cursor: pointer; display: grid; place-items: center; }
+  .posmini button.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+
+  /* placement step (variant C) — inline, not a modal */
+  .placebar { margin-top: var(--s-6); border: 1px solid var(--accent-strong); border-radius: var(--r-sm); background: var(--accent-tint-2); padding: var(--s-6); display: none; animation: fadein .2s var(--ease); }
+  .placebar.show { display: block; }
+  .placebar .pt { font-size: var(--t-sm); color: var(--accent); font-weight: 600; display: flex; align-items: center; gap: 7px; margin-bottom: var(--s-5); }
+  .placebar .pp { display: flex; align-items: center; gap: var(--s-6); }
+  .placebar .pfoot { display: flex; gap: var(--s-5); margin-top: var(--s-6); }
+
+  .vhint { font-size: var(--t-2xs); color: var(--text-faint); padding: var(--s-4) var(--s-10); text-align: center; border-top: 1px solid var(--border-faint); background: var(--canvas); flex: none; line-height: 1.5; }
+  .vhint b { color: var(--text-muted); }
+  .resetbtn { font-size: var(--t-2xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-full); padding: 3px 9px; cursor: pointer; }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 039 · overlay PNG acquire</span>
+  <button class="vtab" onclick="show('a',this)">A · Dropzone en el tab</button>
+  <button class="vtab active" onclick="show('b',this)">B ★ · Soltar en el canvas</button>
+  <button class="vtab" onclick="show('c',this)">C · Botón + paso de ubicación</button>
+  <span class="hint">Agregá un PNG (empieza vacío) · mirá la transición vacío→primero · tope <b>3</b> overlays</span>
+</nav>
+
+<div class="variant" id="v-a"></div>
+<div class="variant active" id="v-b"></div>
+<div class="variant" id="v-c"></div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// canned PNG library (simulating files the user drops — each has transparency)
+const PNGS = [
+  { id:'logo',  name:'logo-marca.png',   gfx:'🅡', meta:'420×420 · PNG', x:'62%', y:'8%',  w:54, pos:6 },
+  { id:'arrow', name:'flecha-cta.png',   gfx:'➜', meta:'300×180 · PNG', x:'20%', y:'62%', w:66, pos:7 },
+  { id:'sub',   name:'subscribe.png',    gfx:'🔔', meta:'512×160 · PNG', x:'50%', y:'82%', w:80, pos:8 },
+];
+const POS_GLYPH = ['↖','↑','↗','←','•','→','↙','↓','↘'];
+
+// per-variant overlay state
+const S = { a:{ ov:[], sel:null }, b:{ ov:[], sel:null }, c:{ ov:[], sel:null, pending:null } };
+
+function rail(){ return `<nav class="rail">
+  <div class="rlogo">R</div>
+  <button class="railbtn on">✎<span class="lab">Editor</span></button>
+  <button class="railbtn">≣<span class="lab">Cola</span></button>
+  <button class="railbtn">✓<span class="lab">Resultados</span></button>
+  <div class="rsp"></div>
+  <button class="railbtn">⚙<span class="lab">Procesamiento</span></button>
+  <button class="railbtn">?<span class="lab">Atajos (⌘K)</span></button>
+</nav>`; }
+
+function stageOverlays(v){
+  return S[v].ov.map(o=>{
+    const p=PNGS.find(x=>x.id===o.id);
+    return `<div class="ov checker ${o.id===S[v].sel?'sel handle':''}" style="left:${p.x};top:${p.y};width:${p.w}px;height:${p.w*0.62}px;border-radius:4px;display:grid;place-items:center;opacity:${o.op/100}" onclick="selOv('${v}','${o.id}')"><span style="font-size:${p.w*0.4}px">${p.gfx}</span></div>`;
+  }).join('');
+}
+
+function stage(v){ return `<div class="col stagecol">
+  <div class="stage9x16" id="stage-${v}">
+    <div class="ttl">3 trucos de edición</div>
+    <div class="cap">así editás tus <b>reels</b></div>
+    ${stageOverlays(v)}
+    ${v==='b'?`<div class="canvasdrop" id="cdrop-b"><div class="cd">Soltá el PNG donde quieras</div></div>`:''}
+  </div>
+</div>`; }
+
+function ovCard(v,o){
+  const p=PNGS.find(x=>x.id===o.id);
+  return `<div class="ovcard ${o.id===S[v].sel?'sel':''}" onclick="selOv('${v}','${o.id}')">
+    <div class="top">
+      <div class="thumb checker"><span class="gfx">${p.gfx}</span></div>
+      <div><div class="nm">${p.name}</div><div class="meta">${p.meta}</div></div>
+      <button class="del" onclick="event.stopPropagation();delOv('${v}','${o.id}')">✕</button>
+    </div>
+    <div class="inlinerow">
+      <div class="miniprop"><label>Ancho</label><div class="v">${p.w*4} px</div></div>
+      <div class="miniprop"><label>Opacidad</label><div class="v">${o.op}%</div></div>
+      <div class="miniprop" style="flex:none"><label>Capa</label><div class="seg"><button class="${o.layer==='back'?'on':''}" onclick="event.stopPropagation();setLayer('${v}','${o.id}','back')">Detrás</button><button class="${o.layer==='front'?'on':''}" onclick="event.stopPropagation();setLayer('${v}','${o.id}','front')">Delante</button></div></div>
+      <div class="miniprop" style="flex:none"><label>Posición</label><div class="posmini">${POS_GLYPH.map((g,i)=>`<button class="${o.pos===i?'on':''}" onclick="event.stopPropagation();setPos('${v}','${o.id}',${i})">${g}</button>`).join('')}</div></div>
+    </div>
+  </div>`;
+}
+
+function controls(v){
+  const st=S[v]; const full=st.ov.length>=3;
+  const list = st.ov.map(o=>ovCard(v,o)).join('');
+  let acquire='';
+  if(v==='a'){
+    acquire = full
+      ? `<div class="dropzone disabled mini"><span style="font-size:var(--t-xs);color:var(--text-muted)">Tope de 3 overlays alcanzado · borrá uno para agregar otro</span></div>`
+      : `<div class="dropzone ${st.ov.length?'mini':''}" id="dz-a" onclick="acquireNext('a')">
+          <div class="big">⤓</div>
+          <div class="dt">${st.ov.length?'Soltá otro PNG, o hacé clic':'Soltá un PNG acá, o hacé clic para elegir'}</div>
+          <div class="dsub">PNG con transparencia · máximo 3</div>
+        </div>`;
+  } else if(v==='b'){
+    acquire = full
+      ? `<div class="dropzone disabled mini"><span style="font-size:var(--t-xs);color:var(--text-muted)">Tope de 3 overlays · borrá uno para agregar</span></div>`
+      : `<div class="dropzone mini" id="dz-b" onmouseenter="armCanvas(true)" onmouseleave="armCanvas(false)" onclick="acquireNext('b')">
+          <div class="dt">⤓ Arrastrá un PNG <b style="color:var(--accent)">directo al video</b></div>
+          <div class="dsub">cae donde lo soltás · o hacé clic para el centro</div>
+        </div>`;
+  } else {
+    acquire = full
+      ? `<div class="dropzone disabled mini"><span style="font-size:var(--t-xs);color:var(--text-muted)">Tope de 3 overlays · borrá uno para agregar</span></div>`
+      : `<button class="btn btn-acc btn-sm" style="width:100%;justify-content:center" onclick="beginPlace('c')">＋ Agregar overlay PNG</button>
+         <div class="placebar" id="place-c"></div>`;
+  }
+  const emptyHero = (!st.ov.length && v!=='c') ? '' : '';
+  return `<div class="col ctrlcol">
+    <div class="tablabel">Overlays <span class="cap-count ${full?'full':''}">${st.ov.length}/3</span></div>
+    ${list}
+    ${acquire}
+  </div>`;
+}
+
+function view(v){ return `${rail()}<div class="colwrap">
+  <header class="hdr">
+    <span class="ctxname">Editor</span>
+    <div class="ctabs"><span class="ctab">Títulos</span><span class="ctab on">Overlays</span><span class="ctab">Subtítulos</span><span class="ctab push">Video</span></div>
+    <div class="spacer"></div>
+    <span class="resetbtn" onclick="resetV('${v}')">↺ reiniciar (vacío)</span>
+    <span class="chip ${S[v].ov.length?'dirty':''}"><span class="dot"></span>${S[v].ov.length?'Cambios sin guardar':'Sin cambios'}</span>
+    <button class="btn btn-out">Guardar</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="work">${stage(v)}${controls(v)}<div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div></div>
+  <div class="vhint">${HINTS[v]}</div>
+</div>`; }
+
+const HINTS = {
+  a:'A — <b>dropzone en el tab</b>: el estado vacío del tab Overlays ES la zona de soltar; al agregar, aparece una card 019-C (thumb con damero = transparencia) y el overlay cae en el canvas. Todo inline, sin modal. El tope 3/3 deshabilita la zona.',
+  b:'B — <b>soltar en el canvas</b>: arrastrás el PNG directo al video 9:16 y cae <b>donde lo soltás</b> (atado al drag-to-position de 007); después aparece en la lista. Adquirir = ubicar, un solo gesto.',
+  c:'C — <b>botón + paso de ubicación inline</b>: "＋ Agregar" elige el archivo y abre un paso de ubicación <b>en el panel</b> (presets de posición + confirmar), no un modal. El más guiado; ¿ayuda o agrega fricción?'
+};
+
+// ── actions ──
+function render(v){ document.getElementById('v-'+v).innerHTML = view(v); }
+function nextPng(v){ const used=S[v].ov.map(o=>o.id); return PNGS.find(p=>!used.includes(p.id)); }
+function addOv(v, pos){ const p=nextPng(v); if(!p||S[v].ov.length>=3) return; const o={ id:p.id, op:100, layer:'front', pos: pos!=null?pos:p.pos }; S[v].ov.push(o); S[v].sel=p.id; }
+
+function acquireNext(v){ addOv(v); render(v); }
+function selOv(v,id){ S[v].sel=id; render(v); }
+function delOv(v,id){ S[v].ov=S[v].ov.filter(o=>o.id!==id); if(S[v].sel===id) S[v].sel=S[v].ov.length?S[v].ov[S[v].ov.length-1].id:null; render(v); }
+function setLayer(v,id,l){ S[v].ov.find(o=>o.id===id).layer=l; render(v); }
+function setPos(v,id,i){ const o=S[v].ov.find(o=>o.id===id); o.pos=i; const p=PNGS.find(x=>x.id===id); const col=i%3, row=Math.floor(i/3); p.x=['8%','50%','78%'][col]; p.y=['8%','45%','78%'][row]; render(v); }
+function armCanvas(on){ const d=document.getElementById('cdrop-b'); if(d) d.classList.toggle('armed',on); }
+
+// variant C placement step (inline, not modal)
+function beginPlace(v){ const p=nextPng(v); if(!p){ return; } S.c.pending={ id:p.id, pos:p.pos, op:100 }; render(v);
+  const bar=document.getElementById('place-c'); if(!bar) return;
+  bar.classList.add('show');
+  bar.innerHTML = `<div class="pt"><span class="thumb checker" style="width:24px;height:24px;border-radius:4px;display:grid;place-items:center">${p.gfx}</span> Ubicá <b style="font-family:var(--mono)">${p.name}</b></div>
+    <div class="pp"><span style="font-size:var(--t-2xs);color:var(--text-muted)">Posición</span><div class="posmini">${POS_GLYPH.map((g,i)=>`<button class="${S.c.pending.pos===i?'on':''}" onclick="placePos(${i})">${g}</button>`).join('')}</div><span style="font-size:var(--t-2xs);color:var(--text-muted);margin-left:auto">o arrastralo en el video</span></div>
+    <div class="pfoot"><button class="btn btn-out btn-sm" style="flex:1;justify-content:center" onclick="cancelPlace()">Cancelar</button><button class="btn btn-acc btn-sm" style="flex:1;justify-content:center" onclick="confirmPlace()">Agregar overlay</button></div>`;
+}
+function placePos(i){ S.c.pending.pos=i; const p=PNGS.find(x=>x.id===S.c.pending.id); const col=i%3,row=Math.floor(i/3); p.x=['8%','50%','78%'][col]; p.y=['8%','45%','78%'][row]; beginPlace('c'); }
+function cancelPlace(){ S.c.pending=null; render('c'); }
+function confirmPlace(){ const pd=S.c.pending; if(!pd) return; S.c.ov.push({ id:pd.id, op:100, layer:'front', pos:pd.pos }); S.c.sel=pd.id; S.c.pending=null; render('c'); }
+
+function resetV(v){ S[v].ov=[]; S[v].sel=null; if(v==='c') S.c.pending=null; render(v); }
+
+['a','b','c'].forEach(render);
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

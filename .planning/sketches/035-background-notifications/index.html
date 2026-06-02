@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 035 — background notifications</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); flex-direction: column; }
+  .variant.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes toastin { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+  @keyframes toastout { to { opacity: 0; transform: translateX(24px); height: 0; margin: 0; padding-top: 0; padding-bottom: 0; } }
+  @keyframes badgepop { 0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  @keyframes stripin { from { transform: translateY(100%); } to { transform: none; } }
+
+  /* shared chrome */
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-12); background: var(--chrome); border-bottom: 1px solid var(--border); position: relative; }
+  .brand { display: flex; align-items: center; gap: var(--s-5); flex: none; }
+  .brand .glyph { width: 26px; height: 26px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; font-size: var(--t-md); color: var(--stage); }
+  .brand h1 { font-size: var(--t-lg); font-weight: 600; letter-spacing: -0.01em; }
+  .spacer { flex: 1; }
+  .vswitch { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; flex: none; margin-left: var(--s-4); }
+  .vswitch button { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: none; border: none; padding: 5px 13px; border-radius: var(--r-xs); cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 7px; position: relative; }
+  .vswitch button.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+  .qbadge { font-size: var(--t-2xs); border-radius: var(--r-full); padding: 0 6px; min-width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+  .qbadge.idle { background: var(--surface-2); color: var(--text-muted); }
+  .qbadge.has { background: var(--surface-2); }
+  .qbadge .ok { color: var(--success); font-weight: 700; } .qbadge .er { color: var(--danger); font-weight: 700; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-xs); font-weight: 600; padding: 5px 11px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.dirty { color: var(--warning); }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-green { background: var(--action); color: #08220f; border-color: transparent; }
+  .btn-sm { padding: 5px 11px; font-size: var(--t-xs); }
+  .linkacc { color: var(--accent); font-weight: 600; cursor: pointer; }
+  .linkacc:hover { text-decoration: underline; }
+  .iconbtn { font: inherit; width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; font-size: 15px; transition: all var(--dur) var(--ease); flex: none; position: relative; }
+  .iconbtn:hover { background: var(--surface-hover); color: var(--text); }
+  .iconbtn.on { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+  .bell-badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: var(--r-full); background: var(--accent); color: var(--stage); font-size: 10px; font-weight: 700; display: grid; place-items: center; animation: badgepop .3s var(--ease); }
+
+  /* abstracted editor (you're working here while a queued job renders) */
+  .body { flex: 1; min-height: 0; display: flex; gap: 1px; background: var(--border-faint); position: relative; }
+  .col { background: var(--canvas); padding: var(--s-10); display: flex; flex-direction: column; }
+  .stagecol { flex: 0 1 320px; align-items: center; justify-content: center; background: var(--stage); }
+  .ctrlcol { flex: 1; gap: var(--s-5); }
+  .metacol { flex: 0 0 220px; background: var(--surface); align-items: center; justify-content: center; }
+  .stage9x16 { width: 184px; height: 327px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+  .stage9x16 .ttl { position: absolute; top: 30px; left: 14px; right: 14px; text-align: center; font-weight: 700; font-size: 12px; background: rgba(0,0,0,.45); padding: 5px; border-radius: 5px; }
+  .stage9x16 .capword { position: absolute; bottom: 46px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 15px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .stage9x16 .capword b { color: var(--accent); }
+  .placard { font-size: var(--t-2xs); color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; }
+  .ghostrow { height: 30px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-faint); }
+  .ghostrow.lg { height: 50px; }
+  .metacol .soon { font-size: var(--t-xs); color: var(--text-faint); border: 1px dashed var(--border-strong); border-radius: var(--r-sm); padding: 8px 12px; text-align: center; }
+
+  /* the simulate panel (sketch driver, framed as such) */
+  .sim { position: absolute; left: 50%; bottom: var(--s-10); transform: translateX(-50%); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-md); padding: var(--s-5) var(--s-6); display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-xs); color: var(--text-muted); z-index: 40; box-shadow: var(--shadow-md); }
+  .sim b { color: var(--text-2); }
+
+  /* ── A: toasts (bottom-right stack) ── */
+  .toaster { position: fixed; right: var(--s-10); bottom: var(--s-10); width: 320px; display: flex; flex-direction: column; gap: var(--s-5); z-index: 200; }
+  .toast { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); padding: var(--s-6) var(--s-8); animation: toastin .26s var(--ease); display: flex; gap: var(--s-5); align-items: flex-start; }
+  .toast.leaving { animation: toastout .3s var(--ease) forwards; }
+  .toast .ic { width: 26px; height: 26px; border-radius: var(--r-sm); display: grid; place-items: center; flex: none; font-size: 13px; font-weight: 700; }
+  .toast.ok .ic { background: oklch(0.72 0.14 150 / 0.18); color: var(--success); }
+  .toast.err .ic { background: oklch(0.63 0.185 25 / 0.18); color: var(--danger); }
+  .toast .tx { flex: 1; }
+  .toast .tt { font-size: var(--t-sm); font-weight: 600; color: var(--text); }
+  .toast .td { font-size: var(--t-xs); color: var(--text-muted); margin-top: 2px; line-height: 1.45; }
+  .toast .ta { display: flex; gap: var(--s-6); margin-top: var(--s-5); font-size: var(--t-xs); }
+  .toast .cl { color: var(--text-faint); cursor: pointer; font-size: 14px; line-height: 1; }
+  .toast .cl:hover { color: var(--text); }
+
+  /* ── B: notification center (dropdown from bell) ── */
+  .center { position: absolute; top: 50px; right: var(--s-12); width: 340px; max-height: 420px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); z-index: 100; display: none; flex-direction: column; animation: fadein .15s var(--ease); }
+  .center.show { display: flex; }
+  .center .ch { padding: var(--s-6) var(--s-8); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: var(--s-5); }
+  .center .ch h4 { font-size: var(--t-md); font-weight: 600; }
+  .center .ch .clear { margin-left: auto; font-size: var(--t-xs); color: var(--text-muted); cursor: pointer; }
+  .center .ch .clear:hover { color: var(--text); }
+  .center .cb { overflow-y: auto; padding: var(--s-3); }
+  .ntf { display: flex; gap: var(--s-5); padding: var(--s-5) var(--s-5); border-radius: var(--r-sm); position: relative; }
+  .ntf.unread { background: var(--accent-tint-2); }
+  .ntf .ic { width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 700; }
+  .ntf.ok .ic { background: oklch(0.72 0.14 150 / 0.18); color: var(--success); }
+  .ntf.err .ic { background: oklch(0.63 0.185 25 / 0.18); color: var(--danger); }
+  .ntf .tt { font-size: var(--t-sm); font-weight: 500; color: var(--text); }
+  .ntf .td { font-size: var(--t-xs); color: var(--text-muted); margin-top: 1px; }
+  .ntf .ti { font-size: var(--t-2xs); color: var(--text-faint); margin-top: 3px; }
+  .ntf .ta { margin-top: var(--s-4); font-size: var(--t-xs); display: flex; gap: var(--s-6); }
+  .center .empty { padding: var(--s-12); text-align: center; color: var(--text-faint); font-size: var(--t-sm); }
+
+  /* ── C: cola-switch carries it + inline strip ── */
+  .jobstrip { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--border-strong); box-shadow: 0 -6px 18px oklch(0.10 0.02 280 / 0.35); padding: var(--s-5) var(--s-10); display: none; align-items: center; gap: var(--s-6); z-index: 50; animation: stripin .28s var(--ease); }
+  .jobstrip.show { display: flex; }
+  .jobstrip .ic { width: 24px; height: 24px; border-radius: var(--r-sm); display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 700; }
+  .jobstrip.ok .ic { background: oklch(0.72 0.14 150 / 0.18); color: var(--success); }
+  .jobstrip.err .ic { background: oklch(0.63 0.185 25 / 0.18); color: var(--danger); }
+  .jobstrip .tt { font-size: var(--t-sm); font-weight: 600; }
+  .jobstrip .td { font-size: var(--t-xs); color: var(--text-muted); }
+
+  .note { position: absolute; left: var(--s-10); bottom: var(--s-10); max-width: 300px; font-size: var(--t-xs); color: var(--text-2); background: var(--accent-tint-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-8); line-height: 1.5; z-index: 30; }
+  .note b { color: var(--text); }
+
+  /* vnav + tools */
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 035 · background notifications</span>
+  <button class="vtab" onclick="show('a',this)">A · Toast (efímero)</button>
+  <button class="vtab" onclick="show('b',this)">B · Campana + centro</button>
+  <button class="vtab" onclick="show('c',this)">C · El switch Cola lo lleva</button>
+  <button class="vtab active" onclick="show('d',this)">D ★ · Síntesis (toast + badge Cola)</button>
+  <span class="hint">Estás editando; usá el panel de simulación para que un render <b style="color:var(--text-2)">en cola</b> termine o falle</span>
+</nav>
+
+<!-- ════════ A · toasts ════════ -->
+<div class="variant" id="v-a">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="vswitch"><button class="on">Editor</button><button>Cola <span class="qbadge has" id="qb-a"><span style="color:var(--accent)">●</span>1</span></button></div>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body" id="body-a"></div>
+</div>
+
+<!-- ════════ B · bell + center ════════ -->
+<div class="variant" id="v-b">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="vswitch"><button class="on">Editor</button><button>Cola <span class="qbadge has"><span style="color:var(--accent)">●</span>1</span></button></div>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <div style="position:relative">
+      <button class="iconbtn" id="bell-b" onclick="toggleCenter(event)">🔔<span id="bellbadge-b"></span></button>
+      <div class="center" id="center-b" onclick="event.stopPropagation()"></div>
+    </div>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body" id="body-b"></div>
+</div>
+
+<!-- ════════ C · cola switch + strip ════════ -->
+<div class="variant" id="v-c">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="vswitch"><button class="on">Editor</button><button id="colaswitch-c">Cola <span class="qbadge has" id="qb-c"><span style="color:var(--accent)">●</span>1</span></button></div>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body" id="body-c"></div>
+</div>
+
+<!-- ════════ D · synthesis (toast + cola badge) ★ ════════ -->
+<div class="variant active" id="v-d">
+  <header class="hdr">
+    <div class="brand"><div class="glyph">R</div><div><h1>Reel Factory Studio</h1></div></div>
+    <div class="vswitch"><button class="on">Editor</button><button id="colaswitch-d">Cola <span class="qbadge has" id="qb-d"><span style="color:var(--accent)">●</span>1</span></button></div>
+    <div class="spacer"></div>
+    <span class="chip dirty"><span class="dot"></span>Cambios sin guardar</span>
+    <button class="btn btn-out">Guardar config</button>
+    <button class="btn btn-green">▶ Render</button>
+  </header>
+  <div class="body" id="body-d"></div>
+</div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+function editorHtml(v, sim){
+  return `<div class="col stagecol"><div class="stage9x16"><div class="ttl">Editando el próximo clip</div><div class="capword">otro <b>reel</b></div></div></div>
+    <div class="col ctrlcol"><div class="placard">Estás en el Editor — un render de la cola corre en segundo plano</div>
+      <div class="ghostrow lg"></div><div class="ghostrow"></div><div class="ghostrow"></div><div class="ghostrow"></div></div>
+    <div class="col metacol"><div class="soon">Metadata de redes<br>— próximamente —</div></div>
+    <div class="sim">
+      <span>Simular: el render en cola</span>
+      <button class="btn btn-out btn-sm" onclick="fire('${v}','ok')">✓ Terminó</button>
+      <button class="btn btn-out btn-sm" onclick="fire('${v}','err')">✕ Falló (OOM)</button>
+      <button class="btn btn-out btn-sm" onclick="fire('${v}','batch')">batch 3/5</button>
+    </div>${sim||''}`;
+}
+
+// ════════ A ════════
+let aDone=0, aErr=0;
+function renderA(){ document.getElementById('body-a').innerHTML = editorHtml('a','<div class="toaster" id="toaster-a"></div>'); }
+function toastA(kind, batch){
+  const t=document.getElementById('toaster-a'); const el=document.createElement('div');
+  if(kind==='ok'){ aDone++; el.className='toast ok';
+    el.innerHTML = `<div class="ic">✓</div><div class="tx"><div class="tt">Reel listo</div><div class="td">entrevista-marzo.mp4 · 1:14 · 9.4 MB</div><div class="ta"><span class="linkacc">Abrir resultado</span><span class="linkacc">⤓ Descargar</span></div></div><span class="cl" onclick="dismiss(this)">✕</span>`;
+  } else if(kind==='err'){ aErr++; el.className='toast err';
+    el.innerHTML = `<div class="ic">✕</div><div class="tx"><div class="tt">El render falló</div><div class="td">demo-largo.mp4 — sin memoria (OOM). Chrome headless agotó la RAM.</div><div class="ta"><span class="linkacc">Reintentar</span><span class="linkacc">Ver en la cola</span></div></div><span class="cl" onclick="dismiss(this)">✕</span>`;
+  } else { aDone+=1; el.className='toast ok';
+    el.innerHTML = `<div class="ic">3</div><div class="tx"><div class="tt">Lote: 3 de 5 listos</div><div class="td">1 falló (OOM) · 1 en cola</div><div class="ta"><span class="linkacc">Ver la cola</span></div></div><span class="cl" onclick="dismiss(this)">✕</span>`;
+  }
+  t.appendChild(el);
+  document.getElementById('qb-a').innerHTML = badgeInner(aDone,aErr);
+  setTimeout(()=>{ if(el.isConnected && kind!=='err') dismiss(el.querySelector?el.querySelector('.cl'):el); }, kind==='err'?100000:5200);
+}
+function dismiss(node){ const el=node.closest? node.closest('.toast'):node; if(!el)return; el.classList.add('leaving'); setTimeout(()=>el.remove(),300); }
+
+// ════════ B ════════
+let bItems=[]; let bUnread=0;
+function renderB(){ document.getElementById('body-b').innerHTML = editorHtml('b'); buildCenter(); }
+function pushB(kind){
+  if(kind==='ok') bItems.unshift({kind:'ok',tt:'Reel listo',td:'entrevista-marzo.mp4 · 1:14',ti:'hace unos segundos',acts:['Abrir','⤓ Descargar']});
+  else if(kind==='err') bItems.unshift({kind:'err',tt:'El render falló (OOM)',td:'demo-largo.mp4 — sin memoria al renderizar',ti:'hace unos segundos',acts:['Reintentar','Ver en cola']});
+  else bItems.unshift({kind:'ok',tt:'Lote terminado: 3 de 5',td:'1 falló · 1 en cola',ti:'hace un momento',acts:['Ver la cola']});
+  bUnread++; bItems.forEach((it,i)=>it.unread=i<bUnread); updateBell(); buildCenter();
+}
+function updateBell(){ const b=document.getElementById('bellbadge-b'); b.outerHTML = bUnread>0?`<span class="bell-badge" id="bellbadge-b">${bUnread}</span>`:`<span id="bellbadge-b"></span>`; }
+function buildCenter(){
+  const c=document.getElementById('center-b');
+  const body = bItems.length? bItems.map(it=>`<div class="ntf ${it.kind} ${it.unread?'unread':''}"><div class="ic">${it.kind==='ok'?'✓':'✕'}</div><div><div class="tt">${it.tt}</div><div class="td">${it.td}</div><div class="ti">${it.ti}</div><div class="ta">${it.acts.map(a=>`<span class="linkacc">${a}</span>`).join('')}</div></div></div>`).join('') : `<div class="empty">Sin novedades.<br>Acá llegan los renders que terminan en segundo plano.</div>`;
+  c.innerHTML = `<div class="ch"><h4>Novedades</h4>${bItems.length?`<span class="clear" onclick="clearB()">Marcar todo leído</span>`:''}</div><div class="cb">${body}</div>`;
+}
+function toggleCenter(e){ e.stopPropagation(); const c=document.getElementById('center-b'); c.classList.toggle('show'); if(c.classList.contains('show')){ bUnread=0; bItems.forEach(it=>it.unread=false); updateBell(); buildCenter(); document.getElementById('bell-b').classList.add('on'); } else document.getElementById('bell-b').classList.remove('on'); }
+function clearB(){ bUnread=0; bItems.forEach(it=>it.unread=false); updateBell(); buildCenter(); }
+
+// ════════ C ════════
+let cDone=0, cErr=0;
+function renderC(){ document.getElementById('body-c').innerHTML = editorHtml('c',
+  `<div class="jobstrip" id="strip-c"></div>
+   <div class="note">C — sin canal aparte: la <b>cola es la notificación</b>. El badge del switch lleva el conteo (✓/✕) y un strip asoma cuando algo termina. Lo más honesto con el modelo de 1-job: casi siempre estás mirando el render del frente (031); esto importa para los <b>lotes</b> en cola.</div>`); }
+function stripC(kind){
+  const s=document.getElementById('strip-c');
+  if(kind==='ok'){ cDone++; s.className='jobstrip ok show'; s.innerHTML=`<div class="ic">✓</div><div><div class="tt">Reel listo en la cola</div><div class="td">entrevista-marzo.mp4 · 1:14</div></div><div class="spacer"></div><button class="btn btn-out btn-sm">Abrir resultado</button><button class="iconbtn" style="width:28px;height:28px;font-size:13px" onclick="document.getElementById('strip-c').classList.remove('show')">✕</button>`; }
+  else if(kind==='err'){ cErr++; s.className='jobstrip err show'; s.innerHTML=`<div class="ic">✕</div><div><div class="tt">Un render falló (OOM)</div><div class="td">demo-largo.mp4 — sin memoria. Reintentá de a uno.</div></div><div class="spacer"></div><button class="btn btn-out btn-sm">Ver en la cola →</button><button class="iconbtn" style="width:28px;height:28px;font-size:13px" onclick="document.getElementById('strip-c').classList.remove('show')">✕</button>`; }
+  else { cDone+=3; cErr+=1; s.className='jobstrip ok show'; s.innerHTML=`<div class="ic">3</div><div><div class="tt">Lote: 3 de 5 listos</div><div class="td">1 falló (OOM) · 1 en cola</div></div><div class="spacer"></div><button class="btn btn-out btn-sm">Ver la cola →</button><button class="iconbtn" style="width:28px;height:28px;font-size:13px" onclick="document.getElementById('strip-c').classList.remove('show')">✕</button>`; }
+  document.getElementById('qb-c').innerHTML = badgeInner(cDone,cErr);
+  document.getElementById('colaswitch-c').classList.add('flash');
+}
+
+// ════════ D · synthesis (toast for the moment + cola badge as the durable record) ════════
+let dDone=0, dErr=0;
+function renderD(){ document.getElementById('body-d').innerHTML = editorHtml('d',
+  `<div class="toaster" id="toaster-d"></div>
+   <div class="note">D ★ — <b>síntesis</b>: el toast cubre el momento (aparece, se va), pero el conteo del badge en el switch <b>Cola</b> queda como registro durable (✓/✕). Lo efímero no se pierde: el badge es la verdad persistente. Cero chrome nuevo en el header. El OOM no se autodescarta.</div>`); }
+function toastD(kind){
+  const t=document.getElementById('toaster-d'); const el=document.createElement('div');
+  if(kind==='ok'){ dDone++; el.className='toast ok';
+    el.innerHTML = `<div class="ic">✓</div><div class="tx"><div class="tt">Reel listo</div><div class="td">entrevista-marzo.mp4 · 1:14 · 9.4 MB</div><div class="ta"><span class="linkacc">Abrir resultado</span><span class="linkacc">⤓ Descargar</span></div></div><span class="cl" onclick="dismiss(this)">✕</span>`;
+  } else if(kind==='err'){ dErr++; el.className='toast err';
+    el.innerHTML = `<div class="ic">✕</div><div class="tx"><div class="tt">El render falló</div><div class="td">demo-largo.mp4 — sin memoria (OOM).</div><div class="ta"><span class="linkacc">Reintentar</span><span class="linkacc">Ver en la cola</span></div></div><span class="cl" onclick="dismiss(this)">✕</span>`;
+  } else { dDone+=3; dErr+=1; el.className='toast ok';
+    el.innerHTML = `<div class="ic">3</div><div class="tx"><div class="tt">Lote: 3 de 5 listos</div><div class="td">1 falló (OOM) · 1 en cola</div><div class="ta"><span class="linkacc">Ver la cola</span></div></div><span class="cl" onclick="dismiss(this)">✕</span>`;
+  }
+  t.appendChild(el);
+  // durable record: the cola badge tally persists after the toast is gone
+  document.getElementById('qb-d').innerHTML = badgeInner(dDone,dErr);
+  if(kind!=='err') setTimeout(()=>{ if(el.isConnected) dismiss(el.querySelector('.cl')); }, 5200);
+}
+
+function badgeInner(done,err){
+  let s='';
+  if(done>0) s+=`<span class="ok">✓${done}</span>`;
+  if(err>0) s+=`${done>0?' ':''}<span class="er">✕${err}</span>`;
+  if(!s) s='<span style="color:var(--accent)">●</span>1';
+  return s;
+}
+
+function fire(v, kind){
+  if(v==='a') toastA(kind);
+  if(v==='b') pushB(kind);
+  if(v==='c') stripC(kind);
+  if(v==='d') toastD(kind);
+}
+
+document.addEventListener('click', ()=>{ const c=document.getElementById('center-b'); if(c){ c.classList.remove('show'); document.getElementById('bell-b').classList.remove('on'); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.getElementById('center-b').classList.remove('show'); } });
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+renderA(); renderB(); renderC(); renderD();
+</script>
+</body>
+</html>

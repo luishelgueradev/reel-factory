@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 041 — modal-stack choreography</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); position: relative; }
+  .variant.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sheetin { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes popin { from { opacity: 0; transform: translate(-50%, -46%) scale(.97); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+  @keyframes toastin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  /* ── rail + header (shared shell, dimmed background context) ── */
+  .rail { width: 56px; flex: none; background: var(--chrome); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: var(--s-6) 0; gap: var(--s-3); }
+  .rlogo { width: 30px; height: 30px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; color: var(--stage); margin-bottom: var(--s-6); }
+  .railbtn { width: 40px; height: 40px; border-radius: var(--r-sm); border: none; background: none; color: var(--text-muted); cursor: pointer; display: grid; place-items: center; font-size: 17px; position: relative; }
+  .railbtn.on { background: var(--accent-tint); color: var(--accent); }
+  .rail .rsp { flex: 1; }
+  .colwrap { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .ctxname { font-size: var(--t-md); font-weight: 600; }
+  .spacer { flex: 1; }
+  .btn { font: inherit; font-size: var(--t-md); font-weight: 600; padding: 8px 16px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); }
+  .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-green { background: var(--action); color: #08220f; }
+  .btn-sm { padding: 5px 11px; font-size: var(--t-xs); }
+  .ctabs { display: flex; gap: var(--s-3); margin-left: var(--s-6); }
+  .ctab { font-size: var(--t-xs); padding: 5px 11px; border-radius: var(--r-full); background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+  .ctab.on { background: var(--accent-tint); color: var(--accent); border-color: var(--accent-strong); }
+
+  .bodyfill { flex: 1; min-height: 0; display: grid; place-items: center; color: var(--text-faint); font-size: var(--t-sm); }
+  .bodyfill .ghosttext { text-align: center; line-height: 1.7; }
+
+  /* ── the six floating surfaces ── */
+  .scrim { position: absolute; inset: 0; background: oklch(0.12 0.02 280 / 0.5); animation: fadein .15s var(--ease); z-index: 10; }
+  .scrim.soft { background: oklch(0.12 0.02 280 / 0.32); }
+
+  .sheet { position: absolute; top: 0; right: 0; bottom: 0; width: 340px; background: var(--surface); border-left: 1px solid var(--border-strong); box-shadow: var(--shadow-pop); z-index: 20; animation: sheetin .22s var(--ease); display: flex; flex-direction: column; }
+  .sheet.settings { width: 380px; }
+  .sheet .sh { height: 48px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--s-8); border-bottom: 1px solid var(--border); font-size: var(--t-md); font-weight: 600; }
+  .sheet .sh .x { margin-left: auto; cursor: pointer; color: var(--text-muted); width: 26px; height: 26px; border-radius: var(--r-xs); display: grid; place-items: center; }
+  .sheet .sh .x:hover { background: var(--surface-2); color: var(--text); }
+  .sheet .sb { flex: 1; overflow-y: auto; padding: var(--s-8); display: flex; flex-direction: column; gap: var(--s-5); }
+  .gcard { border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5); font-size: var(--t-xs); color: var(--text-2); display:flex; align-items:center; gap:8px; }
+  .gcard .av { width: 30px; height: 30px; border-radius: var(--r-xs); background: var(--surface-2); display:grid; place-items:center; font-size:13px; }
+  .chip-cat { font-size: var(--t-2xs); padding: 4px 9px; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+
+  .palette { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 540px; max-width: 86%; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); z-index: 40; animation: popin .16s var(--ease); overflow: hidden; }
+  .palette .psearch { display: flex; align-items: center; gap: 10px; padding: var(--s-6) var(--s-8); border-bottom: 1px solid var(--border); }
+  .palette .psearch .pk { color: var(--text-faint); }
+  .palette .psearch input { flex: 1; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: var(--t-lg); }
+  .palette .pbody { max-height: 280px; overflow-y: auto; padding: var(--s-3); }
+  .palette .pgh { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; padding: var(--s-3) var(--s-5) var(--s-2); }
+  .prow { display: flex; align-items: center; gap: var(--s-5); padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer; }
+  .prow.sel { background: var(--accent-tint); }
+  .prow .pic { width: 22px; text-align: center; color: var(--text-2); }
+  .prow .pn { font-size: var(--t-sm); color: var(--text); }
+  .prow .pkbd { margin-left: auto; font-size: var(--t-2xs); font-family: var(--mono); color: var(--text-faint); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-xs); padding: 2px 6px; }
+
+  .takeover { position: absolute; inset: 0; background: var(--canvas); z-index: 30; display: flex; flex-direction: column; animation: fadein .2s var(--ease); }
+  .takeover .th { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-10); border-bottom: 1px solid var(--border); }
+  .takeover .tbody { flex: 1; display: grid; place-items: center; color: var(--text-2); text-align: center; gap: var(--s-5); }
+  .takeover .reelbig { width: 200px; height: 356px; border-radius: var(--r-md); background: linear-gradient(180deg, oklch(0.34 0.05 255), oklch(0.2 0.03 280)); box-shadow: var(--shadow-md); margin-bottom: var(--s-5); }
+
+  .toast { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: var(--s-5); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); padding: 10px 14px; animation: toastin .2s var(--ease); }
+  .toast .ti { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; }
+  .toast.ok .ti { background: oklch(0.72 0.14 150 / .18); color: var(--success); }
+  .toast.err .ti { background: oklch(0.63 0.185 25 / .18); color: var(--danger); }
+  .toast .tt { font-size: var(--t-sm); color: var(--text); }
+  .toast .ts { font-size: var(--t-2xs); color: var(--text-muted); }
+
+  /* z-ladder legend (variant B) */
+  .zladder { position: absolute; left: 64px; bottom: 14px; z-index: 70; background: oklch(0.2 0.025 280 / .92); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; font-size: var(--t-2xs); font-family: var(--mono); color: var(--text-muted); line-height: 1.7; }
+  .zladder b { color: var(--accent); }
+  .zladder .cur { color: var(--text); }
+
+  /* control deck — drives the sim */
+  .deck { position: absolute; left: 50%; transform: translateX(-50%); bottom: 56px; z-index: 80; display: flex; gap: var(--s-3); background: oklch(0.2 0.025 280 / .94); border: 1px solid var(--border-strong); border-radius: var(--r-full); padding: 6px 8px; box-shadow: var(--shadow-md); flex-wrap: wrap; justify-content: center; max-width: 92%; }
+  .deck .dk { font: inherit; font-size: var(--t-2xs); padding: 5px 11px; border-radius: var(--r-full); background: var(--surface); border: 1px solid var(--border); color: var(--text-2); cursor: pointer; white-space: nowrap; }
+  .deck .dk:hover { border-color: var(--border-strong); color: var(--text); }
+  .deck .dk.live { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); }
+  .deck .esc { color: var(--text-faint); }
+
+  .vhint { position: absolute; left: 64px; bottom: 14px; right: 14px; font-size: var(--t-2xs); color: var(--text-faint); text-align: center; line-height: 1.5; pointer-events: none; z-index: 5; }
+  .vhint b { color: var(--text-muted); }
+  /* B uses its own zladder, so push the hint up there to avoid overlap handled per-variant */
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 041 · modal-stack choreography</span>
+  <button class="vtab" onclick="show('a',this)">A · Una superficie a la vez</button>
+  <button class="vtab active" onclick="show('b',this)">B ★ · Escalera-z con reglas</button>
+  <button class="vtab" onclick="show('c',this)">C · Dos planos (transitorio vs destino)</button>
+  <span class="hint">Abrí superficies con el dock de abajo · una ley de capas para las 6 superficies flotantes</span>
+</nav>
+
+<!-- variants share one shell template, populated by JS -->
+<div class="variant" id="v-a"></div>
+<div class="variant active" id="v-b"></div>
+<div class="variant" id="v-c"></div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// The six independently-sketched floating surfaces:
+//   font (016 sheet) · settings (032 sheet) · palette (036 ⌘K) · toast (035) ·
+//   results (024 takeover) · review (028/029 takeover)
+// Each variant = a different LAYERING POLICY.
+
+const SHELL = `
+  <nav class="rail"><div class="rlogo">R</div>
+    <button class="railbtn on">✎</button><button class="railbtn">≣</button><button class="railbtn">✓</button>
+    <div class="rsp"></div><button class="railbtn" data-open="settings">⚙</button><button class="railbtn" data-open="palette">?</button></nav>
+  <div class="colwrap">
+    <header class="hdr"><span class="ctxname">Editor</span>
+      <div class="ctabs"><span class="ctab on">Títulos</span><span class="ctab">Subtítulos</span><span class="ctab">Overlays</span></div>
+      <div class="spacer"></div>
+      <button class="btn btn-out btn-sm" data-open="font">Fuente: Bebas Neue ▾</button>
+      <button class="btn btn-green btn-sm" data-open="results">▶ Render</button></header>
+    <div class="bodyfill"><div class="ghosttext">— editor (fondo) —<br><span style="font-size:var(--t-2xs)">las superficies flotan acá arriba</span></div></div>
+  </div>`;
+
+// surface metadata
+const FONT = `<div class="sheet" data-surf="font"><div class="sh">Elegir fuente<span class="x" data-close>✕</span></div>
+  <div class="sb"><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip-cat">Sans</span><span class="chip-cat">Display</span><span class="chip-cat">Serif</span><span class="chip-cat">Script</span></div>
+  ${['Bebas Neue','Anton','Montserrat','Oswald','Poppins','Archivo'].map(f=>`<div class="gcard"><div class="av" style="font-weight:800">Aa</div>${f}</div>`).join('')}</div></div>`;
+const SETTINGS = `<div class="sheet settings" data-surf="settings"><div class="sh">⚙ Procesamiento<span class="x" data-close>✕</span></div>
+  <div class="sb"><div style="font-size:var(--t-2xs);color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Modelo Whisper</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${['tiny','base','small','medium · REC','large-v3'].map(m=>`<span class="chip-cat">${m}</span>`).join('')}</div>
+  <div style="font-size:var(--t-2xs);color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:8px">Salida</div>
+  <div class="gcard">9:16 🔒 · 30 fps · H.264</div></div></div>`;
+const PALETTE = `<div class="palette" data-surf="palette"><div class="psearch"><span class="pk">⌘K</span><input placeholder="Buscar acción…" value=""></div>
+  <div class="pbody"><div class="pgh">Ir a</div>
+  <div class="prow sel"><span class="pic">✎</span><span class="pn">Ir a Subtítulos</span><span class="pkbd">G S</span></div>
+  <div class="prow"><span class="pic">≣</span><span class="pn">Abrir Cola</span><span class="pkbd">G C</span></div>
+  <div class="pgh">Acciones</div>
+  <div class="prow"><span class="pic" style="color:var(--action)">▶</span><span class="pn">Render</span><span class="pkbd">⌘↵</span></div>
+  <div class="prow"><span class="pic">⚙</span><span class="pn">Abrir Procesamiento</span><span class="pkbd">⌘,</span></div></div></div>`;
+const RESULTS = `<div class="takeover" data-surf="results"><div class="th"><span class="ctxname">✓ Reel listo</span><div class="spacer"></div><button class="btn btn-out btn-sm" data-close>← Volver al editor</button></div>
+  <div class="tbody"><div><div class="reelbig"></div><div style="font-weight:600;color:var(--text)">reel-2026-06-02.mp4</div><div style="font-size:var(--t-2xs)">1:14 · 9:16 · 8.4 MB</div></div></div></div>`;
+const REVIEW = `<div class="takeover" data-surf="review"><div class="th"><span class="ctxname">Revisar transcripción</span><div class="spacer"></div><button class="btn btn-out btn-sm" data-close>← Volver</button><button class="btn btn-green btn-sm">Confirmar →</button></div>
+  <div class="tbody"><div style="max-width:420px;text-align:left;line-height:1.9;font-size:var(--t-md)">Hoy te muestro <u style="text-decoration-color:var(--warning)">tres</u> trucos de edición que uso en <u style="text-decoration-color:var(--danger)">todos</u> mis reels…</div></div></div>`;
+const TOAST_OK = `<div class="toast ok" data-surf="toast"><div class="ti">✓</div><div><div class="tt">Reel renderizado</div><div class="ts">reel-2026-06-02.mp4 · 8.4 MB</div></div><button class="btn btn-out btn-sm" data-close>Abrir</button></div>`;
+const SURF = { font:FONT, settings:SETTINGS, palette:PALETTE, results:RESULTS, review:REVIEW, toast:TOAST_OK };
+
+// policies decide what coexists / what each open does
+const POLICIES = {
+  a: { // single-surface law
+    name:'A · una a la vez',
+    deck:['font','settings','palette','results','review','toast'],
+    open(v,k){ // opening anything closes everything else (toast excepted: it's a courtesy, replaced too)
+      this.stack = [k];
+    },
+    scrim(){ const top=this.stack[0]; return (top&&top!=='toast'&&top!=='results'&&top!=='review')?'soft':null; },
+    hint:'Una sola superficie flotante a la vez. Abrir cualquier cosa <b>cierra la anterior</b>. Esc cierra. La paleta no se apila sobre una sheet — la reemplaza. Lo más calmo, cero ambigüedad de foco.'
+  },
+  b: { // layered z-ladder
+    name:'B · escalera-z',
+    deck:['font','settings','palette','results','review','toast'],
+    open(v,k){
+      // ladder: toast(60) sits above all & is independent; palette(40) can open over a sheet(20);
+      // takeover(30) owns the editor (closes sheets/palette but toast survives)
+      const Z = { toast:60, palette:40, results:30, review:30, font:20, settings:20 };
+      if(k==='toast'){ if(!this.stack.includes('toast')) this.stack.push('toast'); return; }
+      const toast = this.stack.includes('toast');
+      if(k==='palette'){ // opens OVER whatever sheet is there
+        this.stack = this.stack.filter(s=>s==='font'||s==='settings'||s==='toast'); this.stack.push('palette');
+      } else if(k==='results'||k==='review'){ // takeover: clears floats except toast
+        this.stack = toast?['toast']:[]; this.stack.push(k);
+      } else { // a sheet: replaces other sheet, keeps toast
+        this.stack = this.stack.filter(s=>s==='toast'||s==='palette');
+        this.stack = this.stack.filter(s=>s!=='font'&&s!=='settings'); this.stack.push(k);
+      }
+      this.stack.sort((a,b)=>(Z[a]||0)-(Z[b]||0));
+    },
+    scrim(){ return this.stack.some(s=>['font','settings','palette','results','review'].includes(s))?'soft':null; },
+    hint:'Una <b>escalera-z</b> definida: toast (arriba, nunca atrapa foco) ▸ paleta (modal, se abre <b>sobre</b> una sheet y vuelve a ella con Esc) ▸ takeover (dueño de la pantalla) ▸ sheets. Un contrato de apilado real.'
+  },
+  c: { // two planes
+    name:'C · dos planos',
+    deck:['font','settings','palette','toast','results','review'],
+    open(v,k){
+      if(k==='results'||k==='review'){ // these are DESTINATIONS — they replace the editor (navigation, not float)
+        this.dest = k; this.stack = this.stack.filter(s=>s==='toast'); return;
+      }
+      if(k==='toast'){ if(!this.stack.includes('toast')) this.stack.push('toast'); return; }
+      // genuinely floating: font/settings/palette — one float at a time + toast
+      this.stack = this.stack.filter(s=>s==='toast'); this.stack.push(k);
+    },
+    scrim(){ return this.stack.some(s=>['font','settings','palette'].includes(s))?'soft':null; },
+    hint:'Reencuadre: los takeovers (Resultados/Revisión) son <b>destinos</b> — reemplazan el editor vía riel/flujo, <b>no flotan</b>. Solo sheets + paleta + toast flotan de verdad. La mayoría de los "modales" eran navegación. Menos superpuestos reales.'
+  }
+};
+
+const state = { a:{stack:[],dest:null}, b:{stack:[],dest:null}, c:{stack:[],dest:null} };
+
+function render(v){
+  const el = document.getElementById('v-'+v);
+  const P = POLICIES[v]; const S = state[v];
+  // bind policy helpers to state
+  const ctx = Object.assign(Object.create(P), S);
+  let floats = '';
+  const scrimKind = ctx.scrim.call(ctx);
+  // destination (C) replaces shell
+  let shell = SHELL;
+  if(v==='c' && S.dest){ shell = SURF[S.dest]; }
+  // build floats from stack (toast last so it sits on top visually as well)
+  const ordered = [...S.stack];
+  ordered.forEach(k=> floats += SURF[k]);
+  const scrim = scrimKind ? `<div class="scrim ${scrimKind}" data-scrim></div>` : '';
+  const deck = `<div class="deck">${P.deck.map(k=>`<button class="dk ${S.stack.includes(k)||S.dest===k?'live':''}" data-open="${k}">${labelOf(k)}</button>`).join('')}<button class="dk esc" data-esc>Esc</button>${v==='c'&&S.dest?'<button class="dk" data-esc>← volver al editor</button>':''}</div>`;
+  const ladder = v==='b' ? `<div class="zladder">z-ladder<br>${['toast 60','palette 40','takeover 30','sheet 20'].map(l=>{const key=l.split(' ')[0]; const on = (key==='sheet'&&S.stack.some(s=>['font','settings'].includes(s)))||(key==='takeover'&&S.stack.some(s=>['results','review'].includes(s)))||S.stack.includes(key); return `<span class="${on?'cur':''}">${on?'▸':' '} ${l}</span>`;}).join('<br>')}</div>` : '';
+  const hint = `<div class="vhint" style="${v==='b'?'left:200px':''}">${P.name} — ${P.hint}</div>`;
+  el.innerHTML = shell + scrim + floats + deck + ladder + hint;
+}
+
+function labelOf(k){ return ({font:'Fuente (sheet)',settings:'⚙ Ajustes (sheet)',palette:'⌘K Paleta',results:'Resultados (takeover)',review:'Revisión (takeover)',toast:'Toast render'})[k]; }
+
+function openSurf(v,k){ const S=state[v]; const ctx=Object.assign(Object.create(POLICIES[v]),S); POLICIES[v].open.call(S,v,k); render(v); }
+function escSurf(v){ const S=state[v]; if(S.dest){ S.dest=null; render(v); return; } if(S.stack.length){ S.stack.pop(); render(v); } }
+
+document.addEventListener('click', e=>{
+  const v = e.target.closest('.variant')?.id.split('-')[1]; if(!v) return;
+  const open = e.target.closest('[data-open]'); if(open){ openSurf(v, open.getAttribute('data-open')); return; }
+  if(e.target.closest('[data-esc]')||e.target.closest('[data-close]')||e.target.closest('[data-scrim]')){ escSurf(v); return; }
+  const tab = e.target.closest('.ctab'); if(tab){ tab.parentElement.querySelectorAll('.ctab').forEach(x=>x.classList.remove('on')); tab.classList.add('on'); }
+});
+document.addEventListener('keydown', e=>{ const v=document.querySelector('.variant.active').id.split('-')[1]; if(e.key==='Escape') escSurf(v); if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openSurf(v,'palette'); } });
+
+['a','b','c'].forEach(render);
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

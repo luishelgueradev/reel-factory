@@ -10,12 +10,16 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { Readable } from "node:stream";
 import { validatePipelineConfig } from "./pipeline-config.js";
 import type { PipelineConfig } from "./pipeline-config.js";
 
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
 const INPUT_PATH = process.env.INPUT_PATH || "";
+// Upstream api-server URL — configurable for tests. In production, api-server is
+// reachable at http://api-server:3000 on pipeline-net (D-03).
+const API_SERVER_URL = process.env.API_SERVER_URL || "http://api-server:3000";
 // D-04: Single source of truth for the write destination — read once at module load.
 // resolveConfigPath() is still used for GET reads (job-scoped preview); writes go here only.
 const ACTIVE_PIPELINE_CONFIG_PATH =
@@ -202,13 +206,34 @@ app.put("/api/config", (req, res) => {
   }
 });
 
-// ─── POST /api/render — Render trigger placeholder (D-20, future Plan 05) ─
+// ─── POST /api/render — Streaming multipart proxy to api-server POST /batch ─
+// RENDER-01: forwards the upload to the queue path so jobId is returned
+// immediately (not /process which blocks until the render completes).
+// The browser uploads under field name "videos" (batch.ts upload.array("videos")).
+// duplex:"half" is REQUIRED for Node 22 fetch to stream a request body (RESEARCH Pitfall 3).
+// No multer/body-parser in the Studio: the multipart boundary must survive to api-server.
 
-app.post("/api/render", (_req, res) => {
-  res.status(501).json({
-    status: "not_implemented",
-    message: "Render trigger not yet configured. Will be implemented in Plan 05.",
-  });
+app.post("/api/render", async (req, res) => {
+  try {
+    const upstream = await fetch(API_SERVER_URL + "/batch", {
+      method: "POST",
+      headers: {
+        "content-type": req.headers["content-type"] ?? "",
+        ...(req.headers["content-length"]
+          ? { "content-length": req.headers["content-length"] }
+          : {}),
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      body: req as any,
+      // @ts-expect-error — duplex:"half" is required by Node 22 fetch for streaming request bodies
+      duplex: "half",
+    });
+
+    const data = await upstream.json() as unknown;
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: { step: "proxy", message: String(err) } });
+  }
 });
 
 // ─── Serve static files from public/ (D-06: sample video) ────────────────────

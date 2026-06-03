@@ -14,7 +14,7 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 // Mock the heavy deps that PreviewApp pulls in so the test stays fast in jsdom.
 vi.mock("@remotion/player", () => ({
@@ -98,6 +98,44 @@ describe("Upload affordance (Task 1)", () => {
 
 // ─── Task 2 tests: Render surfaces ────────────────────────────────────────────
 
+/**
+ * Helper: render PreviewApp with a file already selected, then trigger the
+ * Render flow by firing a fake file-change event and clicking the Render button.
+ * This drives the state machine into the running → terminal states.
+ */
+async function renderAndTriggerFlow(
+  fetchMock: ReturnType<typeof vi.fn>,
+  module: { PreviewApp: React.ComponentType }
+) {
+  vi.stubGlobal("fetch", fetchMock);
+  const result = render(<module.PreviewApp />);
+
+  // Simulate a file being selected via the hidden file input in the UploadDropzone
+  const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!fileInput) throw new Error("file input not found");
+
+  const fakeFile = new File(["mp4data"], "video.mp4", { type: "video/mp4" });
+  fireEvent.change(fileInput, { target: { files: [fakeFile] } });
+
+  // Wait for the header to update (file loaded → green Render button)
+  await waitFor(() => {
+    // After file selection the "▶ Render Video" button should be enabled
+    const btn = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+      (b) => b.textContent?.includes("Render Video") && !b.disabled
+    );
+    expect(btn).not.toBeNull();
+  }, { timeout: 500 });
+
+  // Click the green Render Video button
+  const renderBtn = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+    (b) => b.textContent?.includes("Render Video") && !b.disabled
+  );
+  if (!renderBtn) throw new Error("Render button not found or disabled");
+  fireEvent.click(renderBtn);
+
+  return result;
+}
+
 describe("Render overlay surfaces (Task 2)", () => {
   beforeEach(() => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake-url");
@@ -110,120 +148,95 @@ describe("Render overlay surfaces (Task 2)", () => {
   });
 
   it('shows "✓ Reel listo" and a <video> pointing to /api/result/ on completion', async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url === "/api/config") {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({}),
-            status: 200,
-          });
-        }
-        if (typeof url === "string" && url.includes("/api/status/")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: async () => ({ status: "completed", progress: 100 }),
-          });
-        }
-        if (url === "/api/render") {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: async () => ({ jobs: [{ jobId: "test-job-abc" }] }),
-          });
-        }
+    const { PreviewApp } = await import("./PreviewApp.js");
+
+    let statusCallCount = 0;
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config") {
+        return Promise.resolve({ ok: true, json: async () => ({}), status: 200 });
+      }
+      if (url === "/api/render") {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({}),
+          json: async () => ({ jobs: [{ jobId: "test-job-abc" }] }),
         });
-      })
-    );
+      }
+      if (typeof url === "string" && url.includes("/api/status/")) {
+        statusCallCount++;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ status: "completed", progress: 100 }),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
 
-    const { PreviewApp } = await import("./PreviewApp.js");
-    render(<PreviewApp />);
+    await renderAndTriggerFlow(fetchMock, { PreviewApp });
 
-    // The success surface only appears after a render completes.
-    // PreviewApp must render "✓ Reel listo" when renderState === "success".
     await waitFor(
       () => {
         expect(screen.queryByText(/✓ Reel listo/)).not.toBeNull();
       },
-      { timeout: 300 }
-    ).catch(() => {
-      throw new Error(
-        "RED: success surface not yet rendered — implement Task 2 to pass"
-      );
-    });
+      { timeout: 4000 }
+    );
+
+    // Also verify the video element points to /api/result/
+    const video = document.querySelector<HTMLVideoElement>("video");
+    expect(video).not.toBeNull();
+    expect(video!.src).toContain("/api/result/");
   });
 
   it("renders cause line with exit 137 → sin memoria on failure", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url === "/api/config") {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({}),
-            status: 200,
-          });
-        }
-        if (typeof url === "string" && url.includes("/api/status/")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: async () => ({
-              status: "failed",
-              error: "Step remotion-renderer failed (exit 137): OOM",
-            }),
-          });
-        }
-        if (url === "/api/render") {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: async () => ({ jobs: [{ jobId: "test-job-fail" }] }),
-          });
-        }
+    const { PreviewApp } = await import("./PreviewApp.js");
+
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config") {
+        return Promise.resolve({ ok: true, json: async () => ({}), status: 200 });
+      }
+      if (url === "/api/render") {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({}),
+          json: async () => ({ jobs: [{ jobId: "test-job-fail" }] }),
         });
-      })
-    );
+      }
+      if (typeof url === "string" && url.includes("/api/status/")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: "failed",
+            error: "Step remotion-renderer failed (exit 137): OOM",
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
 
-    const { PreviewApp } = await import("./PreviewApp.js");
-    render(<PreviewApp />);
+    await renderAndTriggerFlow(fetchMock, { PreviewApp });
 
     await waitFor(
       () => {
+        // causeLine("remotion-renderer", 137) = "remotion-renderer · exit 137 — sin memoria"
         expect(screen.queryByText(/remotion-renderer\s*·\s*exit 137/)).not.toBeNull();
       },
-      { timeout: 300 }
-    ).catch(() => {
-      throw new Error(
-        "RED: failure cause line not yet rendered — implement Task 2 to pass"
-      );
-    });
+      { timeout: 4000 }
+    );
   });
 
-  it("green discipline: at most ONE action-green element visible at idle", async () => {
+  it("green discipline: at most ONE action-green element visible at idle (no file)", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({}),
-        status: 200,
-      })
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({}), status: 200 })
     );
 
     const { PreviewApp } = await import("./PreviewApp.js");
     render(<PreviewApp />);
 
-    // Inspect inline styles for action-green color
+    // At cold start (no file) only "Elegir archivo" in the dropzone should be action-green.
+    // The header Render CTA must be outline/neutral.
     const actionGreenElements = Array.from(
       document.querySelectorAll<HTMLElement>("*")
     ).filter((el) => {
@@ -239,17 +252,24 @@ describe("Render overlay surfaces (Task 2)", () => {
   });
 
   it("progress surface shows step label for remotion-renderer step", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url === "/api/config") {
-          return Promise.resolve({
-            ok: true,
-            json: async () => ({}),
-            status: 200,
-          });
-        }
-        if (typeof url === "string" && url.includes("/api/status/")) {
+    const { PreviewApp } = await import("./PreviewApp.js");
+
+    // Status returns "running" with remotion-renderer step
+    let firstStatusCall = true;
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config") {
+        return Promise.resolve({ ok: true, json: async () => ({}), status: 200 });
+      }
+      if (url === "/api/render") {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ jobs: [{ jobId: "test-job-progress" }] }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/status/")) {
+        if (firstStatusCall) {
+          firstStatusCall = false;
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -261,33 +281,24 @@ describe("Render overlay surfaces (Task 2)", () => {
             }),
           });
         }
-        if (url === "/api/render") {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            json: async () => ({ jobs: [{ jobId: "test-job-progress" }] }),
-          });
-        }
+        // Subsequent calls return completed to stop polling
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: async () => ({}),
+          json: async () => ({ status: "completed", progress: 100 }),
         });
-      })
-    );
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
 
-    const { PreviewApp } = await import("./PreviewApp.js");
-    render(<PreviewApp />);
+    await renderAndTriggerFlow(fetchMock, { PreviewApp });
 
+    // After the render starts, the progress surface should show "Renderizando"
     await waitFor(
       () => {
         expect(screen.queryByText(/Renderizando/)).not.toBeNull();
       },
-      { timeout: 300 }
-    ).catch(() => {
-      throw new Error(
-        "RED: progress step label not yet rendered — implement Task 2 to pass"
-      );
-    });
+      { timeout: 4000 }
+    );
   });
 });

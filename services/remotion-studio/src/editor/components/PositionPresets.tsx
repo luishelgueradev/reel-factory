@@ -40,7 +40,28 @@ export interface PositionPresetsProps {
   activeAnchor?: string; // drives blue highlight on the matching cell
 }
 
-// ─── Pure math helper (exported for tests) ───────────────────────────────────
+// ─── Pure math helpers (exported for tests) ──────────────────────────────────
+
+/**
+ * Compute the rendered height of a PNG overlay element.
+ *
+ * PngOverlay renders with `width: displayWidth` and `height: auto`, so the
+ * actual rendered height in 1080×1920 frame space is:
+ *   displayWidth * (naturalHeight / naturalWidth)
+ *
+ * Falls back to `displayWidth` (square) when naturalWidth is 0, NaN, or
+ * not finite — matching the old behaviour so nothing ever throws.
+ */
+export function computeOverlayElementHeight(
+  displayWidth: number,
+  naturalWidth: number,
+  naturalHeight: number,
+): number {
+  if (!naturalWidth || !isFinite(naturalWidth)) {
+    return displayWidth;
+  }
+  return Math.round(displayWidth * (naturalHeight / naturalWidth));
+}
 
 /**
  * Compute the top-left (x, y) pixel position for an element placed at the

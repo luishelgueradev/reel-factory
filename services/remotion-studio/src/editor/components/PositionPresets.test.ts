@@ -3,7 +3,7 @@
 // Pure math helper (this file) and enum-mode click mapping (PositionPresets.enum.test.tsx).
 
 import { describe, it, expect } from "vitest";
-import { computePresetXY } from "./PositionPresets.js";
+import { computePresetXY, computeOverlayElementHeight } from "./PositionPresets.js";
 
 // ─── computePresetXY — pure math ─────────────────────────────────────────────
 
@@ -54,5 +54,43 @@ describe("computePresetXY", () => {
     const result = computePresetXY("center", "top", 1400, 100);
     expect(result.x).toBeGreaterThanOrEqual(0);
     expect(result.y).toBe(0);
+  });
+});
+
+// ─── computeOverlayElementHeight — pure aspect-ratio math ────────────────────
+
+describe("computeOverlayElementHeight", () => {
+  it("returns scaled height from aspect ratio (2:1 natural → half width)", () => {
+    // displayWidth=200, naturalWidth=100, naturalHeight=50 → 200*(50/100)=100
+    expect(computeOverlayElementHeight(200, 100, 50)).toBe(100);
+  });
+
+  it("returns scaled height — square source same as width", () => {
+    // displayWidth=200, naturalWidth=400, naturalHeight=200 → 200*(200/400)=100
+    expect(computeOverlayElementHeight(200, 400, 200)).toBe(100);
+  });
+
+  it("falls back to displayWidth when naturalWidth is 0", () => {
+    expect(computeOverlayElementHeight(200, 0, 0)).toBe(200);
+  });
+
+  it("falls back to displayWidth when naturalWidth is NaN", () => {
+    expect(computeOverlayElementHeight(200, NaN, 100)).toBe(200);
+  });
+
+  it("falls back to displayWidth when naturalWidth is Infinity", () => {
+    expect(computeOverlayElementHeight(200, Infinity, 100)).toBe(200);
+  });
+
+  it("returns an integer (Math.round applied)", () => {
+    // displayWidth=100, naturalWidth=3, naturalHeight=2 → 100*(2/3)=66.67 → rounds to 67
+    const result = computeOverlayElementHeight(100, 3, 2);
+    expect(Number.isInteger(result)).toBe(true);
+    expect(result).toBe(67);
+  });
+
+  it("tall portrait image has height > displayWidth", () => {
+    // displayWidth=200, naturalWidth=100, naturalHeight=300 → 200*(300/100)=600
+    expect(computeOverlayElementHeight(200, 100, 300)).toBe(600);
   });
 });

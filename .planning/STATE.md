@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: — Studio redesign + visual capabilities
-status: milestone_complete
-last_updated: 2026-06-03T11:16:44.096Z
-last_activity: 2026-06-03 -- Phase 22 execution started
+milestone: v1.4
+milestone_name: — Studio como producto usable
+status: planning
+last_updated: "2026-06-03T16:00:00.700Z"
+last_activity: 2026-06-03
 progress:
-  total_phases: 20
-  completed_phases: 19
-  total_plans: 76
-  completed_plans: 84
-  percent: 95
-stopped_at: Milestone complete (Phase 22 was final phase)
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 22
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-06-03 - Completed quick task 260603-kv3: cap render concurrency (REMOTION_CONCURRENCY) to prevent Chrome OOM
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-03 — Milestone v1.4 started
 
 ### Quick Tasks Completed
 

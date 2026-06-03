@@ -20,16 +20,18 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 **v1.1 outcomes (notable):** scale:1 production default (Spike 001 mostró que el supersampling no aporta a captions de alto contraste a 1080); orchestrator threadea `PIPELINE_CONFIG_PATH` (los renders honran el config del studio); fix determinista del sync de highlights vía marcador `transcript.timeline` (heurística como fallback); quality-finalizer container ships pero queda como no-op con scale:1.
 
-## Current Milestone: v1.3 — Studio redesign + visual capabilities
+## Current Milestone: v1.4 — Studio como producto usable
 
-**Goal:** Unificar el Studio en una sola interfaz de 2 columnas y expandir las capacidades visuales/tipográficas del render, con persistencia de config que sobreviva rebuilds de Docker.
+**Goal:** Convertir el Studio de editor de estilos en un producto usable de punta a punta: un click genera el video con progreso en vivo, configs reutilizables como perfiles nombrados, metadata para redes generada por IA desde los subtítulos, y la interfaz madurada al north-star elegido.
 
-**Target features:**
-- **Persistencia de config** — estilos guardados como JSON en carpeta persistente (volume/bind), sobreviven `docker rebuild` (hoy se pierden en cada rebuild).
-- **Tipografía** — Plus Jakarta Sans, tamaños de fuente más grandes, variantes bold/italic, efecto outer glow (color/intensidad/suavidad).
-- **PNG overlays** — insertar PNGs transparentes más grandes que el frame, reducidos por código al render (logos/watermarks nítidos).
-- **Bloques de título** — posicionamiento por píxeles (no %), border-radius configurable, eliminar el campo subtítulo (un subtítulo = otro bloque de título).
-- **Rediseño Studio UI (mayor)** — skill `impeccable` + plugin `frontend-design`; una sola interfaz dividida vertical en 2 columnas (izq: preview de video, der: todos los controles en tabs). Elimina la duplicación editor/preview actual.
+**Target features (continúan numeración desde Phase 23):**
+- **Ejecución de render + progreso** — cablear el botón `Render Video` al pipeline real (`POST /process`, que ya corre end-to-end), progreso en vivo (`GET /status/:jobId`), notificación al terminar, y endurecer la carga de fuentes (un blip transitorio gstatic mata el render de 666 frames → retry o fuentes offline). El render ya corre con `REMOTION_CONCURRENCY=2` (fix OOM Chrome, quick 260603-kv3).
+- **Perfiles de config nombrados** — guardar/cargar/reusar configs con nombre (storage + UI). Hoy el config es único en `pipeline/pipeline-config.json` (persistente desde Phase 17).
+- **Metadata IA para redes** — Claude API genera descripción/hashtags desde el transcript de Whisper; llena la columna "Metadata de redes" que Phase 22 dejó de placeholder. Integración de IA → vía `/gsd-ai-integration-phase` (AI-SPEC primero).
+- **Convergencia UI con impeccable** — pase visual holístico de la interfaz hacia el north-star elegido (sketches 037/044-north-star-v4/v5, 033-nav-shell-v4 + corpus en `.planning/sketches/`). Al final, para pulir las superficies nuevas. UI tooling no-negociable: `impeccable` + `frontend-design`.
+
+### v1.3 — Studio redesign + visual capabilities (Shipped: 2026-06-03)
+2-column→3-column Studio shell, tipografía (Plus Jakarta Sans, bold/italic, outer glow), PNG overlays con downscale, bloques de título por píxeles, overlay layering (detrás/delante), presets de posición de 9 puntos. Fases 18–22. Validado con primer render end-to-end real.
 
 **UI tooling (no-negociable):** toda fase/tarea de frontend DEBE invocar `impeccable` + `frontend-design` al inicio (ver AGENTS.md).
 
@@ -127,4 +129,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 — Phase 22 complete: Studio UI polish (3-column shell, densified editors, overlay layering, 9-point presets). Last phase of milestone v1.3.*
+*Last updated: 2026-06-03 — Milestone v1.4 started (Studio como producto usable): render execution+progress, named profiles, AI social metadata, impeccable UI convergence.*

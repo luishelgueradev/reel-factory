@@ -52,4 +52,18 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| _(filled by roadmapper)_ | | |
+| RENDER-01 | Phase 23 | Pending |
+| RENDER-02 | Phase 23 | Pending |
+| RENDER-03 | Phase 23 | Pending |
+| RENDER-04 | Phase 23 | Pending |
+| RENDER-05 | Phase 23 | Pending |
+| PROFILE-01 | Phase 24 | Pending |
+| PROFILE-02 | Phase 24 | Pending |
+| PROFILE-03 | Phase 24 | Pending |
+| PROFILE-04 | Phase 24 | Pending |
+| META-01 | Phase 25 | Pending |
+| META-02 | Phase 25 | Pending |
+| META-03 | Phase 25 | Pending |
+| META-04 | Phase 25 | Pending |
+| UICONV-01 | Phase 26 | Pending |
+| UICONV-02 | Phase 26 | Pending |

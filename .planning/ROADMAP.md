@@ -51,6 +51,18 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 - [x] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)** (completed 2026-05-30)
 - [x] **Phase 22: Studio UI polish** - Adopt a 3-column Studio shell (preview · controls · social-metadata placeholder); denser, reordered control panel (full impeccable pass); sample-text moved into the Subtitles tab; overlay layering model (overlays below text by default, per-overlay back/front toggle); x/y auto-position presets (9-point grid) for titles + overlays. Requirements: D-01..D-11 (22-CONTEXT.md). **Plans:** 6 plans in 3 waves. **(UI hint: yes)** (completed 2026-06-03)
 
+### Milestone v1.4 — Studio como producto usable
+
+Convert the Studio from a style editor into an end-to-end usable product: one click generates the video with live progress, configs are reusable as named profiles, social metadata is AI-generated from subtitles, and the interface is matured toward the chosen north-star. **Frontend tooling non-negotiable:** every studio-facing phase invokes `impeccable` + `frontend-design` (AGENTS.md).
+
+- [ ] **Phase 23: Render execution + progress** - Wire the Studio "Render Video" button to the real pipeline (`POST /process`), live job progress via `GET /status/:jobId`, completion/failure notification, finished-video access from the Studio, and font-load resilience (retry/offline fonts so a transient gstatic blip cannot abort a 666-frame render). Requirements: RENDER-01, RENDER-02, RENDER-03, RENDER-04, RENDER-05. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable per AGENTS.md)**
+
+- [ ] **Phase 24: Named config profiles** - Save the current config as a named profile, load/list/rename/delete saved profiles, persisted with the same Docker-rebuild guarantee as the active config (Phase 17). Requirements: PROFILE-01, PROFILE-02, PROFILE-03, PROFILE-04. **(UI hint: yes)**
+
+- [ ] **Phase 25: AI social metadata** - Generate title/description/hashtags from the Whisper transcript via Claude API; fill the "Metadata de redes" panel that Phase 22 left as a placeholder; edit/copy/regenerate by tone or platform. Run through `/gsd-ai-integration-phase` (produces AI-SPEC.md) before planning. Requirements: META-01, META-02, META-03, META-04. **(UI hint: yes; AI hint: yes — AI-SPEC required before planning)**
+
+- [ ] **Phase 26: UI convergence (impeccable)** - Holistic visual maturity pass over the whole Studio toward the chosen north-star (sketches 037/044-north-star-v4/v5, 033-nav-shell-v4 + the ~47-experiment sketch corpus in `.planning/sketches/`), integrating all new surfaces from Phases 23-25 to the same quality bar. Runs last, polishes surfaces that exist. Requirements: UICONV-01, UICONV-02. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable; sketch-first)**
+
 ## Phase Details
 
 ### Phase 1: Pipeline Infrastructure
@@ -533,27 +545,104 @@ Plans:
 
 ---
 
+### Phase 23: Render execution + progress
+
+**Goal**: Clicking "Render Video" in the Studio starts a real pipeline job and the user watches it complete — the Studio is a working video factory, not just a style editor
+**Depends on**: Phase 22 (3-column Studio shell with Render CTA in place)
+**Requirements**: RENDER-01, RENDER-02, RENDER-03, RENDER-04, RENDER-05
+**UI hint**: yes — invoke `impeccable` + `frontend-design` at plan/execute start (non-negotiable per AGENTS.md)
+**Success Criteria** (what must be TRUE):
+
+  1. Clicking "Render Video" in the Studio submits a job to `POST /process` on the api-server — no curl command or manual step is required
+  2. While the job runs, the Studio displays the current pipeline step name and an overall progress percentage that updates in real time (polling `GET /status/:jobId`)
+  3. When the job completes successfully, the user sees a clear notification and can preview or download the finished video from the Studio without leaving the page
+  4. When the job fails, the Studio surfaces the failure reason so the user knows what went wrong
+  5. A transient font-load failure (gstatic DNS blip) does not abort the render — fonts are loaded with retry logic and/or served from a local offline cache, so a 666-frame job completes even if the initial font fetch fails
+
+**Plans**: TBD
+
+---
+
+### Phase 24: Named config profiles
+
+**Goal**: Users can save and reload named style configurations — switching between project styles is a click, not a manual file operation
+**Depends on**: Phase 17 (active config persistence foundation), Phase 22 (Studio shell where profiles UI will live)
+**Requirements**: PROFILE-01, PROFILE-02, PROFILE-03, PROFILE-04
+**UI hint**: yes
+**Success Criteria** (what must be TRUE):
+
+  1. User can save the current Studio config under a chosen name — the profile appears in the profiles list immediately
+  2. Selecting a saved profile from the list restores its full config into the Studio (all subtitle, title, and overlay settings)
+  3. User can rename and delete profiles from the list — changes persist and are reflected immediately
+  4. Saved profiles survive a `docker compose build` + container recreate — the same Docker-rebuild guarantee as the active config (Phase 17)
+
+**Plans**: TBD
+
+---
+
+### Phase 25: AI social metadata
+
+**Goal**: The "Metadata de redes" column is live — the Studio generates a title, description, and hashtags from the video's transcript in one click, and the user can edit and copy the result
+**Depends on**: Phase 22 (3-column shell with metadata column placeholder), Phase 23 (a completed render produces a transcript artifact accessible to the Studio)
+**Requirements**: META-01, META-02, META-03, META-04
+**UI hint**: yes
+**AI hint**: yes — run `/gsd-ai-integration-phase` to produce AI-SPEC.md before planning this phase
+**Success Criteria** (what must be TRUE):
+
+  1. After a render completes, the user can click "Generar metadata" in the metadata column and the Studio calls Claude API with the video's Whisper transcript to produce a title, description, and hashtag list
+  2. The generated metadata appears in the "Metadata de redes" panel (replacing the Phase 22 placeholder), with distinct fields for title, description, and hashtags
+  3. The user can edit any generated field inline and copy each field to the clipboard independently
+  4. The user can regenerate metadata (choosing a different tone or target platform) without re-running the full video pipeline
+
+**Plans**: TBD
+
+---
+
+### Phase 26: UI convergence (impeccable)
+
+**Goal**: The whole Studio reads as one cohesive product at the chosen north-star quality level — the render progress surface, metadata panel, and profiles panel introduced in Phases 23-25 are visually integrated with the existing shell, not bolted on
+**Depends on**: Phase 25 (all new surfaces exist and are functional)
+**Requirements**: UICONV-01, UICONV-02
+**UI hint**: yes — invoke `impeccable` + `frontend-design` at plan/execute start (non-negotiable per AGENTS.md); sketch-first against `.planning/sketches/` corpus (037/044-north-star-v4/v5, 033-nav-shell-v4, ~47 experiments)
+**Success Criteria** (what must be TRUE):
+
+  1. The Studio shell, navigation, control density, and motion match the chosen north-star direction validated in the sketch corpus (037/044-north-star-v4/v5, 033-nav-shell-v4) — a side-by-side comparison with the sketches shows deliberate convergence, not divergence
+  2. The render-progress surface (Phase 23), metadata panel (Phase 25), and profiles panel (Phase 24) are integrated into the shell at the same visual quality bar as the existing Phase 22 surfaces — no visually inconsistent panels
+
+**Plans**: TBD
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Pipeline Infrastructure | 6/6 | Complete    | 2026-05-05 |
+| 1. Pipeline Infrastructure | 6/6 | Complete | 2026-05-05 |
 | 2. Whisper Transcription | 3/3 | Complete | 2026-05-06 |
 | 3. Silence Detection & Removal | 4/4 | Complete | 2026-05-11 |
 | 4. 9:16 Vertical Output | 3/3 | Complete | 2026-05-11 |
 | 5. Remotion + Animated Subtitles | 5/5 | Complete | 2026-05-11 |
-| 6. Animated Intros & Outros | 5/5 | Complete    | 2026-05-10 |
+| 6. Animated Intros & Outros | 5/5 | Complete | 2026-05-10 |
 | 7. Visual Cuts & Zooms | 7/7 | Complete | 2026-05-12 |
 | 8. SRT/VTT Subtitle Export | 2/2 | Complete | 2026-05-12 |
 | 9. Synchronous API | 3/3 | Complete | 2026-05-13 |
-| 10. Async Batch + Orchestrator | 4/4 | Complete    | 2026-05-13 |
-| 11. Progress Tracking | 3/3 | Complete   | 2026-05-13 |
-| 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete   | 2026-05-18 |
-| 13. Encode Quality | 4/4 | Complete   | 2026-05-21 |
-| 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete   | 2026-05-22 |
-| 15. Whisper externalization | 3/3 | Complete   | 2026-05-23 |
-| 16. Render config + flicker fixes | 3/3 | Complete   | 2026-05-26 |
-| 17. Config persistence | 2/2 | Complete    | 2026-05-27 |
+| 10. Async Batch + Orchestrator | 4/4 | Complete | 2026-05-13 |
+| 11. Progress Tracking | 3/3 | Complete | 2026-05-13 |
+| 12. Subtitle Preview Lab | 2/2 + hot-fixes | Complete | 2026-05-18 |
+| 13. Encode Quality | 4/4 | Complete | 2026-05-21 |
+| 14. Remotion Supersampling + quality-finalizer | 3/3 | Complete | 2026-05-22 |
+| 15. Whisper externalization | 3/3 | Complete | 2026-05-23 |
+| 16. Render config + flicker fixes | 3/3 | Complete | 2026-05-26 |
+| 17. Config persistence | 2/2 | Complete | 2026-05-27 |
+| 18. Studio UI redesign | 3/3 | Complete | 2026-05-27 |
+| 19. Typography & text effects | 4/4 | Complete | 2026-05-29 |
+| 20. Title block precision | 4/4 | Complete | 2026-05-29 |
+| 21. PNG overlays | 3/3 | Complete | 2026-05-30 |
+| 22. Studio UI polish | 6/6 | Complete | 2026-06-03 |
+| 23. Render execution + progress | 0/TBD | Not started | - |
+| 24. Named config profiles | 0/TBD | Not started | - |
+| 25. AI social metadata | 0/TBD | Not started | - |
+| 26. UI convergence (impeccable) | 0/TBD | Not started | - |

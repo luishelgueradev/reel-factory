@@ -574,7 +574,7 @@ Plans:
 
 **Wave 3** *(blocked on 23-01 + 23-02)*
 
-- [ ] 23-04-PLAN.md — UI wiring: MP4 upload + D-02 background swap, 4 inline states (upload/progress/success/failure), ~1.5s poll loop, header CTA state machine, impeccable + frontend-design pass (RENDER-01, RENDER-02, RENDER-03, RENDER-04)
+- [x] 23-04-PLAN.md — UI wiring: MP4 upload + D-02 background swap, 4 inline states (upload/progress/success/failure), ~1.5s poll loop, header CTA state machine, impeccable + frontend-design pass (RENDER-01, RENDER-02, RENDER-03, RENDER-04)
 
 **Wave 4** *(blocked on 23-03 + 23-04)*
 
@@ -661,7 +661,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 20. Title block precision | 4/4 | Complete | 2026-05-29 |
 | 21. PNG overlays | 3/3 | Complete | 2026-05-30 |
 | 22. Studio UI polish | 6/6 | Complete | 2026-06-03 |
-| 23. Render execution + progress | 3/5 | In Progress|  |
+| 23. Render execution + progress | 4/5 | In Progress|  |
 | 24. Named config profiles | 0/TBD | Not started | - |
 | 25. AI social metadata | 0/TBD | Not started | - |
 | 26. UI convergence (impeccable) | 0/TBD | Not started | - |

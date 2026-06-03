@@ -317,7 +317,13 @@ export function PreviewApp() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(errData.error || `Save failed: ${res.status}`);
+        // Prefer the field-level errors array (e.g. ["titles[1].style.x must be …"])
+        // over the generic top-level message ("Invalid config").
+        const fieldErrors: string[] = Array.isArray(errData.errors) ? errData.errors : [];
+        const message = fieldErrors.length > 0
+          ? fieldErrors.join("; ")
+          : (errData.error || `Save failed: ${res.status}`);
+        throw new Error(message);
       }
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -366,14 +372,23 @@ export function PreviewApp() {
             </span>
           )}
           {saveError && (
-            <span style={{
-              fontSize: "var(--t-sm, 12.5px)",
-              color: "var(--danger, #e57373)",
-              padding: "3px var(--s-4, 8px)",
-              borderRadius: "var(--r-full, 999px)",
-              border: "1px solid var(--danger, #e57373)",
-            }}>
-              ✕ Error al guardar
+            <span
+              title={saveError}
+              style={{
+                fontSize: "var(--t-sm, 12.5px)",
+                color: "var(--danger, #e57373)",
+                padding: "3px var(--s-4, 8px)",
+                borderRadius: "var(--r-full, 999px)",
+                border: "1px solid var(--danger, #e57373)",
+                maxWidth: 320,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                display: "inline-block",
+                verticalAlign: "middle",
+              }}
+            >
+              {`✕ ${saveError.length > 60 ? saveError.slice(0, 57) + "…" : saveError}`}
             </span>
           )}
 

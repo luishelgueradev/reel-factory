@@ -28,13 +28,14 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 Phase: 22
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-06-03 - Completed quick task 260603-hgz: position presets use real measured element size
+Last activity: 2026-06-03 - Completed quick task 260603-hob: surface real save validation errors in Guardar config badge
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260603-hgz | Position presets misaligned (center/right/bottom) — measure real element size instead of estimate; overlays use real PNG aspect-ratio, titles measure rendered text box | 2026-06-03 | a811e4f | [260603-hgz-position-presets-misalign-elements-cente](./quick/260603-hgz-position-presets-misalign-elements-cente/) |
+| 260603-hob | Guardar config hid the real error behind a fixed "✕ Error al guardar" — surface the actual PUT /api/config validation field messages (full list on hover) | 2026-06-03 | 6a6749b | [260603-hob-save-config-shows-generic-error-al-guard](./quick/260603-hob-save-config-shows-generic-error-al-guard/) |
 | 260527-i3v | Fix google-fonts loadFont signature bug (all fonts fell back to monospace in preview + renders) | 2026-05-27 | c3b6a1c | [260527-i3v-fix-google-fonts-loadfont-signature-bug](./quick/260527-i3v-fix-google-fonts-loadfont-signature-bug/) |
 | 260529-mxw | fix title/position controls not showing in remotion live preview | 2026-05-29 | 7fc205a | [260529-mxw-fix-title-position-controls-not-showing-](./quick/260529-mxw-fix-title-position-controls-not-showing-/) |
 | 260529-sub | fix fontWeight/fontStyle/outerGlow silently dropped in SubtitledVideo and renderer Root — styles never applied | 2026-05-29 | bee3723 | [260529-sub-subtitle-style-fields-not-passed-through](./quick/260529-sub-subtitle-style-fields-not-passed-through/) |

@@ -1,8 +1,8 @@
 // ─── PositionPresets — TDD tests ─────────────────────────────────────────────
 // Tests for the shared 9-point position preset component (D-07, D-08, D-09).
-// Pure math helper and enum-mode click mapping.
+// Pure math helper (this file) and enum-mode click mapping (PositionPresets.enum.test.tsx).
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { computePresetXY } from "./PositionPresets.js";
 
 // ─── computePresetXY — pure math ─────────────────────────────────────────────
@@ -37,5 +37,22 @@ describe("computePresetXY", () => {
     const result = computePresetXY("center", "center", 201, 101);
     expect(Number.isInteger(result.x)).toBe(true);
     expect(Number.isInteger(result.y)).toBe(true);
+  });
+
+  it("clamps to 0 for oversized elements (WR-01: large title right/bottom preset)", () => {
+    // elementWidth=1400 > frameWidth=1080 → right anchor would yield 1080-1400=-320 without clamp
+    // elementHeight=2200 > frameHeight=1920 → bottom anchor would yield 1920-2200=-280 without clamp
+    const result = computePresetXY("right", "bottom", 1400, 2200);
+    expect(result.x).toBeGreaterThanOrEqual(0);
+    expect(result.y).toBeGreaterThanOrEqual(0);
+    expect(result.x).toBe(0); // Math.max(0, 1080-1400) = Math.max(0, -320) = 0
+    expect(result.y).toBe(0); // Math.max(0, 1920-2200) = Math.max(0, -280) = 0
+  });
+
+  it("clamps center anchor when element exceeds frame width (returns 0, not negative)", () => {
+    // elementWidth=1400 → center x = round((1080-1400)/2) = round(-160) = -160 → clamped to 0
+    const result = computePresetXY("center", "top", 1400, 100);
+    expect(result.x).toBeGreaterThanOrEqual(0);
+    expect(result.y).toBe(0);
   });
 });

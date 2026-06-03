@@ -23,7 +23,13 @@ findings:
   warning: 5
   info: 3
   total: 9
-status: issues_found
+status: resolved
+resolution:
+  resolved: 2026-06-03
+  fixed: [CR-01, WR-01, WR-02, WR-03, WR-04]
+  deferred: [WR-05]
+  untouched_info: [3 Info findings — out of --fix scope]
+  note: "CR-01/WR-01..04 fixed in commits 3dc5bf3, 4523384, f2a3823, f9d01cd, 3a427cd. WR-05 (preview-dim opacity undershoot) skipped — intentional studio-only legibility behavior; a fix would change product behavior. Post-fix: renderer 304/304, studio 135/135, build exit 0."
 ---
 
 # Phase 22: Code Review Report

@@ -1,24 +1,94 @@
-// ─── StyleControls: Subtitle style parameter editing (D-06, D-08, D-09, D-16) ──
-// Per D-06: Global style props - fontFamily, fontSize, activeColor, inactiveColor, outlineColor, outlineWidth
-// Per D-08: Background highlight - enabled/on/off + color, padding, borderRadius
-// Per D-09: Position presets - bottom-center, top-center, center-screen
-// Per D-16: Config editor UI for style controls
-// Phase 19: Extended font size (200), fontWeight/fontStyle toggles, Outer Glow card
+// ─── StyleControls: Subtitle style editing — Phase 22 impeccable pass ────────
+// D-06: Global style props — fontFamily, fontSize, activeColor, inactiveColor,
+//       outlineColor, outlineWidth
+// D-08: Background highlight — enabled/on/off + color, padding, borderRadius
+// D-09: Position presets — migrated to shared PositionPresets ENUM mode (22-05)
+// D-11: Posición → Estilo → Avanzado always-open titled sections
+// Phase 19: Extended font size (200), fontWeight/fontStyle toggles, Outer Glow
+// Phase 22: PositionPresets enum mode replaces 3-button position selector;
+//           segmented-button selection flipped green→blue (color law)
 
 import React from "react";
 import type { SubtitleConfig, SubtitlePosition, BackgroundHighlight, OuterGlow } from "../../pipeline-config.js";
 import { AVAILABLE_FONTS } from "../../fonts.js";
+import { PositionPresets } from "./PositionPresets.js";
 
 interface StyleControlsProps {
   config: SubtitleConfig;
   onChange: (partial: Partial<SubtitleConfig>) => void;
 }
 
-const POSITION_OPTIONS: { id: SubtitlePosition; label: string }[] = [
-  { id: "bottom-center", label: "Bottom Center" },
-  { id: "top-center", label: "Top Center" },
-  { id: "center-screen", label: "Center Screen" },
-];
+// ─── Shared segmented-button style helpers ─────────────────────────────────
+// Color law (LOCKED): active = blue accent tokens; green is Render-CTA only.
+
+function segBtnStyle(active: boolean): React.CSSProperties {
+  return {
+    flex: 1,
+    padding: "6px 12px",
+    border: `1px solid ${active ? "var(--accent-strong, #6ba8e0)" : "var(--border, #333)"}`,
+    borderRadius: "var(--r-xs, 4px)",
+    background: active ? "var(--accent-tint, rgba(144,202,249,0.12))" : "var(--surface-2, #252535)",
+    color: active ? "var(--accent, #90caf9)" : "var(--text-2, #a8a8b3)",
+    cursor: "pointer",
+    fontSize: "var(--t-sm, 12.5px)" as React.CSSProperties["fontSize"],
+    transition: "border-color var(--dur,170ms) var(--ease), background var(--dur,170ms) var(--ease), color var(--dur,170ms) var(--ease)",
+  };
+}
+
+// ─── Section header — numbered chip + uppercase title + hairline fill ──────
+
+function SectionHeader({ n, title }: { n: number; title: string }) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "var(--s-4, 8px)",
+      marginBottom: "var(--s-5, 10px)",
+    }}>
+      <span style={{
+        fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"],
+        fontWeight: 600,
+        color: "var(--text-muted, #777)",
+        background: "var(--surface-2, #252535)",
+        border: "1px solid var(--border, #333)",
+        borderRadius: "var(--r-xs, 4px)",
+        padding: "2px 5px",
+        letterSpacing: "0.1em",
+        textTransform: "uppercase" as React.CSSProperties["textTransform"],
+        lineHeight: 1,
+        flexShrink: 0,
+      }}>
+        {n}
+      </span>
+      <span style={{
+        fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"],
+        fontWeight: 600,
+        color: "var(--text-muted, #777)",
+        letterSpacing: "0.1em",
+        textTransform: "uppercase" as React.CSSProperties["textTransform"],
+        flexShrink: 0,
+      }}>
+        {title}
+      </span>
+      <div style={{ flex: 1, height: 1, background: "var(--border-faint, #2a2a38)" }} />
+    </div>
+  );
+}
+
+// ─── Shared control-row label ──────────────────────────────────────────────
+
+function RowLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label style={{
+      fontSize: "var(--t-sm, 12.5px)" as React.CSSProperties["fontSize"],
+      color: "var(--text-2, #a8a8b3)",
+      display: "block",
+      marginBottom: "var(--s-2, 4px)",
+    }}>
+      {children}
+    </label>
+  );
+}
 
 export function StyleControls({ config, onChange }: StyleControlsProps) {
   const bh: BackgroundHighlight = config.backgroundHighlight ?? {
@@ -36,498 +106,454 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* ── Color controls ──────────────────────────────────────────── */}
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        <ColorControl
-          label="Active Color"
-          value={config.activeColor ?? "#FFFF00"}
-          onChange={(v) => onChange({ activeColor: v })}
-        />
-        <ColorControl
-          label="Highlight Color"
-          value={config.highlightColor ?? "#FFFFFF"}
-          onChange={(v) => onChange({ highlightColor: v })}
-        />
-        <ColorControl
-          label="Inactive Color"
-          value={config.inactiveColor ?? "#FFFFFF"}
-          onChange={(v) => onChange({ inactiveColor: v })}
-        />
-        <ColorControl
-          label="Outline Color"
-          value={config.outlineColor ?? "#000000"}
-          onChange={(v) => onChange({ outlineColor: v })}
-        />
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-8, 16px)" }}>
 
-      {/* ── Font family selector ─────────────────────────────────────── */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          § 1  POSICIÓN
+          Contains: PositionPresets (enum mode, 3 enabled cells) + bottomOffset
+          Migration (D-08): shared <PositionPresets mode="enum"> replaces the
+          old 3-button selector. The 3 anchor cells map to SubtitlePosition:
+            center-bottom → "bottom-center"
+            center-top    → "top-center"
+            center-center → "center-screen"
+          onApplyAnchor writes through the EXISTING onChange({ position }) path —
+          same writes as the old 3 buttons → subtitle preview cannot regress.
+      ═══════════════════════════════════════════════════════════════════ */}
       <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Font Family
-        </label>
-        <select
-          value={config.fontFamily ?? "PlusJakartaSans"}
-          onChange={(e) => onChange({ fontFamily: e.target.value })}
-          style={{
-            width: "100%",
-            padding: "8px 12px",
-            background: "#2a2a3e",
-            border: "1px solid #444",
-            borderRadius: 6,
-            color: "#e0e0e0",
-            fontSize: 14,
-          }}
-        >
-          {AVAILABLE_FONTS.map((font) => (
-            <option key={font} value={font}>{font}</option>
-          ))}
-        </select>
-      </div>
+        <SectionHeader n={1} title="Posición" />
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-5, 10px)" }}>
 
-      {/* ── Font size slider ──────────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Font Size: <strong style={{ color: "#fff" }}>{config.fontSize ?? 58}</strong>
-        </label>
-        <input
-          type="range"
-          min={24}
-          max={200}
-          value={config.fontSize ?? 58}
-          onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-          <span>24</span>
-          <span>200</span>
-        </div>
-      </div>
-
-      {/* ── Font Weight toggle ─────────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Font Weight
-        </label>
-        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <button
-            onClick={() => onChange({ fontWeight: false })}
-            style={{
-              flex: 1,
-              padding: "6px 12px",
-              border: `1px solid ${config.fontWeight === false ? "#4CAF50" : "#444"}`,
-              borderRadius: 4,
-              background: config.fontWeight === false ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
-              color: config.fontWeight === false ? "#a5d6a7" : "#ccc",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Regular
-          </button>
-          <button
-            onClick={() => onChange({ fontWeight: true })}
-            style={{
-              flex: 1,
-              padding: "6px 12px",
-              border: `1px solid ${config.fontWeight !== false ? "#4CAF50" : "#444"}`,
-              borderRadius: 4,
-              background: config.fontWeight !== false ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
-              color: config.fontWeight !== false ? "#a5d6a7" : "#ccc",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Bold
-          </button>
-        </div>
-      </div>
-
-      {/* ── Font Style toggle ──────────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Font Style
-        </label>
-        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <button
-            onClick={() => onChange({ fontStyle: false })}
-            style={{
-              flex: 1,
-              padding: "6px 12px",
-              border: `1px solid ${config.fontStyle !== true ? "#4CAF50" : "#444"}`,
-              borderRadius: 4,
-              background: config.fontStyle !== true ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
-              color: config.fontStyle !== true ? "#a5d6a7" : "#ccc",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Normal
-          </button>
-          <button
-            onClick={() => onChange({ fontStyle: true })}
-            style={{
-              flex: 1,
-              padding: "6px 12px",
-              border: `1px solid ${config.fontStyle === true ? "#4CAF50" : "#444"}`,
-              borderRadius: 4,
-              background: config.fontStyle === true ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
-              color: config.fontStyle === true ? "#a5d6a7" : "#ccc",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Italic
-          </button>
-        </div>
-      </div>
-
-      {/* ── Position selector (D-09) ─────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Subtitle Position
-        </label>
-        <div style={{ display: "flex", gap: 8 }}>
-          {POSITION_OPTIONS.map((opt) => {
-            const isSelected = (config.position ?? "bottom-center") === opt.id;
-            return (
-              <button
-                key={opt.id}
-                onClick={() => onChange({ position: opt.id })}
-                style={{
-                  flex: 1,
-                  padding: "8px 12px",
-                  border: `1px solid ${isSelected ? "#4CAF50" : "#444"}`,
-                  borderRadius: 6,
-                  background: isSelected ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
-                  color: isSelected ? "#a5d6a7" : "#ccc",
-                  cursor: "pointer",
-                  fontSize: 13,
-                }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Outline width ────────────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Outline Width: <strong style={{ color: "#fff" }}>{config.outlineWidth ?? 3}</strong>
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={10}
-          value={config.outlineWidth ?? 3}
-          onChange={(e) => onChange({ outlineWidth: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-      </div>
-
-        {/* ── Letter spacing ───────────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Letter Spacing: <strong style={{ color: "#fff" }}>{config.letterSpacing ?? 0}</strong>
-        </label>
-        <input
-          type="range"
-          min={-1}
-          max={20}
-          value={config.letterSpacing ?? 0}
-          onChange={(e) => onChange({ letterSpacing: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-      </div>
-
-      {/* ── Line Height (D-09, PREV-03) ──────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Line Height: <strong style={{ color: "#fff" }}>{config.lineHeight ?? 1.3}</strong>
-        </label>
-        <input
-          type="range"
-          min={0.8}
-          max={3}
-          step={0.1}
-          value={config.lineHeight ?? 1.3}
-          onChange={(e) => onChange({ lineHeight: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-          <span>0.8</span>
-          <span>3.0</span>
-        </div>
-      </div>
-
-      {/* ── Past Word Opacity (D-07, PREV-03) ──────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Past Word Opacity: <strong style={{ color: "#fff" }}>{config.pastWordOpacity ?? 0.4}</strong>
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={config.pastWordOpacity ?? 0.4}
-          onChange={(e) => onChange({ pastWordOpacity: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-          <span>0</span>
-          <span>1</span>
-        </div>
-      </div>
-
-      {/* ── Highlight Duration ─────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Highlight Duration: <strong style={{ color: "#fff" }}>{config.highlightDurationMs ?? 200}ms</strong>
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={500}
-          step={10}
-          value={config.highlightDurationMs ?? 200}
-          onChange={(e) => onChange({ highlightDurationMs: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-          <span>0ms (off)</span>
-          <span>500ms</span>
-        </div>
-      </div>
-
-      {/* ── Highlight Transition ───────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Highlight Transition
-        </label>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={() => onChange({ highlightTransition: "fade" })}
-            style={{
-              flex: 1,
-              padding: "6px 12px",
-              border: `1px solid ${(config.highlightTransition ?? "fade") === "fade" ? "#4CAF50" : "#444"}`,
-              borderRadius: 4,
-              background: (config.highlightTransition ?? "fade") === "fade" ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
-              color: (config.highlightTransition ?? "fade") === "fade" ? "#a5d6a7" : "#ccc",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Fade
-          </button>
-          <button
-            onClick={() => onChange({ highlightTransition: "instant" })}
-            style={{
-              flex: 1,
-              padding: "6px 12px",
-              border: `1px solid ${config.highlightTransition === "instant" ? "#4CAF50" : "#444"}`,
-              borderRadius: 4,
-              background: config.highlightTransition === "instant" ? "rgba(76, 175, 80, 0.12)" : "#2a2a3e",
-              color: config.highlightTransition === "instant" ? "#a5d6a7" : "#ccc",
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            Instant
-          </button>
-        </div>
-      </div>
-
-      {/* ── Bottom Offset (PREV-03) ────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Bottom Offset: <strong style={{ color: "#fff" }}>{config.bottomOffset ?? 250}px</strong>
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={960}
-          step={10}
-          value={config.bottomOffset ?? 250}
-          onChange={(e) => onChange({ bottomOffset: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-          <span>0px</span>
-          <span>960px</span>
-        </div>
-      </div>
-
-      {/* ── Subtitle Width ────────────────────────────────────── */}
-      <div>
-        <label style={{ fontSize: 13, color: "#bbb", display: "block", marginBottom: 4 }}>
-          Subtitle Width: <strong style={{ color: "#fff" }}>{(config.subtitleWidth ?? 0) || "auto"}</strong>
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={1080}
-          step={10}
-          value={config.subtitleWidth ?? 0}
-          onChange={(e) => onChange({ subtitleWidth: Number(e.target.value) })}
-          style={{ width: "100%", accentColor: "#4CAF50" }}
-        />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-          <span>0 (auto)</span>
-          <span>1080px</span>
-        </div>
-      </div>
-
-      {/* ── Background highlight (D-08) ──────────────────────────────── */}
-      <div style={{
-        padding: "12px 16px",
-        background: "#1e1e2e",
-        borderRadius: 8,
-        border: "1px solid #333",
-      }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 8 }}>
-          <input
-            type="checkbox"
-            checked={bh.enabled}
-            onChange={(e) => onChange({
-              backgroundHighlight: { ...bh, enabled: e.target.checked },
-            })}
-          />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>
-            Background Highlight
-          </span>
-        </label>
-
-        {bh.enabled && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginLeft: 24 }}>
-            <ColorControl
-              label="Highlight Color"
-              value={bh.color}
-              onChange={(v) => onChange({ backgroundHighlight: { ...bh, color: v } })}
+          {/* Position preset grid (enum mode — D-08 migration path) */}
+          <div>
+            <RowLabel>Preset de posición</RowLabel>
+            <PositionPresets
+              mode="enum"
+              anchorToValue={{
+                "center-bottom": "bottom-center",
+                "center-top": "top-center",
+                "center-center": "center-screen",
+              }}
+              activeAnchor={config.position ?? "bottom-center"}
+              onApplyAnchor={(value: SubtitlePosition) => onChange({ position: value })}
             />
-            <div>
-              <label style={{ fontSize: 12, color: "#999" }}>
-                Padding: {bh.padding}px
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={32}
-                value={bh.padding}
-                onChange={(e) => onChange({ backgroundHighlight: { ...bh, padding: Number(e.target.value) } })}
-                style={{ width: "100%", accentColor: "#4CAF50" }}
-              />
+          </div>
+
+          {/* Bottom offset */}
+          <div>
+            <RowLabel>
+              Offset inferior: <strong style={{ color: "var(--text, #e6e6ea)" }}>{config.bottomOffset ?? 250}px</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={0}
+              max={960}
+              step={10}
+              value={config.bottomOffset ?? 250}
+              onChange={(e) => onChange({ bottomOffset: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>
+              <span>0px</span>
+              <span>960px</span>
             </div>
-            <div>
-              <label style={{ fontSize: 12, color: "#999" }}>
-                Border Radius: {bh.borderRadius}px
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={24}
-                value={bh.borderRadius}
-                onChange={(e) => onChange({ backgroundHighlight: { ...bh, borderRadius: Number(e.target.value) } })}
-                style={{ width: "100%", accentColor: "#4CAF50" }}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          § 2  ESTILO
+          Contains: font family, size, weight, style, color matrix, glow
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader n={2} title="Estilo" />
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-5, 10px)" }}>
+
+          {/* Font family */}
+          <div>
+            <RowLabel>Fuente</RowLabel>
+            <select
+              value={config.fontFamily ?? "PlusJakartaSans"}
+              onChange={(e) => onChange({ fontFamily: e.target.value })}
+              style={{
+                width: "100%",
+                padding: "6px 10px",
+                background: "var(--surface-2, #252535)",
+                border: "1px solid var(--border, #333)",
+                borderRadius: "var(--r-sm, 6px)",
+                color: "var(--text, #e6e6ea)",
+                fontSize: "var(--t-md, 13.5px)" as React.CSSProperties["fontSize"],
+              }}
+            >
+              {AVAILABLE_FONTS.map((font) => (
+                <option key={font} value={font}>{font}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Font size slider */}
+          <div>
+            <RowLabel>
+              Tamaño: <strong style={{ color: "var(--text, #e6e6ea)" }}>{config.fontSize ?? 58}</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={24}
+              max={200}
+              value={config.fontSize ?? 58}
+              onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>
+              <span>24</span>
+              <span>200</span>
+            </div>
+          </div>
+
+          {/* Font Weight segmented toggle — blue selection (color law) */}
+          <div>
+            <RowLabel>Grosor</RowLabel>
+            <div style={{ display: "flex", gap: "var(--s-4, 8px)", marginTop: "var(--s-2, 4px)" }}>
+              <button
+                type="button"
+                onClick={() => onChange({ fontWeight: false })}
+                style={segBtnStyle(config.fontWeight === false)}
+              >
+                Regular
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange({ fontWeight: true })}
+                style={segBtnStyle(config.fontWeight !== false)}
+              >
+                Negrita
+              </button>
+            </div>
+          </div>
+
+          {/* Font Style segmented toggle — blue selection (color law) */}
+          <div>
+            <RowLabel>Estilo de fuente</RowLabel>
+            <div style={{ display: "flex", gap: "var(--s-4, 8px)", marginTop: "var(--s-2, 4px)" }}>
+              <button
+                type="button"
+                onClick={() => onChange({ fontStyle: false })}
+                style={segBtnStyle(config.fontStyle !== true)}
+              >
+                Normal
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange({ fontStyle: true })}
+                style={segBtnStyle(config.fontStyle === true)}
+              >
+                Itálica
+              </button>
+            </div>
+          </div>
+
+          {/* Color matrix (2×2 grid) */}
+          <div>
+            <RowLabel>Colores</RowLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-4, 8px)" }}>
+              <ColorControl
+                label="Activa"
+                value={config.activeColor ?? "#FFFF00"}
+                onChange={(v) => onChange({ activeColor: v })}
+              />
+              <ColorControl
+                label="Resaltada"
+                value={config.highlightColor ?? "#FFFFFF"}
+                onChange={(v) => onChange({ highlightColor: v })}
+              />
+              <ColorControl
+                label="Inactiva"
+                value={config.inactiveColor ?? "#FFFFFF"}
+                onChange={(v) => onChange({ inactiveColor: v })}
+              />
+              <ColorControl
+                label="Contorno"
+                value={config.outlineColor ?? "#000000"}
+                onChange={(v) => onChange({ outlineColor: v })}
               />
             </div>
           </div>
-        )}
+
+          {/* Outer Glow card */}
+          <div style={{
+            padding: "var(--s-6, 12px) var(--s-8, 16px)",
+            background: "var(--surface, #1e1e2e)",
+            borderRadius: "var(--r-md, 8px)",
+            border: "1px solid var(--border, #333)",
+          }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--s-4, 8px)", cursor: "pointer", marginBottom: "var(--s-4, 8px)" }}>
+              <input
+                type="checkbox"
+                checked={glow.enabled}
+                onChange={(e) => onChange({ outerGlow: { ...glow, enabled: e.target.checked } })}
+              />
+              <span style={{ fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"], fontWeight: 600, color: "var(--text, #e6e6ea)" }}>
+                Brillo exterior
+              </span>
+            </label>
+
+            {glow.enabled && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-5, 10px)", marginLeft: 24 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "var(--s-2, 4px)" }}>
+                  <label style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-2, #a8a8b3)" }}>Color</label>
+                  <input
+                    type="color"
+                    value={glow.color}
+                    onChange={(e) => onChange({ outerGlow: { ...glow, color: e.target.value } })}
+                    style={{ width: 48, height: 36, border: "1px solid var(--border, #333)", borderRadius: "var(--r-xs, 4px)", padding: 2, background: "var(--surface-2, #252535)", cursor: "pointer" }}
+                  />
+                  <span style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>{glow.color}</span>
+                </div>
+                <div>
+                  <label style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-2, #a8a8b3)", display: "block", marginBottom: "var(--s-2, 4px)" }}>
+                    Intensidad: {glow.intensity}
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={glow.intensity}
+                    onChange={(e) => onChange({ outerGlow: { ...glow, intensity: Number(e.target.value) } })}
+                    style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-2, #a8a8b3)", display: "block", marginBottom: "var(--s-2, 4px)" }}>
+                    Suavidad: {glow.softness}px
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={60}
+                    step={1}
+                    value={glow.softness}
+                    onChange={(e) => onChange({ outerGlow: { ...glow, softness: Number(e.target.value) } })}
+                    style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* ── Outer Glow (Phase 19, TYPO-04) ──────────────────────────────── */}
-      <div style={{
-        padding: "12px 16px",
-        background: "#1e1e2e",
-        borderRadius: 8,
-        border: "1px solid #333",
-      }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 8 }}>
-          <input
-            type="checkbox"
-            checked={glow.enabled}
-            onChange={(e) => onChange({ outerGlow: { ...glow, enabled: e.target.checked } })}
-          />
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#e0e0e0" }}>Outer Glow</span>
-        </label>
+      {/* ═══════════════════════════════════════════════════════════════════
+          § 3  AVANZADO
+          Contains: letterSpacing, lineHeight, pastWordOpacity,
+                    highlightDuration/transition, subtitleWidth, outlineWidth,
+                    backgroundHighlight
+          Always-open titled section — NOT an accordion (UI-SPEC Layout Contract
+          L236-243 overrides the literal "collapsed" wording in D-11/ROADMAP).
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader n={3} title="Avanzado" />
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-5, 10px)" }}>
 
-        {glow.enabled && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginLeft: 24 }}>
-            {/* Glow Color */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-              <label style={{ fontSize: 12, color: "#999" }}>Glow Color</label>
-              <input
-                type="color"
-                value={glow.color}
-                onChange={(e) => onChange({ outerGlow: { ...glow, color: e.target.value } })}
-                style={{
-                  width: 48,
-                  height: 36,
-                  border: "1px solid #444",
-                  borderRadius: 4,
-                  padding: 2,
-                  background: "#2a2a3e",
-                  cursor: "pointer",
-                }}
-              />
-              <span style={{ fontSize: 11, color: "#666" }}>{glow.color}</span>
-            </div>
+          {/* Letter spacing */}
+          <div>
+            <RowLabel>
+              Espaciado de letras: <strong style={{ color: "var(--text, #e6e6ea)" }}>{config.letterSpacing ?? 0}</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={-1}
+              max={20}
+              value={config.letterSpacing ?? 0}
+              onChange={(e) => onChange({ letterSpacing: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+          </div>
 
-            {/* Intensity slider */}
-            <div>
-              <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 4 }}>
-                Intensity: {glow.intensity}
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={glow.intensity}
-                onChange={(e) => onChange({ outerGlow: { ...glow, intensity: Number(e.target.value) } })}
-                style={{ width: "100%", accentColor: "#4CAF50" }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-                <span>0</span>
-                <span>1</span>
-              </div>
-            </div>
-
-            {/* Softness slider */}
-            <div>
-              <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 4 }}>
-                Softness: {glow.softness}px
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={60}
-                step={1}
-                value={glow.softness}
-                onChange={(e) => onChange({ outerGlow: { ...glow, softness: Number(e.target.value) } })}
-                style={{ width: "100%", accentColor: "#4CAF50" }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-                <span>0px</span>
-                <span>60px</span>
-              </div>
+          {/* Line height */}
+          <div>
+            <RowLabel>
+              Altura de línea: <strong style={{ color: "var(--text, #e6e6ea)" }}>{config.lineHeight ?? 1.3}</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={0.8}
+              max={3}
+              step={0.1}
+              value={config.lineHeight ?? 1.3}
+              onChange={(e) => onChange({ lineHeight: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>
+              <span>0.8</span>
+              <span>3.0</span>
             </div>
           </div>
-        )}
+
+          {/* Past word opacity */}
+          <div>
+            <RowLabel>
+              Opacidad palabra anterior: <strong style={{ color: "var(--text, #e6e6ea)" }}>{config.pastWordOpacity ?? 0.4}</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={config.pastWordOpacity ?? 0.4}
+              onChange={(e) => onChange({ pastWordOpacity: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>
+              <span>0</span>
+              <span>1</span>
+            </div>
+          </div>
+
+          {/* Highlight duration */}
+          <div>
+            <RowLabel>
+              Duración resaltado: <strong style={{ color: "var(--text, #e6e6ea)" }}>{config.highlightDurationMs ?? 200}ms</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={0}
+              max={500}
+              step={10}
+              value={config.highlightDurationMs ?? 200}
+              onChange={(e) => onChange({ highlightDurationMs: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>
+              <span>0ms (off)</span>
+              <span>500ms</span>
+            </div>
+          </div>
+
+          {/* Highlight transition — blue selection (color law) */}
+          <div>
+            <RowLabel>Transición de resaltado</RowLabel>
+            <div style={{ display: "flex", gap: "var(--s-4, 8px)" }}>
+              <button
+                type="button"
+                onClick={() => onChange({ highlightTransition: "fade" })}
+                style={segBtnStyle((config.highlightTransition ?? "fade") === "fade")}
+              >
+                Gradual
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange({ highlightTransition: "instant" })}
+                style={segBtnStyle(config.highlightTransition === "instant")}
+              >
+                Instantáneo
+              </button>
+            </div>
+          </div>
+
+          {/* Subtitle width */}
+          <div>
+            <RowLabel>
+              Ancho subtítulos: <strong style={{ color: "var(--text, #e6e6ea)" }}>{(config.subtitleWidth ?? 0) || "auto"}</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={0}
+              max={1080}
+              step={10}
+              value={config.subtitleWidth ?? 0}
+              onChange={(e) => onChange({ subtitleWidth: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>
+              <span>0 (auto)</span>
+              <span>1080px</span>
+            </div>
+          </div>
+
+          {/* Outline width */}
+          <div>
+            <RowLabel>
+              Ancho contorno: <strong style={{ color: "var(--text, #e6e6ea)" }}>{config.outlineWidth ?? 3}</strong>
+            </RowLabel>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              value={config.outlineWidth ?? 3}
+              onChange={(e) => onChange({ outlineWidth: Number(e.target.value) })}
+              style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+            />
+          </div>
+
+          {/* Background highlight card */}
+          <div style={{
+            padding: "var(--s-6, 12px) var(--s-8, 16px)",
+            background: "var(--surface, #1e1e2e)",
+            borderRadius: "var(--r-md, 8px)",
+            border: "1px solid var(--border, #333)",
+          }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--s-4, 8px)", cursor: "pointer", marginBottom: "var(--s-4, 8px)" }}>
+              <input
+                type="checkbox"
+                checked={bh.enabled}
+                onChange={(e) => onChange({
+                  backgroundHighlight: { ...bh, enabled: e.target.checked },
+                })}
+              />
+              <span style={{ fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"], fontWeight: 600, color: "var(--text, #e6e6ea)" }}>
+                Fondo resaltado
+              </span>
+            </label>
+
+            {bh.enabled && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-5, 10px)", marginLeft: 24 }}>
+                <ColorControl
+                  label="Color"
+                  value={bh.color}
+                  onChange={(v) => onChange({ backgroundHighlight: { ...bh, color: v } })}
+                />
+                <div>
+                  <label style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-2, #a8a8b3)" }}>
+                    Relleno: {bh.padding}px
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={32}
+                    value={bh.padding}
+                    onChange={(e) => onChange({ backgroundHighlight: { ...bh, padding: Number(e.target.value) } })}
+                    style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-2, #a8a8b3)" }}>
+                    Radio borde: {bh.borderRadius}px
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={24}
+                    value={bh.borderRadius}
+                    onChange={(e) => onChange({ backgroundHighlight: { ...bh, borderRadius: Number(e.target.value) } })}
+                    style={{ width: "100%", accentColor: "var(--accent, #90caf9)" }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }
 
-// ─── Color picker sub-component ────────────────────────────────────────
+// ─── Color picker sub-component ────────────────────────────────────────────
 
 function ColorControl({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-      <label style={{ fontSize: 12, color: "#999" }}>{label}</label>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--s-2, 4px)" }}>
+      <label style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-2, #a8a8b3)" }}>{label}</label>
       <input
         type="color"
         value={value}
@@ -535,14 +561,14 @@ function ColorControl({ label, value, onChange }: { label: string; value: string
         style={{
           width: 48,
           height: 36,
-          border: "1px solid #444",
-          borderRadius: 4,
+          border: "1px solid var(--border, #333)",
+          borderRadius: "var(--r-xs, 4px)",
           padding: 2,
-          background: "#2a2a3e",
+          background: "var(--surface-2, #252535)",
           cursor: "pointer",
         }}
       />
-      <span style={{ fontSize: 11, color: "#666" }}>{value}</span>
+      <span style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>{value}</span>
     </div>
   );
 }

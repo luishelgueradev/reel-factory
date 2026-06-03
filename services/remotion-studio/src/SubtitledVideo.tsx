@@ -82,6 +82,11 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
   // Build config with resolved CSS fontFamily for layout components
   const resolvedConfig: SubtitleConfig = { ...config, fontFamily: fontFamilyCSS };
 
+  // D-03/D-04: Split overlays into back band (default, under subtitles) and front band (over titles).
+  // Overlays with no layer field default to "back".
+  const backOverlays = overlays.filter(o => (o.layer ?? "back") === "back");
+  const frontOverlays = overlays.filter(o => o.layer === "front");
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       <ZoomContainer
@@ -91,6 +96,16 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
       >
         {videoSrc && <OffthreadVideo src={rawVideoSrc ?? staticFile(videoSrc)} />}
       </ZoomContainer>
+      {/* D-03 back-band: paint BEFORE subtitles (layer 2 — under text) */}
+      {/* Preview-only legibility dim: opacity 0.85 + saturate(0.8) — studio Player path ONLY, never exported */}
+      {backOverlays.map((ov, i) => (
+        <div
+          key={`overlay-back-${i}`}
+          style={{ position: "absolute", inset: 0, opacity: 0.85, filter: "saturate(0.8)" }}
+        >
+          <PngOverlay overlay={ov} rawImageSrc={ov.imageData} />
+        </div>
+      ))}
       <SubtitleLayoutRenderer captionPages={captionPages} config={resolvedConfig} totalDurationMs={totalDurationMs} />
       {(titles ?? []).map((title, i) => {
         const fromFrame = Math.round(title.startTimeMs * (fps / 1000));
@@ -106,10 +121,10 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
           </Sequence>
         );
       })}
-      {/* Phase 21: PNG overlays — rendered above titles (later in DOM = higher z-order) */}
+      {/* D-03 front-band: paint AFTER titles (layer 5 — promoted, over text) */}
       {/* rawImageSrc = ov.imageData (data URL) for Player/browser preview context (D-11) */}
-      {overlays.map((ov, i) => (
-        <PngOverlay key={`overlay-${i}`} overlay={ov} rawImageSrc={ov.imageData} />
+      {frontOverlays.map((ov, i) => (
+        <PngOverlay key={`overlay-front-${i}`} overlay={ov} rawImageSrc={ov.imageData} />
       ))}
     </AbsoluteFill>
   );

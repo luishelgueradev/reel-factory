@@ -121,7 +121,6 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
           <Sequence key={`title-${i}`} from={fromFrame} durationInFrames={durationInFrames}>
             <TitleOverlay
               text={title.text}
-              subtitle={title.subtitle}
               style={title.style}
               durationMs={title.durationMs}
               fontFamily={config.fontFamily}

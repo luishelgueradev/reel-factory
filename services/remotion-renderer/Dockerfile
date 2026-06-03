@@ -9,7 +9,8 @@ RUN npm install && \
 
 COPY tsconfig.json remotion.config.ts ./
 COPY src/ src/
+COPY public/ public/
 
-RUN mkdir -p /app/public && chmod -R 777 /app/public && chmod 777 /app
+RUN chmod -R 777 /app/public && chmod 777 /app
 
 CMD ["npx", "tsx", "src/render.ts"]

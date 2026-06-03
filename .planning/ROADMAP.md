@@ -512,15 +512,15 @@ Plans:
 
 **Deferred (future phase):** AI-generated social-media metadata (title, description, hashtags) derived from the subtitle transcription + chosen titles, populating column 3. Phase 22 ships only the placeholder structure.
 
-**Plans:** 6 plans in 3 waves
+**Plans:** 3/6 plans executed
 
 Plans:
 
 **Wave 1** *(parallel — disjoint files)*
 
-- [ ] 22-01-PLAN.md — Schema: PngOverlayConfig.layer field + validator, studio↔renderer mirror + renderer tests (D-03, D-04)
-- [ ] 22-02-PLAN.md — Shared PositionPresets 9-point grid component, size-aware math, blue active + aria (D-07, D-08, D-09)
-- [ ] 22-03-PLAN.md — 3-column shell, Text-tab removal + sample-text into Subtítulos, col-3 placeholder, default.css tokens, header contract (D-01, D-02, D-10, D-11)
+- [x] 22-01-PLAN.md — Schema: PngOverlayConfig.layer field + validator, studio↔renderer mirror + renderer tests (D-03, D-04)
+- [x] 22-02-PLAN.md — Shared PositionPresets 9-point grid component, size-aware math, blue active + aria (D-07, D-08, D-09)
+- [x] 22-03-PLAN.md — 3-column shell, Text-tab removal + sample-text into Subtítulos, col-3 placeholder, default.css tokens, header contract (D-01, D-02, D-10, D-11)
 
 **Wave 2** *(blocked on Wave 1)*
 

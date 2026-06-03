@@ -11,9 +11,9 @@
 //   layer control writing layer field (D-03); layer badges on overlay cards;
 //   Posición→Estilo→Avanzado always-open sections; aria-labels; blue selection.
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import type { PngOverlayConfig } from "../../pipeline-config.js";
-import { PositionPresets } from "./PositionPresets.js";
+import { PositionPresets, computeOverlayElementHeight } from "./PositionPresets.js";
 
 interface OverlayEditorProps {
   overlays: PngOverlayConfig[];
@@ -126,7 +126,33 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
   const [loading, setLoading] = useState(false);
   const [uploadHover, setUploadHover] = useState(false);
 
+  // ── Natural image dimensions (runtime-only, NOT persisted to config) ───────
+  // Loaded lazily from draft.imageData so PositionPresets can use the real
+  // aspect-ratio height instead of the displayWidth=height square fallback.
+  const [natW, setNatW] = useState(0);
+  const [natH, setNatH] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load natural pixel dimensions from imageData whenever it changes.
+  // Runtime-only — never written to draft or saved config.
+  useEffect(() => {
+    if (!draft.imageData) {
+      setNatW(0);
+      setNatH(0);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      setNatW(img.naturalWidth);
+      setNatH(img.naturalHeight);
+    };
+    img.onerror = () => {
+      setNatW(0);
+      setNatH(0);
+    };
+    img.src = draft.imageData;
+  }, [draft.imageData]);
 
   const resetForm = () => {
     setDraft({ ...DEFAULT_OVERLAY });
@@ -135,6 +161,8 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
     setLoading(false);
     setAddingNew(false);
     setEditingIndex(null);
+    setNatW(0);
+    setNatH(0);
   };
 
   // Compute preview overlays by merging the current draft into the committed list.
@@ -404,12 +432,12 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
               </div>
             </div>
 
-            {/* PositionPresets px mode — elementWidth from displayWidth, height auto → nominal */}
+            {/* PositionPresets px mode — real aspect-ratio height once natural dims are known */}
             <div>
               <RowLabel>Preset de posición</RowLabel>
               <PositionPresets
                 elementWidth={draft.displayWidth}
-                elementHeight={draft.displayWidth}
+                elementHeight={computeOverlayElementHeight(draft.displayWidth, natW, natH)}
                 onApply={(x, y) => handleDraftChange((prev) => ({ ...prev, x, y }))}
               />
             </div>

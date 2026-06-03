@@ -615,5 +615,60 @@ describe("validatePipelineConfig", () => {
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
+
+    // D-03: layer field — 5 cases
+    const validOverlay = { imageData: "data:image/png;base64,abc", x: 0, y: 0, displayWidth: 200 };
+
+    // Test 9: no layer field -> valid (back is the implied default, not validated)
+    it("D-03: accepts overlay with no layer field (back implied)", () => {
+      const config = { subtitle: { layout: "tiktok" }, overlays: [validOverlay] };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors.filter((e) => e.includes("layer"))).toHaveLength(0);
+    });
+
+    // Test 10: layer: "back" -> valid
+    it('D-03: accepts overlay with layer: "back"', () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ ...validOverlay, layer: "back" }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors.filter((e) => e.includes("layer"))).toHaveLength(0);
+    });
+
+    // Test 11: layer: "front" -> valid
+    it('D-03: accepts overlay with layer: "front"', () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ ...validOverlay, layer: "front" }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(true);
+      expect(result.errors.filter((e) => e.includes("layer"))).toHaveLength(0);
+    });
+
+    // Test 12: layer: "middle" -> error 'overlays[0].layer must be "back" or "front"'
+    it('D-03: rejects overlay with layer: "middle" (out-of-enum string)', () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ ...validOverlay, layer: "middle" }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('overlays[0].layer must be "back" or "front"'))).toBe(true);
+    });
+
+    // Test 13: layer: 3 (wrong type) -> same error
+    it("D-03: rejects overlay with layer as a number (wrong type)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        overlays: [{ ...validOverlay, layer: 3 }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('overlays[0].layer must be "back" or "front"'))).toBe(true);
+    });
   });
 });

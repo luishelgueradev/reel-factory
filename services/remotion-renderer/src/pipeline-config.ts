@@ -101,6 +101,7 @@ export interface PngOverlayConfig {
   y: number;               // pixel y from top edge of 1920px frame
   displayWidth: number;    // CSS display width in pixels (triggers downscale)
   opacity?: number;        // 0–1, default 1
+  layer?: "back" | "front"; // D-03: default "back" — decorators behind text
   _resolvedFile?: string;  // runtime-only, set by render.ts, NOT persisted
 }
 
@@ -495,6 +496,13 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
         if (ov.opacity !== undefined) {
           if (typeof ov.opacity !== "number" || ov.opacity < 0 || ov.opacity > 1) {
             errors.push(`overlays[${index}].opacity must be a number between 0 and 1`);
+          }
+        }
+
+        // layer: optional, must be "back" or "front" if present (D-03)
+        if (ov.layer !== undefined) {
+          if (ov.layer !== "back" && ov.layer !== "front") {
+            errors.push(`overlays[${index}].layer must be "back" or "front"`);
           }
         }
 

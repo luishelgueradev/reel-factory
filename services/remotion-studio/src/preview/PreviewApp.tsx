@@ -305,8 +305,8 @@ export function PreviewApp() {
 
       const payload = {
         subtitle: subtitleConfig,
-        titles,
-        overlays,
+        titles: liveTitles,
+        overlays: liveOverlays,
       };
 
       const res = await fetch("/api/config", {
@@ -326,6 +326,12 @@ export function PreviewApp() {
         throw new Error(message);
       }
 
+      // Reconcile committed state to match what was just saved so that
+      // computeLiveTitles/computeLiveOverlays don't revert a previously-saved
+      // live edit when the user next edits a different item.
+      setTitles(liveTitles);
+      setOverlays(liveOverlays);
+
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       setSaveSuccess(true);
       saveTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 2000);
@@ -334,7 +340,7 @@ export function PreviewApp() {
     } finally {
       setSaving(false);
     }
-  }, [subtitleConfig, titles, overlays]);
+  }, [subtitleConfig, liveTitles, liveOverlays]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "var(--canvas, #1a1a2e)" }}>

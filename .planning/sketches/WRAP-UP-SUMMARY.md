@@ -1,7 +1,7 @@
 # Sketch Wrap-Up Summary
 
-**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032) · 2026-06-02 (sketches 033–036) · 2026-06-02 (sketches 037–039) · 2026-06-02 (sketches 040–043)
-**Sketches processed:** 43 (all)
+**Wrap-up sessions:** 2026-05-31 (sketches 001–011) · 2026-06-01 (sketches 012–015) · 2026-06-01 (sketches 016–018) · 2026-06-01 (sketches 019–022) · 2026-06-01 (sketches 023–026) · 2026-06-01 (sketches 027–030) · 2026-06-01 (sketches 031–032) · 2026-06-02 (sketches 033–036) · 2026-06-02 (sketches 037–039) · 2026-06-02 (sketches 040–043) · 2026-06-03 (sketches 044–047, all excluded)
+**Sketches processed:** 47 (43 included · 4 excluded)
 **Design areas:** Workspace Shell, Control Density, Position Presets, Tab Patterns (+ TabLead/TabForm,
 Overlays list-forward), PNG Overlay Acquisition (Phase 21), Subtitle Styling, Caption Animation Preview,
 Title Styling (+ entrance timing), Video Effects/Transitions, Timeline (frontier), Font Picker,
@@ -65,7 +65,14 @@ Direct-Manipulation Canvas (042, frontier), Intro/Outro Home (043, dormant/scope
 | 043 | intro-outro-home | B | Intro/Outro Home (timeline endcaps; dormant Phase-6 / scope-gated; C = Video-tab fallback) |
 
 ## Excluded Sketches
-_None._
+| # | Name | Winner | Reason |
+|---|------|--------|--------|
+| 044 | north-star-v5 | B | Consistency/integration recompose (040+041+042+043 in the canonical Editor). Excluded at user's call — not promoted to canonical; **037-B remains the canonical Editor screen** in the skill. The v5 integration check stands as exploration, but its committed slice did not displace 037 as the build reference. |
+| 045 | cancel-and-destroy | B | Destructive-action + render-abort vocabulary (tiered by cost: toast-undo for reversible, inline-confirm for irreversible). Excluded — not baked into the build skill; the destructive-action law is left out of the validated set for now. |
+| 046 | help-destination | A | Help surface as a slide-over sheet (atajos + concurrency explainer + acerca de). Excluded — help destination not promoted to a validated build decision. |
+| 047 | shell-responsive-ladder | A | Shell-level responsive collapse (metadata yields first → controls 1-col → preview stacks; rail persists). Excluded — outer responsive ladder left unvalidated; 018's inner tab reflow remains the only committed responsive decision. Open whether multi-viewport is even in scope for a desktop-only local studio. |
+
+_All four were the 2026-06-03 session's candidates; the user excluded each, so none shape the build skill. They are marked processed (won't re-surface in future wrap-ups) but their winners are recorded here as exploration only._
 
 ## Design Direction
 The **dark indigo design system** (canvas `#1a1a2e`, chrome `#16213e`, blue accent `#90caf9`, action

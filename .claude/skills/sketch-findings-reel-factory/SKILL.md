@@ -282,4 +282,8 @@ Original sketch HTML files (all variants, winners marked with ★ in the variant
 - 041-modal-stack-choreography (winner B — z-ladder toast 60 ▸ palette 40 ▸ takeover 30 ▸ sheet 20, with C's "takeovers are destinations" reframe grafted on; integration over 016/032/036/035/024/028/029)
 - 042-direct-manipulation-canvas (winner C — hybrid: resize handles for size + 9-anchor snap for position + on-canvas layer chips for overlap; realizes the 007 drag frontier; frontier/scope-expanding)
 - 043-intro-outro-home (winner B — timeline endcaps; dormant Phase-6 capability, scope-gated, depends on 020-C timeline; C = Video-tab fallback host; sketch is also evidence it may stay cut)
+- 044-north-star-v5 (EXCLUDED — winner B; v5 integration recompose of 040+041+042+043 in the canonical Editor. Not promoted: 037-B remains the canonical Editor screen in this skill. Exploration only.)
+- 045-cancel-and-destroy (EXCLUDED — winner B; destructive-action + render-abort vocabulary, tiered by cost. Not baked into the validated set. Exploration only.)
+- 046-help-destination (EXCLUDED — winner A; help as a slide-over sheet reusing the 016/032 idiom. Not promoted to a build decision. Exploration only.)
+- 047-shell-responsive-ladder (EXCLUDED — winner A; shell-level responsive collapse, rail-persists. Not validated; 018's inner tab reflow stays the only committed responsive decision. Open whether multi-viewport is in scope. Exploration only.)
 </metadata>

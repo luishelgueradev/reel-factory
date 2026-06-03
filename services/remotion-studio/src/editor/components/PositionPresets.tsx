@@ -58,19 +58,19 @@ export function computePresetXY(
   frameWidth = 1080,
   frameHeight = 1920,
 ): { x: number; y: number } {
-  const x =
+  const x = Math.max(0,
     anchorX === "left"
       ? 0
       : anchorX === "center"
         ? Math.round((frameWidth - elementWidth) / 2)
-        : Math.round(frameWidth - elementWidth);
+        : Math.round(frameWidth - elementWidth));
 
-  const y =
+  const y = Math.max(0,
     anchorY === "top"
       ? 0
       : anchorY === "center"
         ? Math.round((frameHeight - elementHeight) / 2)
-        : Math.round(frameHeight - elementHeight);
+        : Math.round(frameHeight - elementHeight));
 
   return { x, y };
 }

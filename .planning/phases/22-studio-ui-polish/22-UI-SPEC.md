@@ -97,23 +97,27 @@ is the design system.
 
 ## Spacing Scale
 
-> Source: `default.css` compact spacing scale for a dense control panel.
-> This is a non-standard compact scale (not pure 8-point) — validated across 43 sketches.
+> **Deliberate exception to the generic 8-point grid rule — documented and locked.**
+> This is a custom compact scale validated across 43 sketch iterations for a dense
+> control-panel surface. It is inherited verbatim from `default.css` (the canonical
+> token file). An 8-point-only scale would produce components that are too tall for
+> the panel's information density targets. Each non-standard value below carries a
+> functional justification. Do not collapse to the 8-point set.
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--s-1` | 2px | Micro gap (segmented control padding) |
-| `--s-2` | 4px | Icon gap, segmented cell gap |
-| `--s-3` | 6px | Field gap (mini-label to input), badge padding vertical |
-| `--s-4` | 8px | Compact element spacing (overlay card gap, tab strip gap) |
-| `--s-5` | 10px | Row bottom margin, control row gap |
-| `--s-6` | 12px | Section inner padding, card padding |
-| `--s-8` | 16px | Default element spacing, preview stage padding |
-| `--s-10` | 20px | Tab lead section bottom margin |
-| `--s-12` | 24px | Header horizontal padding, tab bar horizontal padding |
-| `--s-16` | 32px | Major layout gaps |
+| Token | Value | Usage | Deviation justification |
+|-------|-------|-------|------------------------|
+| `--s-1` | 2px | Micro gap (segmented control internal padding) | 2px: hairline separation between segmented cells; 4px would merge them visually at 12.5px text size |
+| `--s-2` | 4px | Icon gap, segmented cell gap | Standard 4px; on the 4-point grid |
+| `--s-3` | 6px | Field gap (mini-label to input), badge/chip vertical padding | 6px: chip vertical padding with 14px text yields a 26px chip; 8px would push the chip to 30px, overshooting the dense row budget |
+| `--s-4` | 8px | Compact element spacing (overlay card gap, tab strip gap) | Standard 8px |
+| `--s-5` | 10px | Row bottom margin, control row gap | 10px: half-step between 8px tight and 12px spacious; removes the stacked-form "wall" effect validated in sketch 002-A |
+| `--s-6` | 12px | Section inner padding, card padding | 12px: card padding that keeps 13.5px control-body text readable without bloating the card; 8px is cramped, 16px wastes vertical space in the dense panel |
+| `--s-8` | 16px | Default element spacing, preview stage padding | Standard 16px |
+| `--s-10` | 20px | Tab lead section bottom margin | 20px: visual pause between the full-width lead and the 2-col form without the 24px section gap that reads as a new page break |
+| `--s-12` | 24px | Header horizontal padding, tab bar horizontal padding | Standard 24px |
+| `--s-16` | 32px | Major layout gaps | Standard 32px |
 
-**Exceptions:**
+**Structural exceptions (non-token fixed dimensions):**
 - Column 3 placeholder width: fixed `320px` (non-responsive, always-visible)
 - Preview stage: `flex: 0 1 470px` content-sized, not a fixed percentage (replaces the current 40%)
 - Position preset grid cells: `30px × 30px` at 3px gap (from sketch 001-D pgrid)
@@ -124,26 +128,47 @@ is the design system.
 
 ## Typography
 
-> Source: `default.css` `--t-*` scale. Inter only; no second typeface.
+> **Deliberate exception to the generic "max 4 font sizes" guideline — documented and locked.**
+> This is the inherited `--t-*` scale from `default.css`, validated across 43 sketch
+> iterations for a dense control-panel surface that serves multiple functional layers
+> (micro-labels, inline labels, row controls, body copy) simultaneously visible on screen.
+> Each size below maps to a distinct UI role; collapsing to 4 sizes would force role
+> conflicts. The active Phase 22 scope uses 6 sizes; 2 additional sizes are inherited
+> tokens not deployed in this phase (listed separately below).
+>
+> **Weight palette: exactly 2 in use — 400 (regular) and 600 (semibold).**
 
-| Role | Token | Size | Weight | Line Height | Used for |
-|------|-------|------|--------|-------------|----------|
-| Micro-label | `--t-2xs` | 10.5px | 700 | — | Section header chips (uppercase, letter-spacing 0.1em), overlay card sub-lines, position preset mini-labels |
+### Active Phase 22 type table
+
+| Role | Token | Size | Weight | Line Height | UI elements |
+|------|-------|------|--------|-------------|-------------|
+| Micro-label | `--t-2xs` | 10.5px | **600** | — | Section header chips (uppercase, letter-spacing 0.1em), overlay card sub-lines, position preset mini-labels |
 | Caption / secondary | `--t-xs` | 11.5px | 400 | — | Card sub-labels, overlay inline control labels |
-| Small label | `--t-sm` | 12.5px | 400–500 | — | Tab labels, row labels (80px column), status chip text, segmented button text |
+| Small label | `--t-sm` | 12.5px | 400 | — | Tab labels, row labels (80px column), status chip text, segmented button text |
 | Control body | `--t-md` | 13.5px | 400 | — | Input/select values, row-control text, textarea text |
 | Body | `--t-base` | 14px | 400 | 1.5 | Help text, card name labels, description copy |
 | Large body | `--t-lg` | 16px | 400 | 1.5 | General paragraph copy (not heavily used in this control panel) |
-| Sub-heading | `--t-xl` | 19px | — | 1.2 | Not used in Phase 22 committed scope |
-| Display | `--t-2xl` | 23px | — | 1.2 | Not used in Phase 22 committed scope (reserved for future screens) |
 
-**Weight palette (exactly 2 in use):**
-- Regular: `font-weight: 400` — all labels, body text, input values
-- Semibold: `font-weight: 600` — tab button active state, primary action buttons (Render), section-header number chip, card name text
+**Notes on weight decisions:**
+- `--t-2xs` uses weight **600** (semibold), not 700. At 10.5px on a dark background, semibold
+  600 is sufficiently assertive for uppercase section-header chips. Weight 700 was the original
+  sketch value but was reconciled to 600 to maintain the 2-weight palette and avoid a heavy
+  micro-label that would fight the section hierarchy.
+- `--t-sm` uses weight **400** (single value). The "400–500" range in the earlier draft was
+  eliminated — no weight-500 is in use; all small-label elements use 400.
+- **Semibold (600) use cases:** tab button active state, primary action buttons (Render),
+  section-header number chip (via `--t-2xs`), card name text.
 
-**Heading line height:** 1.2 (`--t-xl`, `--t-2xl` levels)
+### Inherited tokens not used in Phase 22 (future screens only)
+
+| Token | Size | Notes |
+|-------|------|-------|
+| `--t-xl` | 19px | Sub-heading level — no element in Phase 22 committed scope uses this size |
+| `--t-2xl` | 23px | Display level — reserved for future screens (results takeover, metadata column headings) |
+
+**Heading line height:** 1.2 (`--t-xl`, `--t-2xl` levels — future use)
 **Body line height:** 1.5 (textarea, description copy)
-**Section headers:** uppercase + letter-spacing 0.1em at `--t-2xs` weight 700
+**Section headers:** uppercase + letter-spacing 0.1em at `--t-2xs` weight 600
 
 ---
 
@@ -235,6 +260,29 @@ or migrated in this phase. No shadcn, no external component library.
 
 ---
 
+## Accessible Name Contract
+
+> Source: sketch 040-A (inline error/delete patterns) + 041-B (z-ladder). Issue 3 fix.
+
+### Icon-only buttons — required `aria-label`
+
+All icon-only interactive controls must declare an accessible name. No implicit label from glyph alone.
+
+| Element | Glyph | Required `aria-label` | Notes |
+|---------|-------|----------------------|-------|
+| Delete title card button | `✕` | `aria-label="Eliminar título"` | 44px touch target min; danger color on hover |
+| Delete overlay card button | `✕` | `aria-label="Eliminar overlay"` | 44px touch target min; danger color on hover |
+| Drag handle — title card | `⠿` | `aria-label="Reordenar título"` + `role="button"` | Actionable; drag-to-reorder; keyboard users need a name |
+| Drag handle — overlay card | `⠿` | `aria-label="Reordenar overlay"` + `role="button"` | Same; keyboard activation = focus + arrow keys to move |
+
+**Touch target requirement:** All icon-only buttons must meet WCAG 2.5.5 minimum 44×44px click/tap area,
+even when the visible glyph is smaller (use padding or a wrapper element to extend the hit zone).
+
+**Drag handle keyboard pattern:** when focused, Up/Down arrow keys reorder the item one position.
+`aria-roledescription="reorderable item"` on the containing card is recommended for screen-reader context.
+
+---
+
 ## Per-Tab Design Contract
 
 ### Subtítulos tab
@@ -256,7 +304,7 @@ or migrated in this phase. No shadcn, no external component library.
 
 **TabLead:**
 - Card list (existing TitleEditor list) with count badge
-- Each card: drag-handle `⠿`, title text preview, timing sub-line, delete button
+- Each card: drag-handle `⠿` (`aria-label="Reordenar título"`), title text preview, timing sub-line, delete button `✕` (`aria-label="Eliminar título"`)
 - `+ Agregar título` add button
 
 **TabForm (Posición → Estilo → Avanzado):**
@@ -270,7 +318,7 @@ or migrated in this phase. No shadcn, no external component library.
 
 - Header: `Overlays · controles por ítem · {n}/3`
 - Per-overlay fat card containing inline controls:
-  - Top row: drag-handle `⠿`, checkerboard+thumb, filename, x/y readout, delete `✕`
+  - Top row: drag-handle `⠿` (`aria-label="Reordenar overlay"`), checkerboard+thumb, filename, x/y readout, delete `✕` (`aria-label="Eliminar overlay"`)
   - Inline 2×2 grid: Ancho slider (px), Opacidad slider (%), Capa segmented (`Detrás | Delante`), Anclaje segmented (3-point abbreviated `↗ • ↙`)
 - `+ Agregar overlay` dashed button, disabled at cap of 3 with `Máximo 3` note
 - Transparency = checkerboard background on thumbnail (not black fill)
@@ -290,13 +338,6 @@ the inline-card approach reads as off-pattern next to Titles/Subtitles tabs at b
 
 **Render order (bottom to top):**
 1. Video frame (ZoomContainer/OffthreadVideo)
-2. SubtitleLayoutRenderer (captions)
-3. TitleOverlay sequences (titles)
-4. PngOverlay — `"back"` layer (overlays with `layer: "back"`)
-5. PngOverlay — `"front"` layer (overlays with `layer: "front"`)
-
-Wait — the correct order for "overlays below text" (D-03 default) is:
-1. Video frame
 2. PngOverlay — `"back"` layer (decorators: behind text)
 3. SubtitleLayoutRenderer (subtitles)
 4. TitleOverlay sequences (titles)
@@ -409,8 +450,8 @@ For subtitles, a nominal height estimate is acceptable (subtitles are bottom-anc
 | Render while rendering | `⟳ Renderizando…` |
 
 **Destructive actions in this phase:**
-- Delete title block: inline `✕` on card row; no confirmation modal (reversible via re-add; matches sketch 008-B calm-danger pattern)
-- Delete overlay: inline `✕` on card row; same treatment
+- Delete title block: inline `✕` (`aria-label="Eliminar título"`) on card row; no confirmation modal (reversible via re-add; matches sketch 008-B calm-danger pattern)
+- Delete overlay: inline `✕` (`aria-label="Eliminar overlay"`) on card row; same treatment
 - These are low-consequence destructive actions (config only, not file deletion); no confirmation step needed
 
 **Error states:**
@@ -473,6 +514,7 @@ No third-party registries. All components are authored inline in
 6. **PositionPresets:** build as a single shared component in `services/remotion-studio/src/editor/components/PositionPresets.tsx`. Remove the 3-button preset section from `StyleControls.tsx` (~line 192) and replace with `<PositionPresets>`. Add `<PositionPresets>` to `TitleEditor.tsx` and `OverlayEditor.tsx` Posición sections.
 7. **Overlays tab — contract caveat:** 019-C (list-forward inline controls) is the chosen direction. If the inline-card pattern reads visually off-pattern next to Titles/Subtitles at review time, switch to the 019-A fallback (list + single-column form) without further discussion.
 8. **Preview-dim for back-layer overlays:** apply `opacity: 0.85; filter: saturate(0.8)` to back-layer overlays in the Player preview only. This CSS must NOT reach the renderer path.
+9. **Accessible names:** every icon-only `✕` delete button and `⠿` drag handle must carry the declared `aria-label` (see Accessible Name Contract section). Do not omit these as a "later polish" — they are part of the build contract.
 
 ---
 

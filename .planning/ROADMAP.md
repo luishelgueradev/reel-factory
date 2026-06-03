@@ -49,7 +49,7 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 - [x] **Phase 19: Typography & text effects** - Plus Jakarta Sans, larger font sizes, bold/italic variants, outer glow (color/intensity/softness) — controls in the new UI + renderer. Requirements: TYPO-01, TYPO-02, TYPO-03, TYPO-04. **(UI hint: yes)** (completed 2026-05-29)
 - [x] **Phase 20: Title block precision** - Pixel-coordinate positioning, configurable border-radius, remove the subtitle field (subtitle = separate title block). Requirements: TITLE-01, TITLE-02, TITLE-03. **(UI hint: yes)** (completed 2026-05-29)
 - [x] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)** (completed 2026-05-30)
-- [ ] **Phase 22: Studio UI polish** - Adopt a 3-column Studio shell (preview · controls · social-metadata placeholder); denser, reordered control panel (full impeccable pass); sample-text moved into the Subtitles tab; overlay layering model (overlays below text by default, per-overlay back/front toggle); x/y auto-position presets (9-point grid) for titles + overlays. Requirements: D-01..D-11 (22-CONTEXT.md). **Plans:** 6 plans in 3 waves. **(UI hint: yes)**
+- [x] **Phase 22: Studio UI polish** - Adopt a 3-column Studio shell (preview · controls · social-metadata placeholder); denser, reordered control panel (full impeccable pass); sample-text moved into the Subtitles tab; overlay layering model (overlays below text by default, per-overlay back/front toggle); x/y auto-position presets (9-point grid) for titles + overlays. Requirements: D-01..D-11 (22-CONTEXT.md). **Plans:** 6 plans in 3 waves. **(UI hint: yes)** (completed 2026-06-03)
 
 ## Phase Details
 
@@ -512,7 +512,7 @@ Plans:
 
 **Deferred (future phase):** AI-generated social-media metadata (title, description, hashtags) derived from the subtitle transcription + chosen titles, populating column 3. Phase 22 ships only the placeholder structure.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 
@@ -529,7 +529,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2)*
 
-- [ ] 22-06-PLAN.md — Human visual sign-off on port 3123 against all 5 ROADMAP success criteria (D-01..D-11)
+- [x] 22-06-PLAN.md — Human visual sign-off on port 3123 against all 5 ROADMAP success criteria (D-01..D-11)
 
 ---
 

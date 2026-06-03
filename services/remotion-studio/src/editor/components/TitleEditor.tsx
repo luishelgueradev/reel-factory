@@ -6,10 +6,91 @@
 // Phase 22: PositionPresets (px mode) in Posición section; Posición→Estilo→Avanzado
 //           always-open titled sections; aria-labels on delete buttons; blue selection
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { TitleConfig, TitleEntranceAnimation } from "../../pipeline-config.js";
 import { AVAILABLE_FONTS } from "../../fonts.js";
+import { getFontFamilyCSS } from "../../fonts.js";
 import { PositionPresets } from "./PositionPresets.js";
+
+// ─── measureTitleBox ──────────────────────────────────────────────────────────
+// Returns the exact width/height (integer px, in 1080×1920 frame space) of the
+// TitleOverlay text box for the given style params, by creating a detached DOM
+// node that mirrors TitleOverlay's CSS exactly and reading its offsetWidth /
+// offsetHeight.
+//
+// TitleOverlay box model (from TitleOverlay.tsx):
+//   outer div: position absolute, width "80%"→864px, padding: ${padding}px 24px,
+//              display flex, flexDirection column, alignItems center,
+//              justifyContent center
+//   inner span: fontSize, fontWeight, fontStyle, fontFamily, lineHeight,
+//               whiteSpace "pre-wrap", wordBreak "break-word", textAlign center
+//
+// Because fontSize/padding are ABSOLUTE px values identical to the composition,
+// the measured box is already in 1080×1920 frame space — no scale needed.
+//
+// Falls back to an estimated size if the DOM is not available (SSR / vitest).
+
+interface MeasureTitleOpts {
+  text: string;
+  fontFamily: string;   // CSS font-family string (resolved, not module key)
+  fontSize: number;     // px — matches titleFontSize in TitleOverlay
+  fontWeight: number;   // 700 (bold) or 400 (regular)
+  fontStyle: string;    // "italic" or "normal"
+  lineHeight: number;
+  padding: number;      // top/bottom padding px (left/right is always 24px in TitleOverlay)
+}
+
+// Outer div width = 80% of 1080 frame = 864px (matches TitleOverlay's width:"80%")
+const TITLE_BOX_WIDTH_PX = 864;
+
+function measureTitleBox(opts: MeasureTitleOpts): { width: number; height: number } {
+  if (typeof document === "undefined") {
+    // SSR fallback — return old estimate
+    return {
+      width: TITLE_BOX_WIDTH_PX,
+      height: Math.round(opts.fontSize * 1.5 + opts.padding * 2),
+    };
+  }
+
+  const outer = document.createElement("div");
+  Object.assign(outer.style, {
+    position: "absolute",
+    visibility: "hidden",
+    left: "-99999px",
+    top: "-99999px",
+    width: `${TITLE_BOX_WIDTH_PX}px`,
+    padding: `${opts.padding}px 24px`,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    boxSizing: "border-box",
+  });
+
+  const inner = document.createElement("span");
+  Object.assign(inner.style, {
+    fontSize: `${opts.fontSize}px`,
+    fontWeight: String(opts.fontWeight),
+    fontStyle: opts.fontStyle,
+    fontFamily: opts.fontFamily,
+    lineHeight: String(opts.lineHeight),
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    textAlign: "center",
+    width: "100%",
+  });
+  inner.textContent = opts.text;
+
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  const width = outer.offsetWidth;
+  const height = outer.offsetHeight;
+
+  document.body.removeChild(outer);
+
+  return { width, height };
+}
 
 interface TitleEditorProps {
   titles: TitleConfig[];
@@ -133,6 +214,53 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
     durationMs: 3000,
     style: { ...DEFAULT_TITLE_STYLE },
   });
+
+  // ── Measured title box dimensions (runtime-only, NOT persisted) ──────────
+  // Re-computed whenever text or relevant style fields change; fed to
+  // PositionPresets so center/right/bottom presets use the REAL box size.
+  const [measuredBox, setMeasuredBox] = useState({
+    width: TITLE_BOX_WIDTH_PX,
+    height: Math.round(DEFAULT_TITLE_STYLE.titleFontSize * 1.5 + DEFAULT_TITLE_STYLE.padding * 2),
+  });
+
+  useEffect(() => {
+    const style = newTitle.style;
+    if (!style) return;
+    const text = newTitle.text ?? "";
+    const fontFamily = getFontFamilyCSS(style.titleFontFamily ?? DEFAULT_TITLE_STYLE.titleFontFamily);
+    const fontSize = style.titleFontSize ?? DEFAULT_TITLE_STYLE.titleFontSize;
+    const fontWeight = style.fontWeight !== false ? 700 : 400;
+    const fontStyleStr = style.fontStyle === true ? "italic" : "normal";
+    const lineHeight = style.lineHeight ?? DEFAULT_TITLE_STYLE.lineHeight;
+    const padding = style.padding ?? DEFAULT_TITLE_STYLE.padding;
+
+    const doMeasure = () => {
+      const box = measureTitleBox({
+        text: text || "A", // always measure at least one char to get a valid height
+        fontFamily,
+        fontSize,
+        fontWeight,
+        fontStyle: fontStyleStr,
+        lineHeight,
+        padding,
+      });
+      setMeasuredBox(box);
+    };
+
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      document.fonts.ready.then(doMeasure);
+    } else {
+      doMeasure();
+    }
+  }, [
+    newTitle.text,
+    newTitle.style?.titleFontFamily,
+    newTitle.style?.titleFontSize,
+    newTitle.style?.fontWeight,
+    newTitle.style?.fontStyle,
+    newTitle.style?.lineHeight,
+    newTitle.style?.padding,
+  ]);
 
   const resetForm = () => {
     setNewTitle({
@@ -346,8 +474,7 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
 
           {/* ─────────────────────────────────────────────────────────────
               § 1  POSICIÓN — X/Y inputs + PositionPresets (px mode, D-07/D-09)
-              Size-aware estimate: titleFontSize * ~6 chars + padding*2 for width,
-              titleFontSize * ~1.5 + padding*2 for height (rendered-box estimate)
+              Box size from measureTitleBox() — mirrors TitleOverlay DOM exactly.
           ───────────────────────────────────────────────────────────── */}
           <div style={{ marginBottom: "var(--s-8, 16px)" }}>
             <SectionHeader n={1} title="Posición" />
@@ -388,12 +515,12 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
               </div>
             </div>
 
-            {/* PositionPresets px mode (D-07/D-09) — size-aware from titleFontSize + padding */}
+            {/* PositionPresets px mode (D-07/D-09) — measured real box from measureTitleBox */}
             <div>
               <RowLabel>Preset de posición</RowLabel>
               <PositionPresets
-                elementWidth={(newTitle.style?.titleFontSize ?? 72) * 6 + (newTitle.style?.padding ?? 40) * 2}
-                elementHeight={(newTitle.style?.titleFontSize ?? 72) * 1.5 + (newTitle.style?.padding ?? 40) * 2}
+                elementWidth={measuredBox.width}
+                elementHeight={measuredBox.height}
                 onApply={(x, y) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, x, y } }))}
               />
             </div>

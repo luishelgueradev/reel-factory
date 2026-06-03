@@ -105,6 +105,25 @@ export interface PngOverlayConfig {
   _resolvedFile?: string;  // runtime-only, set by render.ts, NOT persisted
 }
 
+// ─── Overlay layer banding helper (D-03/D-04) ────────────────────────────────
+
+/**
+ * Split an overlays array into back-band and front-band.
+ * Overlays with no layer field default to "back".
+ * Paint order: back → subtitles → titles → front.
+ * Exported for unit testing; mirrors the inline filter logic in both
+ * SubtitledVideo (studio) and SubtitledVideo (renderer).
+ */
+export function splitOverlaysByLayer(overlays: PngOverlayConfig[]): {
+  back: PngOverlayConfig[];
+  front: PngOverlayConfig[];
+} {
+  return {
+    back:  overlays.filter(o => (o.layer ?? "back") === "back"),
+    front: overlays.filter(o => o.layer === "front"),
+  };
+}
+
 // ─── Visual Effects (D-11, D-12) ────────────────────────────────────────────
 
 /** Transition animation type between silence cuts */

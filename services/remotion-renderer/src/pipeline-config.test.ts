@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   validatePipelineConfig,
+  splitOverlaysByLayer,
   DEFAULT_ZOOM_CONFIG,
   DEFAULT_TRANSITION_CONFIG,
   DEFAULT_VISUAL_EFFECTS,
@@ -670,5 +671,63 @@ describe("validatePipelineConfig", () => {
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes('overlays[0].layer must be "back" or "front"'))).toBe(true);
     });
+  });
+});
+
+// ─── splitOverlaysByLayer — back/front banding helper (D-03/D-04, WR-04) ────
+// These tests guard the renderer-side layer banding behavior against
+// renderer-sync clobber drift (see project memory: renderer-sync-clobber-hazard).
+
+describe("splitOverlaysByLayer", () => {
+  const BASE = { imageData: "data:image/png;base64,abc", x: 0, y: 0, displayWidth: 200 };
+
+  it("overlay with no layer field defaults to back band", () => {
+    const result = splitOverlaysByLayer([{ ...BASE }]);
+    expect(result.back).toHaveLength(1);
+    expect(result.front).toHaveLength(0);
+  });
+
+  it('overlay with layer: "back" goes to back band', () => {
+    const result = splitOverlaysByLayer([{ ...BASE, layer: "back" as const }]);
+    expect(result.back).toHaveLength(1);
+    expect(result.front).toHaveLength(0);
+  });
+
+  it('overlay with layer: "front" goes to front band', () => {
+    const result = splitOverlaysByLayer([{ ...BASE, layer: "front" as const }]);
+    expect(result.back).toHaveLength(0);
+    expect(result.front).toHaveLength(1);
+  });
+
+  it("empty array yields two empty bands", () => {
+    const result = splitOverlaysByLayer([]);
+    expect(result.back).toHaveLength(0);
+    expect(result.front).toHaveLength(0);
+  });
+
+  it("mixed array preserves insertion order within each band", () => {
+    const ov1 = { ...BASE, layer: "back"  as const, x: 10 };
+    const ov2 = { ...BASE, layer: "front" as const, x: 20 };
+    const ov3 = { ...BASE,                           x: 30 }; // no layer → back
+    const ov4 = { ...BASE, layer: "front" as const, x: 40 };
+    const result = splitOverlaysByLayer([ov1, ov2, ov3, ov4]);
+    expect(result.back).toHaveLength(2);
+    expect(result.front).toHaveLength(2);
+    // Order preserved
+    expect(result.back[0].x).toBe(10);
+    expect(result.back[1].x).toBe(30);
+    expect(result.front[0].x).toBe(20);
+    expect(result.front[1].x).toBe(40);
+  });
+
+  it("back and front bands together contain all original overlays (no loss)", () => {
+    const overlays = [
+      { ...BASE, layer: "back"  as const },
+      { ...BASE, layer: "front" as const },
+      { ...BASE }, // implicit back
+      { ...BASE, layer: "back"  as const },
+    ];
+    const { back, front } = splitOverlaysByLayer(overlays);
+    expect(back.length + front.length).toBe(overlays.length);
   });
 });

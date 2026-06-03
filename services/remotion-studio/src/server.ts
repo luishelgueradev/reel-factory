@@ -279,17 +279,25 @@ function resolveConfigPath(): string {
 }
 
 // ─── Start server ───────────────────────────────────────────────────────────
+// Guarded so importing server.ts under vitest/NODE_ENV=test does NOT bind
+// port 3123, mirroring api-server/src/index.ts L93.
 
-export const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[remotion-studio] Config API and Editor SPA listening on port ${PORT}`);
-  console.log(`  GET  /api/config  — Read pipeline config`);
-  console.log(`  PUT  /api/config  — Write pipeline config`);
-  console.log(`  POST /api/render  — Render trigger (not yet implemented)`);
-  console.log(`  GET  /editor      — Config Editor SPA`);
-  console.log(`  GET  /preview     — Subtitle Preview SPA`);
-  console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);
-  console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
-  console.log(`  Config file: ${resolveConfigPath()}`);
-});
+export let server: ReturnType<typeof app.listen> | undefined;
+
+if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
+  server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[remotion-studio] Config API and Editor SPA listening on port ${PORT}`);
+    console.log(`  GET  /api/config  — Read pipeline config`);
+    console.log(`  PUT  /api/config  — Write pipeline config`);
+    console.log(`  POST /api/render  — Render trigger`);
+    console.log(`  GET  /api/status/:jobId  — Job status relay`);
+    console.log(`  GET  /api/result/:jobId  — Finished MP4 proxy`);
+    console.log(`  GET  /editor      — Config Editor SPA`);
+    console.log(`  GET  /preview     — Subtitle Preview SPA`);
+    console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);
+    console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
+    console.log(`  Config file: ${resolveConfigPath()}`);
+  });
+}
 
 export default app;

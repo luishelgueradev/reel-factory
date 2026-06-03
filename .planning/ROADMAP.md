@@ -559,7 +559,26 @@ Plans:
   4. When the job fails, the Studio surfaces the failure reason so the user knows what went wrong
   5. A transient font-load failure (gstatic DNS blip) does not abort the render — fonts are loaded with retry logic and/or served from a local offline cache, so a 666-frame job completes even if the initial font fetch fails
 
-**Plans**: TBD
+**Plans**: 5 plans in 4 waves
+
+Plans:
+
+**Wave 1** *(parallel — disjoint files)*
+
+- [ ] 23-01-PLAN.md — Wave-0 test infra: studio supertest harness + render-status.ts (6-step Spanish labels, causeLine, parseStatusError) (RENDER-02, RENDER-03)
+- [ ] 23-03-PLAN.md — Font resilience: @remotion/fonts@4.0.457 local-first → gstatic-retry → bundled-sans chain + per-font timeout in both fonts.ts, vendored woff2, Dockerfile COPY public/ (RENDER-05)
+
+**Wave 2** *(blocked on 23-01)*
+
+- [ ] 23-02-PLAN.md — Studio proxy routes: POST /api/render → api-server POST /batch (queue, jobId up front), GET /api/status/:id, GET /api/result/:id (Range-aware) + server.test.ts (RENDER-01, RENDER-02, RENDER-04)
+
+**Wave 3** *(blocked on 23-01 + 23-02)*
+
+- [ ] 23-04-PLAN.md — UI wiring: MP4 upload + D-02 background swap, 4 inline states (upload/progress/success/failure), ~1.5s poll loop, header CTA state machine, impeccable + frontend-design pass (RENDER-01, RENDER-02, RENDER-03, RENDER-04)
+
+**Wave 4** *(blocked on 23-03 + 23-04)*
+
+- [ ] 23-05-PLAN.md — Human checkpoint: renderer image rebuild + real render smoke (RENDER-01..04) + gstatic-blocked render proof (RENDER-05) + visual sign-off
 
 ---
 

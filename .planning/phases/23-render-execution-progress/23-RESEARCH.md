@@ -417,7 +417,7 @@ useEffect(() => () => { if (file) URL.revokeObjectURL(objectUrl); }, [objectUrl,
 | A4 | A 10s per-font timeout is adequate (CONTEXT marks the exact value as Claude's discretion). | Pattern 4 | Too short → spurious fallback; too long → slow start. Tunable; bounded by D-11. |
 | A5 | Restricting to `latin`+`latin-ext` subsets (as the current code does) is sufficient for the vendored set. | fonts.ts | Spanish/English only need latin; verified by existing comment. LOW. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Which fonts to vendor?**
    - What we know: 26 Google Fonts are in `AVAILABLE_FONTS`; vendoring all × multiple weights bloats
@@ -427,6 +427,9 @@ useEffect(() => () => { if (file) URL.revokeObjectURL(objectUrl); }, [objectUrl,
    - Recommendation: Vendor the **bundled-sans fallbacks (Plus Jakarta Sans + Inter) unconditionally**
      (guarantees D-12), plus the top ~6–8 fonts; remaining fonts use the gstatic-retry tier. This
      bounds image size while making the common path offline. (Planner's call — within D-10/D-12.)
+   - **RESOLVED (Plan 03):** vendor Plus Jakarta Sans + Inter (Regular+Bold) unconditionally
+     plus the top ~6-8 fonts (Montserrat, Poppins, Oswald, Bebas Neue…); the rest fall through
+     to the gstatic-retry tier. Plus Jakarta Sans is the `BUNDLED_SANS` final fallback (D-12).
 
 2. **Does `POST /process` block until the whole render finishes (synchronous), or return a jobId immediately?**
    - What we know: `process.ts` `await runPipeline(...)` runs the FULL pipeline before responding,
@@ -445,6 +448,10 @@ useEffect(() => () => { if (file) URL.revokeObjectURL(objectUrl); }, [objectUrl,
      pollable) rather than the synchronous `/process`.** This is the single most important
      architectural question for RENDER-02 and is flagged HIGH priority. See `status.ts` referencing
      `videoQueue` and CONTEXT note that `POST /batch` exists.
+   - **RESOLVED (Plan 02):** submit via the `POST /batch` queue path — it returns a `jobId` up
+     front (`jobs[0].jobId`, `status:"queued"`) and seeds the Redis `job:{id}` progress hash that
+     `GET /status/:jobId` reads, enabling live RENDER-02 polling. The synchronous `/process` path
+     is NOT used. (Supersedes CONTEXT D-01/D-03's literal `POST /process` — see CONTEXT erratum.)
 
 ## Environment Availability
 

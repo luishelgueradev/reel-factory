@@ -41,6 +41,11 @@ Requirements: RENDER-01..RENDER-05.
 - **D-01:** Input arrives via **upload in the Studio** (drop or file picker) — the
   Studio becomes self-contained; no curl, no pre-placed server-side file, no job
   binding. On Render, the file is sent as multipart `video` to `POST /process`.
+  - **Erratum (planning, verified against code):** the *intent* (upload-in-Studio) holds, but
+    the literal target is corrected: the file is sent as multipart **`videos`** (api-server's
+    `/batch` field) to **`POST /batch`** (the queue path), NOT `video`/`POST /process`. The
+    synchronous `/process` blocks for minutes and cannot return a jobId up front for live
+    progress (RENDER-02). See 23-RESEARCH Open Question 2 (RESOLVED) and Plan 02.
 - **D-02:** The uploaded MP4 **becomes the live preview background** so the user
   styles against their own footage (WYSIWYG). Wire the uploaded file into the
   `@remotion/player` background in the preview.
@@ -52,6 +57,9 @@ Requirements: RENDER-01..RENDER-05.
   `POST /api/render` (covered by the Studio's existing basic auth) → forwards to
   `http://api-server:3000/process` over `pipeline-net` → relays `jobId` + status
   back. One origin; api-server stays internal (no public exposure / CORS).
+  - **Erratum (planning, verified against code):** the proxy-through-Studio *intent* holds, but
+    the upstream is corrected to `http://api-server:3000/batch` (queue, immediate jobId),
+    NOT `/process`. See Plan 02.
 
 ### Progress surface (RENDER-02)
 - **D-04:** Progress renders **inline on the dimmed preview stage** (no modal) —
@@ -74,6 +82,10 @@ Requirements: RENDER-01..RENDER-05.
   built here).
 - **D-08:** The finished MP4 (`/artifacts/{jobId}/output/video.mp4` on api-server,
   internal) is reached **proxied through the Studio** (e.g. `/api/result/:jobId`):
+  - **Erratum (planning, verified against code):** there is NO `output` step; the proxied
+    finished-video *intent* holds but the real path is
+    `/artifacts/{jobId}/quality-finalizer/output.mp4` (the last pipeline step). The Studio
+    pins this step+filename in `/api/result/:jobId`. See 23-RESEARCH A1 and Plan 02.
   inline `<video>` playback **and** a download. **Download uses accent, not green**
   (green discipline — Render is the only green).
 - **D-09:** On failure, surface **inline at the source in low-chroma danger red**

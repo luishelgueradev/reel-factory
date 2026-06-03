@@ -129,14 +129,14 @@ function FontCard({
       onClick={() => onSelect(fontName)}
       style={{
         padding: 16,
-        background: hovered ? "rgba(76, 175, 80, 0.08)" : "#1e1e2e",
+        background: hovered ? "var(--accent-tint-2, rgba(144,202,249,0.06))" : "var(--surface, #1e1e2e)",
         borderRadius: 8,
         cursor: "pointer",
         border: isSelected
-          ? "2px solid #90caf9"
+          ? "2px solid var(--accent, #90caf9)"
           : hovered
-          ? "1px solid #4CAF50"
-          : "1px solid #333",
+          ? "1px solid var(--accent-strong, #6ba8e0)"
+          : "1px solid var(--border, #333)",
         transition: "border-color 0.2s, background 0.2s",
       }}
       onMouseEnter={() => setHovered(true)}

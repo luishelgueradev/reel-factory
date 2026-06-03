@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 046 — help destination (the rail's "?" finally has something behind it)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; height: calc(100vh - 46px); }
+  .variant.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes scrimin { from { opacity: 0; } to { opacity: 1; } }
+  kbd { font-family: var(--mono); font-size: var(--t-2xs); background: var(--surface-2); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--r-xs); padding: 2px 6px; color: var(--text); white-space: nowrap; }
+
+  /* rail (033-B) — the "?" is the subject */
+  .rail { width: 56px; flex: none; background: var(--chrome); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: var(--s-6) 0; gap: var(--s-3); z-index: 10; }
+  .rlogo { width: 30px; height: 30px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); display: grid; place-items: center; font-weight: 800; color: var(--stage); margin-bottom: var(--s-6); }
+  .railbtn { width: 40px; height: 40px; border-radius: var(--r-sm); border: none; background: none; color: var(--text-muted); cursor: pointer; display: grid; place-items: center; font-size: 17px; position: relative; transition: all var(--dur) var(--ease); }
+  .railbtn:hover { background: var(--surface-2); color: var(--text); }
+  .railbtn.on { background: var(--accent-tint); color: var(--accent); }
+  .railbtn.on::before { content: ""; position: absolute; left: -8px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--accent); }
+  .railbtn .lab { position: absolute; left: 48px; top: 50%; transform: translateY(-50%); background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); font-size: var(--t-xs); font-weight: 500; padding: 4px 9px; border-radius: var(--r-xs); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity var(--dur); box-shadow: var(--shadow-md); z-index: 50; }
+  .railbtn:hover .lab { opacity: 1; }
+  .rail .rsp { flex: 1; }
+  .helppulse { box-shadow: 0 0 0 2px var(--accent-strong); }
+
+  .colwrap { display: flex; flex-direction: column; flex: 1; min-width: 0; position: relative; }
+  .hdr { height: 52px; flex: none; display: flex; align-items: center; gap: var(--s-6); padding: 0 var(--s-10); background: var(--chrome); border-bottom: 1px solid var(--border); }
+  .ctxname { font-size: var(--t-md); font-weight: 600; }
+  .stub { flex: 1; display: grid; place-items: center; color: var(--text-faint); font-size: var(--t-sm); background: var(--canvas); text-align: center; line-height: 1.7; }
+  .stub .openbtn { margin-top: var(--s-6); }
+  .btn { font: inherit; font-size: var(--t-sm); font-weight: 600; padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 7px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); } .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-accent { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); } .btn-accent:hover { background: var(--accent-tint); filter: brightness(1.1); }
+
+  /* ── help content blocks (shared across all three presentations) ── */
+  .h-section + .h-section { margin-top: var(--s-10); }
+  .h-h { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: var(--s-5); display: flex; align-items: center; gap: 7px; }
+  .h-h .ic { color: var(--accent); font-size: 13px; }
+  .kbdrow { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-faint); font-size: var(--t-sm); color: var(--text-2); }
+  .kbdrow:last-child { border-bottom: none; }
+  .kbdrow .keys { display: flex; gap: 4px; }
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: var(--s-5); }
+  .flow .fstep { font-size: var(--t-xs); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-full); padding: 4px 10px; color: var(--text-2); }
+  .flow .arr { color: var(--text-faint); font-size: 11px; }
+  .callout { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-5) var(--s-6); font-size: var(--t-sm); color: var(--text-2); line-height: 1.6; }
+  .callout b { color: var(--text); } .callout .mono { font-family: var(--mono); font-size: var(--t-2xs); color: var(--text-muted); }
+  .abouttable { font-size: var(--t-sm); }
+  .abouttable .ar { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-faint); }
+  .abouttable .ar:last-child { border-bottom: none; }
+  .abouttable .ak { color: var(--text-muted); } .abouttable .av { color: var(--text); font-family: var(--mono); font-size: var(--t-2xs); }
+
+  /* ── A: slide-over sheet (reuses 016/032 idiom) ── */
+  .scrim { position: absolute; inset: 0; background: oklch(0.12 0.02 280 / .5); z-index: 20; display: none; animation: scrimin .16s var(--ease); }
+  .scrim.show { display: block; }
+  .sheet { position: absolute; top: 0; right: 0; bottom: 0; width: 360px; background: var(--surface); border-left: 1px solid var(--border-strong); box-shadow: var(--shadow-pop); z-index: 21; transform: translateX(100%); transition: transform .24s var(--ease); display: flex; flex-direction: column; }
+  .sheet.show { transform: none; }
+  .sheet .sh-hd { height: 48px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--s-8); border-bottom: 1px solid var(--border); font-weight: 600; font-size: var(--t-md); }
+  .sheet .sh-hd .x { margin-left: auto; color: var(--text-muted); cursor: pointer; font-size: 16px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: var(--r-xs); }
+  .sheet .sh-hd .x:hover { background: var(--surface-2); color: var(--text); }
+  .sheet .sh-bd { padding: var(--s-8); overflow-y: auto; }
+
+  /* ── B: full destination ── */
+  .destwrap { flex: 1; display: flex; min-height: 0; }
+  .destnav { width: 188px; flex: none; border-right: 1px solid var(--border); padding: var(--s-8) var(--s-5); background: var(--canvas); }
+  .destnav .dn { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--r-sm); font-size: var(--t-sm); color: var(--text-2); cursor: pointer; }
+  .destnav .dn:hover { background: var(--surface-2); color: var(--text); }
+  .destnav .dn.on { background: var(--accent-tint); color: var(--accent); }
+  .destbody { flex: 1; overflow-y: auto; padding: var(--s-12) var(--s-16); }
+  .destbody .dtitle { font-size: var(--t-xl); font-weight: 700; margin-bottom: var(--s-3); }
+  .destbody .dsub { font-size: var(--t-sm); color: var(--text-muted); margin-bottom: var(--s-12); }
+  .destbody .maxw { max-width: 600px; }
+
+  /* ── C: popover cheatsheet ── */
+  .popover { position: absolute; left: 64px; bottom: 12px; width: 296px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); z-index: 30; display: none; animation: fadein .14s var(--ease); }
+  .popover.show { display: block; }
+  .popover .po-hd { padding: var(--s-5) var(--s-6); border-bottom: 1px solid var(--border-faint); font-size: var(--t-sm); font-weight: 600; display: flex; align-items: center; }
+  .popover .po-hd .x { margin-left: auto; color: var(--text-muted); cursor: pointer; }
+  .popover .po-bd { padding: var(--s-5) var(--s-6); }
+  .popover .po-ft { padding: var(--s-4) var(--s-6); border-top: 1px solid var(--border-faint); display: flex; gap: var(--s-5); }
+  .popover .po-ft a { font-size: var(--t-xs); color: var(--accent); cursor: pointer; }
+
+  .vhint { font-size: var(--t-2xs); color: var(--text-faint); padding: var(--s-4) var(--s-10); text-align: center; border-top: 1px solid var(--border-faint); background: var(--canvas); flex: none; line-height: 1.5; }
+  .vhint b { color: var(--text-muted); }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 046 · help destination</span>
+  <button class="vtab" onclick="show('a',this)">A ★ · Slide-over (idioma ⚙)</button>
+  <button class="vtab" onclick="show('b',this)">B · Destino completo</button>
+  <button class="vtab" onclick="show('c',this)">C · Popover cheatsheet</button>
+  <span class="hint">El "?" del riel y el grupo Ayuda del ⌘K prometen algo — ¿qué vive detrás?</span>
+</nav>
+
+<!-- variants injected by JS -->
+<div class="variant active" id="v-a"></div>
+<div class="variant" id="v-b"></div>
+<div class="variant" id="v-c"></div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+// ─── the honest help content (grounded in the real project) ───
+const SHORTCUTS = [
+  ['Paleta de comandos', ['⌘','K']],
+  ['Ir a Títulos / Subtítulos / Overlays / Video', ['G','1…4']],
+  ['Render', ['⌘','↵']],
+  ['Guardar config', ['⌘','S']],
+  ['Abrir ⚙ Procesamiento', ['G','S']],
+  ['Cerrar sheet / cancelar', ['Esc']],
+];
+function shortcutsHTML(){
+  return SHORTCUTS.map(s=>`<div class="kbdrow"><span>${s[0]}</span><span class="keys">${s[1].map(k=>`<kbd>${k}</kbd>`).join('')}</span></div>`).join('');
+}
+const HOWFLOW = `<div class="flow">
+  <span class="fstep">MP4</span><span class="arr">→</span>
+  <span class="fstep">Whisper (es)</span><span class="arr">→</span>
+  <span class="fstep">Cortar silencios</span><span class="arr">→</span>
+  <span class="fstep">Remotion</span><span class="arr">→</span>
+  <span class="fstep">9:16 H.264</span></div>`;
+const CONCURRENCY = `<div class="callout"><b>Un video a la vez.</b> El pipeline corre <span class="mono">MAX_CONCURRENT_JOBS=1</span> a propósito: cada render levanta un Chrome headless, y dos en paralelo agotan la RAM/shm y mueren (OOM) a mitad de render. La cola procesa de a uno; un segundo trabajo espera su turno.</div>`;
+const INSPECT = `<div class="callout" style="margin-top:var(--s-5)">Cada paso es <b>inspeccionable</b>: podés revisar la transcripción (corregir lo que Whisper escuchó mal) y los cortes de silencio (devolver cualquiera) antes de renderizar.</div>`;
+const ABOUT = [
+  ['Versión', 'Reel Factory · v1.3'],
+  ['Studio', 'localhost:3123'],
+  ['Transcripción', 'whisper-api · modelo medium'],
+  ['Acceso público', 'Cloudflare Tunnel + auth básica'],
+  ['Salida', 'output/*.mp4 · 9:16 · H.264'],
+];
+function aboutHTML(){
+  return `<div class="abouttable">${ABOUT.map(a=>`<div class="ar"><span class="ak">${a[0]}</span><span class="av">${a[1]}</span></div>`).join('')}</div>`;
+}
+
+function helpContent(compact){
+  return `<div class="h-section">
+      <div class="h-h"><span class="ic">⌨</span>Atajos de teclado</div>
+      ${shortcutsHTML()}
+    </div>
+    <div class="h-section">
+      <div class="h-h"><span class="ic">⛭</span>Cómo funciona</div>
+      ${HOWFLOW}${CONCURRENCY}${compact?'':INSPECT}
+    </div>
+    <div class="h-section">
+      <div class="h-h"><span class="ic">ⓘ</span>Acerca de</div>
+      ${aboutHTML()}
+    </div>`;
+}
+
+// ── shell with the rail (the "?" is what we're sketching) ──
+function shell(v, inner, extra=''){
+  return `<nav class="rail">
+      <div class="rlogo">R</div>
+      <button class="railbtn">✎<span class="lab">Editor</span></button>
+      <button class="railbtn">≣<span class="lab">Cola</span></button>
+      <button class="railbtn">✓<span class="lab">Resultados</span></button>
+      <div class="rsp"></div>
+      <button class="railbtn">⚙<span class="lab">Procesamiento</span></button>
+      <button class="railbtn ${v==='b'?'on':''} helptrigger" id="qbtn-${v}" onclick="openHelp('${v}')">?<span class="lab">Ayuda</span></button>
+    </nav>
+    <div class="colwrap">${inner}${extra}<div class="vhint">${VHINTS[v]}</div></div>`;
+}
+
+const VHINTS = {
+  a: 'A — <b>slide-over</b>: el "?" abre una hoja sobre el editor (mismo idioma que ⚙ Procesamiento 032 y la galería de fuentes 016). Atajos + Cómo funciona + Acerca de en un scroll. Right-sized: la ayuda de una herramienta local es poca, no merece un destino entero. Esc cierra; el editor sigue detrás.',
+  b: 'B — <b>destino completo</b>: el "?" es un lugar como Resultados/Cola, con sub-nav (Atajos · Cómo funciona · Acerca de). Más peso del que la ayuda necesita en una herramienta de un solo propósito — pero escala si la doc crece.',
+  c: 'C — <b>popover cheatsheet</b>: el "?" muestra solo lo más pedido (los atajos) anclado al riel; "Cómo funciona" y "Acerca de" son links. Mínimo; el explicador de concurrencia vive inline en la cola, no centralizado. Rápido pero fragmenta la ayuda.'
+};
+
+// ── A: editor stub + slide-over ──
+document.getElementById('v-a').innerHTML = shell('a',
+  `<header class="hdr"><span class="ctxname">Editor</span></header>
+   <div class="stub">El editor (037-B) va acá.<br>Tocá <b style="color:var(--accent)">?</b> en el riel para abrir la ayuda.<button class="btn btn-accent openbtn" onclick="openHelp('a')">Abrir ayuda</button></div>`,
+  `<div class="scrim" id="scrim-a" onclick="closeHelp('a')"></div>
+   <div class="sheet" id="sheet-a">
+     <div class="sh-hd">Ayuda <span class="x" onclick="closeHelp('a')">✕</span></div>
+     <div class="sh-bd">${helpContent(false)}</div>
+   </div>`);
+
+// ── B: full destination ──
+const B_SECTIONS = {
+  atajos: { t:'Atajos de teclado', s:'Todo lo del editor está acá; la paleta ⌘K también los muestra inline.', body:`<div class="maxw">${shortcutsHTML()}</div>` },
+  como: { t:'Cómo funciona', s:'El pipeline, paso a paso, y por qué corre un video a la vez.', body:`<div class="maxw">${HOWFLOW}${CONCURRENCY}${INSPECT}</div>` },
+  acerca: { t:'Acerca de', s:'Versión, servicios y dónde caen las cosas.', body:`<div class="maxw">${aboutHTML()}</div>` },
+};
+let bSec = 'atajos';
+function renderB(){
+  const s = B_SECTIONS[bSec];
+  document.getElementById('v-b').innerHTML = shell('b',
+    `<header class="hdr"><span class="ctxname">Ayuda</span></header>
+     <div class="destwrap">
+       <nav class="destnav">
+         ${Object.entries(B_SECTIONS).map(([k,val])=>`<div class="dn ${k===bSec?'on':''}" onclick="setBSec('${k}')">${k==='atajos'?'⌨':k==='como'?'⛭':'ⓘ'} ${val.t}</div>`).join('')}
+       </nav>
+       <div class="destbody"><div class="dtitle">${s.t}</div><div class="dsub">${s.s}</div>${s.body}</div>
+     </div>`);
+}
+function setBSec(k){ bSec=k; renderB(); }
+renderB();
+
+// ── C: popover cheatsheet ──
+document.getElementById('v-c').innerHTML = shell('c',
+  `<header class="hdr"><span class="ctxname">Editor</span></header>
+   <div class="stub">El editor (037-B) va acá.<br>Tocá <b style="color:var(--accent)">?</b> en el riel para el cheatsheet.<button class="btn btn-accent openbtn" onclick="openHelp('c')">Mostrar atajos</button></div>`,
+  `<div class="popover" id="pop-c">
+     <div class="po-hd">Atajos <span class="x" onclick="closeHelp('c')">✕</span></div>
+     <div class="po-bd">${shortcutsHTML()}</div>
+     <div class="po-ft"><a onclick="alert('(demo) abre Cómo funciona — inline en la cola para concurrencia')">Cómo funciona</a><a onclick="alert('(demo) Acerca de · v1.3')">Acerca de</a></div>
+   </div>`);
+
+// ── interactions ──
+function openHelp(v){
+  if(v==='a'){ document.getElementById('scrim-a').classList.add('show'); document.getElementById('sheet-a').classList.add('show'); }
+  else if(v==='c'){ document.getElementById('pop-c').classList.add('show'); }
+  // B is always-open (it's a destination)
+}
+function closeHelp(v){
+  if(v==='a'){ document.getElementById('scrim-a').classList.remove('show'); document.getElementById('sheet-a').classList.remove('show'); }
+  else if(v==='c'){ document.getElementById('pop-c').classList.remove('show'); }
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeHelp('a'); closeHelp('c'); } });
+document.addEventListener('click', e=>{ const pop=document.getElementById('pop-c'); if(pop && pop.classList.contains('show') && !e.target.closest('#pop-c') && !e.target.closest('.helptrigger') && !e.target.closest('.openbtn')) closeHelp('c'); });
+
+function show(id, btn){
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

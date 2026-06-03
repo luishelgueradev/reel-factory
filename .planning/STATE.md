@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: — Studio como producto usable
 status: planning
-last_updated: "2026-06-03T16:00:00.700Z"
-last_activity: 2026-06-03
+last_updated: "2026-06-03T20:12:43.548Z"
+last_activity: 2026-06-03 — v1.4 roadmap created (Phases 23-26)
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 24
+  completed_phases: 20
+  total_plans: 76
+  completed_plans: 77
+  percent: 83
 ---
 
 # Project State

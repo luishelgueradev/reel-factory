@@ -1,7 +1,16 @@
 // ─── Font infrastructure (D-07) ──────────────────────────────────────────────
 // Curated font set: 26 Google Fonts + system monospace fallback.
-// Fonts are loaded via @remotion/google-fonts at render time (T-06-07 mitigation:
-// try/catch with monospace fallback if Google Fonts CDN is unavailable).
+//
+// RENDER-05: Offline-first font loading chain (D-10, D-11, D-12)
+// 1. Local vendored woff2 via @remotion/fonts + staticFile() — offline, deterministic
+// 2. gstatic via @remotion/google-fonts (existing loader) — network fallback
+// 3. Bundled Plus Jakarta Sans — FINAL fallback, NEVER monospace (D-12)
+//
+// Each tier is wrapped in a ~10s withTimeout race (D-11) so a never-resolving
+// network call cannot hang the renderer for the full 3h process timeout.
+
+import { loadFont as loadLocal } from "@remotion/fonts";
+import { staticFile } from "remotion";
 
 import { loadFont as loadPlusJakartaSans, fontFamily as plusJakartaSansFamily } from "@remotion/google-fonts/PlusJakartaSans";
 import { loadFont as loadInter, fontFamily as interFamily } from "@remotion/google-fonts/Inter";
@@ -30,6 +39,46 @@ import { loadFont as loadJosefinSans, fontFamily as josefinSansFamily } from "@r
 import { loadFont as loadRighteous, fontFamily as righteousFamily } from "@remotion/google-fonts/Righteous";
 import { loadFont as loadTitanOne, fontFamily as titanOneFamily } from "@remotion/google-fonts/TitanOne";
 
+// ─── Resilience constants (RENDER-05) ────────────────────────────────────────
+
+/** Timeout per font-load attempt. D-11: bounds the hang path. */
+const PER_FONT_TIMEOUT_MS = 10_000;
+
+/**
+ * Bundled-sans fallback family. D-12: the FINAL fallback is ALWAYS a real
+ * sans-serif font — NEVER "monospace". Plus Jakarta Sans woff2 is vendored
+ * in public/fonts/ so this fallback works fully offline.
+ */
+const BUNDLED_SANS = "Plus Jakarta Sans";
+
+/**
+ * Set of font module names that have a vendored woff2 in public/fonts/.
+ * These are the fonts that can be loaded locally without any network call.
+ * The remaining fonts fall through to the gstatic-retry tier.
+ */
+const VENDORED_FONTS = new Set([
+  "PlusJakartaSans",
+  "Inter",
+  "Montserrat",
+  "Poppins",
+  "Oswald",
+  "BebasNeue",
+  "Roboto",
+]);
+
+/**
+ * Wraps a promise in a ~ms timeout race. Rejects with an Error("font timeout")
+ * if the promise does not settle within ms. Closes the hang path (D-11).
+ */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("font timeout")), ms)
+    ),
+  ]);
+}
+
 // ─── Available fonts (D-07) ─────────────────────────────────────────────────
 
 /** Curated font set available for title and subtitle text */
@@ -47,11 +96,9 @@ export type AvailableFont = (typeof AVAILABLE_FONTS)[number];
 // ─── Font loaders map ────────────────────────────────────────────────────────
 
 /**
- * Maps Google Font family names to their Remotion Google Font loaders.
+ * Maps Google Font module names to their Remotion Google Font loaders (gstatic tier).
  * Each loader provides a `loadFont()` function and a `fontFamily` string.
  */
-// Each font module exports loadFont (with complex generic type) and fontFamily (string).
-// We store them in a map for dynamic lookup by name.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const FONT_LOADERS: Record<string, { fontFamily: string; loadFont: (...args: any[]) => any }> = {
   PlusJakartaSans: { fontFamily: plusJakartaSansFamily, loadFont: loadPlusJakartaSans },
@@ -82,18 +129,8 @@ const FONT_LOADERS: Record<string, { fontFamily: string; loadFont: (...args: any
   TitanOne: { fontFamily: titanOneFamily, loadFont: loadTitanOne },
 };
 
-// ─── loadFont: Async font loading with fallback ──────────────────────────────
+// ─── getFontFamilyCSS ────────────────────────────────────────────────────────
 
-/**
- * Load a Google Font by family name for use in Remotion compositions.
- *
- * Per T-06-07: If the font family is not recognized or loading fails (e.g.,
- * Google Fonts CDN unavailable in Docker), the function falls back to system
- * monospace and logs a warning — rendering continues without blocking.
- *
- * @param fontFamily - Font family name (e.g., "Inter", "Roboto", "Montserrat", etc.)
- * @returns The fontFamily string to use in CSS/Remotion styles
- */
 /**
  * Get the actual CSS fontFamily name for a font module name.
  * E.g., "DancingScript" → "Dancing Script", "SourceSans3" → "Source Sans Three"
@@ -106,26 +143,121 @@ export function getFontFamilyCSS(modulName: string): string {
   return loader.fontFamily;
 }
 
+// ─── loadFont: RENDER-05 offline-first font loading ──────────────────────────
+
+/**
+ * Load a font by module name with a three-tier offline-first resilience chain.
+ *
+ * Tier 1 — Local vendored woff2 via @remotion/fonts + staticFile() (offline, D-10):
+ *   Loads Regular (400) + Bold (700) from public/fonts/<ModuleName>-{Regular,Bold}.woff2.
+ *   Only attempted for fonts in VENDORED_FONTS set.
+ *
+ * Tier 2 — gstatic via @remotion/google-fonts (network fallback, 2 attempts):
+ *   Uses the existing loader map with subsets: ["latin","latin-ext"] (D-socket-pool guard).
+ *   Restricted to latin subsets — loading all unicode ranges generates 40-50 requests per
+ *   font per Chrome tab, exhausting the socket pool during parallel frame rendering.
+ *
+ * Tier 3 — Bundled Plus Jakarta Sans (FINAL fallback, D-12):
+ *   ALWAYS a real sans-serif. NEVER "monospace".
+ *
+ * Every attempt is wrapped in a ~10s withTimeout race (D-11) so a stuck network
+ * call cannot hang the renderer for the full 3h process timeout.
+ *
+ * @param fontFamily - Font module name (e.g., "Inter", "Roboto", "PlusJakartaSans")
+ * @returns The CSS fontFamily string to use in styles
+ */
 export async function loadFont(fontFamily: string): Promise<string> {
-  // System monospace: no loading needed, use browser default
+  // Explicit monospace/empty: caller intent — not a degraded fallback (keep as-is)
   if (fontFamily === "monospace" || fontFamily === "") {
     return "monospace";
   }
 
   const loader = FONT_LOADERS[fontFamily];
+
+  // Unknown font: skip both tiers and go directly to the bundled-sans fallback.
+  // Never return "monospace" for an unknown font (D-12 guard).
   if (!loader) {
-    console.warn(`[fonts] Unknown font family "${fontFamily}", falling back to monospace`);
-    return "monospace";
+    console.warn(`[fonts] Unknown font family "${fontFamily}", falling back to ${BUNDLED_SANS}`);
+    return await loadBundledSans();
   }
 
-  try {
-    // Restrict to latin subsets only — loading all unicode ranges (the default) generates
-    // 40-50 requests per font per Chrome tab, exhausting the socket pool when Remotion
-    // renders frames in parallel. Spanish/English content only needs latin + latin-ext.
-    const result = await loader.loadFont("normal", { subsets: ["latin", "latin-ext"] });
-    return result.fontFamily;
-  } catch (err) {
-    console.warn(`[fonts] Failed to load font "${fontFamily}", falling back to monospace:`, err);
-    return "monospace";
+  const cssFamily = loader.fontFamily;
+
+  // ── Tier 1: Local vendored woff2 (offline, deterministic) ───────────────
+  if (VENDORED_FONTS.has(fontFamily)) {
+    try {
+      await withTimeout(
+        loadLocal({
+          family: cssFamily,
+          url: staticFile(`fonts/${fontFamily}-Regular.woff2`),
+          weight: "400",
+        }),
+        PER_FONT_TIMEOUT_MS
+      );
+      await withTimeout(
+        loadLocal({
+          family: cssFamily,
+          url: staticFile(`fonts/${fontFamily}-Bold.woff2`),
+          weight: "700",
+        }),
+        PER_FONT_TIMEOUT_MS
+      );
+      return cssFamily;
+    } catch (err) {
+      console.warn(`[fonts] Local woff2 load failed for "${fontFamily}", trying gstatic:`, err);
+      // Fall through to tier 2
+    }
   }
+
+  // ── Tier 2: gstatic via @remotion/google-fonts (2 attempts) ─────────────
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // Restrict to latin subsets only — loading all unicode ranges generates
+      // 40-50 requests per font per Chrome tab, exhausting the socket pool when
+      // Remotion renders frames in parallel. Spanish/English only needs latin + latin-ext.
+      const result = await withTimeout(
+        loader.loadFont("normal", { subsets: ["latin", "latin-ext"] }),
+        PER_FONT_TIMEOUT_MS
+      );
+      return result.fontFamily;
+    } catch (err) {
+      console.warn(`[fonts] gstatic attempt ${attempt + 1} failed for "${fontFamily}":`, err);
+    }
+  }
+
+  // ── Tier 3: Bundled Plus Jakarta Sans — FINAL fallback, NEVER monospace ──
+  console.warn(`[fonts] All tiers failed for "${fontFamily}", using bundled fallback ${BUNDLED_SANS}`);
+  return await loadBundledSans();
+}
+
+/**
+ * Load the bundled Plus Jakarta Sans woff2 and return its family name.
+ * This is the FINAL fallback — always a real sans-serif, NEVER monospace (D-12).
+ * If even the bundled load fails (extreme edge case), return BUNDLED_SANS anyway —
+ * the @font-face may still be registered from a previous successful call, and if
+ * not, the browser will use the system sans-serif, which is still a real sans.
+ */
+async function loadBundledSans(): Promise<string> {
+  try {
+    await withTimeout(
+      loadLocal({
+        family: BUNDLED_SANS,
+        url: staticFile("fonts/PlusJakartaSans-Regular.woff2"),
+        weight: "400",
+      }),
+      PER_FONT_TIMEOUT_MS
+    );
+    await withTimeout(
+      loadLocal({
+        family: BUNDLED_SANS,
+        url: staticFile("fonts/PlusJakartaSans-Bold.woff2"),
+        weight: "700",
+      }),
+      PER_FONT_TIMEOUT_MS
+    );
+  } catch (err) {
+    console.warn(`[fonts] Bundled-sans load failed (returning family name anyway):`, err);
+  }
+  // Always return BUNDLED_SANS — worst case the CSS family resolves to system sans
+  return BUNDLED_SANS;
 }

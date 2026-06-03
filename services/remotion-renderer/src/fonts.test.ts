@@ -9,8 +9,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ─── Mock @remotion/fonts ──────────────────────────────────────────────────
-// loadFont from @remotion/fonts returns Promise<void> (no return value).
-// We spy on it to simulate local-load success/failure.
+// loadFont from @remotion/fonts returns Promise<void>.
+// We control it to simulate local-load success/failure per test.
 const mockLoadLocal = vi.fn<[{ family: string; url: string; weight?: string }], Promise<void>>();
 vi.mock("@remotion/fonts", () => ({
   loadFont: mockLoadLocal,
@@ -21,13 +21,123 @@ vi.mock("remotion", () => ({
   staticFile: (path: string) => `/public/${path}`,
 }));
 
+// ─── Mock @remotion/google-fonts/* ────────────────────────────────────────
+// We mock the entire module namespace so that gstatic calls are controlled.
+// The mock factory is called per-import; we make each loader's loadFont a vi.fn().
+// This simulates the case where ALL gstatic loaders fail (network down).
+const mockGstatic = vi.fn();
+vi.mock("@remotion/google-fonts/PlusJakartaSans", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Plus Jakarta Sans",
+}));
+vi.mock("@remotion/google-fonts/Inter", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Inter",
+}));
+vi.mock("@remotion/google-fonts/Roboto", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Roboto",
+}));
+vi.mock("@remotion/google-fonts/Montserrat", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Montserrat",
+}));
+vi.mock("@remotion/google-fonts/Oswald", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Oswald",
+}));
+vi.mock("@remotion/google-fonts/Poppins", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Poppins",
+}));
+vi.mock("@remotion/google-fonts/BebasNeue", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Bebas Neue",
+}));
+vi.mock("@remotion/google-fonts/Antonio", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Antonio",
+}));
+vi.mock("@remotion/google-fonts/Raleway", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Raleway",
+}));
+vi.mock("@remotion/google-fonts/Ubuntu", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Ubuntu",
+}));
+vi.mock("@remotion/google-fonts/Nunito", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Nunito",
+}));
+vi.mock("@remotion/google-fonts/SpaceGrotesk", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Space Grotesk",
+}));
+vi.mock("@remotion/google-fonts/Rubik", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Rubik",
+}));
+vi.mock("@remotion/google-fonts/SourceSans3", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Source Sans 3",
+}));
+vi.mock("@remotion/google-fonts/Outfit", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Outfit",
+}));
+vi.mock("@remotion/google-fonts/PlayfairDisplay", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Playfair Display",
+}));
+vi.mock("@remotion/google-fonts/LexendDeca", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Lexend Deca",
+}));
+vi.mock("@remotion/google-fonts/Signika", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Signika",
+}));
+vi.mock("@remotion/google-fonts/Lato", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Lato",
+}));
+vi.mock("@remotion/google-fonts/Sora", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Sora",
+}));
+vi.mock("@remotion/google-fonts/DancingScript", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Dancing Script",
+}));
+vi.mock("@remotion/google-fonts/CormorantGaramond", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Cormorant Garamond",
+}));
+vi.mock("@remotion/google-fonts/DMSans", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "DM Sans",
+}));
+vi.mock("@remotion/google-fonts/JosefinSans", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Josefin Sans",
+}));
+vi.mock("@remotion/google-fonts/Righteous", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Righteous",
+}));
+vi.mock("@remotion/google-fonts/TitanOne", () => ({
+  loadFont: mockGstatic,
+  fontFamily: "Titan One",
+}));
+
 // Import AFTER mocks are registered
 const { loadFont, getFontFamilyCSS } = await import("./fonts.js");
 
-// ─── Constants (from fonts.ts) ────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────
 const BUNDLED_SANS = "Plus Jakarta Sans";
 
-// ─── Helper: create a promise that never resolves (hang simulation) ────────
+// ─── Helper: never-resolving promise (hang simulation) ────────────────────
 function neverResolves<T>(): Promise<T> {
   return new Promise<T>(() => {
     // intentionally left pending — simulates a stuck network call
@@ -75,7 +185,7 @@ describe("loadFont — RENDER-05 unit proofs", () => {
   // Case 3: unknown font → BUNDLED_SANS (D-12 proof — NOT monospace)
   // ─────────────────────────────────────────────────────────────────────────
   it("returns BUNDLED_SANS for unknown font — NEVER monospace (D-12)", async () => {
-    // Local load resolves for the bundled-sans fallback registration
+    // Local load resolves for the bundled-sans fallback attempt
     mockLoadLocal.mockResolvedValue(undefined);
 
     const result = await loadFont("UnknownFontXYZ");
@@ -87,8 +197,9 @@ describe("loadFont — RENDER-05 unit proofs", () => {
   // Case 4: local load rejects, gstatic also fails → BUNDLED_SANS (D-12 proof)
   // ─────────────────────────────────────────────────────────────────────────
   it("falls back to BUNDLED_SANS when local AND gstatic both fail — NEVER monospace (D-12)", async () => {
-    // All local loads fail (simulates missing woff2 + gstatic down)
-    mockLoadLocal.mockRejectedValue(new Error("load failed"));
+    // All local loads (@remotion/fonts) fail + gstatic (@remotion/google-fonts) fails
+    mockLoadLocal.mockRejectedValue(new Error("local load failed"));
+    mockGstatic.mockRejectedValue(new Error("gstatic down"));
 
     const result = await loadFont("Montserrat");
     expect(result).toBe(BUNDLED_SANS);
@@ -99,8 +210,8 @@ describe("loadFont — RENDER-05 unit proofs", () => {
   // Case 5: catch branch never returns monospace (D-12 catch-branch guard)
   // ─────────────────────────────────────────────────────────────────────────
   it("catch branch returns BUNDLED_SANS, NOT monospace (D-12 catch-branch proof)", async () => {
-    // Simulate local load throwing synchronously (covers catch path)
     mockLoadLocal.mockRejectedValue(new Error("network error"));
+    mockGstatic.mockRejectedValue(new Error("gstatic error"));
 
     const result = await loadFont("Inter");
     expect(result).toBe(BUNDLED_SANS);
@@ -108,48 +219,60 @@ describe("loadFont — RENDER-05 unit proofs", () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Case 6: timeout race (D-11 proof)
+  // Case 6: gstatic fallback succeeds when local fails → returns real family
+  // ─────────────────────────────────────────────────────────────────────────
+  it("falls through to gstatic when local load rejects, returns real CSS family", async () => {
+    // Local fails
+    mockLoadLocal.mockRejectedValue(new Error("no woff2 file"));
+    // Gstatic succeeds — return fontFamily in result
+    mockGstatic.mockResolvedValue({ fontFamily: "Poppins" });
+
+    const result = await loadFont("Poppins");
+    expect(result).toBe("Poppins"); // gstatic returned the real family
+    expect(result).not.toBe("monospace");
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Case 7: timeout race (D-11 proof)
   // A never-resolving load is bounded by withTimeout — does NOT hang forever
   // ─────────────────────────────────────────────────────────────────────────
   it("a never-resolving local load is bounded by the timeout race and falls through (D-11)", async () => {
     vi.useFakeTimers();
 
-    // First two calls (Regular + Bold) never resolve → force timeout path
-    mockLoadLocal.mockImplementation((opts) => {
-      if (opts.url.includes("PlusJakartaSans") && opts.url.includes("Regular")) {
-        return neverResolves<void>();
-      }
-      // Other calls (gstatic fallback, bundled-sans) resolve immediately
-      return Promise.resolve();
+    // Local calls: first call (Regular weight for the font) never resolves → triggers timeout
+    // Subsequent calls (bundled-sans fallback) resolve immediately
+    let callCount = 0;
+    mockLoadLocal.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return neverResolves<void>(); // first local attempt hangs
+      return Promise.resolve(); // bundled-sans fallback resolves
     });
+    // Gstatic also fails
+    mockGstatic.mockRejectedValue(new Error("gstatic down"));
 
-    // Start the loadFont call (it will be pending due to the never-resolving mock)
     const resultPromise = loadFont("Poppins");
 
-    // Advance timers past the PER_FONT_TIMEOUT_MS (~10000ms)
-    // Use a large advance to ensure all timeout races fire
+    // Advance timers past PER_FONT_TIMEOUT_MS (10_000ms) to trigger the timeout race
     await vi.advanceTimersByTimeAsync(15_000);
 
     const result = await resultPromise;
 
-    // Should NOT hang — must have resolved via fallback
+    // Must NOT hang — should have resolved via bundled-sans fallback
     expect(result).toBeDefined();
-    // Final result should be BUNDLED_SANS or the font's real family (gstatic fallback succeeded),
-    // but must NEVER be monospace
-    expect(result).not.toBe("monospace");
+    expect(result).not.toBe("monospace"); // D-12 never-monospace
 
     vi.useRealTimers();
   }, 30_000);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Case 7: withTimeout itself rejects a stuck promise within budget
+  // Case 8: withTimeout itself rejects a stuck promise within budget
+  // (The mechanism proof — independent of fonts.ts logic)
   // ─────────────────────────────────────────────────────────────────────────
   it("withTimeout race rejects within the timeout budget when given a hanging promise", async () => {
     vi.useFakeTimers();
 
     const TIMEOUT_MS = 10_000;
 
-    // Reproduce withTimeout logic to verify the race mechanism itself
     function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
       return Promise.race([
         p,
@@ -169,11 +292,11 @@ describe("loadFont — RENDER-05 unit proofs", () => {
       rejectionMessage = err.message;
     });
 
-    // Before timeout, not yet rejected
+    // Before timeout fires — not yet rejected
     await vi.advanceTimersByTimeAsync(9_999);
     expect(rejected).toBe(false);
 
-    // After timeout, should be rejected
+    // After timeout fires — rejected
     await vi.advanceTimersByTimeAsync(2);
     expect(rejected).toBe(true);
     expect(rejectionMessage).toBe("font timeout");
@@ -182,7 +305,7 @@ describe("loadFont — RENDER-05 unit proofs", () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Case 8: getFontFamilyCSS returns correct CSS family
+  // Case 9: getFontFamilyCSS returns correct CSS family
   // ─────────────────────────────────────────────────────────────────────────
   it("getFontFamilyCSS returns correct CSS family for known fonts", () => {
     expect(getFontFamilyCSS("PlusJakartaSans")).toBe("Plus Jakarta Sans");
@@ -190,20 +313,5 @@ describe("loadFont — RENDER-05 unit proofs", () => {
     expect(getFontFamilyCSS("monospace")).toBe("monospace");
     expect(getFontFamilyCSS("")).toBe("monospace");
     expect(getFontFamilyCSS("UnknownFont")).toBe("UnknownFont");
-  });
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Case 9: subsets restriction still applied to gstatic fallback
-  // ─────────────────────────────────────────────────────────────────────────
-  it("subsets restriction is preserved — gstatic fallback does not request all unicode ranges", async () => {
-    // Local load fails, gstatic might be called — the key invariant is that if a gstatic call
-    // is made, it must NOT request all subsets (socket-pool exhaustion guard from fonts.ts).
-    // We verify fonts.ts still loads local fonts correctly and the chain proceeds.
-    mockLoadLocal.mockRejectedValue(new Error("gstatic down"));
-
-    // Should complete without hanging, regardless of subsets
-    const result = await loadFont("Montserrat");
-    expect(result).not.toBe("monospace"); // D-12
-    expect(result).toBe(BUNDLED_SANS);
   });
 });

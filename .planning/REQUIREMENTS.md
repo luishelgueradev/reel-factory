@@ -1,72 +1,55 @@
-# Requirements: v1.3 — Studio redesign + visual capabilities
+# Requirements: v1.4 — Studio como producto usable
 
-Scoped requirements for milestone v1.3. REQ-IDs continue per-category numbering.
+Scoped requirements for milestone v1.4. REQ-IDs continue per-category numbering.
 Traceability (phase mapping) is filled by the roadmapper.
 
-## v1.3 Requirements
+> v1.3 (Studio redesign + visual capabilities, Phases 18–22) shipped 2026-06-03 — all its
+> requirements (PERSIST, TYPO, OVERLAY, TITLE, STUDIO, D-01..D-11) validated. See PROJECT.md
+> and git history for the v1.3 record.
 
-### Config Persistence (PERSIST)
+## v1.4 Requirements
 
-- [x] **PERSIST-01**: User-saved studio config (subtitle styles + title blocks) survives a `docker compose build`/rebuild and container recreate — styles are not lost.
-- [x] **PERSIST-02**: The active config is stored as inspectable JSON in a persistent location (bind mount or named volume), not the ephemeral image layer.
+### Render Execution & Progress (RENDER)
 
-### Typography (TYPO)
+- [ ] **RENDER-01**: User can start a full video generation from the Studio's "Render Video" button (no curl/manual step).
+- [ ] **RENDER-02**: User sees live progress of the running job — current pipeline step and overall percent — until it finishes.
+- [ ] **RENDER-03**: User is notified when the render finishes (success) or fails, with the failure reason surfaced.
+- [ ] **RENDER-04**: On completion, the user can access the finished video (preview/download) from the Studio.
+- [ ] **RENDER-05**: A transient font-load failure during render does not abort the job — font loading is resilient (retry and/or offline-served fonts).
 
-- [x] **TYPO-01**: User can select Plus Jakarta Sans for subtitles and titles.
-- [x] **TYPO-02**: User can set subtitle/title font sizes beyond the current maximum.
-- [x] **TYPO-03**: User can apply bold and italic variants to fonts.
-- [x] **TYPO-04**: User can apply an outer glow effect with configurable color, intensity, and softness.
+### Named Config Profiles (PROFILE)
 
-### PNG Overlays (OVERLAY)
+- [ ] **PROFILE-01**: User can save the current config as a named profile.
+- [ ] **PROFILE-02**: User can load a saved profile, restoring its config into the Studio.
+- [ ] **PROFILE-03**: User can list, rename, and delete saved profiles.
+- [ ] **PROFILE-04**: Saved profiles persist across Docker rebuilds (same guarantee as the active config).
 
-- [x] **OVERLAY-01**: User can add a transparent PNG overlay onto the video.
-- [x] **OVERLAY-02**: A PNG larger than the frame is downscaled by code at render time for crisp output (supersampling approach).
-- [x] **OVERLAY-03**: User can position and size the PNG overlay.
+### AI Social Metadata (META)
 
-### Title Blocks (TITLE)
+- [ ] **META-01**: User can generate social-media metadata (title/description + hashtags) from the video's transcript via Claude API.
+- [ ] **META-02**: Generated metadata is shown in the Studio "Metadata de redes" panel (replacing the Phase 22 placeholder).
+- [ ] **META-03**: User can edit and copy the generated metadata.
+- [ ] **META-04**: User can regenerate the metadata (e.g., adjust tone/platform) without re-running the pipeline.
 
-- [x] **TITLE-01**: User can position title blocks by pixel coordinates (not percentages).
-- [x] **TITLE-02**: User can configure border-radius on title block containers.
-- [x] **TITLE-03**: Title blocks have no subtitle field; a subtitle is added as a separate title block.
+### UI Convergence (UICONV)
 
-### Studio UI Redesign (STUDIO)
-
-- [x] **STUDIO-01**: Studio presents a single interface split into two vertical columns — left: video preview, right: controls.
-- [x] **STUDIO-02**: All controls live in the right panel, organized in tabs.
-- [x] **STUDIO-03**: The duplicated editor/preview screens and redundant components are consolidated/removed.
+- [ ] **UICONV-01**: The Studio interface converges to the chosen north-star direction (cohesive shell/nav, control density, motion) per the validated sketches.
+- [ ] **UICONV-02**: The new surfaces (render progress, metadata panel, profiles) are integrated into the shell to the same visual quality bar (impeccable + frontend-design).
 
 ## Future Requirements (deferred)
 
-- Multiple named config presets (save/load) — beyond single-active-config persistence.
-- `.env`-level subtitle position knob (position is already configurable via studio config).
+- Batch/multi-job queue UI in the Studio (api-server already exposes `POST /batch`) — surface later.
+- Per-platform export presets (aspect ratios beyond 9:16) — out of current scope.
+- Pipeline-step inspection UI (transcript / silence-cut review) — sketched (028/029) but deferred.
 
 ## Out of Scope
 
-- Pipeline/processing changes (whisper, silence, encode) — v1.3 is studio + render visuals only.
-- New output formats beyond 9:16 — unchanged from prior milestones.
+- Cloud hosting / multi-user accounts — single-user local Studio for now.
+- Direct social-network publishing (auto-post to TikTok/IG) — metadata is generated, not posted.
+- Real-time collaborative editing.
 
 ## Traceability
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| PERSIST-01 | 17 | Validated (Phase 17, 2026-05-27) |
-| PERSIST-02 | 17 | Validated (Phase 17, 2026-05-27) |
-| STUDIO-01 | 18 | Planned |
-| STUDIO-02 | 18 | Planned |
-| STUDIO-03 | 18 | Planned |
-| TYPO-01 | 19 | Planned |
-| TYPO-02 | 19 | Planned |
-| TYPO-03 | 19 | Planned |
-| TYPO-04 | 19 | Planned |
-| TITLE-01 | 20 | Planned |
-| TITLE-02 | 20 | Planned |
-| TITLE-03 | 20 | Planned |
-| OVERLAY-01 | 21 | Planned |
-| OVERLAY-02 | 21 | Planned |
-| OVERLAY-03 | 21 | Planned |
-
----
-
-**Non-negotiable tooling:** All frontend phases/tasks (STUDIO-*, and the studio-facing
-parts of TYPO/OVERLAY/TITLE) MUST invoke the `impeccable` skill + `frontend-design`
-plugin at the start of plan/execute (per AGENTS.md).
+| _(filled by roadmapper)_ | | |

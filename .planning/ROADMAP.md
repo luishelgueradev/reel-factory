@@ -566,11 +566,11 @@ Plans:
 **Wave 1** *(parallel — disjoint files)*
 
 - [x] 23-01-PLAN.md — Wave-0 test infra: studio supertest harness + render-status.ts (6-step Spanish labels, causeLine, parseStatusError) (RENDER-02, RENDER-03)
-- [ ] 23-03-PLAN.md — Font resilience: @remotion/fonts@4.0.457 local-first → gstatic-retry → bundled-sans chain + per-font timeout in both fonts.ts, vendored woff2, Dockerfile COPY public/ (RENDER-05)
+- [x] 23-03-PLAN.md — Font resilience: @remotion/fonts@4.0.457 local-first → gstatic-retry → bundled-sans chain + per-font timeout in both fonts.ts, vendored woff2, Dockerfile COPY public/ (RENDER-05)
 
 **Wave 2** *(blocked on 23-01)*
 
-- [ ] 23-02-PLAN.md — Studio proxy routes: POST /api/render → api-server POST /batch (queue, jobId up front), GET /api/status/:id, GET /api/result/:id (Range-aware) + server.test.ts (RENDER-01, RENDER-02, RENDER-04)
+- [x] 23-02-PLAN.md — Studio proxy routes: POST /api/render → api-server POST /batch (queue, jobId up front), GET /api/status/:id, GET /api/result/:id (Range-aware) + server.test.ts (RENDER-01, RENDER-02, RENDER-04)
 
 **Wave 3** *(blocked on 23-01 + 23-02)*
 
@@ -661,7 +661,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 20. Title block precision | 4/4 | Complete | 2026-05-29 |
 | 21. PNG overlays | 3/3 | Complete | 2026-05-30 |
 | 22. Studio UI polish | 6/6 | Complete | 2026-06-03 |
-| 23. Render execution + progress | 1/5 | In Progress|  |
+| 23. Render execution + progress | 3/5 | In Progress|  |
 | 24. Named config profiles | 0/TBD | Not started | - |
 | 25. AI social metadata | 0/TBD | Not started | - |
 | 26. UI convergence (impeccable) | 0/TBD | Not started | - |

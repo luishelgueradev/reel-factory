@@ -89,6 +89,12 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
   // Build config with resolved CSS fontFamily for layout components
   const resolvedConfig: SubtitleConfig = { ...config, fontFamily: fontFamilyCSS };
 
+  // D-03/D-04: Split overlays into back band (default, under subtitles) and front band (over titles).
+  // Overlays with no layer field default to "back".
+  // NOTE: No preview dim here — the dim is studio Player path ONLY; renderer paints at full opacity.
+  const backOverlays = overlays.filter(o => (o.layer ?? "back") === "back");
+  const frontOverlays = overlays.filter(o => o.layer === "front");
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       {/* D-08/VISU-04: ZoomContainer wraps OffthreadVideo with combined zoom+transition scale */}
@@ -99,7 +105,12 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
       >
         {videoSrc && <OffthreadVideo src={rawVideoSrc ?? staticFile(videoSrc)} />}
       </ZoomContainer>
-      {/* Subtitles on top of video — not affected by zoom */}
+      {/* D-03 back-band: paint BEFORE subtitles (layer 2 — under text) */}
+      {/* No rawImageSrc — renderer resolves via staticFile(_resolvedFile) */}
+      {backOverlays.map((ov, i) => (
+        <PngOverlay key={`overlay-back-${i}`} overlay={ov} />
+      ))}
+      {/* Subtitles on top of back overlays — not affected by zoom */}
       <SubtitleLayoutRenderer captionPages={captionPages} config={resolvedConfig} totalDurationMs={totalDurationMs} />
       {/* Title overlays on top of subtitles — not affected by zoom */}
       {(titles ?? []).map((title, i) => {
@@ -118,10 +129,10 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
           </Sequence>
         );
       })}
-      {/* Phase 21: PNG overlays — above titles (later in DOM = higher z-order) */}
-      {/* No rawImageSrc in render context — PngOverlay uses staticFile(_resolvedFile) */}
-      {overlays.map((ov, i) => (
-        <PngOverlay key={`overlay-${i}`} overlay={ov} />
+      {/* D-03 front-band: paint AFTER titles (layer 5 — promoted, over text) */}
+      {/* No rawImageSrc — renderer resolves via staticFile(_resolvedFile) */}
+      {frontOverlays.map((ov, i) => (
+        <PngOverlay key={`overlay-front-${i}`} overlay={ov} />
       ))}
     </AbsoluteFill>
   );

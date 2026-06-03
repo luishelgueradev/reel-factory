@@ -236,6 +236,78 @@ app.post("/api/render", async (req, res) => {
   }
 });
 
+// ─── UUID validation regex — copied verbatim from api-server/src/routes/status.ts L20-24 ─
+// T-23-02-01, T-23-02-02: gate BEFORE forwarding to upstream (400 without calling fetch).
+const JOB_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ─── GET /api/status/:jobId — Relay job progress JSON (RENDER-02) ───────────
+// UUID-validates jobId, then proxies GET /status/:jobId from api-server verbatim.
+// Returns { jobId, status, currentStep, progress, stepInfo, steps, startedAt, error }.
+
+app.get("/api/status/:jobId", async (req, res) => {
+  const { jobId } = req.params;
+
+  if (!JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "Invalid jobId format" });
+  }
+
+  try {
+    const upstream = await fetch(API_SERVER_URL + "/status/" + jobId);
+    const data = await upstream.json() as unknown;
+    return res.status(upstream.status).json(data);
+  } catch (err) {
+    return res.status(502).json({ error: { step: "proxy", message: String(err) } });
+  }
+});
+
+// ─── GET /api/result/:jobId — Range-aware finished MP4 proxy (RENDER-04) ─────
+// UUID-validates jobId, proxies the finished video from the quality-finalizer step.
+// Step name and filename are PINNED (not request-derived) — T-23-02-01 path-traversal mitigation.
+// Forwards inbound Range header; relays content-type/content-length/accept-ranges/content-range.
+// ?download=1 adds Content-Disposition: attachment for browser download.
+
+const RESULT_STEP = "quality-finalizer";
+const RESULT_FILENAME = "output.mp4";
+
+app.get("/api/result/:jobId", async (req, res) => {
+  const { jobId } = req.params;
+
+  if (!JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "Invalid jobId format" });
+  }
+
+  const upstreamUrl =
+    API_SERVER_URL + "/artifacts/" + jobId + "/" + RESULT_STEP + "/" + RESULT_FILENAME;
+
+  const fetchHeaders: Record<string, string> = {};
+  if (req.headers["range"]) {
+    fetchHeaders["range"] = req.headers["range"];
+  }
+
+  try {
+    const upstream = await fetch(upstreamUrl, { headers: fetchHeaders });
+
+    // Relay relevant headers
+    const relayHeaders = ["content-type", "content-length", "accept-ranges", "content-range"];
+    for (const h of relayHeaders) {
+      const v = upstream.headers.get(h);
+      if (v) res.setHeader(h, v);
+    }
+
+    if (req.query["download"] === "1") {
+      res.setHeader("content-disposition", 'attachment; filename="reel.mp4"');
+    }
+
+    res.status(upstream.status);
+
+    // Stream body — non-null assertion safe: fetch body is always present for a real response
+    Readable.fromWeb(upstream.body!).pipe(res);
+    return;
+  } catch (err) {
+    return res.status(502).json({ error: { step: "proxy", message: String(err) } });
+  }
+});
+
 // ─── Serve static files from public/ (D-06: sample video) ────────────────────
 // Per D-06: Sample video bundled in public/ directory for the preview page.
 // Also used by Remotion Player for staticFile('/sample-video.mp4').

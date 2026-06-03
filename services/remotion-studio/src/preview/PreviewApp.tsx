@@ -1,9 +1,9 @@
-// ─── PreviewApp: Unified StudioApp (Phase 18 — D-01, D-02, D-03, D-04, D-06, D-07, D-08, D-09, D-10) ──
-// Two-column layout: left 40% live 9:16 Player, right panel with TabBar + three tab panels.
-// Tabs: Titles (default), Subtitles, Text.
-// Title state unified — single source of truth for titles (D-10).
-// Font Grid inline in Subtitles tab (D-06).
-// Render Video button disabled / coming-soon (D-05).
+// ─── PreviewApp: Unified StudioApp (Phase 22 — 3-column shell, D-01/D-02/D-10/D-11) ──
+// Three-column layout: col1 preview (flex:0 1 470px, stage bg), col2 controls (flex:1, TabBar),
+// col3 metadata placeholder (320px, always-visible, static).
+// Header: ▶ Render Video (green, THE single CTA) | Guardar config (outline, never green).
+// Tokens: default.css OKLCH token set inlined in index.html (:root block).
+// Tabs: Títulos | Overlays | Subtítulos (Task 2 relocates TextareaInput into Subtítulos).
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { SubtitleConfig, TitleConfig, PngOverlayConfig } from "../pipeline-config";
@@ -25,11 +25,11 @@ const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
 
 // ─── Tab definitions ───────────────────────────────────────────────────────────
 
+// ─── Tab definitions (Phase 22 D-10) — Títulos | Overlays | Subtítulos (Text tab removed) ──
 const TABS: { id: string; label: string }[] = [
-  { id: "titles",    label: "Titles"    },
-  { id: "overlays",  label: "Overlays"  },
-  { id: "subtitles", label: "Subtitles" },
-  { id: "text",      label: "Text"      },
+  { id: "titles",    label: "Títulos"    },
+  { id: "overlays",  label: "Overlays"   },
+  { id: "subtitles", label: "Subtítulos" },
 ];
 
 // ─── TabBar component ─────────────────────────────────────────────────────────
@@ -331,82 +331,111 @@ export function PreviewApp() {
   }, [subtitleConfig, titles, overlays]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#1a1a2e" }}>
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "var(--canvas, #1a1a2e)" }}>
+      {/* ── Header — brand + Guardar config (outline) | ▶ Render Video (green CTA) ── */}
       <header
         style={{
-          padding: "12px 24px",
-          borderBottom: "1px solid #333",
+          padding: "10px var(--s-12, 24px)",
+          borderBottom: "1px solid var(--border, #333)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          background: "#16213e",
+          background: "var(--chrome, #16213e)",
+          minHeight: 48,
         }}
       >
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: "#fff", margin: 0 }}>
-          Reel Factory Studio
-        </h1>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button
-            disabled
-            title="Coming soon — rendering via pipeline API"
-            style={{
-              background: "#333",
-              color: "#777",
-              border: "1px solid #444",
-              padding: "8px 16px",
-              borderRadius: 6,
-              fontSize: 14,
-              cursor: "not-allowed",
-              opacity: 0.6,
-            }}
-          >
-            Render Video
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--s-4, 8px)" }}>
+          <span style={{ fontSize: "var(--t-lg, 16px)", color: "var(--text-muted, #777)" }}>▶</span>
+          <h1 style={{ fontSize: "var(--t-base, 14px)", fontWeight: 600, color: "var(--text, #e6e6ea)", margin: 0 }}>
+            Reel Factory Studio
+          </h1>
+        </div>
+
+        {/* ── Right zone: status + button group ─────────────────────────────── */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--s-4, 8px)" }}>
+          {/* Save status chips */}
+          {saveSuccess && (
+            <span style={{
+              fontSize: "var(--t-sm, 12.5px)",
+              color: "var(--success, #81C784)",
+              padding: "3px var(--s-4, 8px)",
+              borderRadius: "var(--r-full, 999px)",
+              border: "1px solid var(--success, #81C784)",
+            }}>
+              ✓ Guardado recién
+            </span>
+          )}
+          {saveError && (
+            <span style={{
+              fontSize: "var(--t-sm, 12.5px)",
+              color: "var(--danger, #e57373)",
+              padding: "3px var(--s-4, 8px)",
+              borderRadius: "var(--r-full, 999px)",
+              border: "1px solid var(--danger, #e57373)",
+            }}>
+              ✕ Error al guardar
+            </span>
+          )}
+
+          {/* Hairline divider before buttons */}
+          <div style={{ width: 1, height: 20, background: "var(--border, #333)", margin: "0 2px" }} />
+
+          {/* Guardar config — OUTLINE, never green (color law) */}
           <button
             onClick={handleSave}
             disabled={saving}
             style={{
-              padding: "8px 20px",
-              background: saving ? "#555" : "#4CAF50",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
+              padding: "7px 14px",
+              background: "transparent",
+              color: saving ? "var(--text-muted, #777)" : "var(--text, #e6e6ea)",
+              border: "1px solid var(--border-strong, #444)",
+              borderRadius: "var(--r-sm, 6px)",
               cursor: saving ? "wait" : "pointer",
-              fontSize: 14,
-              fontWeight: 600,
+              fontSize: "var(--t-sm, 12.5px)",
+              fontWeight: 400,
+              transition: "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease)",
+              minHeight: 32,
             }}
           >
-            {saving ? "Saving..." : "Save Config"}
+            {saving ? "Guardando…" : "Guardar config"}
+          </button>
+
+          {/* ▶ Render Video — THE single green CTA (color law: never two greens) */}
+          <button
+            disabled
+            title="Próximamente — renderizado vía pipeline API"
+            style={{
+              padding: "7px 16px",
+              background: "var(--action, #4CAF50)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "var(--r-sm, 6px)",
+              cursor: "not-allowed",
+              fontSize: "var(--t-sm, 12.5px)",
+              fontWeight: 600,
+              opacity: 0.65,
+              minHeight: 32,
+            }}
+          >
+            ▶ Render Video
           </button>
         </div>
       </header>
 
-      {/* ── Status messages ──────────────────────────────────────────────── */}
-      {saveSuccess && (
-        <div style={{ padding: "8px 24px", background: "#1b5e20", color: "#a5d6a7", fontSize: 14 }}>
-          Configuration saved successfully
-        </div>
-      )}
-      {saveError && (
-        <div style={{ padding: "8px 24px", background: "#b71c1c", color: "#ef9a9a", fontSize: 14 }}>
-          Save failed: {saveError}
-        </div>
-      )}
-
-      {/* ── Main content: Two-column layout ────────────────────────────── */}
+      {/* ── Main content: 3-column layout (D-01) ──────────────────────────── */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* ── Left panel: 9:16 Preview Player ──────────────────────────────── */}
+
+        {/* ── Col 1: 9:16 Preview Player — flex:0 1 470px, stage bg ─────────── */}
         <div
           style={{
-            width: "40%",
-            minWidth: 300,
+            flex: "0 1 470px",
+            minWidth: 280,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: 16,
-            background: "#111",
-            borderRight: "1px solid #333",
+            padding: "var(--s-8, 16px)",
+            background: "var(--stage, #111)",
+            borderRight: "1px solid var(--border, #333)",
           }}
         >
           <PreviewPlayer
@@ -418,19 +447,20 @@ export function PreviewApp() {
           />
         </div>
 
-        {/* ── Right panel: TabBar + tab content ────────────────────────── */}
+        {/* ── Col 2: Controls — TabBar + tab content panels ─────────────────── */}
         <div
           style={{
             flex: 1,
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            background: "var(--surface, #1e1e2e)",
           }}
         >
           <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
           {/* Tab content wrapper */}
-          <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "var(--s-12, 24px)" }}>
             {/* Titles tab */}
             <div style={{ display: activeTab === "titles" ? "block" : "none" }}>
               <TitleEditor titles={titles} onChange={setTitles} onPreviewChange={setLiveTitles} />
@@ -445,8 +475,28 @@ export function PreviewApp() {
               />
             </div>
 
-            {/* Subtitles tab */}
+            {/* Subtítulos tab — TextareaInput at TOP (D-10), drives captionPages→PreviewPlayer */}
             <div style={{ display: activeTab === "subtitles" ? "block" : "none" }}>
+              {/* Sample text textarea — MUST stay at top; sampleText → captionPages (L224 useMemo) → PreviewPlayer */}
+              <div style={{ marginBottom: "var(--s-10, 20px)" }}>
+                <TextareaInput
+                  value={sampleText}
+                  onChange={setSampleText}
+                  placeholder="Cómo edité este reel en 30 segundos…"
+                />
+                {/* Role cue: blue dot = var(--accent) per UI-SPEC */}
+                <div style={{
+                  marginTop: "var(--s-2, 4px)",
+                  fontSize: "var(--t-xs, 11.5px)",
+                  color: "var(--accent, #90caf9)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--s-2, 4px)",
+                }}>
+                  <span style={{ color: "var(--accent, #90caf9)", fontSize: "0.7em" }}>●</span>
+                  Alimenta los subtítulos · no se exporta
+                </div>
+              </div>
               <LayoutSelector
                 value={subtitleConfig.layout}
                 onChange={(layout) => updateSubtitle({ layout })}
@@ -457,13 +507,59 @@ export function PreviewApp() {
                 onSelect={(font) => updateSubtitle({ fontFamily: font })}
               />
             </div>
-
-            {/* Text tab */}
-            <div style={{ display: activeTab === "text" ? "block" : "none" }}>
-              <TextareaInput value={sampleText} onChange={setSampleText} />
-            </div>
           </div>
         </div>
+
+        {/* ── Col 3: Metadata placeholder — 320px, always-visible (D-01/D-02) ─ */}
+        {/* Hidden below 1024px viewport (CSS media query via inline conditional not possible — col3 renders */}
+        {/* but we use a dedicated class via a <style> block or rely on the viewport-width hidden pattern) */}
+        <div
+          className="col3-metadata"
+          style={{
+            width: 320,
+            flexShrink: 0,
+            flexGrow: 0,
+            display: "flex",
+            flexDirection: "column",
+            borderLeft: "1px solid var(--border, #333)",
+            background: "var(--surface, #1e1e2e)",
+            padding: "var(--s-12, 24px) var(--s-8, 16px)",
+            overflowY: "auto",
+          }}
+        >
+          {/* Metadata placeholder card — NO state, NO fetch, NO controls (D-02) */}
+          <div
+            style={{
+              background: "var(--surface-2, #252535)",
+              borderRadius: "var(--r-md, 8px)",
+              border: "1px solid var(--border-faint, #2a2a38)",
+              padding: "var(--s-6, 12px)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "var(--t-base, 14px)",
+                fontWeight: 600,
+                color: "var(--text, #e6e6ea)",
+                marginBottom: "var(--s-3, 6px)",
+              }}
+            >
+              Metadata de redes
+            </div>
+            <p
+              style={{
+                fontSize: "var(--t-sm, 12.5px)",
+                color: "var(--text-muted, #777)",
+                fontStyle: "italic",
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              Próximamente — descripción, hashtags y más generados a partir de tus subtítulos.
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
   );

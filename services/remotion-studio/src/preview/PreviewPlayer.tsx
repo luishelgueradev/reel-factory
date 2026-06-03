@@ -3,6 +3,7 @@
 // Per D-04: Uses the exact same SubtitledVideo composition as production renders.
 // Per D-05: CSS aspect-ratio scales the 1080x1920 output to fit the preview panel.
 // Per D-06: Uses rawVideoSrc for browser context, bypassing staticFile().
+// Per D-02 (Plan 23-04): rawVideoSrc driven by uploaded-file object URL passed as prop.
 
 import React, { useMemo, useEffect, useState } from "react";
 import { Player } from "@remotion/player";
@@ -18,6 +19,8 @@ interface PreviewPlayerProps {
   totalDurationMs: number;
   titles?: TitleConfig[];
   overlays?: PngOverlayConfig[];
+  /** D-02 (Plan 23-04): object URL of the uploaded file, or null to use sample video */
+  rawVideoSrc?: string | null;
 }
 
 export function PreviewPlayer({
@@ -26,6 +29,7 @@ export function PreviewPlayer({
   totalDurationMs,
   titles,
   overlays,
+  rawVideoSrc,
 }: PreviewPlayerProps) {
   const [fontLoaded, setFontLoaded] = useState(false);
 
@@ -46,10 +50,14 @@ export function PreviewPlayer({
 
   // Build inputProps for SubtitledVideo
   // Per D-06: rawVideoSrc bypasses staticFile() for browser Player context
+  // Per D-02 (Plan 23-04): use the object URL of the uploaded file when provided,
+  // falling back to "/sample-video.mp4" when no file has been uploaded.
+  const effectiveRawVideoSrc = rawVideoSrc ?? "/sample-video.mp4";
+
   const inputProps: RemotionProps = useMemo(
     () => ({
       videoSrc: "sample-video.mp4",
-      rawVideoSrc: "/sample-video.mp4",
+      rawVideoSrc: effectiveRawVideoSrc,
       captionPages,
       subtitleLayout: subtitleConfig.layout,
       subtitleConfig,
@@ -59,7 +67,8 @@ export function PreviewPlayer({
       transitionEvents: [],
       totalDurationMs: totalDurationMs || 10000,
     }),
-    [captionPages, subtitleConfig, totalDurationMs, titles, overlays]
+    // Include effectiveRawVideoSrc in deps so Player re-renders when file changes (D-02)
+    [captionPages, subtitleConfig, totalDurationMs, titles, overlays, effectiveRawVideoSrc]
   );
 
   const containerRef = React.useRef<HTMLDivElement>(null);

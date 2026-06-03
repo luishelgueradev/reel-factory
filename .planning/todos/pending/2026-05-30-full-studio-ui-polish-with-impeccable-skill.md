@@ -2,6 +2,7 @@
 created: 2026-05-30T17:28:06.147Z
 title: Full Studio UI polish with impeccable skill
 area: ui
+resolves_phase: 26
 files:
   - services/remotion-studio/src/preview/PreviewApp.tsx
   - services/remotion-studio/src/editor/components/TitleEditor.tsx

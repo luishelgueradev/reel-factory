@@ -91,6 +91,10 @@ async function main() {
   const remotionColorSpace = (process.env.REMOTION_COLOR_SPACE || "bt709") as "bt709";
   const remotionJpegQuality = parseInt(process.env.REMOTION_JPEG_QUALITY || "95", 10);
   const remotionImageFormat = (process.env.REMOTION_IMAGE_FORMAT || "jpeg") as "jpeg" | "png";
+  // Cap Chrome page-pool size to prevent OOM on low-RAM hosts. Remotion defaults to ~cores/2
+  // which on a 16-core machine with enableMultiProcessOnLinux exhausts ~7.5 GB RAM at frame 0.
+  // Guard NaN (non-numeric env var) by || 2 fallback; floor at 1 so it's always a valid positive int.
+  const remotionConcurrency = Math.max(1, parseInt(process.env.REMOTION_CONCURRENCY || "2", 10) || 2);
 
   if (!inputPath || !outputPath || !jobId) {
     console.error("ERROR: INPUT_PATH, OUTPUT_PATH, and PIPELINE_JOB_ID must be set");
@@ -346,12 +350,14 @@ async function main() {
     console.log(`  Duration: ${composition.durationInFrames} frames (${(composition.durationInFrames / 30).toFixed(1)}s)`);
 
     console.log("[remotion-renderer] Step 6: Rendering video with subtitles");
+    console.log("  Concurrency:", remotionConcurrency);
     await renderMedia({
       composition,
       serveUrl: bundleLocation,
       codec: "h264",
       outputLocation: outputPath,
       inputProps,
+      concurrency: remotionConcurrency,        // Bounded page-pool — prevents Chrome OOM on low-RAM hosts
       scale: remotionScale,                    // RENDER-01 / D-06 (Phase 14)
       crf: remotionCrf,                        // RENDER-01 / D-06 (Phase 14)
       x264Preset: remotionX264Preset,          // RENDER-01 / D-06 (Phase 14)

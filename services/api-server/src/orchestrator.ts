@@ -124,6 +124,9 @@ export const STEPS: PipelineStepConfig[] = [
       // quality-finalizer probe gate (D-08) stream-copies — no extra re-encode.
       REMOTION_SCALE: "1",
       REMOTION_IMAGE_FORMAT: "png",
+      // Cap Remotion's Chrome page-pool to prevent OOM on low-RAM hosts (default is ~cores/2;
+      // on a 16-core machine that spawns ~8 Chrome processes which exhaust ~7.5 GB at frame 0).
+      REMOTION_CONCURRENCY: "2",
     },
   },
   // Phase 14 (RENDER-03): Lanczos-downscale 2160x3840 supersampled output to deliverable 1080x1920.

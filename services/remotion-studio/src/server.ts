@@ -300,11 +300,17 @@ app.get("/api/result/:jobId", async (req, res) => {
 
     res.status(upstream.status);
 
-    // Stream body — non-null assertion safe: fetch body is always present for a real response
-    Readable.fromWeb(upstream.body!).pipe(res);
-    return;
+    // Stream body — non-null assertion safe: fetch body is always present for a real response.
+    // Wrap in a Promise so Express 5 async handler waits for stream completion.
+    await new Promise<void>((resolve, reject) => {
+      Readable.fromWeb(upstream.body!).pipe(res)
+        .on("finish", resolve)
+        .on("error", reject);
+    });
   } catch (err) {
-    return res.status(502).json({ error: { step: "proxy", message: String(err) } });
+    if (!res.headersSent) {
+      res.status(502).json({ error: { step: "proxy", message: String(err) } });
+    }
   }
 });
 

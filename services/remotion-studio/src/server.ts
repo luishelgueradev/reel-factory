@@ -10,12 +10,16 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { Readable } from "node:stream";
 import { validatePipelineConfig } from "./pipeline-config.js";
 import type { PipelineConfig } from "./pipeline-config.js";
 
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
 const INPUT_PATH = process.env.INPUT_PATH || "";
+// Upstream api-server URL — configurable for tests. In production, api-server is
+// reachable at http://api-server:3000 on pipeline-net (D-03).
+const API_SERVER_URL = process.env.API_SERVER_URL || "http://api-server:3000";
 // D-04: Single source of truth for the write destination — read once at module load.
 // resolveConfigPath() is still used for GET reads (job-scoped preview); writes go here only.
 const ACTIVE_PIPELINE_CONFIG_PATH =
@@ -202,13 +206,112 @@ app.put("/api/config", (req, res) => {
   }
 });
 
-// ─── POST /api/render — Render trigger placeholder (D-20, future Plan 05) ─
+// ─── POST /api/render — Streaming multipart proxy to api-server POST /batch ─
+// RENDER-01: forwards the upload to the queue path so jobId is returned
+// immediately (not /process which blocks until the render completes).
+// The browser uploads under field name "videos" (batch.ts upload.array("videos")).
+// duplex:"half" is REQUIRED for Node 22 fetch to stream a request body (RESEARCH Pitfall 3).
+// No multer/body-parser in the Studio: the multipart boundary must survive to api-server.
 
-app.post("/api/render", (_req, res) => {
-  res.status(501).json({
-    status: "not_implemented",
-    message: "Render trigger not yet configured. Will be implemented in Plan 05.",
-  });
+app.post("/api/render", async (req, res) => {
+  try {
+    const upstream = await fetch(API_SERVER_URL + "/batch", {
+      method: "POST",
+      headers: {
+        "content-type": req.headers["content-type"] ?? "",
+        ...(req.headers["content-length"]
+          ? { "content-length": req.headers["content-length"] }
+          : {}),
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      body: req as any,
+      // @ts-expect-error — duplex:"half" is required by Node 22 fetch for streaming request bodies
+      duplex: "half",
+    });
+
+    const data = await upstream.json() as unknown;
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: { step: "proxy", message: String(err) } });
+  }
+});
+
+// ─── UUID validation regex — copied verbatim from api-server/src/routes/status.ts L20-24 ─
+// T-23-02-01, T-23-02-02: gate BEFORE forwarding to upstream (400 without calling fetch).
+const JOB_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ─── GET /api/status/:jobId — Relay job progress JSON (RENDER-02) ───────────
+// UUID-validates jobId, then proxies GET /status/:jobId from api-server verbatim.
+// Returns { jobId, status, currentStep, progress, stepInfo, steps, startedAt, error }.
+
+app.get("/api/status/:jobId", async (req, res) => {
+  const { jobId } = req.params;
+
+  if (!JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "Invalid jobId format" });
+  }
+
+  try {
+    const upstream = await fetch(API_SERVER_URL + "/status/" + jobId);
+    const data = await upstream.json() as unknown;
+    return res.status(upstream.status).json(data);
+  } catch (err) {
+    return res.status(502).json({ error: { step: "proxy", message: String(err) } });
+  }
+});
+
+// ─── GET /api/result/:jobId — Range-aware finished MP4 proxy (RENDER-04) ─────
+// UUID-validates jobId, proxies the finished video from the quality-finalizer step.
+// Step name and filename are PINNED (not request-derived) — T-23-02-01 path-traversal mitigation.
+// Forwards inbound Range header; relays content-type/content-length/accept-ranges/content-range.
+// ?download=1 adds Content-Disposition: attachment for browser download.
+
+const RESULT_STEP = "quality-finalizer";
+const RESULT_FILENAME = "output.mp4";
+
+app.get("/api/result/:jobId", async (req, res) => {
+  const { jobId } = req.params;
+
+  if (!JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "Invalid jobId format" });
+  }
+
+  const upstreamUrl =
+    API_SERVER_URL + "/artifacts/" + jobId + "/" + RESULT_STEP + "/" + RESULT_FILENAME;
+
+  const fetchHeaders: Record<string, string> = {};
+  if (req.headers["range"]) {
+    fetchHeaders["range"] = req.headers["range"];
+  }
+
+  try {
+    const upstream = await fetch(upstreamUrl, { headers: fetchHeaders });
+
+    // Relay relevant headers
+    const relayHeaders = ["content-type", "content-length", "accept-ranges", "content-range"];
+    for (const h of relayHeaders) {
+      const v = upstream.headers.get(h);
+      if (v) res.setHeader(h, v);
+    }
+
+    if (req.query["download"] === "1") {
+      res.setHeader("content-disposition", 'attachment; filename="reel.mp4"');
+    }
+
+    res.status(upstream.status);
+
+    // Stream body — non-null assertion safe: fetch body is always present for a real response.
+    // Wrap in a Promise so Express 5 async handler waits for stream completion.
+    await new Promise<void>((resolve, reject) => {
+      Readable.fromWeb(upstream.body!).pipe(res)
+        .on("finish", resolve)
+        .on("error", reject);
+    });
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(502).json({ error: { step: "proxy", message: String(err) } });
+    }
+  }
 });
 
 // ─── Serve static files from public/ (D-06: sample video) ────────────────────
@@ -279,17 +382,25 @@ function resolveConfigPath(): string {
 }
 
 // ─── Start server ───────────────────────────────────────────────────────────
+// Guarded so importing server.ts under vitest/NODE_ENV=test does NOT bind
+// port 3123, mirroring api-server/src/index.ts L93.
 
-export const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[remotion-studio] Config API and Editor SPA listening on port ${PORT}`);
-  console.log(`  GET  /api/config  — Read pipeline config`);
-  console.log(`  PUT  /api/config  — Write pipeline config`);
-  console.log(`  POST /api/render  — Render trigger (not yet implemented)`);
-  console.log(`  GET  /editor      — Config Editor SPA`);
-  console.log(`  GET  /preview     — Subtitle Preview SPA`);
-  console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);
-  console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
-  console.log(`  Config file: ${resolveConfigPath()}`);
-});
+export let server: ReturnType<typeof app.listen> | undefined;
+
+if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
+  server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[remotion-studio] Config API and Editor SPA listening on port ${PORT}`);
+    console.log(`  GET  /api/config  — Read pipeline config`);
+    console.log(`  PUT  /api/config  — Write pipeline config`);
+    console.log(`  POST /api/render  — Render trigger`);
+    console.log(`  GET  /api/status/:jobId  — Job status relay`);
+    console.log(`  GET  /api/result/:jobId  — Finished MP4 proxy`);
+    console.log(`  GET  /editor      — Config Editor SPA`);
+    console.log(`  GET  /preview     — Subtitle Preview SPA`);
+    console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);
+    console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
+    console.log(`  Config file: ${resolveConfigPath()}`);
+  });
+}
 
 export default app;

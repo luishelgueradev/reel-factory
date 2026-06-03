@@ -25,11 +25,11 @@ const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
 
 // ─── Tab definitions ───────────────────────────────────────────────────────────
 
+// ─── Tab definitions (Phase 22 D-10) — Títulos | Overlays | Subtítulos (Text tab removed) ──
 const TABS: { id: string; label: string }[] = [
-  { id: "titles",    label: "Titles"    },
-  { id: "overlays",  label: "Overlays"  },
-  { id: "subtitles", label: "Subtitles" },
-  { id: "text",      label: "Text"      },
+  { id: "titles",    label: "Títulos"    },
+  { id: "overlays",  label: "Overlays"   },
+  { id: "subtitles", label: "Subtítulos" },
 ];
 
 // ─── TabBar component ─────────────────────────────────────────────────────────
@@ -475,8 +475,28 @@ export function PreviewApp() {
               />
             </div>
 
-            {/* Subtitles tab */}
+            {/* Subtítulos tab — TextareaInput at TOP (D-10), drives captionPages→PreviewPlayer */}
             <div style={{ display: activeTab === "subtitles" ? "block" : "none" }}>
+              {/* Sample text textarea — MUST stay at top; sampleText → captionPages (L224 useMemo) → PreviewPlayer */}
+              <div style={{ marginBottom: "var(--s-10, 20px)" }}>
+                <TextareaInput
+                  value={sampleText}
+                  onChange={setSampleText}
+                  placeholder="Cómo edité este reel en 30 segundos…"
+                />
+                {/* Role cue: blue dot = var(--accent) per UI-SPEC */}
+                <div style={{
+                  marginTop: "var(--s-2, 4px)",
+                  fontSize: "var(--t-xs, 11.5px)",
+                  color: "var(--accent, #90caf9)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--s-2, 4px)",
+                }}>
+                  <span style={{ color: "var(--accent, #90caf9)", fontSize: "0.7em" }}>●</span>
+                  Alimenta los subtítulos · no se exporta
+                </div>
+              </div>
               <LayoutSelector
                 value={subtitleConfig.layout}
                 onChange={(layout) => updateSubtitle({ layout })}
@@ -486,11 +506,6 @@ export function PreviewApp() {
                 selectedFont={subtitleConfig.fontFamily}
                 onSelect={(font) => updateSubtitle({ fontFamily: font })}
               />
-            </div>
-
-            {/* Text tab */}
-            <div style={{ display: activeTab === "text" ? "block" : "none" }}>
-              <TextareaInput value={sampleText} onChange={setSampleText} />
             </div>
           </div>
         </div>

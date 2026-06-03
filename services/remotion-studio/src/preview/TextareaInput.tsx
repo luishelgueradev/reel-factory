@@ -7,9 +7,10 @@ import React, { useCallback, useState, useRef, useEffect } from "react";
 interface TextareaInputProps {
   value: string;
   onChange: (text: string) => void;
+  placeholder?: string;
 }
 
-export function TextareaInput({ value, onChange }: TextareaInputProps) {
+export function TextareaInput({ value, onChange, placeholder }: TextareaInputProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       onChange(e.target.value);
@@ -41,7 +42,7 @@ export function TextareaInput({ value, onChange }: TextareaInputProps) {
           resize: "vertical",
           fontFamily: "inherit",
         }}
-        placeholder="Type your subtitle text here..."
+        placeholder={placeholder ?? "Type your subtitle text here..."}
       />
     </div>
   );

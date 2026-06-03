@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 045 — cancel & destroy (abort render + destructive-action law)</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--canvas); color: var(--text); font-size: var(--t-base); padding-top: 46px; -webkit-font-smoothing: antialiased; }
+  .variant { display: none; min-height: calc(100vh - 46px); }
+  .variant.active { display: block; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes toastin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: var(--s-12) var(--s-10) 80px; }
+  .lede { margin-bottom: var(--s-12); }
+  .lede h1 { font-size: var(--t-xl); font-weight: 700; margin-bottom: var(--s-3); }
+  .lede p { font-size: var(--t-sm); color: var(--text-2); max-width: 70ch; line-height: 1.6; }
+  .lede .law { display: inline-block; margin-top: var(--s-5); font-size: var(--t-xs); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); padding: var(--s-4) var(--s-6); line-height: 1.6; }
+  .lede .law b { color: var(--accent); }
+
+  /* the hero: cancel a render on the dimmed stage (the missing interaction) */
+  .hero { display: grid; grid-template-columns: 244px 1fr; gap: var(--s-10); align-items: center; margin-bottom: var(--s-16); padding: var(--s-10); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); }
+  .heroh { font-size: var(--t-2xs); color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: var(--s-5); grid-column: 1 / -1; }
+  .render-stage { width: 244px; height: 330px; border-radius: var(--r-md); background: var(--stage); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-6); }
+  .render-stage .ring { width: 64px; height: 64px; border-radius: 50%; border: 4px solid var(--surface-2); border-top-color: var(--accent); animation: spin 1s linear infinite; }
+  .render-stage.done .ring, .render-stage.cancelling .ring { animation: none; }
+  .render-stage.done .ring { border: 4px solid var(--success); }
+  .render-stage .rt { font-size: var(--t-sm); color: var(--text); font-weight: 600; }
+  .render-stage .rs { font-size: var(--t-2xs); color: var(--text-muted); font-family: var(--mono); }
+  .render-stage .steps { display: flex; gap: var(--s-4); font-size: var(--t-2xs); }
+  .render-stage .steps span { color: var(--text-faint); } .render-stage .steps .cur { color: var(--accent); } .render-stage .steps .ok { color: var(--success); }
+  .render-cancel { position: absolute; bottom: 12px; left: 12px; right: 12px; }
+  .heroside h3 { font-size: var(--t-md); font-weight: 600; margin-bottom: var(--s-4); }
+  .heroside p { font-size: var(--t-sm); color: var(--text-2); line-height: 1.6; max-width: 56ch; }
+  .heroside .note { margin-top: var(--s-5); font-size: var(--t-xs); color: var(--text-muted); font-family: var(--mono); }
+
+  /* destructive-moment rows */
+  .moments { display: flex; flex-direction: column; gap: 1px; background: var(--border-faint); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+  .moment { background: var(--surface); padding: var(--s-6) var(--s-8); display: flex; align-items: center; gap: var(--s-8); }
+  .moment .mh { flex: 0 0 230px; }
+  .moment .mh .mt { font-size: var(--t-sm); font-weight: 600; color: var(--text); }
+  .moment .mh .md { font-size: var(--t-2xs); color: var(--text-muted); margin-top: 2px; }
+  .moment .mcost { flex: none; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-full); }
+  .mcost.rev { background: oklch(0.72 0.14 150 / .14); color: var(--success); }
+  .mcost.exp { background: oklch(0.63 0.185 25 / .14); color: var(--danger); }
+  .moment .mdemo { margin-left: auto; flex: none; min-width: 280px; display: flex; justify-content: flex-end; }
+
+  /* a sample target object that gets "deleted" */
+  .target { display: inline-flex; align-items: center; gap: var(--s-5); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 10px; font-size: var(--t-sm); color: var(--text); }
+  .target .tw { width: 26px; height: 26px; border-radius: var(--r-xs); flex: none; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+  .target.gone { opacity: 0; transform: scale(.96); transition: all .2s var(--ease); }
+  .target.confirming { border-color: var(--danger); }
+  .iconbtn { width: 28px; height: 28px; border-radius: var(--r-xs); border: 1px solid transparent; background: none; color: var(--text-muted); cursor: pointer; display: grid; place-items: center; font-size: 14px; transition: all var(--dur) var(--ease); }
+  .iconbtn:hover { background: oklch(0.63 0.185 25 / .14); color: var(--danger); }
+
+  .btn { font: inherit; font-size: var(--t-sm); font-weight: 600; padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; transition: all var(--dur) var(--ease); }
+  .btn-out { background: transparent; border-color: var(--border-strong); color: var(--text-2); } .btn-out:hover { background: var(--surface-2); color: var(--text); }
+  .btn-sm { padding: 5px 11px; font-size: var(--t-xs); }
+  .btn-danger { background: var(--danger); color: #fff; } .btn-danger:hover { filter: brightness(1.08); }
+  .btn-danger-out { background: transparent; border-color: var(--danger); color: var(--danger); } .btn-danger-out:hover { background: oklch(0.63 0.185 25 / .12); }
+
+  /* inline-confirm cluster (C, and B-for-expensive) */
+  .confirm { display: inline-flex; align-items: center; gap: var(--s-4); font-size: var(--t-xs); color: var(--text-2); animation: fadein .15s var(--ease); }
+  .confirm b { color: var(--text); }
+
+  /* toast (A, and B-for-reversible) */
+  .toasts { position: fixed; bottom: 18px; right: 18px; display: flex; flex-direction: column; gap: var(--s-4); z-index: 200; }
+  .toast { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-pop); padding: var(--s-5) var(--s-6); display: flex; align-items: center; gap: var(--s-5); font-size: var(--t-sm); animation: toastin .2s var(--ease); min-width: 260px; }
+  .toast .tx { color: var(--text-2); } .toast .tx b { color: var(--text); }
+  .toast .undo { margin-left: auto; color: var(--accent); font-weight: 600; cursor: pointer; }
+  .toast .timer { width: 28px; height: 3px; border-radius: 2px; background: var(--surface-2); overflow: hidden; position: relative; }
+  .toast .timer i { position: absolute; inset: 0; background: var(--accent); transform-origin: left; animation: shrink 5s linear forwards; }
+  @keyframes shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+  .vhint { max-width: 1040px; margin: var(--s-12) auto 0; font-size: var(--t-2xs); color: var(--text-faint); text-align: center; line-height: 1.6; }
+  .vhint b { color: var(--text-muted); }
+
+  #vnav { position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 9998; background: var(--chrome); border-bottom: 1px solid var(--border-strong); display: flex; align-items: center; gap: var(--s-4); padding: 0 var(--s-10); font-size: var(--t-sm); }
+  #vnav .lbl { color: var(--text-muted); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--t-2xs); margin-right: var(--s-4); }
+  .vtab { font: inherit; font-size: var(--t-sm); color: var(--text-2); background: var(--surface); border: 1px solid var(--border); padding: 5px 12px; border-radius: var(--r-full); cursor: pointer; }
+  .vtab.active { background: var(--accent-tint); border-color: var(--accent-strong); color: var(--accent); font-weight: 600; }
+  #vnav .hint { margin-left: auto; color: var(--text-faint); font-size: var(--t-2xs); }
+  #tools { position: fixed; bottom: 12px; left: 12px; z-index: 9999; font-family: system-ui; font-size: 11px; background: rgba(0,0,0,0.72); color: #fff; padding: 7px 10px; border-radius: 8px; opacity: 0.4; display: flex; gap: 8px; transition: opacity .2s; }
+  #tools:hover { opacity: 1; } #tools select { font: inherit; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav id="vnav">
+  <span class="lbl">Sketch 045 · cancel & destroy</span>
+  <button class="vtab" onclick="show('a',this)">A · Toast-undo en todo</button>
+  <button class="vtab active" onclick="show('b',this)">B ★ · Escalonado por costo</button>
+  <button class="vtab" onclick="show('c',this)">C · Confirmar en el lugar</button>
+  <span class="hint">Abortar un render en curso + un vocabulario para acciones destructivas/reversibles</span>
+</nav>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- variants injected by JS -->
+<div class="variant" id="v-a"></div>
+<div class="variant active" id="v-b"></div>
+<div class="variant" id="v-c"></div>
+
+<div id="tools"><span>theme</span>
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'"><option value="default">default</option></select>
+</div>
+
+<script>
+const COPY = {
+  a: { title:'Toast-undo en todo (optimista)',
+       p:'Toda acción destructiva se ejecuta <b>al instante</b> y deja un toast con “Deshacer” (~5s). Cero diálogos. El idioma Gmail/Linear: la red de seguridad es el undo, no la fricción previa. Cancelar un render lo detiene y ofrece reanudar.',
+       law:'<b>Una regla:</b> ejecutar ya, ofrecer deshacer. Reversibilidad por toast, nunca por modal.' },
+  b: { title:'Escalonado por costo (la fricción sigue a la consecuencia)',
+       p:'Lo <b>barato y reversible</b> (quitar un overlay, borrar un preset) se ejecuta con toast-undo. Lo <b>caro o irreversible</b> (abortar un render = minutos de cómputo perdidos · borrar un MP4 del disco) pide una <b>confirmación en el lugar</b> — nunca un modal. El costo decide la fricción.',
+       law:'<b>Una regla:</b> reversible → toast-undo · costoso/irreversible → confirmar en el lugar. <b>Sin modales.</b> El peligro usa su rojo de baja croma, jamás el verde reservado.' },
+  c: { title:'Confirmar en el lugar (todo se resuelve donde vive)',
+       p:'El control destructivo <b>se transforma en sí mismo</b> en un “¿Eliminar? Sí · No”. Sin toast, sin modal, sin diálogo aparte. Cancelar un render convierte su propio botón en la confirmación. Consistente y predecible, pero más clics en lo trivial.',
+       law:'<b>Una regla:</b> el control se vuelve su propia confirmación, in situ. Sin undo diferido.' },
+};
+
+// moment definitions: cost = 'rev' (reversible/cheap) or 'exp' (expensive/irreversible)
+const MOMENTS = [
+  { id:'overlay', cost:'rev', t:'Quitar un overlay', d:'PNG de la lista (Overlays) · vuelve a agregarse', sw:'background:linear-gradient(45deg,oklch(0.4 0.02 280) 25%,transparent 25%),linear-gradient(-45deg,oklch(0.4 0.02 280) 25%,transparent 25%);background-size:8px 8px', wlab:'▣', name:'logo.png' },
+  { id:'preset', cost:'rev', t:'Borrar un estilo', d:'Preset guardado (los 4 tabs) · recuperable', sw:'background:linear-gradient(180deg,oklch(0.3 0.08 320),oklch(0.18 0.04 300));color:#ffe14d', wlab:'Aa', name:'Mi estilo TikTok' },
+  { id:'queued', cost:'rev', t:'Cancelar un trabajo en cola', d:'Aún no empezó a renderizar · se quita de la cola', sw:'background:var(--surface);color:var(--text-2)', wlab:'2', name:'entrevista-02.mp4' },
+  { id:'reel', cost:'exp', t:'Borrar un reel renderizado', d:'Elimina el MP4 del disco (output/) · NO recuperable', sw:'background:linear-gradient(180deg,oklch(0.34 0.05 255),oklch(0.2 0.03 280));color:#fff', wlab:'▶', name:'3-trucos.mp4' },
+];
+
+function targetHTML(m){
+  return `<span class="target" id="tgt-${m.id}"><span class="tw" style="${m.sw}">${m.wlab}</span>${m.name}</span>`;
+}
+
+function momentDemo(v, m){
+  // returns the control area to the right of the target, per variant + cost
+  const tgt = targetHTML(m);
+  // A: always toast-undo (instant delete). C: always inline-confirm. B: rev→toast, exp→inline-confirm.
+  const useConfirm = (v==='c') || (v==='b' && m.cost==='exp');
+  if(useConfirm){
+    return `${tgt}<span id="ctl-${m.id}"><button class="iconbtn" title="Eliminar" onclick="askConfirm('${m.id}','${m.cost}')">🗑</button></span>`;
+  }
+  // toast-undo path
+  return `${tgt}<span id="ctl-${m.id}"><button class="iconbtn" title="Eliminar" onclick="doDelete('${m.id}', true)">🗑</button></span>`;
+}
+
+function renderHero(v){
+  // cancel-render hero. A & C differ; B treats cancel as expensive → inline-confirm.
+  let cancelCtl;
+  if(v==='a'){
+    cancelCtl = `<button class="btn btn-out btn-sm" style="width:100%" onclick="cancelRender('${v}', true)">Cancelar render</button>`;
+  } else { // b, c → cancel is expensive (wastes compute) → inline-confirm on the stage
+    cancelCtl = `<button class="btn btn-out btn-sm" id="rc-btn-${v}" style="width:100%" onclick="askCancelRender('${v}')">Cancelar render</button>`;
+  }
+  const sideNote = v==='a'
+    ? 'Cancelar es un clic; un toast ofrece <b>Reanudar</b> ~5s (re-encolar es barato vs perder el progreso por accidente).'
+    : 'Cancelar <b>descarta minutos de cómputo</b> ya gastados (Whisper + Chrome headless), así que pide confirmación <b>en la barra del stage</b> — no un modal. El stage es su propio diálogo.';
+  return `<div class="hero">
+    <div class="heroh">El que faltaba — abortar un render en curso (010-A: render sobre el stage atenuado, sin modal)</div>
+    <div class="render-stage" id="rs-${v}">
+      <div class="ring"></div>
+      <div class="rt" id="rt-${v}">Renderizando…</div>
+      <div class="rs" id="rsub-${v}">04:12 transcurrido · ~2:40 restante</div>
+      <div class="steps"><span class="ok">✓ Whisper</span><span class="ok">✓ Cortes</span><span class="cur">● Remotion</span></div>
+      <div class="render-cancel" id="rc-${v}">${cancelCtl}</div>
+    </div>
+    <div class="heroside">
+      <h3>${v==='a'?'Cancelar = un clic + Reanudar':'Cancelar = confirmar en el stage'}</h3>
+      <p>${sideNote}</p>
+      <p class="note">single-job · MAX_CONCURRENT_JOBS=1 — un render a la vez; abortar libera la cola</p>
+    </div>
+  </div>`;
+}
+
+function variant(v){
+  const c = COPY[v];
+  return `<div class="wrap">
+    <div class="lede">
+      <h1>Cancelar y destruir — ${c.title}</h1>
+      <p>${c.p}</p>
+      <div class="law">${c.law}</div>
+    </div>
+    ${renderHero(v)}
+    <div class="heroh" style="margin-bottom:var(--s-5);max-width:none">Los 5 momentos destructivos, con este vocabulario</div>
+    <div class="moments">
+      ${MOMENTS.map(m=>`<div class="moment">
+        <div class="mh"><div class="mt">${m.t}</div><div class="md">${m.d}</div></div>
+        <span class="mcost ${m.cost}">${m.cost==='rev'?'reversible':'irreversible'}</span>
+        <div class="mdemo">${momentDemo(v, m)}</div>
+      </div>`).join('')}
+    </div>
+    <div class="vhint">${VHINTS[v]}</div>
+  </div>`;
+}
+
+const VHINTS = {
+  a: 'A — <b>todo es undo</b>: rápido y sin diálogos, pero borrar un MP4 del disco con solo un toast de 5s puede ser demasiado liviano para lo irreversible (¿y si no estás mirando?).',
+  b: 'B — <b>la fricción sigue al costo</b>: lo reversible vuela (toast-undo), lo irreversible o caro (abortar render, borrar archivo) confirma en el lugar. El balance impecable: modal jamás, fricción proporcional a la consecuencia.',
+  c: 'C — <b>siempre confirmar in situ</b>: máxima consistencia y cero undos diferidos, pero agrega un clic a cada acción trivial (quitar un overlay no necesita una pregunta).'
+};
+
+let currentV = 'b';
+['a','b','c'].forEach(v=>{ document.getElementById('v-'+v).innerHTML = variant(v); });
+
+// ── interactions ──
+function doDelete(id, withUndo){
+  const tgt = document.getElementById('tgt-'+id);
+  const ctl = document.getElementById('ctl-'+id);
+  if(!tgt) return;
+  tgt.classList.add('gone');
+  setTimeout(()=>{ tgt.style.display='none'; }, 200);
+  if(ctl) ctl.innerHTML = `<span style="font-size:var(--t-xs);color:var(--text-faint)">eliminado</span>`;
+  if(withUndo){ fireUndoToast(id); }
+}
+function askConfirm(id, cost){
+  const ctl = document.getElementById('ctl-'+id);
+  const tgt = document.getElementById('tgt-'+id);
+  if(tgt) tgt.classList.add('confirming');
+  const danger = cost==='exp';
+  ctl.innerHTML = `<span class="confirm">${danger?'¿Borrar del disco? <b>No se puede deshacer.</b>':'¿Eliminar?'}
+     <button class="btn ${danger?'btn-danger':'btn-danger-out'} btn-sm" onclick="confirmDelete('${id}')">Eliminar</button>
+     <button class="btn btn-out btn-sm" onclick="cancelConfirm('${id}')">Cancelar</button></span>`;
+}
+function cancelConfirm(id){
+  const tgt = document.getElementById('tgt-'+id); if(tgt) tgt.classList.remove('confirming');
+  const m = MOMENTS.find(x=>x.id===id);
+  const ctl = document.getElementById('ctl-'+id);
+  const useConfirmToast = false; // re-render the trash button
+  ctl.innerHTML = `<button class="iconbtn" title="Eliminar" onclick="askConfirm('${id}','${m.cost}')">🗑</button>`;
+}
+function confirmDelete(id){
+  // expensive deletes: no undo (irreversible by definition); cheap inline-confirm (C): no toast
+  const v = currentV;
+  const m = MOMENTS.find(x=>x.id===id);
+  const withUndo = false;
+  doDelete(id, withUndo);
+}
+
+function fireUndoToast(id){
+  const m = MOMENTS.find(x=>x.id===id);
+  const wrap = document.getElementById('toasts');
+  const el = document.createElement('div'); el.className='toast'; const tid='toast-'+id+'-'+Date.now();
+  el.id = tid;
+  el.innerHTML = `<div class="tx"><b>${m.t}</b> · ${m.name}</div><span class="undo" onclick="undo('${id}','${tid}')">Deshacer</span><div class="timer"><i></i></div>`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 5000);
+}
+function undo(id, tid){
+  const tgt = document.getElementById('tgt-'+id);
+  const ctl = document.getElementById('ctl-'+id);
+  const m = MOMENTS.find(x=>x.id===id);
+  if(tgt){ tgt.style.display=''; tgt.classList.remove('gone'); }
+  if(ctl){ const useConfirm = (currentV==='c') || (currentV==='b' && m.cost==='exp');
+    ctl.innerHTML = useConfirm ? `<button class="iconbtn" title="Eliminar" onclick="askConfirm('${id}','${m.cost}')">🗑</button>` : `<button class="iconbtn" title="Eliminar" onclick="doDelete('${id}', true)">🗑</button>`; }
+  const t = document.getElementById(tid); if(t) t.remove();
+}
+
+// ── render cancel ──
+function cancelRender(v, withResume){
+  const stage = document.getElementById('rs-'+v);
+  stage.classList.add('cancelling');
+  document.getElementById('rt-'+v).textContent = 'Render cancelado';
+  document.getElementById('rsub-'+v).textContent = 'detenido en 04:12 · cola liberada';
+  stage.querySelector('.ring').style.borderTopColor = 'var(--text-muted)';
+  const rc = document.getElementById('rc-'+v);
+  rc.innerHTML = `<button class="btn btn-out btn-sm" style="width:100%" onclick="restartRender('${v}')">Volver a renderizar</button>`;
+  if(withResume){
+    const wrap = document.getElementById('toasts');
+    const el = document.createElement('div'); el.className='toast'; const tid='toast-rr-'+Date.now(); el.id=tid;
+    el.innerHTML = `<div class="tx"><b>Render cancelado</b></div><span class="undo" onclick="restartRender('${v}');document.getElementById('${tid}').remove()">Reanudar</span><div class="timer"><i></i></div>`;
+    wrap.appendChild(el); setTimeout(()=>el.remove(), 5000);
+  }
+}
+function askCancelRender(v){
+  const rc = document.getElementById('rc-'+v);
+  rc.innerHTML = `<div class="confirm" style="justify-content:center;flex-wrap:wrap;background:oklch(0.165 0.022 280 /.85);padding:6px 8px;border-radius:var(--r-sm)">¿Descartar el progreso?
+     <button class="btn btn-danger btn-sm" onclick="cancelRender('${v}', false)">Sí, abortar</button>
+     <button class="btn btn-out btn-sm" onclick="resetCancel('${v}')">Seguir</button></div>`;
+}
+function resetCancel(v){
+  document.getElementById('rc-'+v).innerHTML = `<button class="btn btn-out btn-sm" id="rc-btn-${v}" style="width:100%" onclick="askCancelRender('${v}')">Cancelar render</button>`;
+}
+function restartRender(v){
+  const stage = document.getElementById('rs-'+v); stage.classList.remove('cancelling');
+  stage.querySelector('.ring').style.borderTopColor = 'var(--accent)';
+  document.getElementById('rt-'+v).textContent = 'Renderizando…';
+  document.getElementById('rsub-'+v).textContent = '00:08 transcurrido · ~6:50 restante';
+  const cancelCtl = v==='a' ? `<button class="btn btn-out btn-sm" style="width:100%" onclick="cancelRender('${v}', true)">Cancelar render</button>`
+    : `<button class="btn btn-out btn-sm" id="rc-btn-${v}" style="width:100%" onclick="askCancelRender('${v}')">Cancelar render</button>`;
+  document.getElementById('rc-'+v).innerHTML = cancelCtl;
+}
+
+function show(id, btn){
+  currentV = id;
+  document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('toasts').innerHTML='';
+}
+</script>
+</body>
+</html>

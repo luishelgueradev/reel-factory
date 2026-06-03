@@ -512,7 +512,7 @@ Plans:
 
 **Deferred (future phase):** AI-generated social-media metadata (title, description, hashtags) derived from the subtitle transcription + chosen titles, populating column 3. Phase 22 ships only the placeholder structure.
 
-**Plans:** 3/6 plans executed
+**Plans:** 5/6 plans executed
 
 Plans:
 
@@ -524,8 +524,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1)*
 
-- [ ] 22-04-PLAN.md — Overlay layering: back/front band split in studio SubtitledVideo + renderer Root.tsx, preview-only dim, renderer vitest gate (D-03, D-04)
-- [ ] 22-05-PLAN.md — Densify + reorder all 3 editors (Posición→Estilo→Avanzado), wire PositionPresets, migrate subtitle presets, OverlayEditor Capa control, aria + blue selection (D-05, D-06, D-07, D-08, D-09, D-11, D-03)
+- [x] 22-04-PLAN.md — Overlay layering: back/front band split in studio SubtitledVideo + renderer Root.tsx, preview-only dim, renderer vitest gate (D-03, D-04)
+- [x] 22-05-PLAN.md — Densify + reorder all 3 editors (Posición→Estilo→Avanzado), wire PositionPresets, migrate subtitle presets, OverlayEditor Capa control, aria + blue selection (D-05, D-06, D-07, D-08, D-09, D-11, D-03)
 
 **Wave 3** *(blocked on Wave 2)*
 

@@ -55,7 +55,7 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 
 Convert the Studio from a style editor into an end-to-end usable product: one click generates the video with live progress, configs are reusable as named profiles, social metadata is AI-generated from subtitles, and the interface is matured toward the chosen north-star. **Frontend tooling non-negotiable:** every studio-facing phase invokes `impeccable` + `frontend-design` (AGENTS.md).
 
-- [ ] **Phase 23: Render execution + progress** - Wire the Studio "Render Video" button to the real pipeline (`POST /process`), live job progress via `GET /status/:jobId`, completion/failure notification, finished-video access from the Studio, and font-load resilience (retry/offline fonts so a transient gstatic blip cannot abort a 666-frame render). Requirements: RENDER-01, RENDER-02, RENDER-03, RENDER-04, RENDER-05. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable per AGENTS.md)**
+- [x] **Phase 23: Render execution + progress** - Wire the Studio "Render Video" button to the real pipeline (`POST /process`), live job progress via `GET /status/:jobId`, completion/failure notification, finished-video access from the Studio, and font-load resilience (retry/offline fonts so a transient gstatic blip cannot abort a 666-frame render). Requirements: RENDER-01, RENDER-02, RENDER-03, RENDER-04, RENDER-05. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable per AGENTS.md)** (completed 2026-06-04)
 
 - [ ] **Phase 24: Named config profiles** - Save the current config as a named profile, load/list/rename/delete saved profiles, persisted with the same Docker-rebuild guarantee as the active config (Phase 17). Requirements: PROFILE-01, PROFILE-02, PROFILE-03, PROFILE-04. **(UI hint: yes)**
 
@@ -578,7 +578,7 @@ Plans:
 
 **Wave 4** *(blocked on 23-03 + 23-04)*
 
-- [ ] 23-05-PLAN.md — Human checkpoint: renderer image rebuild + real render smoke (RENDER-01..04) + gstatic-blocked render proof (RENDER-05) + visual sign-off
+- [x] 23-05-PLAN.md — Human checkpoint: renderer image rebuild + real render smoke (RENDER-01..04) + gstatic-blocked render proof (RENDER-05) + visual sign-off
 
 ---
 
@@ -661,7 +661,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 20. Title block precision | 4/4 | Complete | 2026-05-29 |
 | 21. PNG overlays | 3/3 | Complete | 2026-05-30 |
 | 22. Studio UI polish | 6/6 | Complete | 2026-06-03 |
-| 23. Render execution + progress | 4/5 | In Progress|  |
+| 23. Render execution + progress | 5/5 | Complete    | 2026-06-04 |
 | 24. Named config profiles | 0/TBD | Not started | - |
 | 25. AI social metadata | 0/TBD | Not started | - |
 | 26. UI convergence (impeccable) | 0/TBD | Not started | - |

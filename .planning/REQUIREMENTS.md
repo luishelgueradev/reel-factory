@@ -11,11 +11,11 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### Render Execution & Progress (RENDER)
 
-- [ ] **RENDER-01**: User can start a full video generation from the Studio's "Render Video" button (no curl/manual step).
-- [ ] **RENDER-02**: User sees live progress of the running job — current pipeline step and overall percent — until it finishes.
-- [ ] **RENDER-03**: User is notified when the render finishes (success) or fails, with the failure reason surfaced.
-- [ ] **RENDER-04**: On completion, the user can access the finished video (preview/download) from the Studio.
-- [ ] **RENDER-05**: A transient font-load failure during render does not abort the job — font loading is resilient (retry and/or offline-served fonts).
+- [x] **RENDER-01**: User can start a full video generation from the Studio's "Render Video" button (no curl/manual step).
+- [x] **RENDER-02**: User sees live progress of the running job — current pipeline step and overall percent — until it finishes.
+- [x] **RENDER-03**: User is notified when the render finishes (success) or fails, with the failure reason surfaced.
+- [x] **RENDER-04**: On completion, the user can access the finished video (preview/download) from the Studio.
+- [x] **RENDER-05**: A transient font-load failure during render does not abort the job — font loading is resilient (retry and/or offline-served fonts).
 
 ### Named Config Profiles (PROFILE)
 
@@ -52,11 +52,11 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| RENDER-01 | Phase 23 | Pending |
-| RENDER-02 | Phase 23 | Pending |
-| RENDER-03 | Phase 23 | Pending |
-| RENDER-04 | Phase 23 | Pending |
-| RENDER-05 | Phase 23 | Pending |
+| RENDER-01 | Phase 23 | Complete |
+| RENDER-02 | Phase 23 | Complete |
+| RENDER-03 | Phase 23 | Complete |
+| RENDER-04 | Phase 23 | Complete |
+| RENDER-05 | Phase 23 | Complete |
 | PROFILE-01 | Phase 24 | Pending |
 | PROFILE-02 | Phase 24 | Pending |
 | PROFILE-03 | Phase 24 | Pending |

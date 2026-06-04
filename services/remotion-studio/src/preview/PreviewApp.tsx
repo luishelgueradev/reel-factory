@@ -33,6 +33,7 @@ import type { TikTokPage } from "@remotion/captions";
 import { loadFont, AVAILABLE_FONTS, getFontFamilyCSS } from "../fonts";
 import { stepLabel, causeLine, isLongStep, parseStatusError } from "./render-status";
 import { ProfilesMenu } from "./ProfilesMenu.js";
+import { MetadataPanel } from "./MetadataPanel.js";
 
 const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
   layout: "tiktok",
@@ -272,6 +273,11 @@ export function PreviewApp() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [renderCauseLine, setRenderCauseLine] = useState<string>("");
 
+  // ── Phase 25-03: last successful render jobId — gates the MetadataPanel ─────
+  // Set when a render transitions to "success". NOT cleared on reset so the
+  // metadata panel stays populated if the user clicks "Renderizar de nuevo".
+  const [lastRenderJobId, setLastRenderJobId] = useState<string | null>(null);
+
   // Poll interval ref — cleared on terminal state AND on unmount (mirror saveTimeoutRef pattern)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -456,6 +462,7 @@ export function PreviewApp() {
           if (statusData.status === "completed") {
             if (pollRef.current) clearInterval(pollRef.current);
             setResultUrl(`/api/result/${newJobId}`);
+            setLastRenderJobId(newJobId); // Phase 25-03: gate MetadataPanel
             setRenderState("success");
             return;
           }
@@ -884,9 +891,9 @@ export function PreviewApp() {
           </div>
         </div>
 
-        {/* ── Col 3: Metadata placeholder — 320px, always-visible (D-01/D-02) ─ */}
-        {/* Hidden below 1024px viewport (CSS media query via inline conditional not possible — col3 renders */}
-        {/* but we use a dedicated class via a <style> block or rely on the viewport-width hidden pattern) */}
+        {/* ── Col 3: Live AI metadata panel — 320px, always-visible (Phase 25-03) ─ */}
+        {/* Replaced the Phase 22 static placeholder. MetadataPanel gates on lastRenderJobId. */}
+        {/* Green discipline: MetadataPanel uses ONLY --accent/--danger, never --action.      */}
         <div
           className="col3-metadata"
           style={{
@@ -901,37 +908,7 @@ export function PreviewApp() {
             overflowY: "auto",
           }}
         >
-          {/* Metadata placeholder card — NO state, NO fetch, NO controls (D-02) */}
-          <div
-            style={{
-              background: "var(--surface-2, #252535)",
-              borderRadius: "var(--r-md, 8px)",
-              border: "1px solid var(--border-faint, #2a2a38)",
-              padding: "var(--s-6, 12px)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "var(--t-base, 14px)",
-                fontWeight: 600,
-                color: "var(--text, #e6e6ea)",
-                marginBottom: "var(--s-3, 6px)",
-              }}
-            >
-              Metadata de redes
-            </div>
-            <p
-              style={{
-                fontSize: "var(--t-sm, 12.5px)",
-                color: "var(--text-muted, #777)",
-                fontStyle: "italic",
-                lineHeight: 1.5,
-                margin: 0,
-              }}
-            >
-              Próximamente — descripción, hashtags y más generados a partir de tus subtítulos.
-            </p>
-          </div>
+          <MetadataPanel jobId={lastRenderJobId} />
         </div>
 
       </div>

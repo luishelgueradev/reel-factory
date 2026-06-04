@@ -1,7 +1,7 @@
-// ─── PreviewApp: Unified StudioApp (Phase 22 + Phase 23-04) ──────────────────
+// ─── PreviewApp: Unified StudioApp (Phase 22 + Phase 23-04 + Phase 24-03) ─────
 // Three-column layout: col1 preview (flex:0 1 470px, stage bg), col2 controls (flex:1, TabBar),
 // col3 metadata placeholder (320px, always-visible, static).
-// Header: ▶ Render Video (green, THE single CTA) | Guardar config (outline, never green).
+// Header: Perfiles ▾ (outline) | Guardar config (outline) | ▶ Render Video (green CTA).
 // Tokens: default.css OKLCH token set inlined in index.html (:root block).
 // Tabs: Títulos | Overlays | Subtítulos (Task 2 relocates TextareaInput into Subtítulos).
 //
@@ -13,9 +13,14 @@
 //   - 4 inline surfaces: upload-affordance, live-progress, success "Reel listo", failure
 //   - Header CTA 4-state cycle per copywriting contract
 //   - Green discipline: exactly one action-green at any time (UI-SPEC Color law)
+//
+// Phase 24-03 additions:
+//   - ProfilesMenu: header "Perfiles ▾" inline popover (left of Guardar config)
+//   - applyConfigToState(): extracted helper shared by load-on-mount + onProfileApplied
+//   - onProfileApplied(): applies a profile's config to Studio state immediately
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import type { SubtitleConfig, TitleConfig, PngOverlayConfig } from "../pipeline-config";
+import type { SubtitleConfig, TitleConfig, PngOverlayConfig, PipelineConfig } from "../pipeline-config";
 import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
 import { PreviewPlayer } from "./PreviewPlayer";
 import { TextareaInput } from "./TextareaInput";
@@ -27,6 +32,7 @@ import { OverlayEditor } from "../editor/components/OverlayEditor";
 import type { TikTokPage } from "@remotion/captions";
 import { loadFont, AVAILABLE_FONTS, getFontFamilyCSS } from "../fonts";
 import { stepLabel, causeLine, isLongStep, parseStatusError } from "./render-status";
+import { ProfilesMenu } from "./ProfilesMenu.js";
 
 const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
   layout: "tiktok",
@@ -288,6 +294,62 @@ export function PreviewApp() {
     setSubtitleConfig((prev: SubtitleConfig) => ({ ...prev, ...partial }));
   }, []);
 
+  // ── Phase 24-03: applyConfigToState ─────────────────────────────────────────
+  // Shared state-population logic used by:
+  //   1. load-on-mount fetch (GET /api/config)
+  //   2. onProfileApplied (PUT /api/profiles/:slug/apply response)
+  // Validates each field before entering state (WR-04 discipline).
+  const applyConfigToState = useCallback((data: PipelineConfig) => {
+    if (data.subtitle) {
+      setSubtitleConfig((prev) => ({ ...prev, ...data.subtitle }));
+    }
+    if (Array.isArray(data.titles)) {
+      // WR-04: Validate shape before entering state — pipeline-config.json may have
+      // been hand-edited or migrated from an older schema. Missing numeric fields
+      // would produce NaN in time-range calculations downstream.
+      const validTitles = (data.titles as unknown[]).filter(
+        (t): t is TitleConfig =>
+          typeof t === "object" && t !== null &&
+          typeof (t as TitleConfig).text === "string" &&
+          typeof (t as TitleConfig).startTimeMs === "number" &&
+          typeof (t as TitleConfig).durationMs === "number"
+      );
+      setTitles(validTitles);
+      setLiveTitles(validTitles);
+    }
+    if (Array.isArray(data.overlays)) {
+      // Validate shape before entering state — pipeline-config.json may have
+      // been hand-edited. Missing numeric/string fields would break the Player.
+      const validOverlays = (data.overlays as unknown[]).filter(
+        (o): o is PngOverlayConfig =>
+          typeof o === "object" && o !== null &&
+          typeof (o as PngOverlayConfig).imageData === "string" &&
+          typeof (o as PngOverlayConfig).x === "number" &&
+          typeof (o as PngOverlayConfig).y === "number" &&
+          typeof (o as PngOverlayConfig).displayWidth === "number"
+      );
+      setOverlays(validOverlays);
+      setLiveOverlays(validOverlays);
+    }
+  }, []);
+
+  // ── Phase 24-03: getCurrentConfig ────────────────────────────────────────────
+  // Returns the same shape PUT /api/config sends: { subtitle, titles, overlays }.
+  // ProfilesMenu uses this for POST /api/profiles { name, config }.
+  const getCurrentConfig = useCallback((): PipelineConfig => ({
+    subtitle: subtitleConfig,
+    titles: liveTitles,
+    overlays: liveOverlays,
+  }), [subtitleConfig, liveTitles, liveOverlays]);
+
+  // ── Phase 24-03: handleProfileApplied ─────────────────────────────────────────
+  // Called by ProfilesMenu when a profile is applied (PUT /api/profiles/:slug/apply).
+  // Repopulates all Studio state from the profile config so the live preview
+  // immediately reflects the applied profile.
+  const handleProfileApplied = useCallback((config: PipelineConfig) => {
+    applyConfigToState(config);
+  }, [applyConfigToState]);
+
   // ── Eagerly load default font on mount ──────────────────────────────────────
   useEffect(() => {
     loadFont("Inter").catch(() => {
@@ -299,40 +361,14 @@ export function PreviewApp() {
   useEffect(() => {
     fetch("/api/config")
       .then((res) => res.json())
-      .then((data) => {
-        if (data && data.subtitle) {
-          setSubtitleConfig((prev) => ({ ...prev, ...data.subtitle }));
-        }
-        if (data && Array.isArray(data.titles)) {
-          // WR-04: Validate shape before entering state — pipeline-config.json may have
-          // been hand-edited or migrated from an older schema. Missing numeric fields
-          // would produce NaN in time-range calculations downstream.
-          const validTitles = (data.titles as unknown[]).filter(
-            (t): t is TitleConfig =>
-              typeof t === "object" && t !== null &&
-              typeof (t as TitleConfig).text === "string" &&
-              typeof (t as TitleConfig).startTimeMs === "number" &&
-              typeof (t as TitleConfig).durationMs === "number"
-          );
-          setTitles(validTitles);
-        }
-        if (data && Array.isArray(data.overlays)) {
-          // Validate shape before entering state — pipeline-config.json may have
-          // been hand-edited. Missing numeric/string fields would break the Player.
-          const validOverlays = (data.overlays as unknown[]).filter(
-            (o): o is PngOverlayConfig =>
-              typeof o === "object" && o !== null &&
-              typeof (o as PngOverlayConfig).imageData === "string" &&
-              typeof (o as PngOverlayConfig).x === "number" &&
-              typeof (o as PngOverlayConfig).y === "number" &&
-              typeof (o as PngOverlayConfig).displayWidth === "number"
-          );
-          setOverlays(validOverlays);
-        }
+      .then((data: PipelineConfig) => {
+        applyConfigToState(data);
       })
       .catch(() => {
         /* use defaults */
       });
+  // applyConfigToState is stable (no deps that change); ok to include
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── WR-03: Cancel save-success timeout on unmount ────────────────────────────
@@ -563,6 +599,16 @@ export function PreviewApp() {
 
           {/* Hairline divider before buttons */}
           <div style={{ width: 1, height: 20, background: "var(--border, #333)", margin: "0 2px" }} />
+
+          {/* Perfiles ▾ — Phase 24-03: inline popover for named config profiles.
+               Immediately left of Guardar config. Uses --accent/--danger, NOT --action.
+               Green discipline: ProfilesMenu never uses --action; Guardar config is outline;
+               only Render Video may be green. */}
+          <ProfilesMenu
+            getCurrentConfig={getCurrentConfig}
+            onApplied={handleProfileApplied}
+            disabled={renderState === "submitting" || renderState === "running"}
+          />
 
           {/* Guardar config — OUTLINE, never green (color law); disabled while rendering */}
           <button

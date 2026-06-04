@@ -633,7 +633,7 @@ function TriggerButton({
   disabled,
   onClick,
 }: {
-  triggerRef: React.RefObject<HTMLButtonElement>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
   open: boolean;
   disabled: boolean;
   onClick: () => void;

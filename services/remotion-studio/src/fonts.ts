@@ -60,14 +60,40 @@ const BUNDLED_SANS = "Plus Jakarta Sans";
  * These are the fonts that can be loaded locally without any network call.
  * The remaining fonts fall through to the gstatic-retry tier.
  */
+// Gap-closure (RENDER-05): the ENTIRE AVAILABLE_FONTS catalog is now vendored as
+// local woff2 (latin subset, public/fonts/<Font>-{Regular,Bold}.woff2). Previously
+// only 7 were vendored; a config selecting any of the other 19 (e.g. Outfit, Raleway)
+// still hit gstatic and a blocked fetch ABORTED the render — the original RENDER-05
+// bug. The gstatic tier (Tier 2) registers @font-face lazily, so its failure surfaces
+// only inside Chrome at frame time, where the loadFont try/catch cannot see it. The
+// only reliable offline guarantee is Tier 1 covering every selectable font.
 const VENDORED_FONTS = new Set([
   "PlusJakartaSans",
   "Inter",
-  "Montserrat",
-  "Poppins",
-  "Oswald",
-  "BebasNeue",
   "Roboto",
+  "Montserrat",
+  "Oswald",
+  "Poppins",
+  "BebasNeue",
+  "Antonio",
+  "Raleway",
+  "Ubuntu",
+  "Nunito",
+  "SpaceGrotesk",
+  "Rubik",
+  "SourceSans3",
+  "Outfit",
+  "PlayfairDisplay",
+  "LexendDeca",
+  "Signika",
+  "Lato",
+  "Sora",
+  "DancingScript",
+  "CormorantGaramond",
+  "DMSans",
+  "JosefinSans",
+  "Righteous",
+  "TitanOne",
 ]);
 
 /**

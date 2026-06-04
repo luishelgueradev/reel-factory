@@ -7,6 +7,9 @@
 //  - Catch branch → BUNDLED_SANS, NOT "monospace"
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ─── Mock @remotion/fonts ──────────────────────────────────────────────────
 // loadFont from @remotion/fonts returns Promise<void>.
@@ -132,7 +135,7 @@ vi.mock("@remotion/google-fonts/TitanOne", () => ({
 }));
 
 // Import AFTER mocks are registered
-const { loadFont, getFontFamilyCSS } = await import("./fonts.js");
+const { loadFont, getFontFamilyCSS, AVAILABLE_FONTS } = await import("./fonts.js");
 
 // ─── Constants ────────────────────────────────────────────────────────────
 const BUNDLED_SANS = "Plus Jakarta Sans";
@@ -313,5 +316,30 @@ describe("loadFont — RENDER-05 unit proofs", () => {
     expect(getFontFamilyCSS("monospace")).toBe("monospace");
     expect(getFontFamilyCSS("")).toBe("monospace");
     expect(getFontFamilyCSS("UnknownFont")).toBe("UnknownFont");
+  });
+});
+
+// ─── RENDER-05 gap-closure: full-catalog vendoring coverage ──────────────────
+// Regression guard: every font a user can SELECT must be vendored as a local woff2,
+// otherwise a gstatic-blocked render aborts (the original RENDER-05 bug). This test
+// fails the moment someone adds a font to AVAILABLE_FONTS without dropping its
+// Regular+Bold woff2 into public/fonts/ — making the offline guarantee structural,
+// not aspirational. Uses the REAL filesystem (node:fs), not the @remotion/fonts mock.
+describe("RENDER-05 — every selectable font is vendored on disk", () => {
+  const fontsDir = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../public/fonts"
+  );
+
+  it("AVAILABLE_FONTS (minus monospace) all have Regular + Bold woff2 in public/fonts/", () => {
+    const missing: string[] = [];
+    for (const font of AVAILABLE_FONTS) {
+      if (font === "monospace") continue;
+      for (const weight of ["Regular", "Bold"]) {
+        const file = path.join(fontsDir, `${font}-${weight}.woff2`);
+        if (!existsSync(file)) missing.push(`${font}-${weight}.woff2`);
+      }
+    }
+    expect(missing).toEqual([]);
   });
 });

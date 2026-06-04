@@ -26,10 +26,10 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### AI Social Metadata (META)
 
-- [ ] **META-01**: User can generate social-media metadata (title/description + hashtags) from the video's transcript via Claude API.
-- [ ] **META-02**: Generated metadata is shown in the Studio "Metadata de redes" panel (replacing the Phase 22 placeholder).
-- [ ] **META-03**: User can edit and copy the generated metadata.
-- [ ] **META-04**: User can regenerate the metadata (e.g., adjust tone/platform) without re-running the pipeline.
+- [x] **META-01**: User can generate social-media metadata (title/description + hashtags) from the video's transcript via Claude API.
+- [x] **META-02**: Generated metadata is shown in the Studio "Metadata de redes" panel (replacing the Phase 22 placeholder).
+- [x] **META-03**: User can edit and copy the generated metadata.
+- [x] **META-04**: User can regenerate the metadata (e.g., adjust tone/platform) without re-running the pipeline.
 
 ### UI Convergence (UICONV)
 
@@ -61,9 +61,9 @@ Traceability (phase mapping) is filled by the roadmapper.
 | PROFILE-02 | Phase 24 | Complete |
 | PROFILE-03 | Phase 24 | Complete |
 | PROFILE-04 | Phase 24 | Complete |
-| META-01 | Phase 25 | Pending |
-| META-02 | Phase 25 | Pending |
-| META-03 | Phase 25 | Pending |
-| META-04 | Phase 25 | Pending |
+| META-01 | Phase 25 | Complete |
+| META-02 | Phase 25 | Complete |
+| META-03 | Phase 25 | Complete |
+| META-04 | Phase 25 | Complete |
 | UICONV-01 | Phase 26 | Pending |
 | UICONV-02 | Phase 26 | Pending |

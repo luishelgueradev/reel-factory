@@ -33,8 +33,8 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### UI Convergence (UICONV)
 
-- [ ] **UICONV-01**: The Studio interface converges to the chosen north-star direction (cohesive shell/nav, control density, motion) per the validated sketches.
-- [ ] **UICONV-02**: The new surfaces (render progress, metadata panel, profiles) are integrated into the shell to the same visual quality bar (impeccable + frontend-design).
+- [x] **UICONV-01**: The Studio interface converges to the chosen north-star direction (cohesive shell/nav, control density, motion) per the validated sketches.
+- [x] **UICONV-02**: The new surfaces (render progress, metadata panel, profiles) are integrated into the shell to the same visual quality bar (impeccable + frontend-design).
 
 ## Future Requirements (deferred)
 
@@ -65,5 +65,5 @@ Traceability (phase mapping) is filled by the roadmapper.
 | META-02 | Phase 25 | Complete |
 | META-03 | Phase 25 | Complete |
 | META-04 | Phase 25 | Complete |
-| UICONV-01 | Phase 26 | Pending |
-| UICONV-02 | Phase 26 | Pending |
+| UICONV-01 | Phase 26 | Complete |
+| UICONV-02 | Phase 26 | Complete |

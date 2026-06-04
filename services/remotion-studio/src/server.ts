@@ -555,26 +555,55 @@ app.get("/{*splat}", serveSpa);
 
 // ─── Helper: Resolve config file path ──────────────────────────────────────
 
-function resolveConfigPath(): string {
-  // PIPELINE_CONFIG_PATH takes precedence (D-19)
-  if (PIPELINE_CONFIG_PATH) {
-    return PIPELINE_CONFIG_PATH;
+// Exported (with injectable deps) so the resolution order is unit-testable without
+// booting the server or mutating process.env. Production callers use resolveConfigPath().
+export function resolveConfigPathWith(deps: {
+  pipelineConfigPath?: string;
+  inputPath?: string;
+  activePath?: string;
+  fileExists?: (p: string) => boolean;
+  cwd?: string;
+}): string {
+  const pipelineConfigPath = deps.pipelineConfigPath ?? "";
+  const inputPath = deps.inputPath ?? "";
+  const activePath = deps.activePath ?? "";
+  const fileExists = deps.fileExists ?? fs.existsSync;
+  const cwd = deps.cwd ?? process.cwd();
+
+  // PIPELINE_CONFIG_PATH (job-scoped preview) takes precedence (D-19) — but ONLY when
+  // the file actually exists. A stale or empty PIPELINE_JOB_ID resolves to a
+  // non-existent job path; in that case we must fall back to the active config so the
+  // Studio shows the real saved settings (and any applied profile) instead of bare
+  // defaults. Without this guard, applying a profile appears to do nothing after a
+  // reload because GET would keep returning defaults for the missing job path.
+  // (Phase 24 robustness — surfaced by named profiles; benefits Phase 17 active-config too.)
+  if (pipelineConfigPath && fileExists(pipelineConfigPath)) {
+    return pipelineConfigPath;
   }
 
-  // Fallback: derive from INPUT_PATH (standard pipeline pattern)
-  if (INPUT_PATH) {
+  // Derive from INPUT_PATH (standard pipeline pattern), if that derived file exists.
+  if (inputPath) {
     // INPUT_PATH = /data/pipeline/{job_id}/remotion-renderer/output.mp4
-    // Config should be at /data/pipeline/{job_id}/remotion-renderer/pipeline-config.json
-    const inputDir = path.dirname(INPUT_PATH);
-    return path.join(inputDir, "pipeline-config.json");
+    // Config would be at /data/pipeline/{job_id}/remotion-renderer/pipeline-config.json
+    const derived = path.join(path.dirname(inputPath), "pipeline-config.json");
+    if (fileExists(derived)) {
+      return derived;
+    }
   }
 
-  // Local dev: read from getActivePipelineConfigPath() so GET and PUT stay in sync.
-  // Fall back to local file only when getActivePipelineConfigPath() is also unset.
-  if (getActivePipelineConfigPath()) {
-    return getActivePipelineConfigPath();
+  // Active config — the normal Studio-editing scenario (GET and PUT stay in sync).
+  if (activePath) {
+    return activePath;
   }
-  return path.join(process.cwd(), "pipeline-config.json");
+  return path.join(cwd, "pipeline-config.json");
+}
+
+function resolveConfigPath(): string {
+  return resolveConfigPathWith({
+    pipelineConfigPath: PIPELINE_CONFIG_PATH,
+    inputPath: INPUT_PATH,
+    activePath: getActivePipelineConfigPath(),
+  });
 }
 
 // ─── Helper: Atomic write to getActivePipelineConfigPath() (CR-02, D-04) ─────

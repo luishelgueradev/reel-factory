@@ -662,6 +662,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 21. PNG overlays | 3/3 | Complete | 2026-05-30 |
 | 22. Studio UI polish | 6/6 | Complete | 2026-06-03 |
 | 23. Render execution + progress | 5/5 | Complete    | 2026-06-04 |
-| 24. Named config profiles | 1/3 | In Progress|  |
+| 24. Named config profiles | 2/3 | In Progress|  |
 | 25. AI social metadata | 0/TBD | Not started | - |
 | 26. UI convergence (impeccable) | 0/TBD | Not started | - |

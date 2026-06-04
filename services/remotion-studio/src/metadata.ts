@@ -221,7 +221,10 @@ FORMATO DE HASHTAGS: Cada hashtag debe comenzar con # y contener solo letras, n√
 
 export const MetadataSchema = z.object({
   title: z.string().min(1).max(120),
-  description: z.string().min(1).max(2200),
+  // Max is set to the highest platform limit (youtube_shorts = 5000).
+  // Per-platform enforcement (e.g. tiktok/instagram at 2200) is handled in sanitizeMetadata
+  // before this schema is evaluated, so zod only needs to catch truly unbounded values.
+  description: z.string().min(1).max(5000),
   hashtags: z
     .array(z.string().regex(/^#[\p{L}0-9_]+$/u))
     .min(1)

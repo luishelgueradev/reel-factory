@@ -5,6 +5,8 @@
 // Phase 20: removed subtitle, topOffset; added x/y pixel positioning + borderRadius slider
 // Phase 22: PositionPresets (px mode) in Posición section; Posición→Estilo→Avanzado
 //           always-open titled sections; aria-labels on delete buttons; blue selection
+// Phase 26-02: Entrance animation refactored from segmented buttons → 4-card preset grid
+//              per sketch 014-C (blue active ring, static cards, D-03 deferred for animation)
 
 import React, { useState, useEffect } from "react";
 import type { TitleConfig, TitleEntranceAnimation } from "../../pipeline-config.js";
@@ -98,11 +100,13 @@ interface TitleEditorProps {
   onPreviewChange?: (liveTitles: TitleConfig[]) => void;
 }
 
-const ENTRANCE_ANIMATIONS: { id: TitleEntranceAnimation; label: string }[] = [
-  { id: "slide-up", label: "Slide ↑" },
-  { id: "slide-down", label: "Slide ↓" },
-  { id: "fade-in", label: "Fade" },
-  { id: "none", label: "Ninguna" },
+// Entrance animation options with glyphs for the 014-C preset card vis
+// Static cards — no live animation (D-03 deferred). Per sketch 014-C .mc-vis.
+const ENTRANCE_ANIMATIONS: { id: TitleEntranceAnimation; label: string; glyph: string }[] = [
+  { id: "slide-up",   label: "Slide ↑", glyph: "↑" },
+  { id: "slide-down", label: "Slide ↓", glyph: "↓" },
+  { id: "fade-in",    label: "Fade",    glyph: "◍" },
+  { id: "none",       label: "Ninguna", glyph: "∅" },
 ];
 
 // Monospace is a system fallback and not suitable for title overlays
@@ -545,23 +549,106 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
               />
             </div>
 
-            {/* Entrance Animation — blue selection (color law) */}
-            <div style={{ marginBottom: "var(--s-5, 10px)" }}>
-              <RowLabel>Animación de entrada</RowLabel>
-              <div style={{ display: "flex", gap: "var(--s-3, 6px)" }}>
+            {/* Entrance Animation — preset cards per sketch 014-C (26-02) ──────────
+                Static cards only (no live animation — D-03 deferred).
+                Blue active ring (--accent) per color law D-04.
+            ────────────────────────────────────────────────────────────── */}
+            <div style={{ marginBottom: "var(--s-8, 16px)" }}>
+              {/* Section header matching 011-C / 014-C pattern */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--s-4, 8px)",
+                marginBottom: "var(--s-6, 12px)",
+              }}>
+                <span style={{
+                  fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"],
+                  fontWeight: 700,
+                  color: "var(--text-muted, #777)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase" as React.CSSProperties["textTransform"],
+                  flexShrink: 0,
+                }}>
+                  Animación de entrada
+                </span>
+                <div style={{ flex: 1, height: 1, background: "var(--border-faint, #2a2a38)" }} />
+              </div>
+
+              {/* 4-card grid — sketch 014-C .modecards pattern */}
+              <div
+                role="radiogroup"
+                aria-label="Animación de entrada"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "var(--s-4, 8px)",
+                }}
+              >
                 {ENTRANCE_ANIMATIONS.map((anim) => {
                   const isSelected = (newTitle.style?.entranceAnimation ?? "slide-up") === anim.id;
                   return (
                     <button
                       key={anim.id}
                       type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      data-entrance={anim.id}
+                      data-selected={isSelected}
                       onClick={() => handleDraftChange((prev) => ({
                         ...prev,
                         style: { ...prev.style!, entranceAnimation: anim.id },
                       }))}
-                      style={segBtnStyle(isSelected)}
+                      style={{
+                        // Card base — sketch 014-C .modecard
+                        padding: "var(--s-5, 10px) var(--s-3, 6px) var(--s-4, 8px)",
+                        // Color law (D-04): active = --accent (blue); NO green
+                        background: isSelected
+                          ? "var(--accent-tint-2, rgba(144,202,249,0.08))"
+                          : "var(--surface, #1e1e2e)",
+                        border: `1px solid ${isSelected
+                          ? "var(--accent-strong, #6ba8e0)"
+                          : "var(--border, #333)"}`,
+                        borderRadius: "var(--r-sm, 6px)",
+                        cursor: "pointer",
+                        textAlign: "center" as React.CSSProperties["textAlign"],
+                        transition: [
+                          "border-color var(--dur,170ms) var(--ease)",
+                          "background var(--dur,170ms) var(--ease)",
+                        ].join(", "),
+                        font: "inherit",
+                        display: "flex",
+                        flexDirection: "column" as React.CSSProperties["flexDirection"],
+                        alignItems: "center",
+                        gap: "var(--s-3, 6px)",
+                      }}
                     >
-                      {anim.label}
+                      {/* .mc-vis — glyph tile (sketch 014-C) */}
+                      <div style={{
+                        width: "100%",
+                        height: 30,
+                        borderRadius: "var(--r-xs, 4px)",
+                        background: "var(--stage, #0f0f17)",
+                        display: "grid",
+                        placeItems: "center",
+                        overflow: "hidden",
+                        fontSize: 15,
+                        color: isSelected
+                          ? "var(--accent, #90caf9)"
+                          : "var(--text-2, #a8a8b3)",
+                      }}>
+                        {anim.glyph}
+                      </div>
+
+                      {/* .mc-nm — mode name label */}
+                      <span style={{
+                        fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"],
+                        fontWeight: 600,
+                        color: isSelected
+                          ? "var(--accent, #90caf9)"
+                          : "var(--text-2, #a8a8b3)",
+                      }}>
+                        {anim.label}
+                      </span>
                     </button>
                   );
                 })}

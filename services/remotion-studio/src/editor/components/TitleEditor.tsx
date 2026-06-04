@@ -7,6 +7,8 @@
 //           always-open titled sections; aria-labels on delete buttons; blue selection
 // Phase 26-02: Entrance animation refactored from segmented buttons → 4-card preset grid
 //              per sketch 014-C (blue active ring, static cards, D-03 deferred for animation)
+// Phase 26-03: rf-form-grid / rf-card-grid className hooks added to 2-col form rows and
+//              the 4-card entrance grid for @media reflow (sketch 018-B: 4-up → 2×2 at 380px)
 
 import React, { useState, useEffect } from "react";
 import type { TitleConfig, TitleEntranceAnimation } from "../../pipeline-config.js";
@@ -483,8 +485,8 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
           <div style={{ marginBottom: "var(--s-8, 16px)" }}>
             <SectionHeader n={1} title="Posición" />
 
-            {/* X/Y number inputs */}
-            <div style={{ display: "flex", gap: "var(--s-8, 16px)", marginBottom: "var(--s-5, 10px)" }}>
+            {/* X/Y number inputs — rf-form-grid: collapses to 1-col at @media 380px (018-B) */}
+            <div className="rf-form-grid" style={{ display: "flex", gap: "var(--s-8, 16px)", marginBottom: "var(--s-5, 10px)" }}>
               <div style={{ flex: 1 }}>
                 <RowLabel>X (px)</RowLabel>
                 <input
@@ -575,9 +577,11 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
               </div>
 
               {/* 4-card grid — sketch 014-C .modecards pattern */}
+              {/* rf-card-grid: reflows 4-up → 2×2 at @media 380px (018-B) */}
               <div
                 role="radiogroup"
                 aria-label="Animación de entrada"
+                className="rf-card-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(4, 1fr)",
@@ -655,8 +659,8 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
               </div>
             </div>
 
-            {/* Font + size */}
-            <div style={{ display: "flex", gap: "var(--s-6, 12px)", marginBottom: "var(--s-5, 10px)" }}>
+            {/* Font + size — rf-form-grid: collapses to 1-col at @media 380px (018-B) */}
+            <div className="rf-form-grid" style={{ display: "flex", gap: "var(--s-6, 12px)", marginBottom: "var(--s-5, 10px)" }}>
               <div style={{ flex: 2 }}>
                 <RowLabel>Fuente</RowLabel>
                 <select
@@ -867,8 +871,8 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
           <div style={{ marginBottom: "var(--s-8, 16px)" }}>
             <SectionHeader n={3} title="Avanzado" />
 
-            {/* Timing */}
-            <div style={{ display: "flex", gap: "var(--s-6, 12px)", marginBottom: "var(--s-5, 10px)" }}>
+            {/* Timing — rf-form-grid: collapses to 1-col at @media 380px (018-B) */}
+            <div className="rf-form-grid" style={{ display: "flex", gap: "var(--s-6, 12px)", marginBottom: "var(--s-5, 10px)" }}>
               <div style={{ flex: 1 }}>
                 <RowLabel>Aparece (s)</RowLabel>
                 <input
@@ -914,8 +918,8 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
               </div>
             </div>
 
-            {/* Line Height & Padding */}
-            <div style={{ display: "flex", gap: "var(--s-6, 12px)" }}>
+            {/* Line Height & Padding — rf-form-grid: collapses to 1-col at @media 380px (018-B) */}
+            <div className="rf-form-grid" style={{ display: "flex", gap: "var(--s-6, 12px)" }}>
               <div style={{ flex: 1 }}>
                 <RowLabel>Altura de línea: {newTitle.style?.lineHeight ?? 1.2}</RowLabel>
                 <input

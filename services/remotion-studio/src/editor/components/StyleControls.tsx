@@ -3,6 +3,8 @@
 //       outlineColor, outlineWidth
 // D-08: Background highlight — enabled/on/off + color, padding, borderRadius
 // D-09: Position presets — migrated to shared PositionPresets ENUM mode (22-05)
+// Phase 26-03: rf-color-matrix className added to color grid for @media reference
+//              (sketch 018-B: color matrix stays 2×2 at all widths — already compact)
 // D-11: Posición → Estilo → Avanzado always-open titled sections
 // Phase 19: Extended font size (200), fontWeight/fontStyle toggles, Outer Glow
 // Phase 22: PositionPresets enum mode replaces 3-button position selector;
@@ -251,10 +253,10 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
             </div>
           </div>
 
-          {/* Color matrix (2×2 grid) */}
+          {/* Color matrix (2×2 grid) — stays 2×2 at all widths per sketch 018-B */}
           <div>
             <RowLabel>Colores</RowLabel>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-4, 8px)" }}>
+            <div className="rf-color-matrix" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-4, 8px)" }}>
               <ColorControl
                 label="Activa"
                 value={config.activeColor ?? "#FFFF00"}

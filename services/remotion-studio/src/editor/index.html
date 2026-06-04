@@ -82,6 +82,32 @@
     @media (max-width: 1023px) {
       .col3-metadata { display: none !important; }
     }
+
+    /* ── Responsive reflow (sketch 018-B / 047) ────────────────────────────
+       At ~360px the controls column is the full viewport.
+       · rf-form-grid: flex 2-col rows (X/Y, font+size, timing, lineH+padding)
+         collapse to 1-col so fields stay legible.
+       · rf-card-grid: 4-up entrance-animation card grid reflows to 2×2
+         (cards stay usable; label text not clipped).
+       · rf-color-matrix (2×2 in StyleControls) is deliberately EXCLUDED —
+         it stays 2×2 at all widths (already compact per 018-B decision).
+       Desktop layout (~1280px) is completely unaffected — these rules only
+       fire when viewport is ≤ 380px. ────────────────────────────────── */
+    @media (max-width: 380px) {
+      /* Form rows: collapse flex 2-col → 1-col */
+      .rf-form-grid {
+        flex-direction: column !important;
+        gap: var(--s-5, 10px) !important;
+      }
+      .rf-form-grid > * {
+        min-width: 0;
+        width: 100%;
+      }
+      /* Preset card grids: 4-up → 2×2 */
+      .rf-card-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+    }
   </style>
 </head>
 <body>

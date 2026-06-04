@@ -139,16 +139,20 @@ describe("POST /batch - batch upload endpoint", () => {
     // Verify videoQueue.add was called for each file
     expect(videoQueue.add).toHaveBeenCalledTimes(2);
 
-    // Verify the first call's job data includes batchId and filename
-    const firstCallData = vi.mocked(videoQueue.add).mock.calls[0];
-    expect(firstCallData[1]).toHaveProperty("jobId");
-    expect(firstCallData[1]).toHaveProperty("batchId");
-    expect(firstCallData[1]).toHaveProperty("filename", "clip_a.mp4");
-    expect(firstCallData[1]).toHaveProperty("inputPath");
-
-    // Verify the second call's job data
-    const secondCallData = vi.mocked(videoQueue.add).mock.calls[1];
-    expect(secondCallData[1].filename).toBe("clip_b.mp4");
+    // The route processes files concurrently (files.map(async …) + Promise.all),
+    // so the ORDER of videoQueue.add calls is non-deterministic (depends on which
+    // file's fs.mkdir/rename resolves first — flakes under parallel test load).
+    // Assert order-INDEPENDENTLY: every call carries the required job-data shape,
+    // and the two filenames collectively match the uploaded files.
+    const payloads = vi.mocked(videoQueue.add).mock.calls.map((c) => c[1] as Record<string, unknown>);
+    for (const payload of payloads) {
+      expect(payload).toHaveProperty("jobId");
+      expect(payload).toHaveProperty("batchId");
+      expect(payload).toHaveProperty("filename");
+      expect(payload).toHaveProperty("inputPath");
+    }
+    const filenames = payloads.map((p) => p.filename).sort();
+    expect(filenames).toEqual(["clip_a.mp4", "clip_b.mp4"]);
   });
 
   it("should store batchId→jobId mapping in Redis via addJobToBatch", async () => {

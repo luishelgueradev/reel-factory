@@ -34,6 +34,7 @@ import { loadFont, AVAILABLE_FONTS, getFontFamilyCSS } from "../fonts";
 import { stepLabel, causeLine, isLongStep, parseStatusError } from "./render-status";
 import { ProfilesMenu } from "./ProfilesMenu.js";
 import { MetadataPanel } from "./MetadataPanel.js";
+import { Z } from "./z-layers.js";
 
 const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
   layout: "tiktok",
@@ -74,9 +75,9 @@ function TabBar({
     <div
       style={{
         display: "flex",
-        borderBottom: "1px solid #333",
-        background: "#16213e",
-        padding: "0 24px",
+        borderBottom: "1px solid var(--border, #333)",
+        background: "var(--chrome, #16213e)",
+        padding: "0 var(--s-12, 24px)",
       }}
     >
       {TABS.map((tab) => {
@@ -108,16 +109,16 @@ function TabButton({
   const [hovered, setHovered] = useState(false);
 
   const style: React.CSSProperties = {
-    padding: "12px 16px",
+    padding: "var(--s-6, 12px) var(--s-8, 16px)",
     minHeight: 44,
     border: "none",
-    background: (!isActive && hovered) ? "rgba(255,255,255,0.04)" : "transparent",
+    background: (!isActive && hovered) ? "var(--surface-hover, rgba(255,255,255,0.04))" : "transparent",
     cursor: "pointer",
-    fontSize: 14,
-    borderBottom: isActive ? "2px solid #90caf9" : "2px solid transparent",
-    color: isActive ? "#90caf9" : hovered ? "#e0e0e0" : "#aaa",
+    fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"],
+    borderBottom: isActive ? "2px solid var(--accent, #90caf9)" : "2px solid transparent",
+    color: isActive ? "var(--accent, #90caf9)" : hovered ? "var(--text, #e6e6ea)" : "var(--text-2, #a8a8b3)",
     fontWeight: isActive ? 600 : 400,
-    transition: "color 0.15s, background 0.15s",
+    transition: "color var(--dur, 170ms) var(--ease), background var(--dur, 170ms) var(--ease)",
   };
 
   return (
@@ -171,15 +172,15 @@ function FontCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={{ fontSize: 14, fontWeight: 600, color: "#90caf9", marginBottom: 8 }}>
+      <div style={{ fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"], fontWeight: 600, color: "var(--accent, #90caf9)", marginBottom: "var(--s-4, 8px)" }}>
         {fontName}
       </div>
       {loaded ? (
-        <div style={{ fontSize: 24, fontFamily: getFontFamilyCSS(fontName), color: "#e0e0e0" }}>
+        <div style={{ fontSize: "var(--t-xl, 19px)" as React.CSSProperties["fontSize"], fontFamily: getFontFamilyCSS(fontName), color: "var(--text, #e6e6ea)" }}>
           Hola mundo
         </div>
       ) : (
-        <div style={{ fontSize: 24, fontFamily: "monospace", color: "#666" }}>
+        <div style={{ fontSize: "var(--t-xl, 19px)" as React.CSSProperties["fontSize"], fontFamily: "monospace", color: "var(--text-faint, #555)" }}>
           Loading...
         </div>
       )}
@@ -200,11 +201,11 @@ function FontGrid({
     <>
       <div
         style={{
-          fontSize: 12,
+          fontSize: "var(--t-sm, 12.5px)" as React.CSSProperties["fontSize"],
           fontWeight: 600,
-          color: "#90caf9",
-          marginBottom: 8,
-          marginTop: 16,
+          color: "var(--accent, #90caf9)",
+          marginBottom: "var(--s-4, 8px)",
+          marginTop: "var(--s-8, 16px)",
         }}
       >
         Browse Fonts
@@ -1045,6 +1046,7 @@ function UploadDropzone({ onFileSelected }: { onFileSelected: (f: File) => void 
 
 // ─── §2 Live progress overlay ─────────────────────────────────────────────────
 // Overlays the dimmed stage. Shows step label, honest %, long-step affordance.
+// Z.takeover (30) — sits above sheets (popovers) per modal-stack-choreography (041).
 function RenderProgressOverlay({
   currentStep,
   progress,
@@ -1062,7 +1064,7 @@ function RenderProgressOverlay({
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: 20,
+        zIndex: Z.takeover,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -1161,6 +1163,7 @@ function RenderProgressOverlay({
 
 // ─── §3 Inline success "Reel listo" ──────────────────────────────────────────
 // Finished 9:16 plays inline. Descargar = accent (NOT green). Renderizar de nuevo = green.
+// Z.takeover (30) — sits above sheets (popovers) per modal-stack-choreography (041).
 function RenderSuccessOverlay({
   resultUrl,
   onRenderAgain,
@@ -1173,7 +1176,7 @@ function RenderSuccessOverlay({
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: 20,
+        zIndex: Z.takeover,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -1269,6 +1272,7 @@ function RenderSuccessOverlay({
 // ─── §4 Inline failure panel ──────────────────────────────────────────────────
 // Low-chroma danger (tint + thin border). Never action-green. Never saturated alarm.
 // Reintentar = green (the one green on this surface).
+// Z.takeover (30) — sits above sheets (popovers) per modal-stack-choreography (041).
 function RenderFailureOverlay({
   causeLine: causeLineText,
   onRetry,
@@ -1281,7 +1285,7 @@ function RenderFailureOverlay({
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: 20,
+        zIndex: Z.takeover,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

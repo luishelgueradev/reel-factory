@@ -186,6 +186,16 @@ services:
       # Leave blank to disable auth (local-only use).
       - STUDIO_BASIC_AUTH_USER=${STUDIO_BASIC_AUTH_USER:-}
       - STUDIO_BASIC_AUTH_PASSWORD=${STUDIO_BASIC_AUTH_PASSWORD:-}
+      # Phase 25: AI social metadata via local-llms router (D-03, D-04, AI-SPEC §3)
+      # METADATA_API_KEY = your local-llms ROUTER_BEARER_TOKEN (leave blank → 503 until set)
+      # METADATA_MODEL options: big-cloud (gpt-oss:120b, cloud) | chat-local (qwen, local/private)
+      - METADATA_API_URL=${METADATA_API_URL:-http://host.docker.internal:3210}
+      - METADATA_API_KEY=${METADATA_API_KEY:-}
+      - METADATA_MODEL=${METADATA_MODEL:-big-cloud}
+    extra_hosts:
+      # Reach the local-llms router published on the host (D-04, same pattern as whisper sidecar).
+      # Required on Linux/WSL2 bridge networks; harmless on Docker Desktop.
+      - "host.docker.internal:host-gateway"
     healthcheck:
       # The studio image ships node but NOT curl. Use a node fetch one-liner;
       # loopback requests bypass Basic Auth (server.ts isLoopback), so this

@@ -23,6 +23,13 @@ import {
   ProfileConflictError,
   ProfileValidationError,
 } from "./profiles.js";
+import {
+  generateMetadata,
+  PLATFORMS,
+  TONES,
+  EmptyTranscriptError,
+  MetadataValidationError,
+} from "./metadata.js";
 
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
@@ -57,6 +64,117 @@ function getProfilesDir(): string {
 // also call mkdir recursively on first write, providing belt-and-suspenders.
 if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
   fs.mkdirSync(getProfilesDir(), { recursive: true });
+}
+
+// ─── Metadata API — lazy getters (Phase 25, D-03, D-04, AI-SPEC §3) ────────────
+// Read lazily so tests can set process.env.* after module load (module-caching lesson).
+
+function getMetadataApiUrl(): string {
+  return process.env.METADATA_API_URL || "http://host.docker.internal:3210";
+}
+
+function getMetadataApiKey(): string {
+  return process.env.METADATA_API_KEY || "";
+}
+
+function getMetadataModel(): string {
+  return process.env.METADATA_MODEL || "big-cloud";
+}
+
+// PIPELINE_DATA_DIR holds {jobId}/... — used to read transcript.json + write metadata.json.
+// Override via PIPELINE_DATA_DIR env so tests can use a temp dir (module-caching lesson).
+// Production default: dirname(ACTIVE_PIPELINE_CONFIG_PATH) = /data/pipeline.
+function getPipelineDataDir(): string {
+  if (process.env.PIPELINE_DATA_DIR) return process.env.PIPELINE_DATA_DIR;
+  return path.dirname(getActivePipelineConfigPath());
+}
+
+// ─── Typed router errors ───────────────────────────────────────────────────────
+
+class RouterNotConfiguredError extends Error {
+  constructor() {
+    super("router no configurado: METADATA_API_KEY no está configurado");
+    this.name = "RouterNotConfiguredError";
+  }
+}
+
+class RouterError extends Error {
+  readonly status: number;
+  constructor(status: number, body: string) {
+    super(`Router devolvió HTTP ${status}: ${body.slice(0, 200)}`);
+    this.name = "RouterError";
+    this.status = status;
+  }
+}
+
+// ─── Real ChatClient — calls the local-llms router (AI-SPEC §3) ────────────────
+// POST ${url}/v1/chat/completions, Bearer key, json_object mode, ~90s timeout.
+// Logs X-Model-Backend + X-Cost-Cents for observability (AI-SPEC §7).
+// Throws RouterNotConfiguredError if key is empty (→ 503 at the route level).
+
+async function routerChatClient({
+  system,
+  user,
+}: {
+  system: string;
+  user: string;
+}): Promise<string> {
+  const key = getMetadataApiKey();
+  if (!key) throw new RouterNotConfiguredError();
+
+  const url = getMetadataApiUrl();
+  const model = getMetadataModel();
+
+  const response = await fetch(`${url}/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 500,
+    }),
+    signal: AbortSignal.timeout(90_000),
+  });
+
+  // Log observability headers (AI-SPEC §7)
+  const backend = response.headers.get("x-model-backend") ?? "unknown";
+  const cost = response.headers.get("x-cost-cents") ?? "unknown";
+  console.log(`[metadata] router backend=${backend} cost_cents=${cost} status=${response.status}`);
+
+  if (!response.ok) {
+    let body = "";
+    try { body = await response.text(); } catch { /* ignore */ }
+    throw new RouterError(response.status, body);
+  }
+
+  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+  return data?.choices?.[0]?.message?.content ?? "";
+}
+
+// ─── Atomic write for job data (metadata.json) ────────────────────────────────
+// Mirrors atomicWriteConfig but operates on arbitrary job-dir files.
+
+function atomicWriteJobFile(filePath: string, data: unknown): void {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+    fs.renameSync(tmpPath, filePath);
+  } catch (writeErr) {
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    throw writeErr;
+  }
 }
 
 const app = express();
@@ -510,6 +628,133 @@ app.delete("/api/profiles/:slug", async (req, res) => {
   }
 });
 
+// ─── POST /api/metadata — Generate social metadata via router (Phase 25, D-01) ─
+// Body: { jobId, platform, tone }
+// Reads {jobId}/whisper/transcript.json, calls routerChatClient, validates,
+// persists to {jobId}/metadata.json (atomic), returns { title, description,
+// hashtags, _meta: { backend, model } }.
+// All error paths return JSON; never throws uncaught.
+
+app.post("/api/metadata", async (req, res) => {
+  const { jobId, platform, tone } = req.body as {
+    jobId?: unknown;
+    platform?: unknown;
+    tone?: unknown;
+  };
+
+  // Validate jobId
+  if (typeof jobId !== "string" || !JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "jobId inválido — se requiere UUID v4" });
+  }
+
+  // Validate platform
+  if (typeof platform !== "string" || !Object.prototype.hasOwnProperty.call(PLATFORMS, platform)) {
+    return res.status(400).json({
+      error: `platform inválido — valores permitidos: ${Object.keys(PLATFORMS).join(", ")}`,
+    });
+  }
+
+  // Validate tone
+  if (typeof tone !== "string" || !Object.prototype.hasOwnProperty.call(TONES, tone)) {
+    return res.status(400).json({
+      error: `tone inválido — valores permitidos: ${Object.keys(TONES).join(", ")}`,
+    });
+  }
+
+  const transcriptPath = path.join(
+    getPipelineDataDir(),
+    jobId,
+    "whisper",
+    "transcript.json"
+  );
+
+  // Read transcript
+  let transcript: unknown;
+  try {
+    if (!fs.existsSync(transcriptPath)) {
+      return res.status(404).json({
+        error: `Transcript no encontrado para jobId ${jobId}`,
+        path: transcriptPath,
+      });
+    }
+    const raw = fs.readFileSync(transcriptPath, "utf-8");
+    transcript = JSON.parse(raw);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[metadata] Error reading transcript:", message);
+    return res.status(500).json({ error: "Error leyendo el transcript", message });
+  }
+
+  // Generate metadata via router
+  try {
+    const metadata = await generateMetadata({
+      transcript,
+      platform: platform as keyof typeof PLATFORMS,
+      tone: tone as keyof typeof TONES,
+      client: routerChatClient,
+    });
+
+    // Persist atomically (D-05)
+    const metadataPath = path.join(getPipelineDataDir(), jobId, "metadata.json");
+    atomicWriteJobFile(metadataPath, metadata);
+
+    const model = getMetadataModel();
+    console.log(`[metadata] Generated for jobId=${jobId} platform=${platform} tone=${tone} model=${model}`);
+
+    return res.status(200).json({
+      ...metadata,
+      _meta: { model },
+    });
+  } catch (err) {
+    if (err instanceof RouterNotConfiguredError) {
+      return res.status(503).json({ error: "router no configurado", message: err.message });
+    }
+    if (err instanceof RouterError) {
+      return res.status(502).json({ error: "Router devolvió un error", message: err.message });
+    }
+    if (err instanceof EmptyTranscriptError) {
+      return res.status(422).json({ error: err.message });
+    }
+    if (err instanceof MetadataValidationError) {
+      return res.status(502).json({ error: "No se pudo validar la metadata", detail: err.message });
+    }
+    // Timeout from AbortSignal
+    if (err instanceof Error && err.name === "TimeoutError") {
+      return res.status(502).json({ error: "Timeout al llamar al router (90s)" });
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[metadata] Unexpected error generating metadata:", message);
+    return res.status(500).json({ error: "Error inesperado generando metadata", message });
+  }
+});
+
+// ─── GET /api/metadata/:jobId — Re-serve persisted metadata.json (D-05) ────────
+// Returns 200 with persisted metadata, or 404 if not yet generated.
+
+app.get("/api/metadata/:jobId", (req, res) => {
+  const { jobId } = req.params;
+
+  if (!JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "jobId inválido — se requiere UUID v4" });
+  }
+
+  const metadataPath = path.join(getPipelineDataDir(), jobId, "metadata.json");
+
+  if (!fs.existsSync(metadataPath)) {
+    return res.status(404).json({ error: `No hay metadata generada para jobId ${jobId}` });
+  }
+
+  try {
+    const raw = fs.readFileSync(metadataPath, "utf-8");
+    const data = JSON.parse(raw) as unknown;
+    return res.status(200).json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[metadata] Error reading metadata.json:", message);
+    return res.status(500).json({ error: "Error leyendo metadata", message });
+  }
+});
+
 // ─── Serve static files from public/ (D-06: sample video) ────────────────────
 // Per D-06: Sample video bundled in public/ directory for the preview page.
 // Also used by Remotion Player for staticFile('/sample-video.mp4').
@@ -648,6 +893,8 @@ if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
     console.log(`  PUT  /api/profiles/:slug/apply  — Apply profile`);
     console.log(`  PATCH /api/profiles/:slug  — Rename profile`);
     console.log(`  DELETE /api/profiles/:slug  — Delete profile`);
+    console.log(`  POST /api/metadata  — Generate social metadata`);
+    console.log(`  GET  /api/metadata/:jobId  — Re-serve persisted metadata`);
     console.log(`  GET  /editor      — Config Editor SPA`);
     console.log(`  GET  /preview     — Subtitle Preview SPA`);
     console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);

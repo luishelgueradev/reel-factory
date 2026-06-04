@@ -163,6 +163,10 @@ services:
   # Both remotion-renderer and remotion-studio read pipeline-config.json from shared volume (D-19).
   remotion-studio:
     <<: *pipeline-common
+    # Durable across host/WSL restarts: the daemon brings the Studio back with
+    # redis + api-server (which already carry unless-stopped). depends_on only
+    # orders `compose up`; on a daemon restart the policy is what re-launches it.
+    restart: unless-stopped
     build:
       context: ./services/remotion-studio
       additional_contexts:

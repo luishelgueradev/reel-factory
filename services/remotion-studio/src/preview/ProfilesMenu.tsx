@@ -17,6 +17,7 @@ import React, {
   useCallback,
 } from "react";
 import type { PipelineConfig } from "../pipeline-config.js";
+import { Z } from "./z-layers.js";
 
 // ─── Types (mirror server-side ProfileSummary / ProfileFile) ─────────────────
 
@@ -363,7 +364,7 @@ export function ProfilesMenu({
             position: "absolute",
             top: "calc(100% + 6px)",
             right: 0,
-            zIndex: 20, // sheet layer per modal-stack-choreography
+            zIndex: Z.sheet, // sheet layer per modal-stack-choreography (041)
             width: 320,
             background: "var(--chrome, #16213e)",
             border: "1px solid var(--border-strong, #444)",

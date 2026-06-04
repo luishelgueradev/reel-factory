@@ -59,7 +59,7 @@ Convert the Studio from a style editor into an end-to-end usable product: one cl
 
 - [x] **Phase 24: Named config profiles** - Save the current config as a named profile, load/list/rename/delete saved profiles, persisted with the same Docker-rebuild guarantee as the active config (Phase 17). Requirements: PROFILE-01, PROFILE-02, PROFILE-03, PROFILE-04. **(UI hint: yes)** (completed 2026-06-04)
 
-- [ ] **Phase 25: AI social metadata** - Generate title/description/hashtags from the Whisper transcript via Claude API; fill the "Metadata de redes" panel that Phase 22 left as a placeholder; edit/copy/regenerate by tone or platform. Run through `/gsd-ai-integration-phase` (produces AI-SPEC.md) before planning. Requirements: META-01, META-02, META-03, META-04. **(UI hint: yes; AI hint: yes — AI-SPEC required before planning)**
+- [x] **Phase 25: AI social metadata** - Generate title/description/hashtags from the Whisper transcript via Claude API; fill the "Metadata de redes" panel that Phase 22 left as a placeholder; edit/copy/regenerate by tone or platform. Run through `/gsd-ai-integration-phase` (produces AI-SPEC.md) before planning. Requirements: META-01, META-02, META-03, META-04. **(UI hint: yes; AI hint: yes — AI-SPEC required before planning)** (completed 2026-06-04)
 
 - [ ] **Phase 26: UI convergence (impeccable)** - Holistic visual maturity pass over the whole Studio toward the chosen north-star (sketches 037/044-north-star-v4/v5, 033-nav-shell-v4 + the ~47-experiment sketch corpus in `.planning/sketches/`), integrating all new surfaces from Phases 23-25 to the same quality bar. Runs last, polishes surfaces that exist. Requirements: UICONV-01, UICONV-02. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable; sketch-first)**
 
@@ -663,5 +663,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 22. Studio UI polish | 6/6 | Complete | 2026-06-03 |
 | 23. Render execution + progress | 5/5 | Complete    | 2026-06-04 |
 | 24. Named config profiles | 3/3 | Complete    | 2026-06-04 |
-| 25. AI social metadata | 2/3 | In Progress|  |
+| 25. AI social metadata | 3/3 | Complete   | 2026-06-04 |
 | 26. UI convergence (impeccable) | 0/TBD | Not started | - |

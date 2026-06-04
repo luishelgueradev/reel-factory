@@ -30,21 +30,34 @@ const INPUT_PATH = process.env.INPUT_PATH || "";
 // Upstream api-server URL — configurable for tests. In production, api-server is
 // reachable at http://api-server:3000 on pipeline-net (D-03).
 const API_SERVER_URL = process.env.API_SERVER_URL || "http://api-server:3000";
-// D-04: Single source of truth for the write destination — read once at module load.
+// D-04: Single source of truth for the write destination.
 // resolveConfigPath() is still used for GET reads (job-scoped preview); writes go here only.
-const ACTIVE_PIPELINE_CONFIG_PATH =
-  process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
+// Read lazily (via function) so tests that set process.env.ACTIVE_PIPELINE_CONFIG_PATH
+// after module load (module cached across test files) still get the overridden path.
+function getActivePipelineConfigPath(): string {
+  return process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
+}
 
-// D-01, D-08: Profiles stored under dirname(ACTIVE_PIPELINE_CONFIG_PATH)/profiles/.
+// D-01, D-08: Profiles stored under dirname(getActivePipelineConfigPath())/profiles/.
 // PROFILES_DIR is env-overridable so tests can redirect to a temp dir without
 // touching the real ./pipeline directory.
-const PROFILES_DIR =
-  process.env.PROFILES_DIR ||
-  path.join(path.dirname(ACTIVE_PIPELINE_CONFIG_PATH), "profiles");
+// Read lazily (via function) so tests can set process.env.PROFILES_DIR
+// after module load (e.g. when the module is cached across test files).
+function getProfilesDir(): string {
+  return (
+    process.env.PROFILES_DIR ||
+    path.join(path.dirname(getActivePipelineConfigPath()), "profiles")
+  );
+}
 
 // D-08: Ensure the profiles directory exists at startup (idempotent mkdir -p).
-// Safe to run under NODE_ENV=test — it creates a temp dir that tests override.
-fs.mkdirSync(PROFILES_DIR, { recursive: true });
+// Guarded under NODE_ENV=test / VITEST so tests can point PROFILES_DIR at a
+// temp dir before importing the module without triggering a permission error on
+// the default /data/pipeline/profiles path. The route handlers (saveProfile)
+// also call mkdir recursively on first write, providing belt-and-suspenders.
+if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
+  fs.mkdirSync(getProfilesDir(), { recursive: true });
+}
 
 const app = express();
 
@@ -192,14 +205,14 @@ app.put("/api/config", (req, res) => {
     // renders title text safely — no HTML sanitization needed here.
     const { _meta, ...configToWrite } = body as PipelineConfig & { _meta?: unknown };
 
-    // D-04: Write ONLY to ACTIVE_PIPELINE_CONFIG_PATH (single source of truth).
+    // D-04: Write ONLY to getActivePipelineConfigPath() (single source of truth).
     // resolveConfigPath() is NOT called here — it is used only by GET for job-scoped reads.
     atomicWriteConfig(configToWrite);
-    console.log("[studio] Config written to:", ACTIVE_PIPELINE_CONFIG_PATH);
+    console.log("[studio] Config written to:", getActivePipelineConfigPath());
 
     return res.json({
       ...configToWrite,
-      _meta: { source: "file", valid: true, path: ACTIVE_PIPELINE_CONFIG_PATH },
+      _meta: { source: "file", valid: true, path: getActivePipelineConfigPath() },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error writing config";
@@ -321,13 +334,13 @@ app.get("/api/result/:jobId", async (req, res) => {
 
 // ─── Profiles CRUD + apply routes (Phase 24, D-05, D-06) ─────────────────────
 // All 6 routes are registered BEFORE the serveSpa catch-all (T-18-03-01).
-// PROFILES_DIR is resolved at module load from ACTIVE_PIPELINE_CONFIG_PATH dirname
-// (D-01) and is env-overridable for tests (D-08).
+// getProfilesDir() is called per-request so PROFILES_DIR env override set in
+// test files takes effect even when server.ts is already module-cached (D-08).
 
 // GET /api/profiles — List profiles (PROFILE-03 list)
 app.get("/api/profiles", async (_req, res) => {
   try {
-    const profiles = await listProfiles(PROFILES_DIR);
+    const profiles = await listProfiles(getProfilesDir());
     return res.json({ profiles });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -358,7 +371,7 @@ app.post("/api/profiles", async (req, res) => {
   }
 
   try {
-    const profile = await saveProfile(PROFILES_DIR, name, config as PipelineConfig);
+    const profile = await saveProfile(getProfilesDir(), name, config as PipelineConfig);
     return res.status(201).json(profile);
   } catch (err) {
     if (err instanceof ProfileValidationError) {
@@ -379,7 +392,7 @@ app.get("/api/profiles/:slug", async (req, res) => {
   }
 
   try {
-    const profile = await readProfile(PROFILES_DIR, slug);
+    const profile = await readProfile(getProfilesDir(), slug);
     if (!profile) {
       return res.status(404).json({ error: `Profile "${slug}" not found` });
     }
@@ -403,7 +416,7 @@ app.put("/api/profiles/:slug/apply", async (req, res) => {
   }
 
   try {
-    const profile = await readProfile(PROFILES_DIR, slug);
+    const profile = await readProfile(getProfilesDir(), slug);
     if (!profile) {
       return res.status(404).json({ error: `Profile "${slug}" not found` });
     }
@@ -417,16 +430,16 @@ app.put("/api/profiles/:slug/apply", async (req, res) => {
       });
     }
 
-    // D-05: Atomically write the profile's config to ACTIVE_PIPELINE_CONFIG_PATH
+    // D-05: Atomically write the profile's config to getActivePipelineConfigPath()
     atomicWriteConfig(profile.config);
-    console.log(`[studio] Profile "${slug}" applied to:`, ACTIVE_PIPELINE_CONFIG_PATH);
+    console.log(`[studio] Profile "${slug}" applied to:`, getActivePipelineConfigPath());
 
     return res.json({
       ...profile.config,
       _meta: {
         source: "profile",
         slug,
-        path: ACTIVE_PIPELINE_CONFIG_PATH,
+        path: getActivePipelineConfigPath(),
       },
     });
   } catch (err) {
@@ -453,7 +466,7 @@ app.patch("/api/profiles/:slug", async (req, res) => {
   }
 
   try {
-    const updated = await renameProfile(PROFILES_DIR, slug, name);
+    const updated = await renameProfile(getProfilesDir(), slug, name);
     return res.json(updated);
   } catch (err) {
     if (err instanceof ProfileConflictError) {
@@ -482,7 +495,7 @@ app.delete("/api/profiles/:slug", async (req, res) => {
   }
 
   try {
-    const existed = await removeProfile(PROFILES_DIR, slug);
+    const existed = await removeProfile(getProfilesDir(), slug);
     if (!existed) {
       return res.status(404).json({ error: `Profile "${slug}" not found` });
     }
@@ -556,20 +569,20 @@ function resolveConfigPath(): string {
     return path.join(inputDir, "pipeline-config.json");
   }
 
-  // Local dev: read from ACTIVE_PIPELINE_CONFIG_PATH so GET and PUT stay in sync.
-  // Fall back to local file only when ACTIVE_PIPELINE_CONFIG_PATH is also unset.
-  if (ACTIVE_PIPELINE_CONFIG_PATH) {
-    return ACTIVE_PIPELINE_CONFIG_PATH;
+  // Local dev: read from getActivePipelineConfigPath() so GET and PUT stay in sync.
+  // Fall back to local file only when getActivePipelineConfigPath() is also unset.
+  if (getActivePipelineConfigPath()) {
+    return getActivePipelineConfigPath();
   }
   return path.join(process.cwd(), "pipeline-config.json");
 }
 
-// ─── Helper: Atomic write to ACTIVE_PIPELINE_CONFIG_PATH (CR-02, D-04) ─────
+// ─── Helper: Atomic write to getActivePipelineConfigPath() (CR-02, D-04) ─────
 // Shared by PUT /api/config and PUT /api/profiles/:slug/apply.
 // Writes to a temp file then renames so a crash mid-write never corrupts the config.
 
 function atomicWriteConfig(config: PipelineConfig): void {
-  const activeDir = path.dirname(ACTIVE_PIPELINE_CONFIG_PATH);
+  const activeDir = path.dirname(getActivePipelineConfigPath());
   if (!fs.existsSync(activeDir)) {
     fs.mkdirSync(activeDir, { recursive: true });
   }
@@ -579,7 +592,7 @@ function atomicWriteConfig(config: PipelineConfig): void {
   );
   try {
     fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), "utf-8");
-    fs.renameSync(tmpPath, ACTIVE_PIPELINE_CONFIG_PATH);
+    fs.renameSync(tmpPath, getActivePipelineConfigPath());
   } catch (writeErr) {
     try { fs.unlinkSync(tmpPath); } catch { /* ignore cleanup error */ }
     throw writeErr;
@@ -611,7 +624,7 @@ if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
     console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);
     console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
     console.log(`  Config file: ${resolveConfigPath()}`);
-    console.log(`  Profiles dir: ${PROFILES_DIR}`);
+    console.log(`  Profiles dir: ${getProfilesDir()}`);
   });
 }
 

@@ -1,0 +1,291 @@
+// @vitest-environment node
+// profiles-api.test.ts — supertest integration tests for the profiles CRUD + apply routes
+//
+// Env setup MUST happen before importing the studio app because PROFILES_DIR and
+// ACTIVE_PIPELINE_CONFIG_PATH are resolved at module load time. We use a fresh
+// temp directory for each test run so tests NEVER touch ./pipeline (PROFILE-04).
+
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import request from "supertest";
+import fs from "fs";
+import os from "os";
+import path from "path";
+
+// ─── Set up isolated temp directories BEFORE importing the app ──────────────
+
+const TEST_PIPELINE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "profiles-api-test-"));
+const TEST_PROFILES_DIR = path.join(TEST_PIPELINE_DIR, "profiles");
+const TEST_ACTIVE_CONFIG = path.join(TEST_PIPELINE_DIR, "pipeline-config.json");
+
+// Point the module-level constants to our temp dirs BEFORE import
+process.env.NODE_ENV = "test";
+process.env.PROFILES_DIR = TEST_PROFILES_DIR;
+process.env.ACTIVE_PIPELINE_CONFIG_PATH = TEST_ACTIVE_CONFIG;
+// Disable basic auth for tests
+delete process.env.STUDIO_BASIC_AUTH_USER;
+delete process.env.STUDIO_BASIC_AUTH_PASSWORD;
+// Use an unreachable mock api-server so no real network calls happen
+process.env.API_SERVER_URL = "http://mock-api-server:3000";
+
+// ─── Import the studio app AFTER env/mock setup ──────────────────────────────
+import app from "./server.js";
+
+// ─── Minimal valid PipelineConfig fixture ─────────────────────────────────────
+
+const VALID_CONFIG = {
+  subtitle: { layout: "tiktok" as const },
+};
+
+const VALID_CONFIG_2 = {
+  subtitle: { layout: "sentence" as const, fontSize: 60 },
+};
+
+// ─── Cleanup ──────────────────────────────────────────────────────────────────
+
+afterAll(() => {
+  try {
+    fs.rmSync(TEST_PIPELINE_DIR, { recursive: true, force: true });
+  } catch {
+    // ignore cleanup errors
+  }
+});
+
+// ─── Helper: fresh profiles dir before each test ──────────────────────────────
+
+beforeAll(() => {
+  // Ensure profiles dir exists (server creates it at startup via mkdirSync)
+  fs.mkdirSync(TEST_PROFILES_DIR, { recursive: true });
+});
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe("Profiles API — CRUD + apply", () => {
+
+  // ─── POST /api/profiles ──────────────────────────────────────────────────────
+
+  describe("POST /api/profiles", () => {
+    it("returns 201 and ProfileFile when body is valid (PROFILE-01)", async () => {
+      const res = await request(app)
+        .post("/api/profiles")
+        .send({ name: "My Test Profile", config: VALID_CONFIG });
+
+      expect(res.status).toBe(201);
+      expect(res.body.slug).toBe("my-test-profile");
+      expect(res.body.name).toBe("My Test Profile");
+      expect(res.body.updatedAt).toBeDefined();
+      expect(res.body.config).toEqual(VALID_CONFIG);
+    });
+
+    it("returns 400 when config fails validatePipelineConfig", async () => {
+      const res = await request(app)
+        .post("/api/profiles")
+        .send({ name: "Bad Config", config: { subtitle: { layout: "invalid-mode" } } });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBeDefined();
+    });
+
+    it("returns 400 when name is missing", async () => {
+      const res = await request(app)
+        .post("/api/profiles")
+        .send({ config: VALID_CONFIG });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 when config is missing", async () => {
+      const res = await request(app)
+        .post("/api/profiles")
+        .send({ name: "No Config Profile" });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ─── GET /api/profiles ────────────────────────────────────────────────────────
+
+  describe("GET /api/profiles", () => {
+    it("lists saved profiles (PROFILE-01 + PROFILE-03 list)", async () => {
+      // Save a profile first
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "List Test Profile", config: VALID_CONFIG });
+
+      const res = await request(app).get("/api/profiles");
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.profiles)).toBe(true);
+      const slugs = (res.body.profiles as Array<{ slug: string }>).map((p) => p.slug);
+      expect(slugs).toContain("list-test-profile");
+    });
+  });
+
+  // ─── GET /api/profiles/:slug ─────────────────────────────────────────────────
+
+  describe("GET /api/profiles/:slug", () => {
+    it("returns verbatim ProfileFile for a known slug (PROFILE-02 read)", async () => {
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Read Test Profile", config: VALID_CONFIG });
+
+      const res = await request(app).get("/api/profiles/read-test-profile");
+
+      expect(res.status).toBe(200);
+      expect(res.body.slug).toBe("read-test-profile");
+      expect(res.body.config).toEqual(VALID_CONFIG);
+    });
+
+    it("returns 404 for an unknown slug", async () => {
+      const res = await request(app).get("/api/profiles/nonexistent-profile-xyz");
+
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 400 for path-traversal slug '../x' (path-traversal guard, D-03)", async () => {
+      const res = await request(app).get("/api/profiles/..%2Fx");
+
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 for slug with dots (e.g. 'a.json')", async () => {
+      const res = await request(app).get("/api/profiles/a.json");
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ─── PUT /api/profiles/:slug/apply ───────────────────────────────────────────
+
+  describe("PUT /api/profiles/:slug/apply", () => {
+    it("applies profile, writes to ACTIVE_PIPELINE_CONFIG_PATH, returns applied config (PROFILE-02 + D-05)", async () => {
+      // Save a profile with a known config
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Apply Test Profile", config: VALID_CONFIG_2 });
+
+      const res = await request(app).put("/api/profiles/apply-test-profile/apply");
+
+      expect(res.status).toBe(200);
+      expect(res.body._meta).toEqual(
+        expect.objectContaining({ source: "profile", slug: "apply-test-profile" })
+      );
+
+      // Verify the active config file on disk now equals the profile's config (PROFILE-02 + active-sync)
+      expect(fs.existsSync(TEST_ACTIVE_CONFIG)).toBe(true);
+      const written = JSON.parse(fs.readFileSync(TEST_ACTIVE_CONFIG, "utf-8"));
+      expect(written.subtitle.layout).toBe("sentence");
+      expect(written.subtitle.fontSize).toBe(60);
+    });
+
+    it("returns 404 for an unknown slug", async () => {
+      const res = await request(app).put("/api/profiles/nonexistent-profile-abc/apply");
+
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 400 for invalid slug on apply", async () => {
+      const res = await request(app).put("/api/profiles/..%2Fevil/apply");
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ─── PATCH /api/profiles/:slug ────────────────────────────────────────────────
+
+  describe("PATCH /api/profiles/:slug", () => {
+    it("renames profile: 200 + new slug in list, old slug gone (PROFILE-03 rename)", async () => {
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Rename Source Profile", config: VALID_CONFIG });
+
+      const res = await request(app)
+        .patch("/api/profiles/rename-source-profile")
+        .send({ name: "Renamed Target Profile" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.slug).toBe("renamed-target-profile");
+      expect(res.body.name).toBe("Renamed Target Profile");
+
+      // New slug should appear in list
+      const listRes = await request(app).get("/api/profiles");
+      const slugs = (listRes.body.profiles as Array<{ slug: string }>).map((p) => p.slug);
+      expect(slugs).toContain("renamed-target-profile");
+      expect(slugs).not.toContain("rename-source-profile");
+    });
+
+    it("returns 409 when renaming onto an existing slug (PROFILE-03 conflict)", async () => {
+      // Save two profiles
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Conflict Alpha", config: VALID_CONFIG });
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Conflict Beta", config: VALID_CONFIG });
+
+      // Try to rename Alpha to the same name as Beta → slug collision
+      const res = await request(app)
+        .patch("/api/profiles/conflict-alpha")
+        .send({ name: "Conflict Beta" });
+
+      expect(res.status).toBe(409);
+    });
+
+    it("returns 404 for renaming a nonexistent profile", async () => {
+      const res = await request(app)
+        .patch("/api/profiles/nonexistent-slug-zzz")
+        .send({ name: "New Name" });
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ─── DELETE /api/profiles/:slug ───────────────────────────────────────────────
+
+  describe("DELETE /api/profiles/:slug", () => {
+    it("deletes a profile; 200 then GET list no longer contains it (PROFILE-03 delete)", async () => {
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Delete Me Profile", config: VALID_CONFIG });
+
+      const deleteRes = await request(app).delete("/api/profiles/delete-me-profile");
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.deleted).toBe(true);
+
+      // Profile should no longer appear in list
+      const listRes = await request(app).get("/api/profiles");
+      const slugs = (listRes.body.profiles as Array<{ slug: string }>).map((p) => p.slug);
+      expect(slugs).not.toContain("delete-me-profile");
+    });
+
+    it("returns 404 when deleting a nonexistent profile (PROFILE-03)", async () => {
+      const res = await request(app).delete("/api/profiles/totally-missing-profile");
+
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 400 for invalid slug on delete", async () => {
+      const res = await request(app).delete("/api/profiles/..%2Fevil");
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ─── Persistence (PROFILE-04): profiles written under PROFILES_DIR ───────────
+
+  describe("Persistence (PROFILE-04)", () => {
+    it("profile file is written under PROFILES_DIR (the bind-mounted ./pipeline/profiles)", async () => {
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Persistence Test Profile", config: VALID_CONFIG });
+
+      // Assert the file exists on disk under TEST_PROFILES_DIR
+      const expectedPath = path.join(TEST_PROFILES_DIR, "persistence-test-profile.json");
+      expect(fs.existsSync(expectedPath)).toBe(true);
+
+      // Verify it contains the correct data
+      const content = JSON.parse(fs.readFileSync(expectedPath, "utf-8"));
+      expect(content.slug).toBe("persistence-test-profile");
+      expect(content.config).toEqual(VALID_CONFIG);
+    });
+  });
+});

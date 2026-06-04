@@ -13,6 +13,16 @@ import crypto from "crypto";
 import { Readable } from "node:stream";
 import { validatePipelineConfig } from "./pipeline-config.js";
 import type { PipelineConfig } from "./pipeline-config.js";
+import {
+  listProfiles,
+  readProfile,
+  saveProfile,
+  renameProfile,
+  removeProfile,
+  isValidSlug,
+  ProfileConflictError,
+  ProfileValidationError,
+} from "./profiles.js";
 
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
@@ -20,10 +30,34 @@ const INPUT_PATH = process.env.INPUT_PATH || "";
 // Upstream api-server URL — configurable for tests. In production, api-server is
 // reachable at http://api-server:3000 on pipeline-net (D-03).
 const API_SERVER_URL = process.env.API_SERVER_URL || "http://api-server:3000";
-// D-04: Single source of truth for the write destination — read once at module load.
+// D-04: Single source of truth for the write destination.
 // resolveConfigPath() is still used for GET reads (job-scoped preview); writes go here only.
-const ACTIVE_PIPELINE_CONFIG_PATH =
-  process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
+// Read lazily (via function) so tests that set process.env.ACTIVE_PIPELINE_CONFIG_PATH
+// after module load (module cached across test files) still get the overridden path.
+function getActivePipelineConfigPath(): string {
+  return process.env.ACTIVE_PIPELINE_CONFIG_PATH || "/data/pipeline/pipeline-config.json";
+}
+
+// D-01, D-08: Profiles stored under dirname(getActivePipelineConfigPath())/profiles/.
+// PROFILES_DIR is env-overridable so tests can redirect to a temp dir without
+// touching the real ./pipeline directory.
+// Read lazily (via function) so tests can set process.env.PROFILES_DIR
+// after module load (e.g. when the module is cached across test files).
+function getProfilesDir(): string {
+  return (
+    process.env.PROFILES_DIR ||
+    path.join(path.dirname(getActivePipelineConfigPath()), "profiles")
+  );
+}
+
+// D-08: Ensure the profiles directory exists at startup (idempotent mkdir -p).
+// Guarded under NODE_ENV=test / VITEST so tests can point PROFILES_DIR at a
+// temp dir before importing the module without triggering a permission error on
+// the default /data/pipeline/profiles path. The route handlers (saveProfile)
+// also call mkdir recursively on first write, providing belt-and-suspenders.
+if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
+  fs.mkdirSync(getProfilesDir(), { recursive: true });
+}
 
 const app = express();
 
@@ -171,30 +205,14 @@ app.put("/api/config", (req, res) => {
     // renders title text safely — no HTML sanitization needed here.
     const { _meta, ...configToWrite } = body as PipelineConfig & { _meta?: unknown };
 
-    // D-04: Write ONLY to ACTIVE_PIPELINE_CONFIG_PATH (single source of truth).
+    // D-04: Write ONLY to getActivePipelineConfigPath() (single source of truth).
     // resolveConfigPath() is NOT called here — it is used only by GET for job-scoped reads.
-    const activeDir = path.dirname(ACTIVE_PIPELINE_CONFIG_PATH);
-    if (!fs.existsSync(activeDir)) {
-      fs.mkdirSync(activeDir, { recursive: true });
-    }
-    // CR-02: Atomic write — write to temp file then rename so a process kill
-    // mid-write never leaves a truncated/corrupt pipeline-config.json.
-    const tmpPath = path.join(
-      activeDir,
-      `.pipeline-config.${process.pid}.${Date.now()}.tmp.json`
-    );
-    try {
-      fs.writeFileSync(tmpPath, JSON.stringify(configToWrite, null, 2), "utf-8");
-      fs.renameSync(tmpPath, ACTIVE_PIPELINE_CONFIG_PATH);
-    } catch (writeErr) {
-      try { fs.unlinkSync(tmpPath); } catch { /* ignore cleanup error */ }
-      throw writeErr;
-    }
-    console.log("[studio] Config written to:", ACTIVE_PIPELINE_CONFIG_PATH);
+    atomicWriteConfig(configToWrite);
+    console.log("[studio] Config written to:", getActivePipelineConfigPath());
 
     return res.json({
       ...configToWrite,
-      _meta: { source: "file", valid: true, path: ACTIVE_PIPELINE_CONFIG_PATH },
+      _meta: { source: "file", valid: true, path: getActivePipelineConfigPath() },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error writing config";
@@ -314,6 +332,184 @@ app.get("/api/result/:jobId", async (req, res) => {
   }
 });
 
+// ─── Profiles CRUD + apply routes (Phase 24, D-05, D-06) ─────────────────────
+// All 6 routes are registered BEFORE the serveSpa catch-all (T-18-03-01).
+// getProfilesDir() is called per-request so PROFILES_DIR env override set in
+// test files takes effect even when server.ts is already module-cached (D-08).
+
+// GET /api/profiles — List profiles (PROFILE-03 list)
+app.get("/api/profiles", async (_req, res) => {
+  try {
+    const profiles = await listProfiles(getProfilesDir());
+    return res.json({ profiles });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[studio] Error listing profiles:", message);
+    return res.status(500).json({ error: "Failed to list profiles", message });
+  }
+});
+
+// POST /api/profiles — Save a new profile (PROFILE-01)
+app.post("/api/profiles", async (req, res) => {
+  const { name, config } = req.body as { name?: unknown; config?: unknown };
+
+  if (typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "name is required and must be a non-empty string" });
+  }
+
+  if (!config || typeof config !== "object") {
+    return res.status(400).json({ error: "config is required and must be an object" });
+  }
+
+  // Validate PipelineConfig before saving
+  const configValidation = validatePipelineConfig(config);
+  if (!configValidation.valid) {
+    return res.status(400).json({
+      error: "Invalid config",
+      errors: configValidation.errors,
+    });
+  }
+
+  try {
+    const profile = await saveProfile(getProfilesDir(), name, config as PipelineConfig);
+    return res.status(201).json(profile);
+  } catch (err) {
+    if (err instanceof ProfileValidationError) {
+      return res.status(400).json({ error: err.message });
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[studio] Error saving profile:", message);
+    return res.status(500).json({ error: "Failed to save profile", message });
+  }
+});
+
+// GET /api/profiles/:slug — Read a single profile (PROFILE-02 read)
+app.get("/api/profiles/:slug", async (req, res) => {
+  const { slug } = req.params;
+
+  if (!isValidSlug(slug)) {
+    return res.status(400).json({ error: `Invalid slug "${slug}"` });
+  }
+
+  try {
+    const profile = await readProfile(getProfilesDir(), slug);
+    if (!profile) {
+      return res.status(404).json({ error: `Profile "${slug}" not found` });
+    }
+    return res.json(profile);
+  } catch (err) {
+    if (err instanceof ProfileValidationError) {
+      return res.status(400).json({ error: err.message });
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[studio] Error reading profile:", message);
+    return res.status(500).json({ error: "Failed to read profile", message });
+  }
+});
+
+// PUT /api/profiles/:slug/apply — Apply profile → atomically update active config (PROFILE-02, D-05)
+app.put("/api/profiles/:slug/apply", async (req, res) => {
+  const { slug } = req.params;
+
+  if (!isValidSlug(slug)) {
+    return res.status(400).json({ error: `Invalid slug "${slug}"` });
+  }
+
+  try {
+    const profile = await readProfile(getProfilesDir(), slug);
+    if (!profile) {
+      return res.status(404).json({ error: `Profile "${slug}" not found` });
+    }
+
+    // D-07: Validate the stored config before applying (422 if malformed/hand-edited profile)
+    const configValidation = validatePipelineConfig(profile.config);
+    if (!configValidation.valid) {
+      return res.status(422).json({
+        error: "Profile config is invalid and cannot be applied",
+        errors: configValidation.errors,
+      });
+    }
+
+    // D-05: Atomically write the profile's config to getActivePipelineConfigPath()
+    atomicWriteConfig(profile.config);
+    console.log(`[studio] Profile "${slug}" applied to:`, getActivePipelineConfigPath());
+
+    return res.json({
+      ...profile.config,
+      _meta: {
+        source: "profile",
+        slug,
+        path: getActivePipelineConfigPath(),
+      },
+    });
+  } catch (err) {
+    if (err instanceof ProfileValidationError) {
+      return res.status(400).json({ error: err.message });
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[studio] Error applying profile:", message);
+    return res.status(500).json({ error: "Failed to apply profile", message });
+  }
+});
+
+// PATCH /api/profiles/:slug — Rename profile (PROFILE-03 rename)
+app.patch("/api/profiles/:slug", async (req, res) => {
+  const { slug } = req.params;
+  const { name } = req.body as { name?: unknown };
+
+  if (!isValidSlug(slug)) {
+    return res.status(400).json({ error: `Invalid slug "${slug}"` });
+  }
+
+  if (typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ error: "name is required and must be a non-empty string" });
+  }
+
+  try {
+    const updated = await renameProfile(getProfilesDir(), slug, name);
+    return res.json(updated);
+  } catch (err) {
+    if (err instanceof ProfileConflictError) {
+      return res.status(409).json({ error: err.message });
+    }
+    if (err instanceof ProfileValidationError) {
+      // renameProfile throws ProfileValidationError if the profile doesn't exist
+      // or the new name is invalid. Distinguish 404 vs 400 by message content.
+      if (err.message.includes("does not exist")) {
+        return res.status(404).json({ error: err.message });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[studio] Error renaming profile:", message);
+    return res.status(500).json({ error: "Failed to rename profile", message });
+  }
+});
+
+// DELETE /api/profiles/:slug — Delete profile (PROFILE-03 delete)
+app.delete("/api/profiles/:slug", async (req, res) => {
+  const { slug } = req.params;
+
+  if (!isValidSlug(slug)) {
+    return res.status(400).json({ error: `Invalid slug "${slug}"` });
+  }
+
+  try {
+    const existed = await removeProfile(getProfilesDir(), slug);
+    if (!existed) {
+      return res.status(404).json({ error: `Profile "${slug}" not found` });
+    }
+    return res.json({ deleted: true });
+  } catch (err) {
+    if (err instanceof ProfileValidationError) {
+      return res.status(400).json({ error: err.message });
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[studio] Error deleting profile:", message);
+    return res.status(500).json({ error: "Failed to delete profile", message });
+  }
+});
+
 // ─── Serve static files from public/ (D-06: sample video) ────────────────────
 // Per D-06: Sample video bundled in public/ directory for the preview page.
 // Also used by Remotion Player for staticFile('/sample-video.mp4').
@@ -340,7 +536,7 @@ function serveSpa(_req: express.Request, res: express.Response) {
 // ─── Serve unified StudioApp SPA at / (18-03 D-02) ──────────────────────────
 // API routes (/api/*) are all registered above — they must appear before this
 // static middleware to prevent express.static from intercepting API calls.
-// T-18-03-01: API ordering verified at registration time (lines 96-203 above).
+// T-18-03-01: API ordering verified at registration time (routes above).
 
 app.use("/", express.static(EDITOR_DIST));      // serves /assets/... and any static file
 
@@ -373,12 +569,34 @@ function resolveConfigPath(): string {
     return path.join(inputDir, "pipeline-config.json");
   }
 
-  // Local dev: read from ACTIVE_PIPELINE_CONFIG_PATH so GET and PUT stay in sync.
-  // Fall back to local file only when ACTIVE_PIPELINE_CONFIG_PATH is also unset.
-  if (ACTIVE_PIPELINE_CONFIG_PATH) {
-    return ACTIVE_PIPELINE_CONFIG_PATH;
+  // Local dev: read from getActivePipelineConfigPath() so GET and PUT stay in sync.
+  // Fall back to local file only when getActivePipelineConfigPath() is also unset.
+  if (getActivePipelineConfigPath()) {
+    return getActivePipelineConfigPath();
   }
   return path.join(process.cwd(), "pipeline-config.json");
+}
+
+// ─── Helper: Atomic write to getActivePipelineConfigPath() (CR-02, D-04) ─────
+// Shared by PUT /api/config and PUT /api/profiles/:slug/apply.
+// Writes to a temp file then renames so a crash mid-write never corrupts the config.
+
+function atomicWriteConfig(config: PipelineConfig): void {
+  const activeDir = path.dirname(getActivePipelineConfigPath());
+  if (!fs.existsSync(activeDir)) {
+    fs.mkdirSync(activeDir, { recursive: true });
+  }
+  const tmpPath = path.join(
+    activeDir,
+    `.pipeline-config.${process.pid}.${Date.now()}.tmp.json`
+  );
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), "utf-8");
+    fs.renameSync(tmpPath, getActivePipelineConfigPath());
+  } catch (writeErr) {
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore cleanup error */ }
+    throw writeErr;
+  }
 }
 
 // ─── Start server ───────────────────────────────────────────────────────────
@@ -395,11 +613,18 @@ if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
     console.log(`  POST /api/render  — Render trigger`);
     console.log(`  GET  /api/status/:jobId  — Job status relay`);
     console.log(`  GET  /api/result/:jobId  — Finished MP4 proxy`);
+    console.log(`  GET  /api/profiles  — List profiles`);
+    console.log(`  POST /api/profiles  — Save profile`);
+    console.log(`  GET  /api/profiles/:slug  — Read profile`);
+    console.log(`  PUT  /api/profiles/:slug/apply  — Apply profile`);
+    console.log(`  PATCH /api/profiles/:slug  — Rename profile`);
+    console.log(`  DELETE /api/profiles/:slug  — Delete profile`);
     console.log(`  GET  /editor      — Config Editor SPA`);
     console.log(`  GET  /preview     — Subtitle Preview SPA`);
     console.log(`  PIPELINE_CONFIG_PATH: ${PIPELINE_CONFIG_PATH || "(not set, using local fallback)"}`);
     console.log(`  INPUT_PATH: ${INPUT_PATH || "(not set)"}`);
     console.log(`  Config file: ${resolveConfigPath()}`);
+    console.log(`  Profiles dir: ${getProfilesDir()}`);
   });
 }
 

@@ -10,6 +10,8 @@
 // Phase 22: PositionPresets (px mode) in Posición section; Capa (Detrás|Delante)
 //   layer control writing layer field (D-03); layer badges on overlay cards;
 //   Posición→Estilo→Avanzado always-open sections; aria-labels; blue selection.
+// Phase 26-03: rf-form-grid className hook added to X/Y input row for @media reflow
+//              (sketch 018-B: 2-col form rows collapse to 1-col at 380px)
 
 import React, { useRef, useState, useEffect } from "react";
 import type { PngOverlayConfig } from "../../pipeline-config.js";
@@ -396,8 +398,8 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
           <div style={{ marginBottom: "var(--s-8, 16px)" }}>
             <SectionHeader n={1} title="Posición" />
 
-            {/* X/Y number inputs */}
-            <div style={{ display: "flex", gap: "var(--s-8, 16px)", marginBottom: "var(--s-5, 10px)" }}>
+            {/* X/Y number inputs — rf-form-grid: collapses to 1-col at @media 380px (018-B) */}
+            <div className="rf-form-grid" style={{ display: "flex", gap: "var(--s-8, 16px)", marginBottom: "var(--s-5, 10px)" }}>
               <div style={{ flex: 1 }}>
                 <RowLabel>X (px)</RowLabel>
                 <input

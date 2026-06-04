@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: — Studio como producto usable
-status: executing
-last_updated: "2026-06-04T12:50:43.811Z"
+status: ready_to_plan
+last_updated: 2026-06-04T13:42:52.848Z
 last_activity: 2026-06-04 -- Phase 24 execution started
 progress:
   total_phases: 24
   completed_phases: 21
   total_plans: 84
-  completed_plans: 82
+  completed_plans: 92
   percent: 88
+stopped_at: Phase 24 complete (3/3) — ready to discuss Phase 25
 ---
 
 # Project State
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** Phase 24 — named-config-profiles
+**Current focus:** Phase 25 — ai social metadata
 
 ## Current Position
 
-Phase: 24 (named-config-profiles) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 24
-Last activity: 2026-06-04 -- Phase 24 execution started
+Phase: 25
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-06-04
 
 ### Milestone v1.4 Phase Summary
 

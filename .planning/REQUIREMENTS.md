@@ -19,10 +19,10 @@ Traceability (phase mapping) is filled by the roadmapper.
 
 ### Named Config Profiles (PROFILE)
 
-- [ ] **PROFILE-01**: User can save the current config as a named profile.
-- [ ] **PROFILE-02**: User can load a saved profile, restoring its config into the Studio.
-- [ ] **PROFILE-03**: User can list, rename, and delete saved profiles.
-- [ ] **PROFILE-04**: Saved profiles persist across Docker rebuilds (same guarantee as the active config).
+- [x] **PROFILE-01**: User can save the current config as a named profile.
+- [x] **PROFILE-02**: User can load a saved profile, restoring its config into the Studio.
+- [x] **PROFILE-03**: User can list, rename, and delete saved profiles.
+- [x] **PROFILE-04**: Saved profiles persist across Docker rebuilds (same guarantee as the active config).
 
 ### AI Social Metadata (META)
 
@@ -57,10 +57,10 @@ Traceability (phase mapping) is filled by the roadmapper.
 | RENDER-03 | Phase 23 | Complete |
 | RENDER-04 | Phase 23 | Complete |
 | RENDER-05 | Phase 23 | Complete |
-| PROFILE-01 | Phase 24 | Pending |
-| PROFILE-02 | Phase 24 | Pending |
-| PROFILE-03 | Phase 24 | Pending |
-| PROFILE-04 | Phase 24 | Pending |
+| PROFILE-01 | Phase 24 | Complete |
+| PROFILE-02 | Phase 24 | Complete |
+| PROFILE-03 | Phase 24 | Complete |
+| PROFILE-04 | Phase 24 | Complete |
 | META-01 | Phase 25 | Pending |
 | META-02 | Phase 25 | Pending |
 | META-03 | Phase 25 | Pending |

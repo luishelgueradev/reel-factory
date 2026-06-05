@@ -327,6 +327,34 @@ export function ProfilesMenu({
     [disabled, applyingSlug, onApplied]
   );
 
+  // ── Handle export ─────────────────────────────────────────────────────────
+  const handleExport = useCallback(async (slug: string) => {
+    try {
+      const res = await fetch(`/api/profiles/${encodeURIComponent(slug)}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = (body as { error?: string }).error || `Error ${res.status}`;
+        setRowError({ slug, msg });
+        return;
+      }
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setRowError({
+        slug,
+        msg: err instanceof Error ? err.message : "Error al exportar",
+      });
+    }
+  }, []);
+
   // ── Handle rename ─────────────────────────────────────────────────────────
   const commitRename = useCallback(
     async (slug: string) => {
@@ -682,6 +710,7 @@ export function ProfilesMenu({
                   rowError={rowError?.slug === profile.slug ? rowError.msg : null}
                   disabled={disabled}
                   onApply={() => handleApply(profile.slug)}
+                  onExport={() => handleExport(profile.slug)}
                   onRenameStart={() => {
                     setRenamingSlug(profile.slug);
                     setRenameValue(profile.name);
@@ -970,6 +999,7 @@ interface ProfileRowProps {
   rowError: string | null;
   disabled: boolean;
   onApply: () => void;
+  onExport: () => void;
   onRenameStart: () => void;
   onRenameChange: (v: string) => void;
   onRenameKey: (e: React.KeyboardEvent) => void;
@@ -991,6 +1021,7 @@ function ProfileRow({
   rowError,
   disabled,
   onApply,
+  onExport,
   onRenameStart,
   onRenameChange,
   onRenameKey,
@@ -1146,6 +1177,16 @@ function ProfileRow({
               hoverColor="var(--accent, #90caf9)"
             >
               ✎
+            </IconButton>
+            {/* Export (download) — --accent (blue), NOT --action (green) */}
+            <IconButton
+              title="Exportar"
+              onClick={onExport}
+              disabled={disabled}
+              color="var(--text-muted, #777)"
+              hoverColor="var(--accent, #90caf9)"
+            >
+              ⬇
             </IconButton>
             {/* Delete (trash) — --danger, low-chroma */}
             <IconButton

@@ -823,3 +823,147 @@ describe("ProfilesMenu disabled state", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
+
+// ─── Test: Export (PA2-EXPORT) ───────────────────────────────────────────────
+
+describe("ProfilesMenu export (PA2-EXPORT)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("clicking ⬇ fetches GET /api/profiles/:slug and triggers a Blob download", async () => {
+    const profileFile = {
+      slug: PROFILE_A.slug,
+      name: PROFILE_A.name,
+      updatedAt: PROFILE_A.updatedAt,
+      config: SAMPLE_CONFIG,
+    };
+
+    // Mock URL APIs
+    const createObjectURL = vi.fn().mockReturnValue("blob:fake-url");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+
+    // Track anchor creation and capture download attribute before removeChild
+    let capturedDownload: string | undefined;
+    const anchorClickSpy = vi.fn();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = origCreateElement(tag);
+      if (tag === "a") {
+        vi.spyOn(el, "click").mockImplementation(function (this: HTMLAnchorElement) {
+          capturedDownload = this.download;
+          anchorClickSpy();
+        });
+      }
+      return el;
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+        if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ profiles: [PROFILE_A] }),
+          });
+        }
+        if (typeof url === "string" && url.includes(`/api/profiles/${PROFILE_A.slug}`) && !url.includes("/apply")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => profileFile,
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      })
+    );
+
+    render(
+      <ProfilesMenu getCurrentConfig={() => SAMPLE_CONFIG} onApplied={vi.fn()} />
+    );
+
+    fireEvent.click(screen.getByTitle("Perfiles de configuración"));
+    await waitFor(() => screen.queryByText("Mi estilo TikTok"));
+
+    // Hover row to reveal action buttons
+    const row = document.querySelector(`[data-testid="profile-row-${PROFILE_A.slug}"]`);
+    expect(row).not.toBeNull();
+    fireEvent.mouseEnter(row!);
+
+    // Click export button
+    const exportBtn = screen.getByTitle("Exportar");
+    fireEvent.click(exportBtn);
+
+    // Assert Blob download triggered and anchor download attribute is "{slug}.json"
+    await waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(anchorClickSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(capturedDownload).toBe(`${PROFILE_A.slug}.json`);
+  });
+
+  it("shows rowError when GET /api/profiles/:slug fails on export", async () => {
+    vi.stubGlobal("URL", { createObjectURL: vi.fn(), revokeObjectURL: vi.fn() });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+        if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ profiles: [PROFILE_A] }),
+          });
+        }
+        if (typeof url === "string" && url.includes(`/api/profiles/${PROFILE_A.slug}`) && !url.includes("/apply")) {
+          return Promise.resolve({
+            ok: false,
+            json: async () => ({ error: "Perfil no encontrado" }),
+          });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      })
+    );
+
+    render(
+      <ProfilesMenu getCurrentConfig={() => SAMPLE_CONFIG} onApplied={vi.fn()} />
+    );
+
+    fireEvent.click(screen.getByTitle("Perfiles de configuración"));
+    await waitFor(() => screen.queryByText("Mi estilo TikTok"));
+
+    const row = document.querySelector(`[data-testid="profile-row-${PROFILE_A.slug}"]`);
+    fireEvent.mouseEnter(row!);
+
+    fireEvent.click(screen.getByTitle("Exportar"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Perfil no encontrado")).not.toBeNull();
+    });
+  });
+
+  it("export button does not use --action (green) token", async () => {
+    vi.stubGlobal("URL", { createObjectURL: vi.fn(), revokeObjectURL: vi.fn() });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ profiles: [PROFILE_A] }),
+      })
+    );
+
+    render(
+      <ProfilesMenu getCurrentConfig={() => SAMPLE_CONFIG} onApplied={vi.fn()} />
+    );
+
+    fireEvent.click(screen.getByTitle("Perfiles de configuración"));
+    await waitFor(() => screen.queryByText("Mi estilo TikTok"));
+
+    const row = document.querySelector(`[data-testid="profile-row-${PROFILE_A.slug}"]`);
+    fireEvent.mouseEnter(row!);
+
+    const exportBtn = screen.getByTitle("Exportar");
+    const color = exportBtn.style?.color || "";
+    const bg = exportBtn.style?.background || exportBtn.style?.backgroundColor || "";
+    expect(color.includes("var(--action)")).toBe(false);
+    expect(bg.includes("var(--action)")).toBe(false);
+    expect(color.includes("#4CAF50")).toBe(false);
+  });
+});

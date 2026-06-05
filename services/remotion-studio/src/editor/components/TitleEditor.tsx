@@ -217,14 +217,17 @@ function TwoFields({
   xValue, yValue,
   onXChange, onYChange,
   xMax = 1080, yMax = 1920,
+  layout = "row",
 }: {
   xValue: number; yValue: number;
   onXChange: (v: number) => void; onYChange: (v: number) => void;
   xMax?: number; yMax?: number;
+  layout?: "row" | "stack";
 }) {
   const inputStyle: React.CSSProperties = {
     width: "100%",
-    padding: "6px 9px",
+    minWidth: 0,
+    padding: "6px 6px",
     background: "var(--surface-2, #252535)",
     border: "1px solid var(--border, #333)",
     borderRadius: "var(--r-sm, 6px)",
@@ -232,20 +235,39 @@ function TwoFields({
     fontSize: "var(--t-md, 13.5px)" as React.CSSProperties["fontSize"],
     fontVariantNumeric: "tabular-nums",
   };
+  const labelStyle: React.CSSProperties = {
+    fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"],
+    color: "var(--text-muted, #777)",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+  };
+  const numberInput = (value: number, max: number, onChange: (v: number) => void) => (
+    <input type="number" min={0} max={max} step={1} value={value}
+      onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(v); }}
+      style={inputStyle} />
+  );
+  if (layout === "stack") {
+    // Y over X, inline "label :" + value box, inputs aligned in a shared column
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: "var(--s-3, 6px)", rowGap: "var(--s-5, 10px)", alignItems: "center" }}>
+        <span style={labelStyle}>Y :</span>
+        {numberInput(yValue, yMax, onYChange)}
+        <span style={labelStyle}>X :</span>
+        {numberInput(xValue, xMax, onXChange)}
+      </div>
+    );
+  }
+  // row: X | Y, label above input
+  const field = (label: string, value: number, max: number, onChange: (v: number) => void) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-3, 6px)" }}>
+      <span style={labelStyle}>{label}</span>
+      {numberInput(value, max, onChange)}
+    </div>
+  );
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-5, 10px)" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-3, 6px)" }}>
-        <span style={{ fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"], color: "var(--text-muted, #777)", textTransform: "uppercase", letterSpacing: "0.06em" }}>X</span>
-        <input type="number" min={0} max={xMax} step={1} value={xValue}
-          onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) onXChange(v); }}
-          style={inputStyle} />
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--s-3, 6px)" }}>
-        <span style={{ fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"], color: "var(--text-muted, #777)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Y</span>
-        <input type="number" min={0} max={yMax} step={1} value={yValue}
-          onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) onYChange(v); }}
-          style={inputStyle} />
-      </div>
+      {field("X", xValue, xMax, onXChange)}
+      {field("Y", yValue, yMax, onYChange)}
     </div>
   );
 }
@@ -420,6 +442,7 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
   const handleRemove = (index: number) => {
     const updated = titles.filter((_, i) => i !== index);
     onChange(updated);
+    onPreviewChange?.(updated);
     if (editingIndex === index) resetForm();
     else if (editingIndex !== null && index < editingIndex) setEditingIndex(editingIndex - 1);
   };
@@ -606,26 +629,27 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
             {/* ── LEFT COLWRAP: Posición + Avanzado ────────────────────── */}
             <div data-colwrap="left" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
 
-              {/* § Posición — X/Y .two + PositionPresets */}
+              {/* § Posición — grid LEFT + X/Y stacked RIGHT (saves vertical space) */}
               <div style={{ marginBottom: "var(--s-8, 16px)" }}>
                 <SectionHeader n={1} title="Posición" />
 
-                {/* X/Y .two */}
-                <div style={{ marginBottom: "var(--s-5, 10px)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "var(--s-4, 8px)", alignItems: "center" }}>
+                  {/* PositionPresets — left */}
+                  <PositionPresets
+                    elementWidth={measuredBox.width}
+                    elementHeight={measuredBox.height}
+                    onApply={(x, y) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, x, y } }))}
+                  />
+
+                  {/* X/Y .two — stacked, right */}
                   <TwoFields
+                    layout="stack"
                     xValue={newTitle.style?.x ?? 200}
                     yValue={newTitle.style?.y ?? 960}
                     onXChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, x: v } }))}
                     onYChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, y: v } }))}
                   />
                 </div>
-
-                {/* PositionPresets */}
-                <PositionPresets
-                  elementWidth={measuredBox.width}
-                  elementHeight={measuredBox.height}
-                  onApply={(x, y) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, x, y } }))}
-                />
               </div>
 
               {/* § Avanzado — glow on/off, glow color, glow difusión, aparece, duración */}

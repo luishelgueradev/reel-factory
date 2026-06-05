@@ -307,32 +307,36 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
               alignItems: "start",
             }}
           >
-            {/* ── LEFT: Posición ──────────────────────────────────────── */}
+            {/* ── LEFT: Posición — grid LEFT + X/Y stacked RIGHT ─────────── */}
             <div data-colwrap="left" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <SectionHeader n={1} title="Posición" />
 
-              {/* X/Y inputs — sketch 019 .xy */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-5, 10px)", marginBottom: "var(--s-5, 10px)" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "14px 1fr", alignItems: "center", gap: "var(--s-3, 6px)", background: "var(--surface-2, #252535)", border: "1px solid var(--border, #333)", borderRadius: "var(--r-sm, 6px)", padding: "4px 8px" }}>
-                  <span style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>X</span>
-                  <input type="number" min={0} max={1080} step={1} value={draft.x}
-                    onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) handleDraftChange((prev) => ({ ...prev, x: v })); }}
-                    style={{ font: "inherit", fontSize: "var(--t-md, 13.5px)" as React.CSSProperties["fontSize"], color: "var(--text, #e6e6ea)", background: "none", border: "none", width: "100%", fontVariantNumeric: "tabular-nums" }} />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "14px 1fr", alignItems: "center", gap: "var(--s-3, 6px)", background: "var(--surface-2, #252535)", border: "1px solid var(--border, #333)", borderRadius: "var(--r-sm, 6px)", padding: "4px 8px" }}>
-                  <span style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-faint, #555)" }}>Y</span>
-                  <input type="number" min={0} max={1920} step={1} value={draft.y}
-                    onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) handleDraftChange((prev) => ({ ...prev, y: v })); }}
-                    style={{ font: "inherit", fontSize: "var(--t-md, 13.5px)" as React.CSSProperties["fontSize"], color: "var(--text, #e6e6ea)", background: "none", border: "none", width: "100%", fontVariantNumeric: "tabular-nums" }} />
-                </div>
-              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "var(--s-4, 8px)", alignItems: "center" }}>
+                {/* PositionPresets px mode — left */}
+                <PositionPresets
+                  elementWidth={draft.displayWidth}
+                  elementHeight={computeOverlayElementHeight(draft.displayWidth, natW, natH)}
+                  onApply={(x, y) => handleDraftChange((prev) => ({ ...prev, x, y }))}
+                />
 
-              {/* PositionPresets px mode */}
-              <PositionPresets
-                elementWidth={draft.displayWidth}
-                elementHeight={computeOverlayElementHeight(draft.displayWidth, natW, natH)}
-                onApply={(x, y) => handleDraftChange((prev) => ({ ...prev, x, y }))}
-              />
+                {/* X/Y inputs — sketch 019 .xy, Y over X, inline "label :" + value box */}
+                {(() => {
+                  const xyLabelStyle: React.CSSProperties = { fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"], color: "var(--text-muted, #777)", textTransform: "uppercase", letterSpacing: "0.06em" };
+                  const xyInputStyle: React.CSSProperties = { width: "100%", minWidth: 0, padding: "6px 6px", background: "var(--surface-2, #252535)", border: "1px solid var(--border, #333)", borderRadius: "var(--r-sm, 6px)", color: "var(--text, #e6e6ea)", fontSize: "var(--t-md, 13.5px)" as React.CSSProperties["fontSize"], fontVariantNumeric: "tabular-nums" };
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: "var(--s-3, 6px)", rowGap: "var(--s-5, 10px)", alignItems: "center", minWidth: 0 }}>
+                      <span style={xyLabelStyle}>Y :</span>
+                      <input type="number" min={0} max={1920} step={1} value={draft.y}
+                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) handleDraftChange((prev) => ({ ...prev, y: v })); }}
+                        style={xyInputStyle} />
+                      <span style={xyLabelStyle}>X :</span>
+                      <input type="number" min={0} max={1080} step={1} value={draft.x}
+                        onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) handleDraftChange((prev) => ({ ...prev, x: v })); }}
+                        style={xyInputStyle} />
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
 
             {/* ── RIGHT: Estilo — PNG upload, width, opacity, capa ──────── */}

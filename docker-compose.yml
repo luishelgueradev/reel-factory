@@ -331,6 +331,12 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      # Force HTTP/2 (TCP) transport instead of the default QUIC (UDP). On this
+      # host the QUIC datagram path flaps ("control stream failure" / "datagram
+      # handler: no recent network activity"); HTTP/2 over TCP is stable here.
+      # (=--protocol http2; the redundant edge conns still served, this kills the noise.)
+      - TUNNEL_TRANSPORT_PROTOCOL=http2
     networks:
       - pipeline-net
     depends_on:

@@ -243,6 +243,9 @@ export function PreviewApp() {
   const [overlays, setOverlays] = useState<PngOverlayConfig[]>([]);
   const [liveOverlays, setLiveOverlays] = useState<PngOverlayConfig[]>([]);
   const [saving, setSaving] = useState(false);
+  // Bumped after each successful "Guardar config" so ProfilesMenu refetches the
+  // active profile snapshot (the save syncs it server-side) and clears Modificado.
+  const [configSaveVersion, setConfigSaveVersion] = useState(0);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("titles");
@@ -541,6 +544,7 @@ export function PreviewApp() {
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       setSaveSuccess(true);
+      setConfigSaveVersion((v) => v + 1);
       saveTimeoutRef.current = setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save config");
@@ -615,6 +619,7 @@ export function PreviewApp() {
           <ProfilesMenu
             getCurrentConfig={getCurrentConfig}
             currentConfig={getCurrentConfig()}
+            savedVersion={configSaveVersion}
             onApplied={handleProfileApplied}
             disabled={renderState === "submitting" || renderState === "running"}
           />

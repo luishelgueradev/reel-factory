@@ -931,6 +931,37 @@ describe("ProfilesMenu import (PA2-IMPORT)", () => {
     });
   });
 
+  it("applies the imported config to the editor (calls onApplied) on success", async () => {
+    const importedConfig = { subtitle: { layout: "tiktok" as const, activeColor: "#123456" }, titles: [], overlays: [] };
+    const profileFile = { slug: "applied", name: "Applied", updatedAt: new Date().toISOString(), config: importedConfig };
+    const onApplied = vi.fn();
+
+    vi.stubGlobal("FileReader", makeFileReaderMock(JSON.stringify(profileFile)));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
+        return Promise.resolve({ ok: true, json: async () => ({ profiles: [profileFile], activeSlug: "applied" }) });
+      }
+      if (url === "/api/profiles" && opts?.method === "POST") {
+        return Promise.resolve({ ok: true, status: 201, json: async () => profileFile });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    }));
+
+    render(<ProfilesMenu getCurrentConfig={() => SAMPLE_CONFIG} onApplied={onApplied} />);
+    fireEvent.click(screen.getByTitle("Perfiles de configuración"));
+    await waitFor(() => screen.queryByRole("dialog"));
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    const fakeFile = new File([JSON.stringify(profileFile)], "profile.json", { type: "application/json" });
+    Object.defineProperty(fileInput, "files", { value: [fakeFile], configurable: true });
+    fireEvent.change(fileInput!);
+
+    // The imported config must be pushed into the editor immediately (not only on F5)
+    await waitFor(() => {
+      expect(onApplied).toHaveBeenCalledWith(importedConfig);
+    });
+  });
+
   it("invalid JSON: shows topError 'Archivo no válido: JSON inválido', no fetch POST", async () => {
     let postCalled = false;
 

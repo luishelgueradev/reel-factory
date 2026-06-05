@@ -336,6 +336,36 @@ describe("Profiles API — CRUD + apply", () => {
       expect(styled?.preview?.activeColor).toBe("#FF00AA");
     });
 
+    it("PUT /api/config syncs the active profile snapshot so export reflects edits", async () => {
+      // Create a profile (becomes active) with a yellow active color
+      await request(app).post("/api/profiles").send({
+        name: "Sync Look",
+        config: { subtitle: { layout: "tiktok" as const, activeColor: "#FFFF00" }, titles: [], overlays: [] },
+      });
+      expect((await request(app).get("/api/profiles")).body.activeSlug).toBe("sync-look");
+
+      // Edit + "Guardar config" (PUT /api/config) — change the color to red
+      await request(app).put("/api/config").send({
+        subtitle: { layout: "tiktok" as const, activeColor: "#FF0000" }, titles: [], overlays: [],
+      });
+
+      // Export = GET the active profile file; it must now reflect the edit (was stale before)
+      const exported = await request(app).get("/api/profiles/sync-look");
+      expect(exported.body.config.subtitle.activeColor).toBe("#FF0000");
+    });
+
+    it("PUT /api/config with no active profile still writes config (no crash)", async () => {
+      // Remove any active profile first
+      const before = await request(app).get("/api/profiles");
+      if (before.body.activeSlug) {
+        await request(app).delete(`/api/profiles/${before.body.activeSlug}`);
+      }
+      const res = await request(app).put("/api/config").send({
+        subtitle: { layout: "tiktok" as const }, titles: [], overlays: [],
+      });
+      expect(res.status).toBe(200);
+    });
+
     it("deleting the active profile clears the active pointer", async () => {
       await request(app).post("/api/profiles").send({ name: "Doomed Look", config: VALID_CONFIG });
       expect((await request(app).get("/api/profiles")).body.activeSlug).toBe("doomed-look");

@@ -104,6 +104,9 @@ export interface ProfilesMenuProps {
   /** Live config object — drives the ambient "Modificado" divergence marker.
    *  Optional: falls back to getCurrentConfig() (non-reactive) when omitted. */
   currentConfig?: PipelineConfig;
+  /** Bumps when the host saves the working config ("Guardar config"), so the
+   *  menu refetches the active profile snapshot (which the save syncs). */
+  savedVersion?: number;
   onApplied: (config: PipelineConfig) => void;
   disabled?: boolean;
 }
@@ -111,6 +114,7 @@ export interface ProfilesMenuProps {
 export function ProfilesMenu({
   getCurrentConfig,
   currentConfig: currentConfigProp,
+  savedVersion,
   onApplied,
   disabled = false,
 }: ProfilesMenuProps) {
@@ -202,7 +206,10 @@ export function ProfilesMenu({
     return () => {
       cancelled = true;
     };
-  }, [activeSlug]);
+    // Refetch when the popover opens or after a config save (savedVersion bumps),
+    // since "Guardar config" syncs the active profile server-side — the cached
+    // snapshot would otherwise leave the Modificado marker stale.
+  }, [activeSlug, open, savedVersion]);
 
   // ── Open → fetch + focus save input ───────────────────────────────────────
   useEffect(() => {
@@ -345,8 +352,12 @@ export function ProfilesMenu({
           if (importInputRef.current) importInputRef.current.value = "";
           return;
         }
-        // Success
+        // Success — apply the imported config to the editor NOW (not only on F5)
+        // so the imported look is immediately reflected, then refresh the list.
+        const created = await res.json().catch(() => null) as { slug?: string } | null;
+        onApplied(config as PipelineConfig);
         await fetchProfiles();
+        if (created?.slug) setActiveSlug(created.slug);
         if (saveChipRef.current) clearTimeout(saveChipRef.current);
         setSaveChip("✓ Perfil importado");
         saveChipRef.current = setTimeout(() => setSaveChip(null), 2000);
@@ -358,7 +369,7 @@ export function ProfilesMenu({
       }
     };
     reader.readAsText(file);
-  }, [fetchProfiles]);
+  }, [fetchProfiles, onApplied]);
 
   // ── Handle apply ──────────────────────────────────────────────────────────
   const handleApply = useCallback(

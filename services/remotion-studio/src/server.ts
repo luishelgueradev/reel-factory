@@ -308,7 +308,7 @@ app.get("/api/config", (_req, res) => {
 // a trusted internal Docker network only. Before exposing this API externally,
 // add authentication (API key, JWT, etc.) and rate limiting.
 
-app.put("/api/config", (req, res) => {
+app.put("/api/config", async (req, res) => {
   const body = req.body;
 
   // Validate against PipelineConfig schema (T-06-09)
@@ -329,6 +329,27 @@ app.put("/api/config", (req, res) => {
     // resolveConfigPath() is NOT called here — it is used only by GET for job-scoped reads.
     atomicWriteConfig(configToWrite);
     console.log("[studio] Config written to:", getActivePipelineConfigPath());
+
+    // Keep the ACTIVE profile's saved snapshot in sync with the working config.
+    // The active profile IS the working style: when you edit and "Guardar config",
+    // those edits must persist into the active profile so exporting it (which reads
+    // the profile file) reflects the changes. Without this, exports were stale.
+    try {
+      const dir = getProfilesDir();
+      const activeSlug = await getActiveProfileSlug(dir);
+      if (activeSlug) {
+        const active = await readProfile(dir, activeSlug);
+        if (active) {
+          await saveProfile(dir, active.name, configToWrite as PipelineConfig);
+        }
+      }
+    } catch (syncErr) {
+      // Non-fatal: the working config was written. Profile sync is best-effort.
+      console.warn(
+        "[studio] active-profile sync after config save skipped:",
+        syncErr instanceof Error ? syncErr.message : syncErr
+      );
+    }
 
     return res.json({
       ...configToWrite,

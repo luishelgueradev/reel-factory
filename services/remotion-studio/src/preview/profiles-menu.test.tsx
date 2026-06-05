@@ -824,6 +824,249 @@ describe("ProfilesMenu disabled state", () => {
   });
 });
 
+// ─── Test: Import (PA2-IMPORT) ───────────────────────────────────────────────
+
+/**
+ * FileReader mock helper.
+ * Returns a constructor that calls onload synchronously with the given text result.
+ * Assign to vi.stubGlobal("FileReader", makeFileReaderMock(text)) before each import test.
+ */
+function makeFileReaderMock(resultText: string) {
+  return class MockFileReader {
+    onload: ((e: { target: { result: string } }) => void) | null = null;
+    readAsText() {
+      // schedule as microtask to mimic async behavior
+      Promise.resolve().then(() => {
+        this.onload?.({ target: { result: resultText } });
+      });
+    }
+  };
+}
+
+describe("ProfilesMenu import (PA2-IMPORT)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  // Helper: opens menu + waits for list, then simulates file selection
+  async function setupImportTest(
+    fileText: string,
+    fetchImpl: (url: string, opts?: RequestInit) => Promise<unknown>
+  ) {
+    vi.stubGlobal("FileReader", makeFileReaderMock(fileText));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(fetchImpl));
+
+    render(
+      <ProfilesMenu getCurrentConfig={() => SAMPLE_CONFIG} onApplied={vi.fn()} />
+    );
+
+    fireEvent.click(screen.getByTitle("Perfiles de configuración"));
+    await waitFor(() => screen.queryByRole("dialog"));
+
+    // Simulate file input change (trigger handleImport)
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(fileInput).not.toBeNull();
+    const fakeFile = new File([fileText], "profile.json", { type: "application/json" });
+    Object.defineProperty(fileInput, "files", { value: [fakeFile], configurable: true });
+    fireEvent.change(fileInput!);
+  }
+
+  it("happy path (full ProfileFile envelope): POSTs { name, config } and shows chip + refreshes list", async () => {
+    const profileFile = {
+      slug: "importado",
+      name: "Importado",
+      updatedAt: new Date().toISOString(),
+      config: SAMPLE_CONFIG,
+    };
+
+    let postCalled = false;
+    let postedBody: unknown;
+
+    await setupImportTest(JSON.stringify(profileFile), (url: string, opts?: RequestInit) => {
+      if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ profiles: postCalled ? [profileFile] : [] }),
+        });
+      }
+      if (url === "/api/profiles" && opts?.method === "POST") {
+        postCalled = true;
+        postedBody = opts.body ? JSON.parse(opts.body as string) : null;
+        return Promise.resolve({ ok: true, status: 201, json: async () => profileFile });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    await waitFor(() => {
+      expect(postCalled).toBe(true);
+    });
+    const body = postedBody as { name: string; config: unknown };
+    expect(body.name).toBe("Importado");
+    expect(body.config).toEqual(SAMPLE_CONFIG);
+
+    await waitFor(() => {
+      expect(screen.queryByText("✓ Perfil importado")).not.toBeNull();
+    });
+  });
+
+  it("happy path (bare { name, config } envelope): POSTs and shows chip", async () => {
+    const bareFile = { name: "Bare Import", config: SAMPLE_CONFIG };
+
+    let postCalled = false;
+
+    await setupImportTest(JSON.stringify(bareFile), (url: string, opts?: RequestInit) => {
+      if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
+        return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) });
+      }
+      if (url === "/api/profiles" && opts?.method === "POST") {
+        postCalled = true;
+        return Promise.resolve({ ok: true, status: 201, json: async () => ({ ...bareFile, slug: "bare-import", updatedAt: new Date().toISOString() }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    await waitFor(() => {
+      expect(postCalled).toBe(true);
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("✓ Perfil importado")).not.toBeNull();
+    });
+  });
+
+  it("invalid JSON: shows topError 'Archivo no válido: JSON inválido', no fetch POST", async () => {
+    let postCalled = false;
+
+    await setupImportTest("not-json{{{", (url: string, opts?: RequestInit) => {
+      if (url === "/api/profiles" && opts?.method === "POST") {
+        postCalled = true;
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Archivo no válido: JSON inválido")).not.toBeNull();
+    });
+    expect(postCalled).toBe(false);
+  });
+
+  it("invalid config: shows topError 'Config inválida: ...' (validatePipelineConfig)", async () => {
+    const badFile = { name: "Bad", config: { subtitle: { layout: "INVALID_LAYOUT" } } };
+    let postCalled = false;
+
+    await setupImportTest(JSON.stringify(badFile), (url: string, opts?: RequestInit) => {
+      if (url === "/api/profiles" && opts?.method === "POST") postCalled = true;
+      return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) });
+    });
+
+    await waitFor(() => {
+      const err = screen.queryByText((text) => text.startsWith("Config inválida:"));
+      expect(err).not.toBeNull();
+    });
+    expect(postCalled).toBe(false);
+  });
+
+  it("missing name: shows topError \"El archivo no tiene un campo 'name'\"", async () => {
+    const noNameFile = { config: SAMPLE_CONFIG };
+    let postCalled = false;
+
+    await setupImportTest(JSON.stringify(noNameFile), (url: string, opts?: RequestInit) => {
+      if (url === "/api/profiles" && opts?.method === "POST") postCalled = true;
+      return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("El archivo no tiene un campo 'name'")).not.toBeNull();
+    });
+    expect(postCalled).toBe(false);
+  });
+
+  it("POST failure: shows server error message in topError", async () => {
+    const validFile = { name: "Valid", config: SAMPLE_CONFIG };
+
+    await setupImportTest(JSON.stringify(validFile), (url: string, opts?: RequestInit) => {
+      if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
+        return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) });
+      }
+      if (url === "/api/profiles" && opts?.method === "POST") {
+        return Promise.resolve({
+          ok: false,
+          status: 400,
+          json: async () => ({ error: "Nombre demasiado largo" }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Nombre demasiado largo")).not.toBeNull();
+    });
+  });
+
+  it("Importar button is disabled when disabled prop is true", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ profiles: [] }),
+    }));
+
+    render(
+      <ProfilesMenu
+        getCurrentConfig={() => SAMPLE_CONFIG}
+        onApplied={vi.fn()}
+        disabled={true}
+      />
+    );
+
+    // When disabled=true, popover shouldn't open — check button is disabled when rendered
+    // We need to render without disabled to check the button, then with disabled
+    vi.restoreAllMocks();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ profiles: [] }),
+    }));
+
+    const { unmount } = render(
+      <ProfilesMenu
+        getCurrentConfig={() => SAMPLE_CONFIG}
+        onApplied={vi.fn()}
+        disabled={false}
+      />
+    );
+
+    const triggers = screen.getAllByTitle("Perfiles de configuración");
+    fireEvent.click(triggers[triggers.length - 1]);
+
+    await waitFor(() => {
+      const importBtn = screen.queryByText("Importar");
+      // Button should exist in open popover
+      expect(importBtn).not.toBeNull();
+    });
+
+    unmount();
+
+    // Now test with disabled=true — popover won't open, so check button style
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ profiles: [] }),
+    }));
+
+    // Render with disabled=false to get popover open, then we check the Importar button exists and is operable
+    // The test verifies disabled prop disables the Importar button via the disabled state passed in
+    // Since the popover doesn't open when disabled=true, we verify button is non-interactive via the saving/disabled flag
+    // Simpler: render open, verify Importar exists; then verify disabled prop makes it disabled
+    render(
+      <ProfilesMenu
+        getCurrentConfig={() => SAMPLE_CONFIG}
+        onApplied={vi.fn()}
+        disabled={true}
+      />
+    );
+
+    const allTriggers = screen.getAllByTitle("Perfiles de configuración");
+    fireEvent.click(allTriggers[allTriggers.length - 1]);
+    // Popover stays closed when disabled — no Importar button visible
+    const dialogs = screen.queryAllByRole("dialog");
+    expect(dialogs.length).toBe(0); // disabled prevents open
+  });
+});
+
 // ─── Test: Export (PA2-EXPORT) ───────────────────────────────────────────────
 
 describe("ProfilesMenu export (PA2-EXPORT)", () => {

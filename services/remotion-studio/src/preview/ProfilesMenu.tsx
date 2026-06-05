@@ -17,6 +17,7 @@ import React, {
   useCallback,
 } from "react";
 import type { PipelineConfig } from "../pipeline-config.js";
+import { validatePipelineConfig } from "../pipeline-config.js";
 import { Z } from "./z-layers.js";
 
 // ─── Types (mirror server-side ProfileSummary / ProfileFile) ─────────────────
@@ -119,6 +120,7 @@ export function ProfilesMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const saveInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // ── Profiles list ──────────────────────────────────────────────────────────
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
@@ -290,6 +292,73 @@ export function ProfilesMenu({
       setSaving(false);
     }
   }, [saveName, getCurrentConfig, fetchProfiles]);
+
+  // ── Handle import ─────────────────────────────────────────────────────────
+  const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTopError(null);
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const text = (ev.target as { result: string }).result;
+
+      // Step 1: Parse JSON
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        setTopError("Archivo no válido: JSON inválido");
+        // Reset file input
+        if (importInputRef.current) importInputRef.current.value = "";
+        return;
+      }
+
+      // Step 2: Validate name field
+      if (typeof parsed.name !== "string" || !parsed.name) {
+        setTopError("El archivo no tiene un campo 'name'");
+        if (importInputRef.current) importInputRef.current.value = "";
+        return;
+      }
+
+      // Step 3: Validate config with validatePipelineConfig
+      const config = parsed.config;
+      const validation = validatePipelineConfig(config);
+      if (!validation.valid) {
+        setTopError(`Config inválida: ${validation.errors[0]}`);
+        if (importInputRef.current) importInputRef.current.value = "";
+        return;
+      }
+
+      // Step 4: POST to /api/profiles
+      setSaving(true);
+      try {
+        const res = await fetch("/api/profiles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: parsed.name, config }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setTopError((body as { error?: string }).error || "Error al importar");
+          setSaving(false);
+          if (importInputRef.current) importInputRef.current.value = "";
+          return;
+        }
+        // Success
+        await fetchProfiles();
+        if (saveChipRef.current) clearTimeout(saveChipRef.current);
+        setSaveChip("✓ Perfil importado");
+        saveChipRef.current = setTimeout(() => setSaveChip(null), 2000);
+        if (importInputRef.current) importInputRef.current.value = "";
+      } catch (err) {
+        setTopError(err instanceof Error ? err.message : "Error al importar");
+      } finally {
+        setSaving(false);
+      }
+    };
+    reader.readAsText(file);
+  }, [fetchProfiles]);
 
   // ── Handle apply ──────────────────────────────────────────────────────────
   const handleApply = useCallback(
@@ -634,7 +703,25 @@ export function ProfilesMenu({
                 {saving ? "…" : nameMatchesExisting ? "Actualizar" : "Guardar actual"}
               </button>
             </div>
-            {/* Inline save error */}
+            {/* Import row — second thinner row below save-as */}
+            <div style={{ display: "flex", alignItems: "center", marginTop: "var(--s-2, 4px)" }}>
+              {/* Hidden file input */}
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json"
+                style={{ display: "none" }}
+                disabled={saving || disabled}
+                onChange={handleImport}
+              />
+              {/* Importar button — neutral/muted outline, --accent on hover; NOT --action */}
+              <ImportarButton
+                disabled={saving || disabled}
+                onClick={() => importInputRef.current?.click()}
+              />
+            </div>
+
+            {/* Inline save/import error */}
             {topError && (
               <div
                 style={{
@@ -1307,6 +1394,55 @@ function IconButton({
       }}
     >
       {children}
+    </button>
+  );
+}
+
+// ─── ImportarButton ───────────────────────────────────────────────────────────
+// Neutral outline button (--text-muted / --text); --accent on hover.
+// Green discipline: does NOT use --action. Importing is a neutral action.
+
+function ImportarButton({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: "3px 9px",
+        background: "transparent",
+        // neutral/muted by default; --accent border+color on hover (NOT --action)
+        color: disabled
+          ? "var(--text-faint, #555)"
+          : hovered
+          ? "var(--accent, #90caf9)"
+          : "var(--text-muted, #777)",
+        border: "1px solid",
+        borderColor: disabled
+          ? "var(--border, #333)"
+          : hovered
+          ? "var(--accent, #90caf9)"
+          : "var(--border, #333)",
+        borderRadius: "var(--r-sm, 6px)",
+        fontSize: "var(--t-2xs, 10.5px)",
+        fontWeight: 500,
+        cursor: disabled ? "not-allowed" : "pointer",
+        minHeight: 26,
+        whiteSpace: "nowrap",
+        transition: "color var(--dur, 170ms) var(--ease), border-color var(--dur, 170ms) var(--ease)",
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      Importar
     </button>
   );
 }

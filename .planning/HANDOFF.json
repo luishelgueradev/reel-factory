@@ -1,29 +1,40 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-29T16:25:52.167Z",
+  "timestamp": "2026-05-29T21:37:54.792Z",
   "phase": "20",
   "phase_name": "title-block-precision",
   "phase_dir": ".planning/phases/20-title-block-precision",
   "plan": 4,
-  "task": 2,
-  "total_tasks": 2,
+  "task": 4,
+  "total_tasks": 4,
   "status": "phase_complete",
   "completed_tasks": [
-    {"id": 1, "name": "Renderer sync + vitest + build:editor", "status": "done", "commit": "b7b43a2"},
-    {"id": 2, "name": "Human UAT checkpoint (all 6 checks approved)", "status": "done", "commit": "b7b43a2"}
+    {"id": 1, "name": "Schema migration — TitleStyleProps x/y/borderRadius, remove subtitle", "status": "done", "commit": "f5d99b4"},
+    {"id": 2, "name": "TitleOverlay rendering — pixel positioning, config borderRadius, subtitle removed", "status": "done", "commit": "7927a4f"},
+    {"id": 3, "name": "TitleEditor UI — x/y inputs, borderRadius slider, subtitle controls removed", "status": "done", "commit": "5620664"},
+    {"id": 4, "name": "Renderer sync + UAT + post-UAT fixes (stale fields BUG-1, GET/PUT divergence BUG-2)", "status": "done", "commit": "fbf6802"}
   ],
   "remaining_tasks": [],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "NaN guard added to X/Y onChange in TitleEditor", "rationale": "parseInt('') = NaN → JSON.stringify(NaN) = null → corrupts config", "phase": "20"},
-    {"decision": "Legacy titles retain orphaned fields (topOffset, subtitleFontSize) on round-trip", "rationale": "handleStartEdit spreads existing style; expected behavior — pre-existing titles not migrated", "phase": "20"},
-    {"decision": "Server read/write config split is pre-existing", "rationale": "PIPELINE_CONFIG_PATH (read) vs ACTIVE_PIPELINE_CONFIG_PATH (write) — not a Phase 20 bug", "phase": "20"}
+    {
+      "decision": "BUG-2 FIXED: resolveConfigPath() now uses ACTIVE_PIPELINE_CONFIG_PATH as fallback for GET",
+      "rationale": "GET was reading services/remotion-studio/pipeline-config.json (local fallback) while PUT wrote to pipeline/pipeline-config.json. Changes were lost on reload. Previous HANDOFF noted this as 'pre-existing, not a Phase 20 bug' — UAT proved it was user-impacting and fixed it.",
+      "phase": "20"
+    },
+    {
+      "decision": "BUG-1 FIXED: handleStartEdit now does explicit TitleStyleProps field pick",
+      "rationale": "Spread of { ...title.style } re-saved deprecated fields (subtitleFontSize, subtitleColor, topOffset) on each edit. Previous HANDOFF noted this as 'expected behavior'. UAT showed it pollutes the config on round-trip.",
+      "phase": "20"
+    },
+    {
+      "decision": "Local pipeline-config.json files cleaned of pre-Phase-20 stale fields",
+      "rationale": "Both services/remotion-studio/pipeline-config.json and pipeline/pipeline-config.json had subtitleFontSize, topOffset, subtitleColor, subtitleFontFamily. Removed. Next phase starts from clean config.",
+      "phase": "20"
+    }
   ],
-  "uncommitted_files": [
-    ".planning/STATE.md",
-    ".planning/phases/20-title-block-precision/20-REVIEW-FIX.md"
-  ],
-  "next_action": "Phase 20 is complete. Start Phase 21 (PNG overlays) with /gsd-progress or /gsd-execute-phase 21",
-  "context_notes": "Phase 20 fully done: 4/4 plans, VERIFICATION.md 12/12, code review fixes applied (CR-01 delayRender, CR-02 NaN, WR-01 stale test, WR-02 lineHeight, WR-03 fps), QA UAT passed, NaN spinbutton bug found and fixed."
+  "uncommitted_files": [".planning/STATE.md"],
+  "next_action": "Phase 20 fully complete with post-UAT fixes. Plan Phase 21 (PNG overlays): /gsd-plan-phase 21",
+  "context_notes": "Two full UAT passes done with playwright. 5/5 tests passed both times. Three bugs found and fixed. Studio server on port 3123 still running. Milestone v1.3 at 95% (18/19 phases). Phase 21 is the final planned phase of v1.3."
 }

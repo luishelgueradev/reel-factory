@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 Phase: 26
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-06-04
+Last activity: 2026-06-05 - Completed quick task 260605-pa2: exportar/importar JSON de perfil
 
 ### Milestone v1.4 Phase Summary
 
@@ -43,6 +43,7 @@ Last activity: 2026-06-04
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260605-pa2 | Exportar/importar JSON de perfil — descargar un perfil a archivo (.json) y reimportarlo, para una versión portable de los datos del perfil (backup/compartir) | 2026-06-05 | ecb83d5 | [260605-pa2-exportar-e-importar-un-json-de-configura](./quick/260605-pa2-exportar-e-importar-un-json-de-configura/) |
 | 260603-hgz | Position presets misaligned (center/right/bottom) — measure real element size instead of estimate; overlays use real PNG aspect-ratio, titles measure rendered text box | 2026-06-03 | a811e4f | [260603-hgz-position-presets-misalign-elements-cente](./quick/260603-hgz-position-presets-misalign-elements-cente/) |
 | 260603-hob | Guardar config hid the real error behind a fixed "✕ Error al guardar" — surface the actual PUT /api/config validation field messages (full list on hover) | 2026-06-03 | 6a6749b | [260603-hob-save-config-shows-generic-error-al-guard](./quick/260603-hob-save-config-shows-generic-error-al-guard/) |
 | 260603-igq | Guardar config persisted committed state, not the live preview — edits shown in preview were lost on reload; save liveTitles/liveOverlays + reconcile committed | 2026-06-03 | a3c798f | [260603-igq-guardar-config-saves-committed-state-not](./quick/260603-igq-guardar-config-saves-committed-state-not/) |

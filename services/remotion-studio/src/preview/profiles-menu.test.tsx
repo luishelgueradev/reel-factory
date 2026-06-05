@@ -241,9 +241,11 @@ describe("ProfilesMenu save-as (PROFILE-01)", () => {
     expect(body.name).toBe("Nuevo perfil");
     expect(body.config).toEqual(SAMPLE_CONFIG);
 
-    // Assert the new profile appears in the list
+    // Assert the new profile appears in the list (scope to the row — the trigger
+    // now ALSO shows the active profile name, so a bare text query would match two)
     await waitFor(() => {
-      expect(screen.queryByText("Nuevo perfil")).not.toBeNull();
+      const row = screen.getByTestId("profile-row-nuevo-perfil");
+      expect(row.textContent).toContain("Nuevo perfil");
     });
 
     // Assert the "✓ Perfil guardado" chip appears

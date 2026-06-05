@@ -270,6 +270,81 @@ describe("Profiles API — CRUD + apply", () => {
     });
   });
 
+  // ─── Active-profile pointer + save-writes-active-config (F5 persistence bug) ──
+  // Regression for: "create titles → save profile → F5 → titles gone".
+  // Root cause was POST /api/profiles never updating the active pipeline config,
+  // and the active profile being client-only state lost on reload.
+
+  describe("Active profile + F5 persistence", () => {
+    const CONFIG_WITH_TITLE = {
+      subtitle: { layout: "tiktok" as const },
+      titles: [{ text: "Hola F5", startTimeMs: 0, durationMs: 2000 }],
+      overlays: [],
+    };
+
+    it("saving a profile writes the titles to the active config (survives F5)", async () => {
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "F5 Look", config: CONFIG_WITH_TITLE });
+
+      // Simulate F5: GET /api/config must now return the saved titles
+      const reload = await request(app).get("/api/config");
+      expect(reload.status).toBe(200);
+      expect(Array.isArray(reload.body.titles)).toBe(true);
+      expect(reload.body.titles).toHaveLength(1);
+      expect(reload.body.titles[0].text).toBe("Hola F5");
+
+      // And the active config file on disk reflects it
+      const onDisk = JSON.parse(fs.readFileSync(TEST_ACTIVE_CONFIG, "utf-8"));
+      expect(onDisk.titles[0].text).toBe("Hola F5");
+    });
+
+    it("GET /api/profiles reports the saved profile as activeSlug, and it persists across reloads", async () => {
+      await request(app)
+        .post("/api/profiles")
+        .send({ name: "Active Look", config: VALID_CONFIG });
+
+      const first = await request(app).get("/api/profiles");
+      expect(first.body.activeSlug).toBe("active-look");
+
+      // Simulate F5: a fresh GET still reports the same active profile
+      const second = await request(app).get("/api/profiles");
+      expect(second.body.activeSlug).toBe("active-look");
+    });
+
+    it("applying a profile makes it the active profile", async () => {
+      await request(app).post("/api/profiles").send({ name: "Apply Source", config: VALID_CONFIG });
+      // Save another so the active pointer is something else first
+      await request(app).post("/api/profiles").send({ name: "Other Look", config: VALID_CONFIG_2 });
+      expect((await request(app).get("/api/profiles")).body.activeSlug).toBe("other-look");
+
+      const applied = await request(app).put("/api/profiles/apply-source/apply");
+      expect(applied.status).toBe(200);
+      expect((await request(app).get("/api/profiles")).body.activeSlug).toBe("apply-source");
+    });
+
+    it("GET /api/profiles includes a look preview (font + active color) per profile", async () => {
+      await request(app).post("/api/profiles").send({
+        name: "Styled Look",
+        config: { subtitle: { layout: "tiktok" as const, fontFamily: "Raleway", activeColor: "#FF00AA", outlineColor: "#000000" } },
+      });
+      const res = await request(app).get("/api/profiles");
+      const styled = (res.body.profiles as Array<{ slug: string; preview?: { fontFamily?: string; activeColor?: string } }>)
+        .find((p) => p.slug === "styled-look");
+      expect(styled?.preview).toBeDefined();
+      expect(styled?.preview?.fontFamily).toBe("Raleway");
+      expect(styled?.preview?.activeColor).toBe("#FF00AA");
+    });
+
+    it("deleting the active profile clears the active pointer", async () => {
+      await request(app).post("/api/profiles").send({ name: "Doomed Look", config: VALID_CONFIG });
+      expect((await request(app).get("/api/profiles")).body.activeSlug).toBe("doomed-look");
+
+      await request(app).delete("/api/profiles/doomed-look");
+      expect((await request(app).get("/api/profiles")).body.activeSlug).toBeNull();
+    });
+  });
+
   // ─── Persistence (PROFILE-04): profiles written under PROFILES_DIR ───────────
 
   describe("Persistence (PROFILE-04)", () => {

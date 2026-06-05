@@ -21,10 +21,59 @@ import { Z } from "./z-layers.js";
 
 // ─── Types (mirror server-side ProfileSummary / ProfileFile) ─────────────────
 
+// Mirrors the server-side ProfilePreview (profiles.ts). Defined locally so the
+// client bundle never imports profiles.ts (which pulls in `fs`).
+interface ProfilePreview {
+  fontFamily?: string;
+  activeColor?: string;
+  outlineColor?: string;
+  fontWeight?: boolean;
+  titleText?: string;
+  titleColor?: string;
+  titleBg?: string;
+}
+
 interface ProfileSummary {
   slug: string;
   name: string;
   updatedAt: string;
+  preview?: ProfilePreview;
+}
+
+// ─── Config comparison (Modificado / diverged-from-active-preset) ─────────────
+
+/** Recursively sorts object keys so two equivalent configs stringify identically. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(value as Record<string, unknown>).sort()) {
+      out[k] = canonical((value as Record<string, unknown>)[k]);
+    }
+    return out;
+  }
+  return value;
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+/**
+ * True when the current config has DIVERGED from the active profile's saved config.
+ * titles/overlays compare fully; subtitle compares only the keys the profile
+ * specifies (the live config may carry extra default-filled keys after apply,
+ * which must NOT read as a divergence — that would be a false "Modificado").
+ */
+function isModifiedFromProfile(current: PipelineConfig, profile: PipelineConfig): boolean {
+  if (!deepEqual(current.titles ?? [], profile.titles ?? [])) return true;
+  if (!deepEqual(current.overlays ?? [], profile.overlays ?? [])) return true;
+  const ps = (profile.subtitle ?? {}) as unknown as Record<string, unknown>;
+  const cs = (current.subtitle ?? {}) as unknown as Record<string, unknown>;
+  for (const k of Object.keys(ps)) {
+    if (!deepEqual(ps[k], cs[k])) return true;
+  }
+  return false;
 }
 
 // ─── Relative time formatter ─────────────────────────────────────────────────
@@ -51,15 +100,20 @@ function relativeTime(isoString: string): string {
 
 export interface ProfilesMenuProps {
   getCurrentConfig: () => PipelineConfig;
+  /** Live config object — drives the ambient "Modificado" divergence marker.
+   *  Optional: falls back to getCurrentConfig() (non-reactive) when omitted. */
+  currentConfig?: PipelineConfig;
   onApplied: (config: PipelineConfig) => void;
   disabled?: boolean;
 }
 
 export function ProfilesMenu({
   getCurrentConfig,
+  currentConfig: currentConfigProp,
   onApplied,
   disabled = false,
 }: ProfilesMenuProps) {
+  const currentConfig = currentConfigProp ?? getCurrentConfig();
   // ── Popover open/close ─────────────────────────────────────────────────────
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -71,8 +125,10 @@ export function ProfilesMenu({
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
 
-  // ── Active slug (applied profile) ─────────────────────────────────────────
+  // ── Active slug (applied profile) — hydrated from server so it survives F5 ──
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  // Active profile's saved config — used to compute the "Modificado" divergence
+  const [activeConfig, setActiveConfig] = useState<PipelineConfig | null>(null);
 
   // ── Save-as field ──────────────────────────────────────────────────────────
   const [saveName, setSaveName] = useState("");
@@ -108,14 +164,43 @@ export function ProfilesMenu({
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error || `Error ${res.status}`);
       }
-      const data = await res.json() as { profiles?: ProfileSummary[] };
+      const data = await res.json() as { profiles?: ProfileSummary[]; activeSlug?: string | null };
       setProfiles(Array.isArray(data.profiles) ? data.profiles : []);
+      // Hydrate the active profile from the server (persisted pointer) so the
+      // trigger shows it even after a page reload, not just within one session.
+      setActiveSlug(data.activeSlug ?? null);
     } catch (err) {
       setListError(err instanceof Error ? err.message : "Error al cargar perfiles");
     } finally {
       setListLoading(false);
     }
   }, []);
+
+  // ── Hydrate profiles + active pointer on mount (so the trigger label is
+  //    correct before the popover is ever opened, and survives F5) ───────────
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  // ── Fetch the active profile's saved config (drives Modificado) ────────────
+  useEffect(() => {
+    if (!activeSlug) {
+      setActiveConfig(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/profiles/${encodeURIComponent(activeSlug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { config?: PipelineConfig } | null) => {
+        if (!cancelled) setActiveConfig(data?.config ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveConfig(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSlug]);
 
   // ── Open → fetch + focus save input ───────────────────────────────────────
   useEffect(() => {
@@ -334,6 +419,14 @@ export function ProfilesMenu({
     [commitRename]
   );
 
+  // ── Active profile name + Modificado divergence (sketch 034-A) ─────────────
+  const activeName = activeSlug
+    ? profiles.find((p) => p.slug === activeSlug)?.name ?? null
+    : null;
+  const modified = Boolean(
+    activeSlug && activeConfig && isModifiedFromProfile(currentConfig, activeConfig)
+  );
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
@@ -342,6 +435,8 @@ export function ProfilesMenu({
         triggerRef={triggerRef}
         open={open}
         disabled={disabled}
+        activeName={activeName}
+        modified={modified}
         onClick={() => {
           if (!disabled) {
             setOpen((v) => !v);
@@ -632,11 +727,15 @@ function TriggerButton({
   triggerRef,
   open,
   disabled,
+  activeName,
+  modified,
   onClick,
 }: {
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   open: boolean;
   disabled: boolean;
+  activeName: string | null;
+  modified: boolean;
   onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -648,11 +747,11 @@ function TriggerButton({
       disabled={disabled}
       aria-expanded={open}
       aria-haspopup="dialog"
-      title="Perfiles de configuración"
+      title={activeName ? `Estilo activo: ${activeName}` : "Perfiles de configuración"}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        padding: "7px 14px",
+        padding: "7px 12px",
         // Outline style — NOT green (green discipline: --action is for Render Video only)
         background: open
           ? "var(--surface-2, #252535)"
@@ -676,6 +775,7 @@ function TriggerButton({
         fontSize: "var(--t-sm, 12.5px)",
         fontWeight: 400,
         minHeight: 32,
+        maxWidth: 260,
         display: "inline-flex",
         alignItems: "center",
         gap: "var(--s-2, 4px)",
@@ -685,12 +785,52 @@ function TriggerButton({
         whiteSpace: "nowrap",
       }}
     >
-      Perfiles
+      {/* "Estilo:" label (uppercase, muted) — always present so the control reads
+          as a named-look switcher, not a generic menu (sketch 034-A) */}
+      <span
+        style={{
+          fontSize: "var(--t-2xs, 10.5px)",
+          color: "var(--text-muted, #777)",
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+          flexShrink: 0,
+        }}
+      >
+        Estilo:
+      </span>
+      {/* Active look name, or a calm placeholder when none is active */}
+      <span
+        style={{
+          fontWeight: activeName ? 600 : 400,
+          color: activeName
+            ? "inherit"
+            : "var(--text-2, #a8a8b3)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {activeName ?? "Sin perfil"}
+      </span>
+      {/* Modificado — amber, low-chroma; informational divergence, not an alarm */}
+      {modified && (
+        <span
+          style={{
+            fontSize: "var(--t-2xs, 10.5px)",
+            fontWeight: 600,
+            color: "var(--warning, #e0b15a)",
+            flexShrink: 0,
+          }}
+        >
+          · Modificado
+        </span>
+      )}
       <span
         style={{
           fontSize: "0.7em",
           lineHeight: 1,
           display: "inline-block",
+          flexShrink: 0,
           transform: open ? "rotate(180deg)" : "rotate(0deg)",
           transition: "transform var(--dur, 170ms) var(--ease)",
         }}
@@ -730,6 +870,88 @@ function EmptyState() {
       >
         Guardá el estilo actual con un nombre arriba.
       </div>
+    </div>
+  );
+}
+
+// ─── ProfileSpecimen ────────────────────────────────────────────────────────
+// A tiny 9:16 canvas rendering the profile's actual look (title-box hint +
+// caption word in its own font / active color / outline). Sketch 034-A: a
+// preset's payload is a whole config — show the look, not just a swatch.
+
+function ProfileSpecimen({ preview }: { preview?: ProfilePreview }) {
+  const fontFamily = preview?.fontFamily ?? "PlusJakartaSans";
+  const activeColor = preview?.activeColor ?? "#FFFF00";
+  const outlineColor = preview?.outlineColor ?? "#000000";
+  const weight = preview?.fontWeight === false ? 500 : 800;
+  const outline = [
+    `-1px -1px 0 ${outlineColor}`,
+    `1px -1px 0 ${outlineColor}`,
+    `-1px 1px 0 ${outlineColor}`,
+    `1px 1px 0 ${outlineColor}`,
+  ].join(", ");
+  const hasTitle = Boolean(preview?.titleBg || preview?.titleText);
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: 30,
+        height: 40,
+        flexShrink: 0,
+        borderRadius: "var(--r-sm, 6px)",
+        background: "var(--stage, #0d0d16)",
+        border: "1px solid var(--border, #333)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Title-box hint near the top */}
+      {hasTitle && (
+        <div
+          style={{
+            position: "absolute",
+            top: 5,
+            left: 4,
+            right: 4,
+            height: 10,
+            borderRadius: 2,
+            background: preview?.titleBg ?? "transparent",
+            border: preview?.titleBg ? "none" : `1px solid ${preview?.titleColor ?? "#fff"}`,
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 6,
+              fontWeight: 700,
+              lineHeight: 1,
+              color: preview?.titleColor ?? "#ffffff",
+            }}
+          >
+            Aa
+          </span>
+        </div>
+      )}
+      {/* Caption word in the profile's own font / active color / outline */}
+      <span
+        style={{
+          position: "absolute",
+          bottom: 5,
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          fontFamily: `'${fontFamily}', sans-serif`,
+          color: activeColor,
+          fontWeight: weight,
+          fontSize: 11,
+          lineHeight: 1,
+          textShadow: outline,
+        }}
+      >
+        Aa
+      </span>
     </div>
   );
 }
@@ -815,10 +1037,12 @@ function ProfileRow({
         style={{
           display: "flex",
           alignItems: "center",
-          minHeight: 36,
-          gap: "var(--s-3, 6px)",
+          minHeight: 48,
+          gap: "var(--s-4, 8px)",
         }}
       >
+        {/* Mini-specimen — renders the profile's real look (font/colors) */}
+        <ProfileSpecimen preview={profile.preview} />
         {/* Applying spinner */}
         {isApplying && (
           <span

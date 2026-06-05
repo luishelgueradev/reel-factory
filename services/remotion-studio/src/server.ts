@@ -20,6 +20,8 @@ import {
   renameProfile,
   removeProfile,
   isValidSlug,
+  getActiveProfileSlug,
+  setActiveProfileSlug,
   ProfileConflictError,
   ProfileValidationError,
 } from "./profiles.js";
@@ -458,8 +460,10 @@ app.get("/api/result/:jobId", async (req, res) => {
 // GET /api/profiles — List profiles (PROFILE-03 list)
 app.get("/api/profiles", async (_req, res) => {
   try {
-    const profiles = await listProfiles(getProfilesDir());
-    return res.json({ profiles });
+    const dir = getProfilesDir();
+    const profiles = await listProfiles(dir);
+    const activeSlug = await getActiveProfileSlug(dir);
+    return res.json({ profiles, activeSlug });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[studio] Error listing profiles:", message);
@@ -489,7 +493,14 @@ app.post("/api/profiles", async (req, res) => {
   }
 
   try {
-    const profile = await saveProfile(getProfilesDir(), name, config as PipelineConfig);
+    const dir = getProfilesDir();
+    const profile = await saveProfile(dir, name, config as PipelineConfig);
+    // Persist the saved look as the active pipeline config so the user's current
+    // work survives a page reload (F5), and mark it as the active profile.
+    // Without this, saving a profile left pipeline-config.json untouched and the
+    // titles/overlays vanished on reload (GET /api/config reads the active config).
+    atomicWriteConfig(profile.config);
+    await setActiveProfileSlug(dir, profile.slug);
     return res.status(201).json(profile);
   } catch (err) {
     if (err instanceof ProfileValidationError) {
@@ -550,6 +561,8 @@ app.put("/api/profiles/:slug/apply", async (req, res) => {
 
     // D-05: Atomically write the profile's config to getActivePipelineConfigPath()
     atomicWriteConfig(profile.config);
+    // Mark this profile as active so the Studio UI shows it after a reload (F5)
+    await setActiveProfileSlug(getProfilesDir(), slug);
     console.log(`[studio] Profile "${slug}" applied to:`, getActivePipelineConfigPath());
 
     return res.json({
@@ -584,7 +597,13 @@ app.patch("/api/profiles/:slug", async (req, res) => {
   }
 
   try {
-    const updated = await renameProfile(getProfilesDir(), slug, name);
+    const dir = getProfilesDir();
+    const wasActive = (await getActiveProfileSlug(dir)) === slug;
+    const updated = await renameProfile(dir, slug, name);
+    // Keep the active pointer following a renamed-active profile across a slug change
+    if (wasActive && updated.slug !== slug) {
+      await setActiveProfileSlug(dir, updated.slug);
+    }
     return res.json(updated);
   } catch (err) {
     if (err instanceof ProfileConflictError) {
@@ -613,9 +632,15 @@ app.delete("/api/profiles/:slug", async (req, res) => {
   }
 
   try {
-    const existed = await removeProfile(getProfilesDir(), slug);
+    const dir = getProfilesDir();
+    const wasActive = (await getActiveProfileSlug(dir)) === slug;
+    const existed = await removeProfile(dir, slug);
     if (!existed) {
       return res.status(404).json({ error: `Profile "${slug}" not found` });
+    }
+    // Clear the active pointer if the deleted profile was active
+    if (wasActive) {
+      await setActiveProfileSlug(dir, null);
     }
     return res.json({ deleted: true });
   } catch (err) {

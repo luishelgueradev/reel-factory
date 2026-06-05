@@ -10,15 +10,48 @@
 import fs from "fs";
 import path from "path";
 import { validatePipelineConfig } from "./pipeline-config.js";
-import type { PipelineConfig } from "./pipeline-config.js";
+import type { PipelineConfig, SubtitleConfig, TitleStyleProps } from "./pipeline-config.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+/**
+ * A tiny visual digest of a profile's "look" — the salient style axes the
+ * dropdown mini-specimen renders so a saved profile reads as a whole
+ * configuration at a glance, not just a name (sketch 034-A).
+ */
+export interface ProfilePreview {
+  fontFamily?: string;
+  activeColor?: string;
+  outlineColor?: string;
+  fontWeight?: boolean;
+  titleText?: string;
+  titleColor?: string;
+  titleBg?: string;
+}
 
 /** A lightweight summary suitable for list views */
 export interface ProfileSummary {
   slug: string;
   name: string;
   updatedAt: string;
+  preview?: ProfilePreview;
+}
+
+/** Distills a config's caption + first-title look into a ProfilePreview. */
+function extractPreview(config: PipelineConfig): ProfilePreview {
+  const s: Partial<SubtitleConfig> = config.subtitle ?? {};
+  const firstTitle = Array.isArray(config.titles) ? config.titles[0] : undefined;
+  const ts: Partial<TitleStyleProps> = firstTitle?.style ?? {};
+  const preview: ProfilePreview = {
+    fontFamily: s.fontFamily,
+    activeColor: s.activeColor,
+    outlineColor: s.outlineColor,
+    fontWeight: s.fontWeight,
+  };
+  if (firstTitle?.text) preview.titleText = firstTitle.text.slice(0, 14);
+  if (ts.textColor) preview.titleColor = ts.textColor;
+  if (ts.backgroundColor) preview.titleBg = ts.backgroundColor;
+  return preview;
 }
 
 /** The full on-disk representation of a profile */
@@ -187,6 +220,7 @@ export async function listProfiles(dir: string): Promise<ProfileSummary[]> {
         slug: parsed.slug as string,
         name: parsed.name as string,
         updatedAt: parsed.updatedAt as string,
+        preview: extractPreview(parsed.config as PipelineConfig),
       });
     } catch (err) {
       console.warn(`[profiles] Skipping unreadable profile: ${file} —`, err instanceof Error ? err.message : err);
@@ -339,6 +373,66 @@ export async function removeProfile(dir: string, slug: string): Promise<boolean>
 
   await fs.promises.unlink(filePath);
   return true;
+}
+
+// ─── Active-profile pointer (D-05 follow-up: which profile is "current") ───────
+// Persisted so the Studio UI can show the active profile after a page reload (F5).
+// Stored as a plain-text slug in a NON-".json" file so listProfiles() ignores it.
+
+const ACTIVE_POINTER_FILE = ".active-profile";
+
+/**
+ * Returns the slug of the currently-active profile, or null if none is set
+ * (or the pointed-at profile no longer exists / the pointer is corrupt).
+ */
+export async function getActiveProfileSlug(dir: string): Promise<string | null> {
+  const pointerPath = path.join(dir, ACTIVE_POINTER_FILE);
+  if (!fs.existsSync(pointerPath)) return null;
+  try {
+    const raw = (await fs.promises.readFile(pointerPath, "utf-8")).trim();
+    if (!isValidSlug(raw)) return null;
+    // Only report active if the profile file still exists (avoids dangling pointer)
+    if (!fs.existsSync(profilePath(dir, raw))) return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sets (or clears, when slug === null) the active-profile pointer.
+ * Writes atomically via temp file + rename (D-04). No-op cleanup on clear.
+ */
+export async function setActiveProfileSlug(dir: string, slug: string | null): Promise<void> {
+  await fs.promises.mkdir(dir, { recursive: true });
+  const pointerPath = path.join(dir, ACTIVE_POINTER_FILE);
+
+  if (slug === null) {
+    try {
+      await fs.promises.unlink(pointerPath);
+    } catch {
+      // already absent — fine
+    }
+    return;
+  }
+
+  if (!isValidSlug(slug)) {
+    throw new ProfileValidationError(`Invalid active-profile slug "${slug}"`);
+  }
+
+  // Non-".json" temp so a mid-write glimpse never trips listProfiles()
+  const tmpPath = path.join(dir, `${ACTIVE_POINTER_FILE}.${process.pid}.${Date.now()}.tmp`);
+  try {
+    await fs.promises.writeFile(tmpPath, slug, "utf-8");
+    fs.renameSync(tmpPath, pointerPath);
+  } catch (err) {
+    try {
+      await fs.promises.unlink(tmpPath);
+    } catch {
+      // ignore cleanup error
+    }
+    throw err;
+  }
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────

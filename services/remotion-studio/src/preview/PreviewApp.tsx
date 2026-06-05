@@ -614,6 +614,7 @@ export function PreviewApp() {
                only Render Video may be green. */}
           <ProfilesMenu
             getCurrentConfig={getCurrentConfig}
+            currentConfig={getCurrentConfig()}
             onApplied={handleProfileApplied}
             disabled={renderState === "submitting" || renderState === "running"}
           />

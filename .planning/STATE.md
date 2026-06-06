@@ -43,6 +43,7 @@ Last activity: 2026-06-05 - Completed quick task 260605-pa2: exportar/importar J
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260606-278 | Overlay resize "Ancho px" slider max too small — quadrupled 540→2160 so PNG overlays scale much larger | 2026-06-06 | f185c23 | [260606-278-overlay-resize-width-max-too-small-quadr](./quick/260606-278-overlay-resize-width-max-too-small-quadr/) |
 | 260605-pa2 | Exportar/importar JSON de perfil — descargar un perfil a archivo (.json) y reimportarlo, para una versión portable de los datos del perfil (backup/compartir) | 2026-06-05 | ecb83d5 | [260605-pa2-exportar-e-importar-un-json-de-configura](./quick/260605-pa2-exportar-e-importar-un-json-de-configura/) |
 | 260603-hgz | Position presets misaligned (center/right/bottom) — measure real element size instead of estimate; overlays use real PNG aspect-ratio, titles measure rendered text box | 2026-06-03 | a811e4f | [260603-hgz-position-presets-misalign-elements-cente](./quick/260603-hgz-position-presets-misalign-elements-cente/) |
 | 260603-hob | Guardar config hid the real error behind a fixed "✕ Error al guardar" — surface the actual PUT /api/config validation field messages (full list on hover) | 2026-06-03 | 6a6749b | [260603-hob-save-config-shows-generic-error-al-guard](./quick/260603-hob-save-config-shows-generic-error-al-guard/) |

@@ -340,9 +340,10 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
       expect(screen.queryByText("Mi estilo TikTok")).not.toBeNull();
     });
 
-    // No "Actualizar «…»" update affordance should be present.
+    // No "Actualizar «…»" update affordance should be present (the control
+    // exposes itself via a title that starts with "Actualizar el perfil activo").
     expect(
-      screen.queryByText((t) => t.startsWith("Actualizar «"))
+      screen.queryByTitle(/^Actualizar el perfil activo/)
     ).toBeNull();
   });
 
@@ -359,11 +360,13 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
       return Promise.resolve({ ok: true, json: async () => ({ config: SAMPLE_CONFIG }) });
     });
 
-    await waitFor(() => {
-      expect(
-        screen.queryByText((t) => t.startsWith("Actualizar «") && t.includes("Mi estilo TikTok"))
-      ).not.toBeNull();
-    });
+    // The control names WHICH profile it re-saves, both in its title and label.
+    const updateBtn = await screen.findByTitle(
+      /^Actualizar el perfil activo «Mi estilo TikTok»/
+    );
+    expect(updateBtn).not.toBeNull();
+    expect(updateBtn.textContent).toContain("Actualizar");
+    expect(updateBtn.textContent).toContain("Mi estilo TikTok");
   });
 
   it("clicking update POSTs { name: activeName, config: getCurrentConfig() } and shows the saved chip", async () => {
@@ -408,9 +411,7 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
     fireEvent.click(await screen.findByTitle("Estilo activo: Mi estilo TikTok"));
 
     // The update control appears once the active profile hydrates.
-    const updateBtn = await waitFor(() =>
-      screen.getByText((t) => t.startsWith("Actualizar «"))
-    );
+    const updateBtn = await screen.findByTitle(/^Actualizar el perfil activo/);
 
     fireEvent.click(updateBtn);
 
@@ -448,9 +449,7 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
 
     fireEvent.click(await screen.findByTitle("Estilo activo: Mi estilo TikTok"));
 
-    const updateBtn = await waitFor(() =>
-      screen.getByText((t) => t.startsWith("Actualizar «"))
-    );
+    const updateBtn = await screen.findByTitle(/^Actualizar el perfil activo/);
 
     const btnEl = updateBtn.closest("button") ?? updateBtn;
     const color = (btnEl as HTMLElement).style?.color || "";

@@ -142,6 +142,11 @@ export function ProfilesMenu({
   const [saveChip, setSaveChip] = useState<string | null>(null); // transient chip
   const saveChipRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Holds the latest active profile name so handleUpdateActive (declared before
+  // activeName is computed in render) re-saves under the current active name
+  // without re-creating the callback on every list change.
+  const activeNameRef = useRef<string | null>(null);
+
   // ── Per-row state (applying, renaming, deleting) ──────────────────────────
   const [applyingSlug, setApplyingSlug] = useState<string | null>(null);
   const [applyChip, setApplyChip] = useState<string | null>(null);
@@ -299,6 +304,41 @@ export function ProfilesMenu({
       setSaving(false);
     }
   }, [saveName, getCurrentConfig, fetchProfiles]);
+
+  // ── Handle update-active ───────────────────────────────────────────────────
+  // One-click re-save of the CURRENTLY ACTIVE profile with the live config —
+  // no name re-typing. POSTs { name: activeName, config }; the server slugifies
+  // the name and a slug collision OVERWRITES the existing file (this IS the
+  // documented update path — no server change). Keeps the profile active.
+  const handleUpdateActive = useCallback(async () => {
+    const name = activeNameRef.current;
+    if (!name || saving || disabled) return;
+    setSaving(true);
+    setTopError(null);
+    try {
+      const config = getCurrentConfig();
+      const res = await fetch("/api/profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, config }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error || `Error ${res.status}`);
+      }
+      const data = (await res.json()) as { slug?: string };
+      // Refresh list and keep the profile active (its slug is stable on overwrite).
+      await fetchProfiles();
+      if (data.slug) setActiveSlug(data.slug);
+      if (saveChipRef.current) clearTimeout(saveChipRef.current);
+      setSaveChip("✓ Perfil guardado");
+      saveChipRef.current = setTimeout(() => setSaveChip(null), 2000);
+    } catch (err) {
+      setTopError(err instanceof Error ? err.message : "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
+  }, [saving, disabled, getCurrentConfig, fetchProfiles]);
 
   // ── Handle import ─────────────────────────────────────────────────────────
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -534,6 +574,9 @@ export function ProfilesMenu({
   const modified = Boolean(
     activeSlug && activeConfig && isModifiedFromProfile(currentConfig, activeConfig)
   );
+  // Keep the ref in sync so handleUpdateActive always re-saves under the current
+  // active name (the callback is created before activeName is known here).
+  activeNameRef.current = activeName;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -649,6 +692,31 @@ export function ProfilesMenu({
               borderBottom: "1px solid var(--border, #333)",
             }}
           >
+            {/* Update-active: the PRIMARY action when a profile is active —
+                re-saves the live config (titles included) to THIS profile in
+                one click, no name re-typing. --accent (blue), never --action
+                (green). When the live config has diverged ("Modificado"), a
+                calm accent-tint background invites the update without alarm. */}
+            {activeName && (
+              <>
+                <UpdateActiveButton
+                  activeName={activeName}
+                  modified={modified}
+                  disabled={saving || disabled}
+                  saving={saving}
+                  onClick={handleUpdateActive}
+                />
+                <div
+                  style={{
+                    fontSize: "var(--t-2xs, 10.5px)",
+                    color: "var(--text-muted, #777)",
+                    margin: "var(--s-3, 6px) 0 var(--s-2, 4px)",
+                  }}
+                >
+                  …o guardá como nuevo perfil:
+                </div>
+              </>
+            )}
             <div style={{ display: "flex", gap: "var(--s-3, 6px)" }}>
               <input
                 ref={saveInputRef}
@@ -1405,6 +1473,99 @@ function IconButton({
       }}
     >
       {children}
+    </button>
+  );
+}
+
+// ─── UpdateActiveButton ───────────────────────────────────────────────────────
+// Primary one-click "re-save the active profile" affordance. Full-width, calm.
+// Green discipline: --accent (blue) only, NEVER --action (green). When the live
+// config has diverged from the saved profile (`modified`), it gains a low-chroma
+// accent-tint fill + a "· Modificado" cue so a diverged config visibly invites
+// the update — informational, not an alarm (reuses the sketch 034-A grammar).
+
+function UpdateActiveButton({
+  activeName,
+  modified,
+  disabled,
+  saving,
+  onClick,
+}: {
+  activeName: string;
+  modified: boolean;
+  disabled: boolean;
+  saving: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const accent = "var(--accent, #90caf9)";
+  // Calm divergence fill — low-chroma accent tint (NOT green, NOT red).
+  const tint = "oklch(0.55 0.09 240 / 0.16)";
+  const enabled = !disabled;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={`Actualizar el perfil activo «${activeName}» con la configuración actual`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "var(--s-2, 4px)",
+        padding: "6px var(--s-4, 8px)",
+        // Diverged → calm accent tint invites the save; clean → transparent
+        // outline (hover deepens the tint). Never action-green.
+        background: !enabled
+          ? "transparent"
+          : modified
+          ? tint
+          : hovered
+          ? "oklch(0.55 0.09 240 / 0.10)"
+          : "transparent",
+        color: enabled ? accent : "var(--text-faint, #555)",
+        border: "1px solid",
+        borderColor: enabled ? accent : "var(--border, #333)",
+        borderRadius: "var(--r-sm, 6px)",
+        fontSize: "var(--t-sm, 12.5px)",
+        fontWeight: 600,
+        cursor: enabled ? "pointer" : "not-allowed",
+        minHeight: 34,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        transition:
+          "background var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease), border-color var(--dur, 170ms) var(--ease)",
+        opacity: disabled && !saving ? 0.5 : 1,
+      }}
+    >
+      <span style={{ flexShrink: 0 }}>{saving ? "…" : "Actualizar"}</span>
+      <span
+        style={{
+          fontWeight: 700,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        «{activeName}»
+      </span>
+      {/* Modificado cue — amber, low-chroma, informational (sketch 034-A) */}
+      {modified && enabled && !saving && (
+        <span
+          style={{
+            fontSize: "var(--t-2xs, 10.5px)",
+            fontWeight: 600,
+            color: "var(--warning, #e0b15a)",
+            flexShrink: 0,
+          }}
+        >
+          · Modificado
+        </span>
+      )}
     </button>
   );
 }

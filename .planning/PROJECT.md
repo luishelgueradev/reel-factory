@@ -10,7 +10,7 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 ## Current State
 
-**Shipped:** v1.0 (Pipeline completo, 12 fases) + v1.1 (Calidad de video, fases 13-14) + v1.2 (Infrastructure / shared services, fases 15-16 — whisper externalizado + render config-propagation/flicker fixes + tunnel/auth/concurrency hardening). Archived: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md), [.planning/milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md).
+**Shipped:** v1.0 (Pipeline completo, 12 fases) + v1.1 (Calidad de video, fases 13-14) + v1.2 (Infrastructure / shared services, fases 15-16 — whisper externalizado + render config-propagation/flicker fixes + tunnel/auth/concurrency hardening). Archived: [.planning/milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md), [.planning/milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md). **v1.3** (Studio redesign, fases 17-22) shipped 2026-06-03. **v1.4** (Studio como producto usable — render-from-button, named profiles + JSON export/import, AI metadata, north-star UI convergence) shipped & archived 2026-06-06: [roadmap](milestones/v1.4-ROADMAP.md) · [requirements](milestones/v1.4-REQUIREMENTS.md).
 
 **Phase 22 complete (2026-06-03):** Studio UI polish done — 3-column shell (preview · controls · static "Metadata de redes — Próximamente" placeholder) in PreviewApp; full impeccable densification of all three editors with Posición→Estilo→Avanzado ordering and green→blue selection states (single green Render CTA); tabs restructured to Títulos | Overlays | Subtítulos with sample text relocated atop Subtítulos; overlay back/front layering model (`PngOverlayConfig.layer` field + validator, mirrored studio/renderer, 5-layer paint order, preview-only legibility dim); shared 9-point `PositionPresets` component (size-aware px mode for titles/overlays, enum mode for subtitles). 298/298 renderer + 127/127 studio tests pass; human visual UAT approved. Verification 5/5. Code review surfaced 1 pre-existing blocker (CR-01, renderer Root.tsx subtitle prop) + advisory warnings tracked in 22-REVIEW.md.
 
@@ -20,7 +20,11 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 **v1.1 outcomes (notable):** scale:1 production default (Spike 001 mostró que el supersampling no aporta a captions de alto contraste a 1080); orchestrator threadea `PIPELINE_CONFIG_PATH` (los renders honran el config del studio); fix determinista del sync de highlights vía marcador `transcript.timeline` (heurística como fallback); quality-finalizer container ships pero queda como no-op con scale:1.
 
-## Current Milestone: v1.4 — Studio como producto usable
+## Current State: Between milestones — v1.4 shipped 2026-06-06
+
+v1.4 (Studio como producto usable) is complete and archived ([roadmap](milestones/v1.4-ROADMAP.md) · [requirements](milestones/v1.4-REQUIREMENTS.md) · [audit](v1.4-MILESTONE-AUDIT.md), PASSED). Next: define v1.5 with `/gsd-new-milestone`. Deferred backlog candidates: north-star shell (rail/header consolidation), dynamic Google Font add/remove, `tsc --noEmit` cleanup, batch-queue UI.
+
+### v1.4 — Studio como producto usable (Shipped: 2026-06-06)
 
 **Goal:** Convertir el Studio de editor de estilos en un producto usable de punta a punta: un click genera el video con progreso en vivo, configs reutilizables como perfiles nombrados, metadata para redes generada por IA desde los subtítulos, y la interfaz madurada al north-star elegido.
 

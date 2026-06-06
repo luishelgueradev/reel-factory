@@ -51,17 +51,9 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 - [x] **Phase 21: PNG overlays** - Transparent PNG overlay with code-side supersampled downscale for crisp logos/watermarks, with positioning/sizing. Requirements: OVERLAY-01, OVERLAY-02, OVERLAY-03. **(UI hint: yes)** (completed 2026-05-30)
 - [x] **Phase 22: Studio UI polish** - Adopt a 3-column Studio shell (preview · controls · social-metadata placeholder); denser, reordered control panel (full impeccable pass); sample-text moved into the Subtitles tab; overlay layering model (overlays below text by default, per-overlay back/front toggle); x/y auto-position presets (9-point grid) for titles + overlays. Requirements: D-01..D-11 (22-CONTEXT.md). **Plans:** 6 plans in 3 waves. **(UI hint: yes)** (completed 2026-06-03)
 
-### Milestone v1.4 — Studio como producto usable
+### Milestone v1.4 — Studio como producto usable — ✅ SHIPPED 2026-06-06
 
-Convert the Studio from a style editor into an end-to-end usable product: one click generates the video with live progress, configs are reusable as named profiles, social metadata is AI-generated from subtitles, and the interface is matured toward the chosen north-star. **Frontend tooling non-negotiable:** every studio-facing phase invokes `impeccable` + `frontend-design` (AGENTS.md).
-
-- [x] **Phase 23: Render execution + progress** - Wire the Studio "Render Video" button to the real pipeline (`POST /process`), live job progress via `GET /status/:jobId`, completion/failure notification, finished-video access from the Studio, and font-load resilience (retry/offline fonts so a transient gstatic blip cannot abort a 666-frame render). Requirements: RENDER-01, RENDER-02, RENDER-03, RENDER-04, RENDER-05. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable per AGENTS.md)** (completed 2026-06-04)
-
-- [x] **Phase 24: Named config profiles** - Save the current config as a named profile, load/list/rename/delete saved profiles, persisted with the same Docker-rebuild guarantee as the active config (Phase 17). Requirements: PROFILE-01, PROFILE-02, PROFILE-03, PROFILE-04. **(UI hint: yes)** (completed 2026-06-04)
-
-- [x] **Phase 25: AI social metadata** - Generate title/description/hashtags from the Whisper transcript via Claude API; fill the "Metadata de redes" panel that Phase 22 left as a placeholder; edit/copy/regenerate by tone or platform. Run through `/gsd-ai-integration-phase` (produces AI-SPEC.md) before planning. Requirements: META-01, META-02, META-03, META-04. **(UI hint: yes; AI hint: yes — AI-SPEC required before planning)** (completed 2026-06-04)
-
-- [x] **Phase 26: UI convergence (impeccable)** - Holistic visual maturity pass over the whole Studio toward the chosen north-star (sketches 037/044-north-star-v4/v5, 033-nav-shell-v4 + the ~47-experiment sketch corpus in `.planning/sketches/`), integrating all new surfaces from Phases 23-25 to the same quality bar. Runs last, polishes surfaces that exist. Requirements: UICONV-01, UICONV-02. **(UI hint: yes — `impeccable` + `frontend-design` non-negotiable; sketch-first)** (completed 2026-06-04)
+Closed at 4 phases / 14 plans / 15 requirements complete (audit PASSED). Render-from-button with live progress + font resilience (Phase 23); named config profiles with Docker-rebuild persistence (Phase 24, extended post-milestone with JSON export/import + active-profile pointer); AI social metadata from the transcript via the local-llms router (Phase 25); north-star UI convergence integrating all new surfaces (Phase 26). Full archive: [.planning/milestones/v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) · requirements: [.planning/milestones/v1.4-REQUIREMENTS.md](milestones/v1.4-REQUIREMENTS.md) · audit: [.planning/v1.4-MILESTONE-AUDIT.md](v1.4-MILESTONE-AUDIT.md)
 
 ## Phase Details
 

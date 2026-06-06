@@ -21,7 +21,7 @@ stopped_at: Milestone complete (Phase 26 was final phase)
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** Milestone complete
+**Current focus:** Between milestones — v1.4 archived 2026-06-06 (audit PASSED, tag v1.4). Next: /gsd-new-milestone for v1.5.
 
 ## Current Position
 

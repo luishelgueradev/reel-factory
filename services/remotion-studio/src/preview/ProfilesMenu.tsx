@@ -139,6 +139,11 @@ export function ProfilesMenu({
   // ── Save-as field ──────────────────────────────────────────────────────────
   const [saveName, setSaveName] = useState("");
   const [saving, setSaving] = useState(false);
+  // Disclosure: the "create a NEW profile" form is collapsed by default when a
+  // profile is active (the primary action there is updating the active one).
+  // When no profile is active, the create form is the only path, so it shows
+  // unconditionally (see `showCreateForm` in render).
+  const [showSaveAsNew, setShowSaveAsNew] = useState(false);
   const [saveChip, setSaveChip] = useState<string | null>(null); // transient chip
   const saveChipRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -264,16 +269,22 @@ export function ProfilesMenu({
     };
   }, []);
 
-  // ── Save-as: does the name match an existing profile? ─────────────────────
-  const nameMatchesExisting = profiles.some(
-    (p) => p.name.toLowerCase() === saveName.trim().toLowerCase()
-  );
-
-  // ── Handle save-as ─────────────────────────────────────────────────────────
+  // ── Handle create-new ────────────────────────────────────────────────────────
+  // Creates a NEW profile from the current config. Updating an existing profile
+  // is a separate, explicit action (handleUpdateActive). So a name that collides
+  // with an existing profile is rejected here with a clear redirect — we never
+  // silently overwrite from the create path.
   const handleSave = useCallback(async () => {
     const name = saveName.trim();
     if (!name) {
       setTopError("Ingresá un nombre");
+      return;
+    }
+    const collision = profiles.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase()
+    );
+    if (collision) {
+      setTopError(`Ya existe «${collision.name}». Aplicalo y usá "Guardar cambios".`);
       return;
     }
     setSaving(true);
@@ -290,20 +301,21 @@ export function ProfilesMenu({
         throw new Error((body as { error?: string }).error || `Error ${res.status}`);
       }
       const data = await res.json() as { slug?: string };
-      // Refresh list and set active slug to the saved profile
+      // Refresh list and set active slug to the new profile
       await fetchProfiles();
       setActiveSlug(data.slug ?? null);
       setSaveName("");
+      setShowSaveAsNew(false); // collapse the create form on success
       // Transient chip
       if (saveChipRef.current) clearTimeout(saveChipRef.current);
-      setSaveChip("✓ Perfil guardado");
+      setSaveChip("✓ Perfil creado");
       saveChipRef.current = setTimeout(() => setSaveChip(null), 2000);
     } catch (err) {
       setTopError(err instanceof Error ? err.message : "Error al guardar");
     } finally {
       setSaving(false);
     }
-  }, [saveName, getCurrentConfig, fetchProfiles]);
+  }, [saveName, profiles, getCurrentConfig, fetchProfiles]);
 
   // ── Handle update-active ───────────────────────────────────────────────────
   // One-click re-save of the CURRENTLY ACTIVE profile with the live config —
@@ -331,7 +343,7 @@ export function ProfilesMenu({
       await fetchProfiles();
       if (data.slug) setActiveSlug(data.slug);
       if (saveChipRef.current) clearTimeout(saveChipRef.current);
-      setSaveChip("✓ Perfil guardado");
+      setSaveChip("✓ Cambios guardados");
       saveChipRef.current = setTimeout(() => setSaveChip(null), 2000);
     } catch (err) {
       setTopError(err instanceof Error ? err.message : "Error al guardar");
@@ -574,6 +586,9 @@ export function ProfilesMenu({
   const modified = Boolean(
     activeSlug && activeConfig && isModifiedFromProfile(currentConfig, activeConfig)
   );
+  // The create-new form is the sole save path when no profile is active; when one
+  // is active it lives behind the "Guardar como nuevo…" disclosure.
+  const showCreateForm = !activeName || showSaveAsNew;
   // Keep the ref in sync so handleUpdateActive always re-saves under the current
   // active name (the callback is created before activeName is known here).
   activeNameRef.current = activeName;
@@ -593,6 +608,7 @@ export function ProfilesMenu({
             setOpen((v) => !v);
             if (!open) {
               setSaveName("");
+              setShowSaveAsNew(false);
               setTopError(null);
               setRowError(null);
             }
@@ -692,113 +708,160 @@ export function ProfilesMenu({
               borderBottom: "1px solid var(--border, #333)",
             }}
           >
-            {/* Update-active: the PRIMARY action when a profile is active —
-                re-saves the live config (titles included) to THIS profile in
-                one click, no name re-typing. --accent (blue), never --action
-                (green). When the live config has diverged ("Modificado"), a
-                calm accent-tint background invites the update without alarm. */}
+            {/* Adaptive save zone (sketch 034-A grammar). Exactly one verb per
+                intent — no duplicate save buttons:
+                  • A profile active → a context line "En «X»" (+ "· Modificado")
+                    and the PRIMARY "Guardar cambios" action, which appears ONLY
+                    when the live config has diverged (tied to the Modificado
+                    signal). Creating a new profile is a quiet disclosure below.
+                  • No profile active → the create-new form is the sole, direct
+                    path (the disclosure is bypassed).
+                --accent (blue) only, never --action (green). */}
             {activeName && (
-              <>
-                <UpdateActiveButton
-                  activeName={activeName}
-                  modified={modified}
-                  disabled={saving || disabled}
-                  saving={saving}
-                  onClick={handleUpdateActive}
-                />
-                <div
-                  style={{
-                    fontSize: "var(--t-2xs, 10.5px)",
-                    color: "var(--text-muted, #777)",
-                    margin: "var(--s-3, 6px) 0 var(--s-2, 4px)",
-                  }}
-                >
-                  …o guardá como nuevo perfil:
-                </div>
-              </>
-            )}
-            <div style={{ display: "flex", gap: "var(--s-3, 6px)" }}>
-              <input
-                ref={saveInputRef}
-                type="text"
-                value={saveName}
-                onChange={(e) => {
-                  setSaveName(e.target.value);
-                  setTopError(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !saving && !disabled) handleSave();
-                }}
-                placeholder="Nombre del perfil…"
-                disabled={saving || disabled}
+              <div
+                data-active-context
                 style={{
-                  flex: 1,
-                  padding: "5px var(--s-4, 8px)",
-                  background: "var(--surface, #1e1e2e)",
-                  border: topError
-                    ? "1px solid var(--danger, #e57373)"
-                    : "1px solid var(--border, #333)",
-                  borderRadius: "var(--r-sm, 6px)",
-                  color: "var(--text, #e6e6ea)",
-                  fontSize: "var(--t-sm, 12.5px)",
-                  outline: "none",
-                  minHeight: 32,
-                  transition: "border-color var(--dur, 170ms) var(--ease)",
-                  opacity: disabled ? 0.5 : 1,
-                }}
-              />
-              <button
-                onClick={handleSave}
-                disabled={saving || disabled || !saveName.trim()}
-                title={
-                  nameMatchesExisting
-                    ? "Actualizar el perfil existente con este nombre"
-                    : "Guardar la config actual como perfil"
-                }
-                style={{
-                  padding: "5px 10px",
-                  background: "transparent",
-                  // --accent (blue), NOT --action (green) — green discipline
-                  color:
-                    saving || disabled || !saveName.trim()
-                      ? "var(--text-faint, #555)"
-                      : "var(--accent, #90caf9)",
-                  border: "1px solid",
-                  borderColor:
-                    saving || disabled || !saveName.trim()
-                      ? "var(--border, #333)"
-                      : "var(--accent, #90caf9)",
-                  borderRadius: "var(--r-sm, 6px)",
-                  fontSize: "var(--t-sm, 12.5px)",
-                  fontWeight: 500,
-                  cursor:
-                    saving || disabled || !saveName.trim() ? "not-allowed" : "pointer",
-                  minHeight: 32,
-                  whiteSpace: "nowrap",
-                  transition: "color var(--dur, 170ms) var(--ease), border-color var(--dur, 170ms) var(--ease)",
-                  opacity: saving || disabled ? 0.5 : 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "var(--s-4, 8px)",
+                  minHeight: 34,
                 }}
               >
-                {saving ? "…" : nameMatchesExisting ? "Actualizar" : "Guardar actual"}
-              </button>
-            </div>
-            {/* Import row — second thinner row below save-as */}
-            <div style={{ display: "flex", alignItems: "center", marginTop: "var(--s-2, 4px)" }}>
-              {/* Hidden file input */}
-              <input
-                ref={importInputRef}
-                type="file"
-                accept=".json"
-                style={{ display: "none" }}
+                <div
+                  style={{
+                    fontSize: "var(--t-sm, 12.5px)",
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                    minWidth: 0,
+                  }}
+                >
+                  <span style={{ color: "var(--text-muted, #777)" }}>En </span>
+                  <span style={{ fontWeight: 600, color: "var(--text, #e6e6ea)" }}>
+                    «{activeName}»
+                  </span>
+                  {modified && (
+                    <span
+                      style={{
+                        marginLeft: "var(--s-3, 6px)",
+                        fontSize: "var(--t-2xs, 10.5px)",
+                        fontWeight: 600,
+                        color: "var(--warning, #e0b15a)",
+                      }}
+                    >
+                      · Modificado
+                    </span>
+                  )}
+                </div>
+                {modified && (
+                  <SaveChangesButton
+                    saving={saving}
+                    disabled={saving || disabled}
+                    onClick={handleUpdateActive}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Disclosure → reveals the create-new form. Only rendered when a
+                profile is active (otherwise the form shows directly below). */}
+            {activeName && (
+              <DisclosureLink
+                open={showSaveAsNew}
                 disabled={saving || disabled}
-                onChange={handleImport}
+                onClick={() => {
+                  setTopError(null);
+                  setShowSaveAsNew((v) => {
+                    if (v) setSaveName(""); // collapsing → clear the field
+                    return !v;
+                  });
+                }}
               />
-              {/* Importar button — neutral/muted outline, --accent on hover; NOT --action */}
-              <ImportarButton
-                disabled={saving || disabled}
-                onClick={() => importInputRef.current?.click()}
-              />
-            </div>
+            )}
+
+            {/* Create-new form: name + Crear + Importar. */}
+            {showCreateForm && (
+              <div style={{ marginTop: activeName ? "var(--s-3, 6px)" : 0 }}>
+                <div style={{ display: "flex", gap: "var(--s-3, 6px)" }}>
+                  <input
+                    ref={saveInputRef}
+                    type="text"
+                    value={saveName}
+                    onChange={(e) => {
+                      setSaveName(e.target.value);
+                      setTopError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !saving && !disabled) handleSave();
+                    }}
+                    placeholder="Nombre del perfil nuevo…"
+                    disabled={saving || disabled}
+                    style={{
+                      flex: 1,
+                      padding: "5px var(--s-4, 8px)",
+                      background: "var(--surface, #1e1e2e)",
+                      border: topError
+                        ? "1px solid var(--danger, #e57373)"
+                        : "1px solid var(--border, #333)",
+                      borderRadius: "var(--r-sm, 6px)",
+                      color: "var(--text, #e6e6ea)",
+                      fontSize: "var(--t-sm, 12.5px)",
+                      outline: "none",
+                      minHeight: 32,
+                      transition: "border-color var(--dur, 170ms) var(--ease)",
+                      opacity: disabled ? 0.5 : 1,
+                    }}
+                  />
+                  <button
+                    onClick={handleSave}
+                    disabled={saving || disabled || !saveName.trim()}
+                    title="Crear un perfil nuevo con la configuración actual"
+                    style={{
+                      padding: "5px 12px",
+                      background: "transparent",
+                      // --accent (blue), NOT --action (green) — green discipline
+                      color:
+                        saving || disabled || !saveName.trim()
+                          ? "var(--text-faint, #555)"
+                          : "var(--accent, #90caf9)",
+                      border: "1px solid",
+                      borderColor:
+                        saving || disabled || !saveName.trim()
+                          ? "var(--border, #333)"
+                          : "var(--accent, #90caf9)",
+                      borderRadius: "var(--r-sm, 6px)",
+                      fontSize: "var(--t-sm, 12.5px)",
+                      fontWeight: 500,
+                      cursor:
+                        saving || disabled || !saveName.trim() ? "not-allowed" : "pointer",
+                      minHeight: 32,
+                      whiteSpace: "nowrap",
+                      transition:
+                        "color var(--dur, 170ms) var(--ease), border-color var(--dur, 170ms) var(--ease)",
+                      opacity: saving || disabled ? 0.5 : 1,
+                    }}
+                  >
+                    {saving ? "…" : "Crear"}
+                  </button>
+                </div>
+                {/* Import row — create a profile from a .json file */}
+                <div style={{ display: "flex", alignItems: "center", marginTop: "var(--s-3, 6px)" }}>
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".json"
+                    style={{ display: "none" }}
+                    disabled={saving || disabled}
+                    onChange={handleImport}
+                  />
+                  <ImportarButton
+                    disabled={saving || disabled}
+                    onClick={() => importInputRef.current?.click()}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Inline save/import error */}
             {topError && (
@@ -1477,55 +1540,41 @@ function IconButton({
   );
 }
 
-// ─── UpdateActiveButton ───────────────────────────────────────────────────────
-// Primary one-click "re-save the active profile" affordance. Full-width, calm.
-// Green discipline: --accent (blue) only, NEVER --action (green). When the live
-// config has diverged from the saved profile (`modified`), it gains a low-chroma
-// accent-tint fill + a "· Modificado" cue so a diverged config visibly invites
-// the update — informational, not an alarm (reuses the sketch 034-A grammar).
+// ─── SaveChangesButton ────────────────────────────────────────────────────────
+// Compact PRIMARY action: re-save the live config into the ACTIVE profile. Lives
+// on the active-profile context line and only renders when the config diverged
+// (the caller gates it on `modified`). Green discipline: --accent (blue) only,
+// never --action (green).
 
-function UpdateActiveButton({
-  activeName,
-  modified,
+function SaveChangesButton({
   disabled,
   saving,
   onClick,
 }: {
-  activeName: string;
-  modified: boolean;
   disabled: boolean;
   saving: boolean;
   onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const accent = "var(--accent, #90caf9)";
-  // Calm divergence fill — low-chroma accent tint (NOT green, NOT red).
-  const tint = "oklch(0.55 0.09 240 / 0.16)";
   const enabled = !disabled;
-
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={`Actualizar el perfil activo «${activeName}» con la configuración actual`}
+      title="Guardar los cambios actuales en el perfil activo"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "var(--s-2, 4px)",
-        padding: "6px var(--s-4, 8px)",
-        // Diverged → calm accent tint invites the save; clean → transparent
-        // outline (hover deepens the tint). Never action-green.
-        background: !enabled
-          ? "transparent"
-          : modified
-          ? tint
-          : hovered
-          ? "oklch(0.55 0.09 240 / 0.10)"
+        flexShrink: 0,
+        padding: "5px 12px",
+        // Diverged action invites the save with a calm accent tint; deepens on
+        // hover. Never action-green.
+        background: enabled
+          ? hovered
+            ? "oklch(0.55 0.09 240 / 0.18)"
+            : "oklch(0.55 0.09 240 / 0.12)"
           : "transparent",
         color: enabled ? accent : "var(--text-faint, #555)",
         border: "1px solid",
@@ -1534,38 +1583,58 @@ function UpdateActiveButton({
         fontSize: "var(--t-sm, 12.5px)",
         fontWeight: 600,
         cursor: enabled ? "pointer" : "not-allowed",
-        minHeight: 34,
+        minHeight: 32,
         whiteSpace: "nowrap",
-        overflow: "hidden",
         transition:
           "background var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease), border-color var(--dur, 170ms) var(--ease)",
         opacity: disabled && !saving ? 0.5 : 1,
       }}
     >
-      <span style={{ flexShrink: 0 }}>{saving ? "…" : "Actualizar"}</span>
-      <span
-        style={{
-          fontWeight: 700,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        «{activeName}»
-      </span>
-      {/* Modificado cue — amber, low-chroma, informational (sketch 034-A) */}
-      {modified && enabled && !saving && (
-        <span
-          style={{
-            fontSize: "var(--t-2xs, 10.5px)",
-            fontWeight: 600,
-            color: "var(--warning, #e0b15a)",
-            flexShrink: 0,
-          }}
-        >
-          · Modificado
-        </span>
-      )}
+      {saving ? "…" : "Guardar cambios"}
+    </button>
+  );
+}
+
+// ─── DisclosureLink ───────────────────────────────────────────────────────────
+// Quiet text affordance that toggles the "create a new profile" form. Muted by
+// default, --accent on hover. Never --action (green).
+
+function DisclosureLink({
+  open,
+  disabled,
+  onClick,
+}: {
+  open: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-expanded={open}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        marginTop: "var(--s-3, 6px)",
+        padding: "2px 0",
+        background: "transparent",
+        border: "none",
+        color: disabled
+          ? "var(--text-faint, #555)"
+          : hovered
+          ? "var(--accent, #90caf9)"
+          : "var(--text-muted, #777)",
+        fontSize: "var(--t-2xs, 10.5px)",
+        fontWeight: 500,
+        cursor: disabled ? "not-allowed" : "pointer",
+        textAlign: "left",
+        transition: "color var(--dur, 170ms) var(--ease)",
+      }}
+    >
+      {open ? "− Cancelar" : "+ Guardar como nuevo…"}
     </button>
   );
 }

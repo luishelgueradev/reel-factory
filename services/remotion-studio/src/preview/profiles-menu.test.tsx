@@ -220,18 +220,18 @@ describe("ProfilesMenu save-as (PROFILE-01)", () => {
     // Open the menu
     fireEvent.click(screen.getByTitle("Perfiles de configuración"));
 
-    // Wait for the save input to appear
+    // Wait for the create-new input to appear (no profile active → shown directly)
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText("Nombre del perfil…")).not.toBeNull();
+      expect(screen.queryByPlaceholderText("Nombre del perfil nuevo…")).not.toBeNull();
     });
 
     // Type a name
-    fireEvent.change(screen.getByPlaceholderText("Nombre del perfil…"), {
+    fireEvent.change(screen.getByPlaceholderText("Nombre del perfil nuevo…"), {
       target: { value: "Nuevo perfil" },
     });
 
-    // Click "Guardar actual"
-    fireEvent.click(screen.getByText("Guardar actual"));
+    // Click "Crear"
+    fireEvent.click(screen.getByText("Crear"));
 
     // Assert POST was called with name + config
     await waitFor(() => {
@@ -248,18 +248,28 @@ describe("ProfilesMenu save-as (PROFILE-01)", () => {
       expect(row.textContent).toContain("Nuevo perfil");
     });
 
-    // Assert the "✓ Perfil guardado" chip appears
+    // Assert the "✓ Perfil creado" chip appears
     await waitFor(() => {
-      expect(screen.queryByText("✓ Perfil guardado")).not.toBeNull();
+      expect(screen.queryByText("✓ Perfil creado")).not.toBeNull();
     });
   });
 
-  it("shows 'Actualizar' when name matches existing profile", async () => {
+  it("rejects creating a profile whose name collides with an existing one", async () => {
+    // Create-new is for NEW profiles only; updating an existing one is a separate
+    // explicit action. A colliding name is refused (no silent overwrite, no POST).
+    let postCalled = false;
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ profiles: [PROFILE_A] }),
+      vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+        if (url === "/api/profiles" && opts?.method === "POST") {
+          postCalled = true;
+          return Promise.resolve({ ok: true, json: async () => ({}) });
+        }
+        // GET returns PROFILE_A but no active profile → create form shown directly
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ profiles: [PROFILE_A], activeSlug: null }),
+        });
       })
     );
 
@@ -273,18 +283,20 @@ describe("ProfilesMenu save-as (PROFILE-01)", () => {
     fireEvent.click(screen.getByTitle("Perfiles de configuración"));
 
     await waitFor(() => {
-      expect(screen.queryByText("Mi estilo TikTok")).not.toBeNull();
+      expect(screen.queryByPlaceholderText("Nombre del perfil nuevo…")).not.toBeNull();
     });
 
-    // Type the existing name
-    fireEvent.change(screen.getByPlaceholderText("Nombre del perfil…"), {
+    // Type the existing name and try to create
+    fireEvent.change(screen.getByPlaceholderText("Nombre del perfil nuevo…"), {
       target: { value: "Mi estilo TikTok" },
     });
+    fireEvent.click(screen.getByText("Crear"));
 
-    // Button label should become "Actualizar"
+    // Inline error redirects to the update path; no POST is issued.
     await waitFor(() => {
-      expect(screen.queryByText("Actualizar")).not.toBeNull();
+      expect(screen.queryByText(/Ya existe «Mi estilo TikTok»/)).not.toBeNull();
     });
+    expect(postCalled).toBe(false);
   });
 
   it("shows inline error when save fails", async () => {
@@ -309,12 +321,12 @@ describe("ProfilesMenu save-as (PROFILE-01)", () => {
     );
 
     fireEvent.click(screen.getByTitle("Perfiles de configuración"));
-    await waitFor(() => screen.queryByPlaceholderText("Nombre del perfil…"));
+    await waitFor(() => screen.queryByPlaceholderText("Nombre del perfil nuevo…"));
 
-    fireEvent.change(screen.getByPlaceholderText("Nombre del perfil…"), {
+    fireEvent.change(screen.getByPlaceholderText("Nombre del perfil nuevo…"), {
       target: { value: "Prueba" },
     });
-    fireEvent.click(screen.getByText("Guardar actual"));
+    fireEvent.click(screen.getByText("Crear"));
 
     await waitFor(() => {
       expect(screen.queryByText("Config inválida")).not.toBeNull();
@@ -327,7 +339,17 @@ describe("ProfilesMenu save-as (PROFILE-01)", () => {
 describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("does NOT render the update-active control when no profile is active", async () => {
+  // A config that diverges from SAMPLE_CONFIG so `modified` is true → the
+  // "Guardar cambios" action surfaces (tied to the Modificado signal).
+  const DIVERGED_CONFIG: PipelineConfig = {
+    subtitle: { layout: "tiktok", activeColor: "#FF0000" },
+    titles: [{ text: "Mi título propio", startFrame: 0, durationInFrames: 60 }],
+    overlays: [],
+  } as unknown as PipelineConfig;
+
+  const UPDATE_TITLE = "Guardar los cambios actuales en el perfil activo";
+
+  it("does NOT render the 'Guardar cambios' control when no profile is active", async () => {
     // GET returns profiles but NO activeSlug → no active profile.
     await renderOpenMenu(() =>
       Promise.resolve({
@@ -340,15 +362,14 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
       expect(screen.queryByText("Mi estilo TikTok")).not.toBeNull();
     });
 
-    // No "Actualizar «…»" update affordance should be present (the control
-    // exposes itself via a title that starts with "Actualizar el perfil activo").
-    expect(
-      screen.queryByTitle(/^Actualizar el perfil activo/)
-    ).toBeNull();
+    // No active-profile context line and no update action.
+    expect(screen.queryByTitle(UPDATE_TITLE)).toBeNull();
+    expect(screen.queryByText("Guardar cambios")).toBeNull();
   });
 
-  it("renders a one-click 'Actualizar «{activeName}»' control when a profile is active", async () => {
-    // Hydrate activeSlug from GET so the component reads PROFILE_A as active.
+  it("shows the active-profile context line and a 'Guardar cambios' action only when modified", async () => {
+    // Hydrate activeSlug from GET; the saved config (GET /:slug) matches
+    // getCurrentConfig() here → NOT modified → no update button, just context.
     await renderOpenMenu((url: string, opts?: RequestInit) => {
       if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
         return Promise.resolve({
@@ -356,26 +377,22 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
           json: async () => ({ profiles: [PROFILE_A], activeSlug: PROFILE_A.slug }),
         });
       }
-      // GET /api/profiles/:slug for activeConfig
       return Promise.resolve({ ok: true, json: async () => ({ config: SAMPLE_CONFIG }) });
     });
 
-    // The control names WHICH profile it re-saves, both in its title and label.
-    const updateBtn = await screen.findByTitle(
-      /^Actualizar el perfil activo «Mi estilo TikTok»/
-    );
-    expect(updateBtn).not.toBeNull();
-    expect(updateBtn.textContent).toContain("Actualizar");
-    expect(updateBtn.textContent).toContain("Mi estilo TikTok");
+    // Context line names the active profile (scope to the popover's context row,
+    // not the trigger which also shows the name).
+    const ctx = await waitFor(() => {
+      const el = document.querySelector("[data-active-context]");
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(ctx.textContent).toContain("«Mi estilo TikTok»");
+    // Not modified → no update button.
+    expect(screen.queryByTitle(UPDATE_TITLE)).toBeNull();
   });
 
-  it("clicking update POSTs { name: activeName, config: getCurrentConfig() } and shows the saved chip", async () => {
-    const liveConfig: PipelineConfig = {
-      subtitle: { layout: "tiktok", activeColor: "#FF0000" },
-      titles: [{ text: "Mi título propio", startFrame: 0, durationInFrames: 60 }],
-      overlays: [],
-    } as unknown as PipelineConfig;
-
+  it("clicking 'Guardar cambios' POSTs { name: activeName, config: getCurrentConfig() } and shows the chip", async () => {
     let postCalled = false;
     let postedBody: unknown;
 
@@ -396,22 +413,23 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
             json: async () => ({ slug: PROFILE_A.slug }),
           });
         }
-        // GET /api/profiles/:slug for activeConfig
+        // GET /api/profiles/:slug for activeConfig (saved) — differs from live → modified
         return Promise.resolve({ ok: true, json: async () => ({ config: SAMPLE_CONFIG }) });
       })
     );
 
     render(
       <ProfilesMenu
-        getCurrentConfig={() => liveConfig}
+        getCurrentConfig={() => DIVERGED_CONFIG}
         onApplied={vi.fn()}
       />
     );
 
     fireEvent.click(await screen.findByTitle("Estilo activo: Mi estilo TikTok"));
 
-    // The update control appears once the active profile hydrates.
-    const updateBtn = await screen.findByTitle(/^Actualizar el perfil activo/);
+    // The update action surfaces once the diverged active profile hydrates.
+    const updateBtn = await screen.findByTitle(UPDATE_TITLE);
+    expect(updateBtn.textContent).toContain("Guardar cambios");
 
     fireEvent.click(updateBtn);
 
@@ -421,15 +439,14 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
 
     const body = postedBody as { name: string; config: PipelineConfig };
     expect(body.name).toBe(PROFILE_A.name); // re-saves under the ACTIVE name, no re-type
-    expect(body.config).toEqual(liveConfig); // exactly getCurrentConfig()'s live return
+    expect(body.config).toEqual(DIVERGED_CONFIG); // exactly getCurrentConfig()'s live return
 
-    // The transient saved chip appears.
     await waitFor(() => {
-      expect(screen.queryByText("✓ Perfil guardado")).not.toBeNull();
+      expect(screen.queryByText("✓ Cambios guardados")).not.toBeNull();
     });
   });
 
-  it("update control uses --accent (blue), never --action (green)", async () => {
+  it("'Guardar cambios' uses --accent (blue), never --action (green)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
@@ -444,12 +461,12 @@ describe("ProfilesMenu update-active (QUICK-2EK-01)", () => {
     );
 
     render(
-      <ProfilesMenu getCurrentConfig={() => SAMPLE_CONFIG} onApplied={vi.fn()} />
+      <ProfilesMenu getCurrentConfig={() => DIVERGED_CONFIG} onApplied={vi.fn()} />
     );
 
     fireEvent.click(await screen.findByTitle("Estilo activo: Mi estilo TikTok"));
 
-    const updateBtn = await screen.findByTitle(/^Actualizar el perfil activo/);
+    const updateBtn = await screen.findByTitle(UPDATE_TITLE);
 
     const btnEl = updateBtn.closest("button") ?? updateBtn;
     const color = (btnEl as HTMLElement).style?.color || "";
@@ -1081,7 +1098,8 @@ describe("ProfilesMenu import (PA2-IMPORT)", () => {
     vi.stubGlobal("FileReader", makeFileReaderMock(JSON.stringify(profileFile)));
     vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
       if (url === "/api/profiles" && (!opts?.method || opts.method === "GET")) {
-        return Promise.resolve({ ok: true, json: async () => ({ profiles: [profileFile], activeSlug: "applied" }) });
+        // No active profile → create-new form (with the Importar control) is shown.
+        return Promise.resolve({ ok: true, json: async () => ({ profiles: [profileFile], activeSlug: null }) });
       }
       if (url === "/api/profiles" && opts?.method === "POST") {
         return Promise.resolve({ ok: true, status: 201, json: async () => profileFile });

@@ -388,8 +388,8 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
                 )}
               </div>
 
-              {/* Ancho */}
-              <RangeRow label="Ancho px" min={24} max={540}
+              {/* Ancho — max 4× (was 540) so overlays can scale much larger */}
+              <RangeRow label="Ancho px" min={24} max={2160}
                 value={draft.displayWidth}
                 onChange={(v) => handleDraftChange((prev) => ({ ...prev, displayWidth: v }))}
               />

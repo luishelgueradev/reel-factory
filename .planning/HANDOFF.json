@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-29T21:37:54.792Z",
+  "timestamp": "2026-06-06T00:48:20Z",
   "phase": "20",
   "phase_name": "title-block-precision",
   "phase_dir": ".planning/phases/20-title-block-precision",
@@ -36,5 +36,26 @@
   ],
   "uncommitted_files": [".planning/STATE.md"],
   "next_action": "Phase 20 fully complete with post-UAT fixes. Plan Phase 21 (PNG overlays): /gsd-plan-phase 21",
-  "context_notes": "Two full UAT passes done with playwright. 5/5 tests passed both times. Three bugs found and fixed. Studio server on port 3123 still running. Milestone v1.3 at 95% (18/19 phases). Phase 21 is the final planned phase of v1.3."
+  "context_notes": "Two full UAT passes done with playwright. 5/5 tests passed both times. Three bugs found and fixed. Studio server on port 3123 still running. Milestone v1.3 at 95% (18/19 phases). Phase 21 is the final planned phase of v1.3.",
+  "session_notes": [
+    {
+      "date": "2026-06-05",
+      "summary": "Studio profiles hardening + export/import + ops. Not a GSD phase — ad-hoc work driven directly by the user (one quick task included).",
+      "work": [
+        "Position control 2-col layout (TitleEditor/OverlayEditor): preset grid left, X/Y inline-stacked 'Y :'/'X :' (Y over X). Commit 73b9927.",
+        "Profiles F5-persistence bug: saving a profile / applying now writes the active pipeline config + a persisted active-profile pointer (profiles/.active-profile); GET /api/profiles returns activeSlug. Trigger shows 'Estilo: <name> · Modificado' (sketch 034-A), hydrated from server. Mini-specimens per dropdown row (server preview). Commit 785e063.",
+        "Profile JSON export/import (GSD quick task 260605-pa2): per-row export downloads the ProfileFile envelope as {slug}.json; Importar file-picker validates (JSON->name->validatePipelineConfig) and POSTs. Commits 8e861a5, ecb83d5, e9534d7.",
+        "Profile fixes the user flagged ('no funciona'): (1) export was stale — PUT /api/config now re-snapshots the active profile so 'Guardar config' edits land in the exported JSON; (2) import now calls onApplied so it applies to the editor immediately (not only on F5); (3) Modificado clears after save (savedVersion prop + activeConfig refetch). Commit f4a1ccb.",
+        "Ops: cloudflared forced to HTTP/2 (TUNNEL_TRANSPORT_PROTOCOL=http2) to stop QUIC/UDP tunnel flapping. Commit 20be3c4. Monitored ~3.5 min: 0 flap errors, 4/4 http2 conns, prod 200 throughout.",
+        "Planning artifacts checkpointed. Commit f1f7151."
+      ],
+      "verification": "playwright-cli (firefox) E2E: 21/21 flow checks green (create, modify->save->export-reflects-edits, second profile, switch, import-applies, export envelope, delete-clears-active) + export->import round-trip identical. 448 unit tests + 5 new regression tests. Production https://reel-factory.luishelguera.dev verified live (401 no-auth / 200 with .env creds) running the pushed code.",
+      "gotchas": [
+        "Studio is a Docker container (reel-factory-remotion-studio-1) that bakes the editor dist at image build time — editor changes need 'docker compose build remotion-studio' + recreate, NOT the host 'npx tsx' command (can't bind :3123, exit 144).",
+        "playwright-cli + Firefox: basic-auth creds embedded in the URL break ALL SPA fetch() calls ('url with embedded credentials'). For E2E, temporarily disable auth via shell-env override (STUDIO_BASIC_AUTH_USER='' ... docker compose up -d --force-recreate), then restore with a plain recreate. Use CSS/text selectors not eNN refs (refs renumber per render).",
+        "During E2E auth was temporarily disabled (prod briefly unauthenticated). RESTORED at end — auth back on (401), test profiles cleaned, user's real 'general' profile intact."
+      ],
+      "state_at_handoff": "All work committed and pushed; master == origin/main at f1f7151. Working tree clean. Production online over stable HTTP/2 tunnel, auth enabled. No playwright sessions open. Note: this HANDOFF's top-level phase/decisions block is stale (Phase 20) and was not regenerated — only this session_notes entry reflects 2026-06-05/06 work."
+    }
+  ]
 }

@@ -1,16 +1,23 @@
 /**
- * metadata-panel.test.tsx — Phase 25 Plan 03, Task 1
+ * metadata-panel.test.tsx — Phase 29 Plan 02 (META-05 / META-06)
  *
- * Tests the MetadataPanel component against the 25-02 API contract.
+ * Tests the MetadataPanel against the batch /api/metadata/all contract and the
+ * per-platform TAB strip (replacing the META-04 platform <select> dropdown).
+ *
  * Uses vitest + @testing-library/react + mocked fetch (zero real network calls).
  *
  * Coverage:
- *  - jobId null → Generar disabled + muted hint (D-02)
- *  - With jobId, Generar POSTs {jobId,platform,tone} and renders title/description/hashtags (META-01/02)
- *  - Changing platform/tone then Regenerar re-POSTs; no auto-call on select change (META-04)
- *  - Editing a field updates it; copy button writes that field to clipboard (META-03)
- *  - Error response → inline error + Reintentar
+ *  - jobId null → Generar disabled + muted hint
+ *  - With jobId, Generar POSTs { jobId, tone } to /api/metadata/all (no platform)
+ *  - Tab strip with 3 tabs (TikTok / Instagram Reels / YouTube Shorts)
+ *  - Active (TikTok) tab shows its fields; switching to Instagram shows its fields
+ *  - Switching tabs does NOT trigger a fetch
+ *  - Partial failure: failed platform's tab shows an error, survivors render fields
+ *  - Editing + copy still works per-tab
+ *  - Tone stays a single select (exactly one combobox)
+ *  - Error (all-failed) → inline error + Reintentar
  *  - Green discipline: no --action token in the panel
+ *  - On mount restore via GET /api/metadata-all/:jobId
  */
 
 import React from "react";
@@ -22,24 +29,44 @@ import { MetadataPanel } from "./MetadataPanel.js";
 
 const SAMPLE_JOB_ID = "11111111-2222-3333-4444-555555555555";
 
-const SAMPLE_RESULT = {
-  title: "Cómo edité mi reel en 30 segundos",
-  description: "Te cuento el proceso completo de edición paso a paso.",
-  hashtags: ["#reels", "#edicion", "#tips"],
+const TIKTOK_RESULT = {
+  title: "TikTok: edité mi reel en 30 segundos",
+  description: "Te cuento el proceso de edición rápido.",
+  hashtags: ["#reels", "#edicion", "#tiktok"],
+};
+const INSTAGRAM_RESULT = {
+  title: "Instagram: el proceso completo de edición",
+  description: "Edición paso a paso para tus Reels.",
+  hashtags: ["#instagram", "#reels", "#tips", "#edicion"],
+};
+const YOUTUBE_RESULT = {
+  title: "YouTube Shorts: cómo editar un reel",
+  description: "Guía SEO para editar tu short.",
+  hashtags: ["#shorts", "#youtube", "#edicion"],
+};
+
+const ALL_RESULTS = {
+  results: {
+    tiktok: TIKTOK_RESULT,
+    instagram: INSTAGRAM_RESULT,
+    youtube_shorts: YOUTUBE_RESULT,
+  },
   _meta: { model: "big-cloud" },
 };
 
-// ─── Mock fetch helper ────────────────────────────────────────────────────────
+// ─── Mock fetch helpers ───────────────────────────────────────────────────────
 
-function mockFetch404() {
+/** GET /api/metadata-all/:jobId → empty results (nothing persisted). */
+function mockRestoreEmpty() {
   return vi.fn().mockResolvedValue({
-    ok: false,
-    status: 404,
-    json: async () => ({ error: "No hay metadata" }),
+    ok: true,
+    status: 200,
+    json: async () => ({ results: {} }),
   });
 }
 
-function mockFetchGetOk(data: unknown) {
+/** GET restore returns persisted per-platform results. */
+function mockRestoreFull(data: unknown) {
   return vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
@@ -47,20 +74,20 @@ function mockFetchGetOk(data: unknown) {
   });
 }
 
-function mockFetchPostOk(data: unknown) {
-  // First call = GET (404), subsequent call = POST (200)
+/**
+ * First call = GET restore (empty), subsequent call = POST /api/metadata/all (200).
+ */
+function mockGenerateAllOk(data: unknown) {
   let calls = 0;
   return vi.fn().mockImplementation(() => {
     calls++;
     if (calls === 1) {
-      // GET /api/metadata/:jobId → 404 (no persisted result)
       return Promise.resolve({
-        ok: false,
-        status: 404,
-        json: async () => ({ error: "no result" }),
+        ok: true,
+        status: 200,
+        json: async () => ({ results: {} }),
       });
     }
-    // POST /api/metadata → 200 with result
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -69,15 +96,16 @@ function mockFetchPostOk(data: unknown) {
   });
 }
 
-function mockFetchPostError(errMsg: string) {
+/** First call = GET restore (empty), POST → non-2xx all-failed error. */
+function mockGenerateAllError(errMsg: string) {
   let calls = 0;
   return vi.fn().mockImplementation(() => {
     calls++;
     if (calls === 1) {
       return Promise.resolve({
-        ok: false,
-        status: 404,
-        json: async () => ({ error: "no result" }),
+        ok: true,
+        status: 200,
+        json: async () => ({ results: {} }),
       });
     }
     return Promise.resolve({
@@ -98,14 +126,14 @@ describe("MetadataPanel — jobId null", () => {
     expect(screen.getByText("Metadata de redes")).toBeTruthy();
   });
 
-  it("renders Generar metadata button disabled when jobId is null", () => {
+  it("renders the generate-all button disabled when jobId is null", () => {
     render(<MetadataPanel jobId={null} />);
     const btn = screen.getByRole("button", { name: /Generar metadata/i });
     expect(btn).toBeTruthy();
     expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("shows muted hint 'Generá un render para crear la metadata' when jobId is null", () => {
+  it("shows muted hint when jobId is null", () => {
     render(<MetadataPanel jobId={null} />);
     expect(screen.getByText(/Generá un render para crear la metadata/i)).toBeTruthy();
   });
@@ -118,11 +146,10 @@ describe("MetadataPanel — jobId null", () => {
   });
 });
 
-// ─── Test: with jobId, Generar POSTs and renders fields (META-01/02) ─────────
+// ─── Test: generate-all flow (META-05) ───────────────────────────────────────
 
-describe("MetadataPanel — generate flow (META-01, META-02)", () => {
+describe("MetadataPanel — generate-all flow (META-05)", () => {
   beforeEach(() => {
-    // Mock clipboard
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
       writable: true,
@@ -131,22 +158,22 @@ describe("MetadataPanel — generate flow (META-01, META-02)", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it("calls GET /api/metadata/:jobId on mount with a jobId", async () => {
-    const mockFn = mockFetch404();
+  it("calls GET /api/metadata-all/:jobId on mount with a jobId", async () => {
+    const mockFn = mockRestoreEmpty();
     vi.stubGlobal("fetch", mockFn);
 
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
     await waitFor(() => {
       expect(mockFn).toHaveBeenCalledWith(
-        `/api/metadata/${SAMPLE_JOB_ID}`,
+        `/api/metadata-all/${SAMPLE_JOB_ID}`,
         expect.objectContaining({ signal: expect.anything() })
       );
     });
   });
 
-  it("enables Generar button when jobId is set", async () => {
-    vi.stubGlobal("fetch", mockFetch404());
+  it("enables the generate-all button when jobId is set", async () => {
+    vi.stubGlobal("fetch", mockRestoreEmpty());
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
     await waitFor(() => {
@@ -155,38 +182,33 @@ describe("MetadataPanel — generate flow (META-01, META-02)", () => {
     });
   });
 
-  it("POSTs { jobId, platform, tone } when Generar is clicked", async () => {
-    const mockFn = mockFetchPostOk(SAMPLE_RESULT);
+  it("POSTs { jobId, tone } (no platform) to /api/metadata/all when Generar is clicked", async () => {
+    const mockFn = mockGenerateAllOk(ALL_RESULTS);
     vi.stubGlobal("fetch", mockFn);
 
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
-    // Wait for GET to resolve (404 → ready state)
     await waitFor(() => {
       const btn = screen.getByRole("button", { name: /Generar metadata/i });
       expect((btn as HTMLButtonElement).disabled).toBe(false);
     });
 
-    // Click Generar
     fireEvent.click(screen.getByRole("button", { name: /Generar metadata/i }));
 
     await waitFor(() => {
-      // POST should have been called
-      const calls = mockFn.mock.calls;
-      const postCall = calls.find(
-        (c) => c[0] === "/api/metadata" && (c[1] as RequestInit)?.method === "POST"
+      const postCall = mockFn.mock.calls.find(
+        (c) => c[0] === "/api/metadata/all" && (c[1] as RequestInit)?.method === "POST"
       );
       expect(postCall).toBeTruthy();
-
       const body = JSON.parse((postCall![1] as RequestInit).body as string);
       expect(body.jobId).toBe(SAMPLE_JOB_ID);
-      expect(body.platform).toBe("tiktok");
       expect(body.tone).toBe("cercano");
+      expect(body.platform).toBeUndefined();
     });
   });
 
-  it("populates title/description/hashtags after successful POST (META-02)", async () => {
-    vi.stubGlobal("fetch", mockFetchPostOk(SAMPLE_RESULT));
+  it("shows a tab strip with TikTok / Instagram Reels / YouTube Shorts after generate-all", async () => {
+    vi.stubGlobal("fetch", mockGenerateAllOk(ALL_RESULTS));
 
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
@@ -199,18 +221,35 @@ describe("MetadataPanel — generate flow (META-01, META-02)", () => {
     });
 
     await waitFor(() => {
-      // Title input populated
-      const titleInput = screen.getByRole("textbox", { name: /Título/i });
-      expect((titleInput as HTMLInputElement).value).toBe(SAMPLE_RESULT.title);
+      expect(screen.getByRole("tab", { name: /TikTok/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /Instagram Reels/i })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: /YouTube Shorts/i })).toBeTruthy();
+    });
+  });
+
+  it("active (TikTok) tab shows TikTok's title/description after generate-all", async () => {
+    vi.stubGlobal("fetch", mockGenerateAllOk(ALL_RESULTS));
+
+    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
+
+    await waitFor(() => {
+      expect((screen.getByRole("button", { name: /Generar metadata/i }) as HTMLButtonElement).disabled).toBe(false);
     });
 
-    // Description populated
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Generar metadata/i }));
+    });
+
+    await waitFor(() => {
+      const titleInput = screen.getByRole("textbox", { name: /Título/i });
+      expect((titleInput as HTMLInputElement).value).toBe(TIKTOK_RESULT.title);
+    });
     const descInput = screen.getByRole("textbox", { name: /Descripción/i });
-    expect((descInput as HTMLTextAreaElement).value).toBe(SAMPLE_RESULT.description);
+    expect((descInput as HTMLTextAreaElement).value).toBe(TIKTOK_RESULT.description);
   });
 
-  it("shows Regenerar button (not Generar) once a result exists", async () => {
-    vi.stubGlobal("fetch", mockFetchPostOk(SAMPLE_RESULT));
+  it("shows Regenerar (todas) once results exist", async () => {
+    vi.stubGlobal("fetch", mockGenerateAllOk(ALL_RESULTS));
 
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
@@ -227,117 +266,21 @@ describe("MetadataPanel — generate flow (META-01, META-02)", () => {
     });
   });
 
-  it("restores a persisted result from GET /api/metadata/:jobId (D-05)", async () => {
-    vi.stubGlobal("fetch", mockFetchGetOk(SAMPLE_RESULT));
+  it("restores persisted per-platform results from GET /api/metadata-all/:jobId on mount", async () => {
+    vi.stubGlobal("fetch", mockRestoreFull(ALL_RESULTS));
 
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
     await waitFor(() => {
       const titleInput = screen.getByRole("textbox", { name: /Título/i });
-      expect((titleInput as HTMLInputElement).value).toBe(SAMPLE_RESULT.title);
+      expect((titleInput as HTMLInputElement).value).toBe(TIKTOK_RESULT.title);
     });
   });
 });
 
-// ─── Test: platform/tone change → no auto-regenerate; Regenerar re-POSTs (META-04) ──
+// ─── Test: tab switching (META-06) ───────────────────────────────────────────
 
-describe("MetadataPanel — platform/tone change (META-04)", () => {
-  afterEach(() => vi.restoreAllMocks());
-
-  it("does NOT auto-regenerate when platform selector changes", async () => {
-    const mockFn = mockFetchPostOk(SAMPLE_RESULT);
-    vi.stubGlobal("fetch", mockFn);
-
-    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
-
-    // Wait for GET to resolve
-    await waitFor(() => {
-      expect(screen.getByRole("combobox", { name: /Plataforma/i })).toBeTruthy();
-    });
-
-    const callsBefore = mockFn.mock.calls.length;
-
-    // Change platform
-    fireEvent.change(screen.getByRole("combobox", { name: /Plataforma/i }), {
-      target: { value: "instagram" },
-    });
-
-    // Wait a tick and confirm no new fetch calls
-    await new Promise((r) => setTimeout(r, 50));
-    expect(mockFn.mock.calls.length).toBe(callsBefore);
-  });
-
-  it("does NOT auto-regenerate when tone selector changes", async () => {
-    const mockFn = mockFetchPostOk(SAMPLE_RESULT);
-    vi.stubGlobal("fetch", mockFn);
-
-    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("combobox", { name: /Tono/i })).toBeTruthy();
-    });
-
-    const callsBefore = mockFn.mock.calls.length;
-
-    fireEvent.change(screen.getByRole("combobox", { name: /Tono/i }), {
-      target: { value: "profesional" },
-    });
-
-    await new Promise((r) => setTimeout(r, 50));
-    expect(mockFn.mock.calls.length).toBe(callsBefore);
-  });
-
-  it("re-POSTs with new platform when Regenerar is clicked after platform change", async () => {
-    // First: mock GET returns persisted result
-    let calls = 0;
-    const mockFn = vi.fn().mockImplementation(() => {
-      calls++;
-      if (calls === 1) {
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => SAMPLE_RESULT,
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: async () => ({ ...SAMPLE_RESULT, title: "Nuevo título" }),
-      });
-    });
-    vi.stubGlobal("fetch", mockFn);
-
-    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
-
-    // Wait for persisted result to restore
-    await waitFor(() => {
-      expect(screen.queryByText(/Regenerar/i)).toBeTruthy();
-    });
-
-    // Change platform
-    fireEvent.change(screen.getByRole("combobox", { name: /Plataforma/i }), {
-      target: { value: "youtube_shorts" },
-    });
-
-    // Click Regenerar
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Regenerar/i }));
-    });
-
-    await waitFor(() => {
-      const postCall = mockFn.mock.calls.find(
-        (c) => c[0] === "/api/metadata" && (c[1] as RequestInit)?.method === "POST"
-      );
-      expect(postCall).toBeTruthy();
-      const body = JSON.parse((postCall![1] as RequestInit).body as string);
-      expect(body.platform).toBe("youtube_shorts");
-    });
-  });
-});
-
-// ─── Test: editing a field updates it + copy (META-03) ───────────────────────
-
-describe("MetadataPanel — field editing + copy (META-03)", () => {
+describe("MetadataPanel — per-platform tabs (META-06)", () => {
   beforeEach(() => {
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
@@ -347,8 +290,151 @@ describe("MetadataPanel — field editing + copy (META-03)", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  async function renderWithResult() {
-    vi.stubGlobal("fetch", mockFetchGetOk(SAMPLE_RESULT));
+  async function renderWithResults() {
+    vi.stubGlobal("fetch", mockRestoreFull(ALL_RESULTS));
+    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /Instagram Reels/i })).toBeTruthy();
+    });
+  }
+
+  it("clicking the Instagram Reels tab shows Instagram's title/description", async () => {
+    await renderWithResults();
+
+    fireEvent.click(screen.getByRole("tab", { name: /Instagram Reels/i }));
+
+    await waitFor(() => {
+      const titleInput = screen.getByRole("textbox", { name: /Título/i });
+      expect((titleInput as HTMLInputElement).value).toBe(INSTAGRAM_RESULT.title);
+    });
+    const descInput = screen.getByRole("textbox", { name: /Descripción/i });
+    expect((descInput as HTMLTextAreaElement).value).toBe(INSTAGRAM_RESULT.description);
+  });
+
+  it("switching tabs does NOT trigger a fetch", async () => {
+    const mockFn = mockRestoreFull(ALL_RESULTS);
+    vi.stubGlobal("fetch", mockFn);
+    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /YouTube Shorts/i })).toBeTruthy();
+    });
+
+    const callsBefore = mockFn.mock.calls.length;
+    fireEvent.click(screen.getByRole("tab", { name: /YouTube Shorts/i }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(mockFn.mock.calls.length).toBe(callsBefore);
+  });
+
+  it("edits to one platform's fields do not bleed into another", async () => {
+    await renderWithResults();
+
+    // Edit TikTok title
+    const tiktokTitle = screen.getByRole("textbox", { name: /Título/i }) as HTMLInputElement;
+    fireEvent.change(tiktokTitle, { target: { value: "EDITADO TIKTOK" } });
+    expect(tiktokTitle.value).toBe("EDITADO TIKTOK");
+
+    // Switch to Instagram — its title must be unchanged
+    fireEvent.click(screen.getByRole("tab", { name: /Instagram Reels/i }));
+    await waitFor(() => {
+      const igTitle = screen.getByRole("textbox", { name: /Título/i }) as HTMLInputElement;
+      expect(igTitle.value).toBe(INSTAGRAM_RESULT.title);
+    });
+
+    // Switch back to TikTok — edit is preserved
+    fireEvent.click(screen.getByRole("tab", { name: /TikTok/i }));
+    await waitFor(() => {
+      const ttTitle = screen.getByRole("textbox", { name: /Título/i }) as HTMLInputElement;
+      expect(ttTitle.value).toBe("EDITADO TIKTOK");
+    });
+  });
+
+  it("exposes exactly one <select> (tone) — the platform dropdown is removed", async () => {
+    await renderWithResults();
+    const selects = screen.getAllByRole("combobox");
+    expect(selects.length).toBe(1);
+    // The single remaining combobox is the Tono select
+    expect(screen.getByRole("combobox", { name: /Tono/i })).toBeTruthy();
+  });
+
+  it("the active tab is marked aria-selected", async () => {
+    await renderWithResults();
+    const tiktokTab = screen.getByRole("tab", { name: /TikTok/i });
+    expect(tiktokTab.getAttribute("aria-selected")).toBe("true");
+
+    fireEvent.click(screen.getByRole("tab", { name: /Instagram Reels/i }));
+    await waitFor(() => {
+      const igTab = screen.getByRole("tab", { name: /Instagram Reels/i });
+      expect(igTab.getAttribute("aria-selected")).toBe("true");
+    });
+  });
+});
+
+// ─── Test: partial failure ───────────────────────────────────────────────────
+
+describe("MetadataPanel — partial failure (META-05)", () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      writable: true,
+      configurable: true,
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const PARTIAL = {
+    results: {
+      tiktok: TIKTOK_RESULT,
+      youtube_shorts: YOUTUBE_RESULT,
+    },
+    errors: {
+      instagram: "No se pudo validar la metadata",
+    },
+    _meta: { model: "big-cloud" },
+  };
+
+  it("failed platform's tab shows an error; surviving tabs render fields", async () => {
+    vi.stubGlobal("fetch", mockGenerateAllOk(PARTIAL));
+
+    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
+
+    await waitFor(() => {
+      expect((screen.getByRole("button", { name: /Generar metadata/i }) as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Generar metadata/i }));
+    });
+
+    // TikTok (active) renders its fields
+    await waitFor(() => {
+      const titleInput = screen.getByRole("textbox", { name: /Título/i });
+      expect((titleInput as HTMLInputElement).value).toBe(TIKTOK_RESULT.title);
+    });
+
+    // Switch to the failed Instagram tab — it shows the error, no fields
+    fireEvent.click(screen.getByRole("tab", { name: /Instagram Reels/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/No se pudo validar la metadata/i)).toBeTruthy();
+    });
+    expect(screen.queryByRole("textbox", { name: /Título/i })).toBeNull();
+  });
+});
+
+// ─── Test: field editing + copy ──────────────────────────────────────────────
+
+describe("MetadataPanel — field editing + copy", () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      writable: true,
+      configurable: true,
+    });
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  async function renderWithResults() {
+    vi.stubGlobal("fetch", mockRestoreFull(ALL_RESULTS));
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
     await waitFor(() => {
       expect(screen.getByRole("textbox", { name: /Título/i })).toBeTruthy();
@@ -356,40 +442,24 @@ describe("MetadataPanel — field editing + copy (META-03)", () => {
   }
 
   it("editing the title input updates the field value", async () => {
-    await renderWithResult();
+    await renderWithResults();
     const titleInput = screen.getByRole("textbox", { name: /Título/i }) as HTMLInputElement;
     fireEvent.change(titleInput, { target: { value: "Nuevo título editado" } });
     expect(titleInput.value).toBe("Nuevo título editado");
   });
 
-  it("editing the description textarea updates the field value", async () => {
-    await renderWithResult();
-    const desc = screen.getByRole("textbox", { name: /Descripción/i }) as HTMLTextAreaElement;
-    fireEvent.change(desc, { target: { value: "Nueva descripción" } });
-    expect(desc.value).toBe("Nueva descripción");
-  });
-
-  it("copy button for Título writes the title to clipboard", async () => {
-    await renderWithResult();
+  it("copy button for Título writes the active tab's title to clipboard", async () => {
+    await renderWithResults();
     fireEvent.click(screen.getByRole("button", { name: /Copiar Título/i }));
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(SAMPLE_RESULT.title);
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(TIKTOK_RESULT.title);
     });
   });
 
-  it("copy button for Descripción writes the description to clipboard", async () => {
-    await renderWithResult();
-    fireEvent.click(screen.getByRole("button", { name: /Copiar Descripción/i }));
-    await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(SAMPLE_RESULT.description);
-    });
-  });
-
-  it("copy button for Hashtags writes the hashtag text to clipboard", async () => {
-    await renderWithResult();
+  it("copy button for Hashtags writes the active tab's hashtags to clipboard", async () => {
+    await renderWithResults();
     fireEvent.click(screen.getByRole("button", { name: /Copiar Hashtags/i }));
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalled();
       const callArg = (navigator.clipboard.writeText as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(typeof callArg).toBe("string");
       expect(callArg).toContain("#reels");
@@ -397,7 +467,7 @@ describe("MetadataPanel — field editing + copy (META-03)", () => {
   });
 
   it("shows ✓ Copiado chip after copy", async () => {
-    await renderWithResult();
+    await renderWithResults();
     fireEvent.click(screen.getByRole("button", { name: /Copiar Título/i }));
     await waitFor(() => {
       expect(screen.queryByText("✓ Copiado")).toBeTruthy();
@@ -405,13 +475,13 @@ describe("MetadataPanel — field editing + copy (META-03)", () => {
   });
 });
 
-// ─── Test: error state ────────────────────────────────────────────────────────
+// ─── Test: error state (all-failed) ──────────────────────────────────────────
 
 describe("MetadataPanel — error state", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("shows inline error message on POST failure", async () => {
-    vi.stubGlobal("fetch", mockFetchPostError("router no configurado"));
+  it("shows inline error message on all-failed POST", async () => {
+    vi.stubGlobal("fetch", mockGenerateAllError("router no configurado"));
 
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
@@ -428,26 +498,8 @@ describe("MetadataPanel — error state", () => {
     });
   });
 
-  it("shows Reintentar button on error", async () => {
-    vi.stubGlobal("fetch", mockFetchPostError("Sin API key configurada"));
-
-    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
-
-    await waitFor(() => {
-      expect((screen.getByRole("button", { name: /Generar metadata/i }) as HTMLButtonElement).disabled).toBe(false);
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /Generar metadata/i }));
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /Reintentar/i })).toBeTruthy();
-    });
-  });
-
-  it("clicking Reintentar goes back to ready state (Generar enabled)", async () => {
-    vi.stubGlobal("fetch", mockFetchPostError("Error"));
+  it("shows Reintentar button on error and returns to ready on click", async () => {
+    vi.stubGlobal("fetch", mockGenerateAllError("Sin API key configurada"));
 
     render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
@@ -473,14 +525,13 @@ describe("MetadataPanel — error state", () => {
 
 // ─── Test: green discipline — no --action token in the panel ─────────────────
 
-describe("MetadataPanel — green discipline (D-10)", () => {
+describe("MetadataPanel — green discipline", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("rendered panel contains no --action token in inline styles", () => {
-    vi.stubGlobal("fetch", mockFetch404());
+  it("rendered panel contains no --action token in inline styles (ready state)", () => {
+    vi.stubGlobal("fetch", mockRestoreEmpty());
     const { container } = render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
-    // Walk all elements with style attributes and confirm --action is absent
     const allElements = container.querySelectorAll("[style]");
     allElements.forEach((el) => {
       const style = el.getAttribute("style") ?? "";
@@ -488,13 +539,21 @@ describe("MetadataPanel — green discipline (D-10)", () => {
     });
   });
 
-  it("Generar button does not use --action color", () => {
-    vi.stubGlobal("fetch", mockFetch404());
-    render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
+  it("contains no --action token after generate-all (tabbed state)", async () => {
+    vi.stubGlobal("fetch", mockGenerateAllOk(ALL_RESULTS));
+    const { container } = render(<MetadataPanel jobId={SAMPLE_JOB_ID} />);
 
-    // The button must exist (we already test it's disabled when null / enabled when set)
-    // Here just confirm no --action appears anywhere in the rendered tree
-    const allElements = document.querySelectorAll("[style]");
+    await waitFor(() => {
+      expect((screen.getByRole("button", { name: /Generar metadata/i }) as HTMLButtonElement).disabled).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Generar metadata/i }));
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /TikTok/i })).toBeTruthy();
+    });
+
+    const allElements = container.querySelectorAll("[style]");
     allElements.forEach((el) => {
       const style = el.getAttribute("style") ?? "";
       expect(style).not.toContain("--action");

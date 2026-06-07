@@ -1,19 +1,28 @@
-// ─── MetadataPanel: AI social metadata for col3 (Phase 25, Plan 03) ──────────
+// ─── MetadataPanel: AI social metadata for col3 (Phase 25 · reworked Phase 29) ──
 // Design contract: 25-UI-SPEC.md + sketch-findings-reel-factory `AI metadata column` (026-C)
 //
 // Green discipline: this component uses ONLY --accent/--danger. NEVER --action.
 // --action (green) is RESERVED for Render / Guardar config in the header.
 //
+// Phase 29 (META-05 / META-06):
+//   - ONE action "Generar metadata (todas las redes)" → POST /api/metadata/all
+//     generates metadata for ALL 3 platforms in one round-trip.
+//   - The platform <select> dropdown is replaced by a TAB strip (TikTok /
+//     Instagram Reels / YouTube Shorts); each tab shows that platform's own
+//     editable title/description/hashtags + copy. Tone stays a single select.
+//   - Partial failure: a platform that failed shows an inline --danger line on
+//     its own tab; the survivors render normally.
+//
 // States:
-//   empty     — no jobId; Generar disabled + muted hint
-//   ready     — jobId set, no generated result yet; Generar enabled
+//   empty      — no jobId; Generar disabled + muted hint
+//   ready      — jobId set, no results yet; Generar enabled
 //   generating — fetch in flight; shimmer + spinner; controls disabled
-//   generated  — fields populated, editable, copyable; Regenerar available
-//   error      — inline --danger line + Reintentar
+//   generated  — at least one platform has results; tab strip + editable fields
+//   error      — all-failed; inline --danger line + Reintentar
 //
 // Props: { jobId: string | null }
-// API: POST /api/metadata { jobId, platform, tone } → { title, description, hashtags, _meta }
-//      GET  /api/metadata/:jobId → restores persisted result (D-05)
+// API: POST /api/metadata/all { jobId, tone } → { results: { <platform>: Metadata }, errors?, _meta }
+//      GET  /api/metadata-all/:jobId → restores persisted per-platform results
 
 import React, {
   useState,
@@ -30,8 +39,31 @@ type Platform = keyof typeof PLATFORMS;
 type Tone = keyof typeof TONES;
 type PanelState = "empty" | "ready" | "generating" | "generated" | "error";
 
-interface GeneratedResult extends Metadata {
-  _meta?: { model?: string; backend?: string };
+/** Editable per-platform buffer (what the user sees in the fields). */
+interface EditBuffer {
+  title: string;
+  description: string;
+  hashtagsText: string; // space/newline-joined
+}
+
+const PLATFORM_KEYS = Object.keys(PLATFORMS) as Platform[];
+
+function emptyBuffer(): EditBuffer {
+  return { title: "", description: "", hashtagsText: "" };
+}
+
+function bufferFromMetadata(m: Metadata): EditBuffer {
+  return {
+    title: m.title ?? "",
+    description: m.description ?? "",
+    hashtagsText: Array.isArray(m.hashtags) ? m.hashtags.join(" ") : "",
+  };
+}
+
+function makeRecord<T>(make: () => T): Record<Platform, T> {
+  const out = {} as Record<Platform, T>;
+  for (const k of PLATFORM_KEYS) out[k] = make();
+  return out;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -41,70 +73,102 @@ export interface MetadataPanelProps {
 }
 
 export function MetadataPanel({ jobId }: MetadataPanelProps) {
-  // ── Platform / Tone selectors ─────────────────────────────────────────────
-  const [platform, setPlatform] = useState<Platform>("tiktok");
+  // ── Tone selector (single, applied to ALL platforms) ──────────────────────
   const [tone, setTone] = useState<Tone>("cercano");
+
+  // ── Active platform tab ───────────────────────────────────────────────────
+  const [activePlatformTab, setActivePlatformTab] = useState<Platform>("tiktok");
 
   // ── Panel state ────────────────────────────────────────────────────────────
   const [panelState, setPanelState] = useState<PanelState>(jobId ? "ready" : "empty");
   const [error, setError] = useState<string | null>(null);
+  const [model, setModel] = useState<string | undefined>(undefined);
 
-  // ── Generated result (editable) ──────────────────────────────────────────
-  const [result, setResult] = useState<GeneratedResult | null>(null);
-
-  // ── Local field editors (edits stay in UI state) ─────────────────────────
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editHashtagsText, setEditHashtagsText] = useState(""); // space/newline-joined
+  // ── Per-platform editable buffers + per-platform errors ───────────────────
+  const [buffers, setBuffers] = useState<Record<Platform, EditBuffer>>(() => makeRecord(emptyBuffer));
+  const [platformErrors, setPlatformErrors] = useState<Record<Platform, string | undefined>>(() =>
+    makeRecord<string | undefined>(() => undefined)
+  );
+  // Which platforms have a result (success) — drives whether a tab renders fields.
+  const [haveResult, setHaveResult] = useState<Record<Platform, boolean>>(() =>
+    makeRecord<boolean>(() => false)
+  );
 
   // ── Transient copy chips: field → timer ref ───────────────────────────────
   const [copyChip, setCopyChip] = useState<"title" | "description" | "hashtags" | null>(null);
   const copyChipRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ─── Sync panelState when jobId changes ──────────────────────────────────
+  // ── Apply a results/errors map into per-platform state ─────────────────────
+  const applyResults = useCallback(
+    (results: Partial<Record<Platform, Metadata>>, errors?: Partial<Record<Platform, string>>) => {
+      setBuffers((prev) => {
+        const next = { ...prev };
+        for (const k of PLATFORM_KEYS) {
+          const m = results[k];
+          if (m) next[k] = bufferFromMetadata(m);
+        }
+        return next;
+      });
+      setHaveResult((prev) => {
+        const next = { ...prev };
+        for (const k of PLATFORM_KEYS) {
+          if (results[k]) next[k] = true;
+        }
+        return next;
+      });
+      setPlatformErrors((prev) => {
+        const next = { ...prev };
+        for (const k of PLATFORM_KEYS) {
+          // Clear error on success, set it on failure.
+          if (results[k]) next[k] = undefined;
+          if (errors && errors[k]) next[k] = errors[k];
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  // ─── Restore persisted per-platform results when jobId changes ───────────
   useEffect(() => {
     if (!jobId) {
       setPanelState("empty");
-      // Clear result on jobId lost
-      setResult(null);
+      setBuffers(makeRecord(emptyBuffer));
+      setHaveResult(makeRecord<boolean>(() => false));
+      setPlatformErrors(makeRecord<string | undefined>(() => undefined));
       setError(null);
+      setModel(undefined);
       return;
     }
 
-    // jobId became available or changed: try to restore persisted result
     const controller = new AbortController();
     setPanelState("ready"); // optimistic ready while we check
     setError(null);
 
-    fetch(`/api/metadata/${jobId}`, { signal: controller.signal })
+    fetch(`/api/metadata-all/${jobId}`, { signal: controller.signal })
       .then(async (res) => {
-        if (res.status === 404) {
-          // No persisted result — stay ready
-          setPanelState("ready");
-          return;
-        }
         if (!res.ok) {
-          // Server error restoring — stay ready (non-blocking)
+          setPanelState("ready"); // non-blocking — they can Generar
+          return;
+        }
+        const data = (await res.json()) as {
+          results?: Partial<Record<Platform, Metadata>>;
+        };
+        const results = data.results ?? {};
+        if (Object.keys(results).length === 0) {
           setPanelState("ready");
           return;
         }
-        const data = await res.json() as GeneratedResult;
-        setResult(data);
-        setEditTitle(data.title ?? "");
-        setEditDescription(data.description ?? "");
-        setEditHashtagsText(
-          Array.isArray(data.hashtags) ? data.hashtags.join(" ") : ""
-        );
+        applyResults(results);
         setPanelState("generated");
       })
       .catch((err) => {
         if (err instanceof Error && err.name === "AbortError") return;
-        // Silently fall back to ready (not a user-visible error; they can Generar)
-        setPanelState("ready");
+        setPanelState("ready"); // silent fallback
       });
 
     return () => controller.abort();
-  }, [jobId]);
+  }, [jobId, applyResults]);
 
   // ── Cleanup copy chip timer on unmount ────────────────────────────────────
   useEffect(() => {
@@ -113,7 +177,7 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
     };
   }, []);
 
-  // ── Generate / Regenerate ─────────────────────────────────────────────────
+  // ── Generate all networks in one action ───────────────────────────────────
   const handleGenerate = useCallback(async () => {
     if (!jobId || panelState === "generating") return;
 
@@ -121,42 +185,64 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
     setError(null);
 
     try {
-      const res = await fetch("/api/metadata", {
+      const res = await fetch("/api/metadata/all", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jobId, platform, tone }),
+        body: JSON.stringify({ jobId, tone }),
       });
 
-      const data = await res.json() as GeneratedResult & { error?: string };
+      const data = (await res.json()) as {
+        results?: Partial<Record<Platform, Metadata>>;
+        errors?: Partial<Record<Platform, string>>;
+        _meta?: { model?: string };
+        error?: string;
+      };
 
       if (!res.ok) {
+        // All-failed → single inline error + Reintentar.
         const errMsg = data?.error ?? `Error ${res.status}`;
         setError(errMsg);
         setPanelState("error");
         return;
       }
 
-      setResult(data);
-      setEditTitle(data.title ?? "");
-      setEditDescription(data.description ?? "");
-      setEditHashtagsText(
-        Array.isArray(data.hashtags) ? data.hashtags.join(" ") : ""
-      );
+      const results = data.results ?? {};
+      applyResults(results, data.errors);
+      setModel(data._meta?.model);
+
+      // Land the user on a platform that succeeded (prefer the current tab).
+      if (!results[activePlatformTab]) {
+        const firstOk = PLATFORM_KEYS.find((k) => results[k]);
+        if (firstOk) setActivePlatformTab(firstOk);
+      }
+
       setPanelState("generated");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error de conexión";
       setError(msg);
       setPanelState("error");
     }
-  }, [jobId, panelState, platform, tone]);
+  }, [jobId, panelState, tone, applyResults, activePlatformTab]);
 
-  // ── Copy field to clipboard ───────────────────────────────────────────────
+  // ── Update the active platform's buffer field ─────────────────────────────
+  const updateField = useCallback(
+    (field: keyof EditBuffer, value: string) => {
+      setBuffers((prev) => ({
+        ...prev,
+        [activePlatformTab]: { ...prev[activePlatformTab], [field]: value },
+      }));
+    },
+    [activePlatformTab]
+  );
+
+  // ── Copy active platform field to clipboard ───────────────────────────────
   const copyField = useCallback(
     async (field: "title" | "description" | "hashtags") => {
+      const buf = buffers[activePlatformTab];
       let text = "";
-      if (field === "title") text = editTitle;
-      if (field === "description") text = editDescription;
-      if (field === "hashtags") text = editHashtagsText.trim();
+      if (field === "title") text = buf.title;
+      if (field === "description") text = buf.description;
+      if (field === "hashtags") text = buf.hashtagsText.trim();
 
       try {
         await navigator.clipboard.writeText(text);
@@ -167,26 +253,33 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
         // Clipboard unavailable — silently skip
       }
     },
-    [editTitle, editDescription, editHashtagsText]
+    [buffers, activePlatformTab]
   );
 
-  // ── Retry after error ─────────────────────────────────────────────────────
+  // ── Retry after all-failed error ──────────────────────────────────────────
   const handleRetry = useCallback(() => {
     if (!jobId) return;
     setPanelState("ready");
     setError(null);
   }, [jobId]);
 
+  // ── Tab switch (pure UI — never triggers a fetch) ─────────────────────────
+  const handleTabSelect = useCallback((p: Platform) => {
+    setActivePlatformTab(p);
+    setCopyChip(null);
+  }, []);
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const hasResult = panelState === "generated";
   const isGenerating = panelState === "generating";
   const isDisabled = !jobId || isGenerating;
 
-  const platformLabel = PLATFORMS[platform]?.label ?? platform;
-  const toneLabel = TONES[tone]?.label ?? tone;
+  const activeBuffer = buffers[activePlatformTab];
+  const activeError = platformErrors[activePlatformTab];
+  const activeHasResult = haveResult[activePlatformTab];
 
-  // Hashtag chips — parse the text back into chips for display
-  const hashtagChips = editHashtagsText
+  // Hashtag chips — parse the active tab's text back into chips for display
+  const hashtagChips = activeBuffer.hashtagsText
     .split(/[\s,]+/)
     .map((t) => t.trim())
     .filter((t) => t.startsWith("#") && t.length > 1);
@@ -218,7 +311,7 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
           Metadata de redes
         </span>
         {/* Backend chip — shown when generated */}
-        {hasResult && result?._meta?.model && (
+        {hasResult && model && (
           <span
             style={{
               fontSize: "var(--t-2xs, 10.5px)",
@@ -230,12 +323,12 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
               whiteSpace: "nowrap",
             }}
           >
-            {result._meta.model}
+            {model}
           </span>
         )}
       </div>
 
-      {/* ── Controls row: Platform + Tone selectors ─────────────────────── */}
+      {/* ── Controls row: Tone selector (single, applies to all platforms) ─ */}
       <div
         style={{
           display: "flex",
@@ -243,48 +336,6 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
           gap: "var(--s-3, 6px)",
         }}
       >
-        {/* Platform selector */}
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--s-1, 2px)",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "var(--t-xs, 11.5px)",
-              color: "var(--text-muted, #777)",
-              fontWeight: 500,
-            }}
-          >
-            Plataforma
-          </span>
-          <select
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value as Platform)}
-            disabled={isGenerating}
-            aria-label="Plataforma"
-            style={{
-              width: "100%",
-              padding: "5px var(--s-5, 10px)",
-              background: "var(--surface-2, #252535)",
-              color: "var(--text, #e6e6ea)",
-              border: "1px solid var(--border, #333)",
-              borderRadius: "var(--r-sm, 6px)",
-              fontSize: "var(--t-sm, 12.5px)",
-              cursor: isGenerating ? "not-allowed" : "pointer",
-              outline: "none",
-            }}
-          >
-            {Object.entries(PLATFORMS).map(([key, spec]) => (
-              <option key={key} value={key}>
-                {spec.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
         {/* Tone selector */}
         <label
           style={{
@@ -333,7 +384,7 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
       <button
         onClick={handleGenerate}
         disabled={isDisabled}
-        aria-label={hasResult ? `Regenerar metadata para ${platformLabel}, tono ${toneLabel}` : "Generar metadata"}
+        aria-label={hasResult ? "Regenerar metadata (todas las redes)" : "Generar metadata (todas las redes)"}
         style={{
           width: "100%",
           padding: "8px var(--s-6, 12px)",
@@ -362,9 +413,9 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
             <span>Generando…</span>
           </>
         ) : hasResult ? (
-          <span>↻ Regenerar</span>
+          <span>↻ Regenerar (todas)</span>
         ) : (
-          <span>✨ Generar metadata</span>
+          <span>✨ Generar metadata (todas las redes)</span>
         )}
       </button>
 
@@ -433,120 +484,210 @@ export function MetadataPanel({ jobId }: MetadataPanelProps) {
         </div>
       )}
 
-      {/* ── Generated result: editable fields + copy buttons ─────────── */}
+      {/* ── Generated result: per-platform TAB strip + editable fields ── */}
       {hasResult && (
         <div
-          style={{ display: "flex", flexDirection: "column", gap: "var(--s-8, 16px)" }}
+          style={{ display: "flex", flexDirection: "column", gap: "var(--s-6, 12px)" }}
         >
-          {/* Título */}
-          <FieldBlock
-            label="Título"
-            onCopy={() => copyField("title")}
-            showChip={copyChip === "title"}
+          {/* Tab strip — mirrors the PreviewApp TabButton underline idiom. */}
+          {/* GREEN DISCIPLINE: active tab uses --accent, never --action. */}
+          <div
+            role="tablist"
+            aria-label="Plataforma"
+            style={{
+              display: "flex",
+              gap: "var(--s-1, 2px)",
+              borderBottom: "1px solid var(--border, #333)",
+              overflowX: "auto",
+            }}
           >
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              aria-label="Título"
-              style={{
-                width: "100%",
-                padding: "var(--s-3, 6px) var(--s-5, 10px)",
-                background: "var(--surface-2, #252535)",
-                color: "var(--text, #e6e6ea)",
-                border: "1px solid var(--border, #333)",
-                borderRadius: "var(--r-sm, 6px)",
-                fontSize: "var(--t-sm, 12.5px)",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </FieldBlock>
+            {PLATFORM_KEYS.map((p) => {
+              const isActive = p === activePlatformTab;
+              const failed = Boolean(platformErrors[p]);
+              return (
+                <button
+                  key={p}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => handleTabSelect(p)}
+                  style={{
+                    padding: "var(--s-3, 6px) var(--s-5, 10px)",
+                    minHeight: 32,
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    fontSize: "var(--t-xs, 11.5px)",
+                    fontWeight: isActive ? 600 : 400,
+                    borderBottom: isActive
+                      ? "2px solid var(--accent, #90caf9)"
+                      : "2px solid transparent",
+                    color: isActive
+                      ? "var(--accent, #90caf9)"
+                      : "var(--text-2, #a8a8b3)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--s-1, 2px)",
+                    transition:
+                      "color var(--dur, 170ms) var(--ease), border-color var(--dur, 170ms) var(--ease)",
+                  }}
+                >
+                  {PLATFORMS[p]?.label ?? p}
+                  {failed && (
+                    <span
+                      aria-hidden="true"
+                      title="Falló"
+                      style={{ color: "var(--danger, #e57373)" }}
+                    >
+                      !
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Descripción */}
-          <FieldBlock
-            label="Descripción"
-            onCopy={() => copyField("description")}
-            showChip={copyChip === "description"}
-          >
-            <textarea
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              aria-label="Descripción"
-              rows={4}
+          {/* Active tab body */}
+          {activeError ? (
+            // Failed platform — show its inline --danger message (no fields).
+            <p
               style={{
-                width: "100%",
-                padding: "var(--s-3, 6px) var(--s-5, 10px)",
-                background: "var(--surface-2, #252535)",
-                color: "var(--text, #e6e6ea)",
-                border: "1px solid var(--border, #333)",
-                borderRadius: "var(--r-sm, 6px)",
-                fontSize: "var(--t-sm, 12.5px)",
-                resize: "vertical",
+                fontSize: "var(--t-xs, 11.5px)",
+                color: "var(--danger, #e57373)",
+                margin: 0,
                 lineHeight: 1.5,
-                outline: "none",
-                boxSizing: "border-box",
-                fontFamily: "inherit",
               }}
-            />
-          </FieldBlock>
-
-          {/* Hashtags */}
-          <FieldBlock
-            label="Hashtags"
-            onCopy={() => copyField("hashtags")}
-            showChip={copyChip === "hashtags"}
-          >
-            {/* Chips display */}
-            {hashtagChips.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "var(--s-2, 4px)",
-                  marginBottom: "var(--s-2, 4px)",
-                }}
+            >
+              {activeError}
+            </p>
+          ) : activeHasResult ? (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "var(--s-8, 16px)" }}
+            >
+              {/* Título */}
+              <FieldBlock
+                label="Título"
+                onCopy={() => copyField("title")}
+                showChip={copyChip === "title"}
               >
-                {hashtagChips.map((tag) => (
-                  <span
-                    key={tag}
+                <input
+                  type="text"
+                  value={activeBuffer.title}
+                  onChange={(e) => updateField("title", e.target.value)}
+                  aria-label="Título"
+                  style={{
+                    width: "100%",
+                    padding: "var(--s-3, 6px) var(--s-5, 10px)",
+                    background: "var(--surface-2, #252535)",
+                    color: "var(--text, #e6e6ea)",
+                    border: "1px solid var(--border, #333)",
+                    borderRadius: "var(--r-sm, 6px)",
+                    fontSize: "var(--t-sm, 12.5px)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </FieldBlock>
+
+              {/* Descripción */}
+              <FieldBlock
+                label="Descripción"
+                onCopy={() => copyField("description")}
+                showChip={copyChip === "description"}
+              >
+                <textarea
+                  value={activeBuffer.description}
+                  onChange={(e) => updateField("description", e.target.value)}
+                  aria-label="Descripción"
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    padding: "var(--s-3, 6px) var(--s-5, 10px)",
+                    background: "var(--surface-2, #252535)",
+                    color: "var(--text, #e6e6ea)",
+                    border: "1px solid var(--border, #333)",
+                    borderRadius: "var(--r-sm, 6px)",
+                    fontSize: "var(--t-sm, 12.5px)",
+                    resize: "vertical",
+                    lineHeight: 1.5,
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: "inherit",
+                  }}
+                />
+              </FieldBlock>
+
+              {/* Hashtags */}
+              <FieldBlock
+                label="Hashtags"
+                onCopy={() => copyField("hashtags")}
+                showChip={copyChip === "hashtags"}
+              >
+                {/* Chips display */}
+                {hashtagChips.length > 0 && (
+                  <div
                     style={{
-                      color: "var(--accent, #90caf9)",
-                      background: "var(--accent-tint, rgba(144,202,249,0.08))",
-                      border: "1px solid var(--accent-strong, #6ba8e0)",
-                      borderRadius: "var(--r-full, 999px)",
-                      padding: "2px var(--s-5, 10px)",
-                      fontSize: "var(--t-xs, 11.5px)",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "var(--s-2, 4px)",
+                      marginBottom: "var(--s-2, 4px)",
                     }}
                   >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            {/* Editable text for hashtags */}
-            <textarea
-              value={editHashtagsText}
-              onChange={(e) => setEditHashtagsText(e.target.value)}
-              aria-label="Hashtags"
-              rows={2}
-              placeholder="#hashtag1 #hashtag2"
+                    {hashtagChips.map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          color: "var(--accent, #90caf9)",
+                          background: "var(--accent-tint, rgba(144,202,249,0.08))",
+                          border: "1px solid var(--accent-strong, #6ba8e0)",
+                          borderRadius: "var(--r-full, 999px)",
+                          padding: "2px var(--s-5, 10px)",
+                          fontSize: "var(--t-xs, 11.5px)",
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Editable text for hashtags */}
+                <textarea
+                  value={activeBuffer.hashtagsText}
+                  onChange={(e) => updateField("hashtagsText", e.target.value)}
+                  aria-label="Hashtags"
+                  rows={2}
+                  placeholder="#hashtag1 #hashtag2"
+                  style={{
+                    width: "100%",
+                    padding: "var(--s-3, 6px) var(--s-5, 10px)",
+                    background: "var(--surface-2, #252535)",
+                    color: "var(--text, #e6e6ea)",
+                    border: "1px solid var(--border, #333)",
+                    borderRadius: "var(--r-sm, 6px)",
+                    fontSize: "var(--t-sm, 12.5px)",
+                    resize: "none",
+                    lineHeight: 1.5,
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: "monospace",
+                  }}
+                />
+              </FieldBlock>
+            </div>
+          ) : (
+            // No result yet for this platform (and no error) — muted hint.
+            <p
               style={{
-                width: "100%",
-                padding: "var(--s-3, 6px) var(--s-5, 10px)",
-                background: "var(--surface-2, #252535)",
-                color: "var(--text, #e6e6ea)",
-                border: "1px solid var(--border, #333)",
-                borderRadius: "var(--r-sm, 6px)",
-                fontSize: "var(--t-sm, 12.5px)",
-                resize: "none",
+                fontSize: "var(--t-xs, 11.5px)",
+                color: "var(--text-muted, #777)",
+                margin: 0,
                 lineHeight: 1.5,
-                outline: "none",
-                boxSizing: "border-box",
-                fontFamily: "monospace",
+                fontStyle: "italic",
               }}
-            />
-          </FieldBlock>
+            >
+              Sin metadata para esta red todavía.
+            </p>
+          )}
         </div>
       )}
     </div>

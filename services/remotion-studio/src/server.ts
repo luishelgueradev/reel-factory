@@ -32,6 +32,7 @@ import {
   EmptyTranscriptError,
   MetadataValidationError,
 } from "./metadata.js";
+import type { Metadata } from "./metadata.js";
 
 const PORT = parseInt(process.env.PORT || "3123", 10);
 const PIPELINE_CONFIG_PATH = process.env.PIPELINE_CONFIG_PATH || "";
@@ -774,6 +775,129 @@ app.post("/api/metadata", async (req, res) => {
   }
 });
 
+// ─── POST /api/metadata/all — Batch-generate metadata for ALL platforms (META-05) ─
+// Body: { jobId, tone }  (no platform — loops over every PLATFORMS key)
+// Reads {jobId}/whisper/transcript.json ONCE, then calls generateMetadata per
+// platform sequentially (router is the bottleneck; worker concurrency is 1 by
+// project rule). Successes go into `results`, failures into `errors` — a single
+// platform failing must NOT 500 the whole request. Each success is persisted to
+// {jobId}/metadata-{platform}.json (atomic). If ALL platforms fail, the FIRST
+// captured error is mapped to a status using the same scheme as POST /api/metadata.
+
+app.post("/api/metadata/all", async (req, res) => {
+  const { jobId, tone } = req.body as {
+    jobId?: unknown;
+    tone?: unknown;
+  };
+
+  // Validate jobId
+  if (typeof jobId !== "string" || !JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "jobId inválido — se requiere UUID v4" });
+  }
+
+  // Validate tone
+  if (typeof tone !== "string" || !Object.prototype.hasOwnProperty.call(TONES, tone)) {
+    return res.status(400).json({
+      error: `tone inválido — valores permitidos: ${Object.keys(TONES).join(", ")}`,
+    });
+  }
+
+  const transcriptPath = path.join(
+    getPipelineDataDir(),
+    jobId,
+    "whisper",
+    "transcript.json"
+  );
+
+  // Read transcript once (mirror single endpoint)
+  let transcript: unknown;
+  try {
+    if (!fs.existsSync(transcriptPath)) {
+      return res.status(404).json({
+        error: `Transcript no encontrado para jobId ${jobId}`,
+        path: transcriptPath,
+      });
+    }
+    const raw = fs.readFileSync(transcriptPath, "utf-8");
+    transcript = JSON.parse(raw);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[metadata/all] Error reading transcript:", message);
+    return res.status(500).json({ error: "Error leyendo el transcript", message });
+  }
+
+  const results: Record<string, Metadata> = {};
+  const errors: Record<string, string> = {};
+  const errorObjs: Record<string, unknown> = {};
+
+  // Sequential generation per platform — router is the bottleneck.
+  for (const platform of Object.keys(PLATFORMS)) {
+    try {
+      const metadata = await generateMetadata({
+        transcript,
+        platform: platform as keyof typeof PLATFORMS,
+        tone: tone as keyof typeof TONES,
+        client: routerChatClient,
+      });
+      results[platform] = metadata;
+
+      // Persist per-platform atomically so it survives a reload.
+      const metadataPath = path.join(
+        getPipelineDataDir(),
+        jobId,
+        `metadata-${platform}.json`
+      );
+      atomicWriteJobFile(metadataPath, metadata);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors[platform] = message;
+      errorObjs[platform] = err;
+      console.error(`[metadata/all] Platform ${platform} failed:`, message);
+    }
+  }
+
+  // At least one success → 200 with results (+ errors if any partial failures).
+  if (Object.keys(results).length > 0) {
+    const model = getMetadataModel();
+    console.log(
+      `[metadata/all] jobId=${jobId} tone=${tone} ok=[${Object.keys(results).join(",")}] failed=[${Object.keys(errors).join(",")}] model=${model}`
+    );
+    const body: {
+      results: Record<string, Metadata>;
+      errors?: Record<string, string>;
+      _meta: { model: string };
+    } = { results, _meta: { model } };
+    if (Object.keys(errors).length > 0) {
+      body.errors = errors;
+    }
+    return res.status(200).json(body);
+  }
+
+  // ALL platforms failed → map the FIRST captured error to a status, mirroring
+  // the single-endpoint scheme.
+  const firstKey = Object.keys(errorObjs)[0];
+  const firstErr = firstKey ? errorObjs[firstKey] : undefined;
+
+  if (firstErr instanceof RouterNotConfiguredError) {
+    return res.status(503).json({ error: "router no configurado", message: firstErr.message });
+  }
+  if (firstErr instanceof RouterError) {
+    return res.status(502).json({ error: "Router devolvió un error", message: firstErr.message });
+  }
+  if (firstErr instanceof EmptyTranscriptError) {
+    return res.status(422).json({ error: firstErr.message });
+  }
+  if (firstErr instanceof MetadataValidationError) {
+    return res.status(502).json({ error: "No se pudo validar la metadata", detail: firstErr.message });
+  }
+  if (firstErr instanceof Error && firstErr.name === "TimeoutError") {
+    return res.status(502).json({ error: "Timeout al llamar al router (90s)" });
+  }
+  const message = firstErr instanceof Error ? firstErr.message : String(firstErr);
+  console.error("[metadata/all] All platforms failed:", message);
+  return res.status(500).json({ error: "Error inesperado generando metadata", message, errors });
+});
+
 // ─── GET /api/metadata/:jobId — Re-serve persisted metadata.json (D-05) ────────
 // Returns 200 with persisted metadata, or 404 if not yet generated.
 
@@ -799,6 +923,36 @@ app.get("/api/metadata/:jobId", (req, res) => {
     console.error("[metadata] Error reading metadata.json:", message);
     return res.status(500).json({ error: "Error leyendo metadata", message });
   }
+});
+
+// ─── GET /api/metadata-all/:jobId — Re-serve persisted per-platform metadata (META-05) ─
+// Returns 200 with { results: { <platform>: Metadata } } reading every
+// {jobId}/metadata-{platform}.json that exists. Always 200 (possibly with an
+// empty results map) so the panel can restore gracefully without treating
+// "nothing persisted yet" as an error.
+
+app.get("/api/metadata-all/:jobId", (req, res) => {
+  const { jobId } = req.params;
+
+  if (!JOB_ID_REGEX.test(jobId)) {
+    return res.status(400).json({ error: "jobId inválido — se requiere UUID v4" });
+  }
+
+  const results: Record<string, Metadata> = {};
+  for (const platform of Object.keys(PLATFORMS)) {
+    const p = path.join(getPipelineDataDir(), jobId, `metadata-${platform}.json`);
+    if (!fs.existsSync(p)) continue;
+    try {
+      const raw = fs.readFileSync(p, "utf-8");
+      results[platform] = JSON.parse(raw) as Metadata;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[metadata-all] Error reading ${platform}:`, message);
+      // Skip the unreadable platform; keep restoring the rest.
+    }
+  }
+
+  return res.status(200).json({ results });
 });
 
 // ─── Serve static files from public/ (D-06: sample video) ────────────────────

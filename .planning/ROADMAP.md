@@ -676,7 +676,21 @@ Plans:
   3. A real render produces a video whose per-word bar matches the Studio preview exactly (same color/opacity/radius/padding/position) — studio↔renderer parity verified
   4. The karaoke style is no longer offered anywhere in the subtitle options (removed, not hidden as legacy)
 
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
+
+Plans:
+
+**Wave 1**
+
+- [ ] 28-01-PLAN.md — wordBackground config schema + getWordBackgroundStyle + TikTokLayout per-word bar + renderer mirror + tests (SUB-01, SUB-02, SUB-03)
+
+**Wave 2** *(blocked on 28-01 — shared pipeline-config.ts)*
+
+- [ ] 28-02-PLAN.md — Remove karaoke everywhere + migration fallback (karaoke→tiktok) + tests, both services (SUB-04)
+
+**Wave 3** *(blocked on 28-01 + 28-02)*
+
+- [ ] 28-03-PLAN.md — Studio "Fondo por palabra" editor controls + live preview wiring + build:editor + human UAT (SUB-01, SUB-02)
 
 ---
 
@@ -731,5 +745,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 25. AI social metadata | 3/3 | Complete    | 2026-06-04 |
 | 26. UI convergence (impeccable) | 3/3 | Complete    | 2026-06-04 |
 | 27. Overlays pro — guía de zonas seguras + edición | 0/3 | Planned | - |
-| 28. Subtítulos pro — bar background por palabra | 0/TBD | Not started | - |
+| 28. Subtítulos pro — bar background por palabra | 0/3 | Planned | - |
 | 29. UX de fuentes + Metadata multi-red | 0/TBD | Not started | - |

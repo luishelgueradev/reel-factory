@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   validatePipelineConfig,
+  normalizeSubtitleLayout,
   splitOverlaysByLayer,
   partitionGuideOverlays,
   DEFAULT_ZOOM_CONFIG,
@@ -98,8 +99,8 @@ describe("validatePipelineConfig", () => {
       expect(result.valid).toBe(true);
     });
 
-    it("accepts all 4 layout modes: tiktok, sentence, bar, karaoke", () => {
-      const layouts: SubtitleLayoutMode[] = ["tiktok", "sentence", "bar", "karaoke"];
+    it("accepts all 3 layout modes: tiktok, sentence, bar (SUB-04: karaoke removed)", () => {
+      const layouts: SubtitleLayoutMode[] = ["tiktok", "sentence", "bar"];
       for (const layout of layouts) {
         const config = { subtitle: { layout } };
         const result = validatePipelineConfig(config);
@@ -270,9 +271,22 @@ describe("validatePipelineConfig", () => {
     });
 
     it("accepts config with subtitle having only layout field", () => {
-      const config = { subtitle: { layout: "karaoke" } };
+      const config = { subtitle: { layout: "tiktok" } };
       const result = validatePipelineConfig(config);
       expect(result.valid).toBe(true);
+    });
+
+    it("rejects a stale layout:'karaoke' value (SUB-04: karaoke removed)", () => {
+      const config = { subtitle: { layout: "karaoke" } };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => /must be one of:[^,]*karaoke/i.test(e))).toBe(false);
+    });
+
+    it("normalizeSubtitleLayout coerces a stale 'karaoke' to 'tiktok' (T-28-04 migration)", () => {
+      expect(normalizeSubtitleLayout("karaoke")).toBe("tiktok");
+      expect(normalizeSubtitleLayout("sentence")).toBe("sentence");
+      expect(normalizeSubtitleLayout(undefined)).toBe("tiktok");
     });
   });
 

@@ -21,7 +21,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { SubtitleConfig, TitleConfig, PngOverlayConfig, PipelineConfig } from "../pipeline-config";
-import { DEFAULT_SUBTITLE_CONFIG } from "../pipeline-config";
+import { DEFAULT_SUBTITLE_CONFIG, normalizeSubtitleLayout } from "../pipeline-config";
 import { PreviewPlayer } from "./PreviewPlayer";
 import { TextareaInput } from "./TextareaInput";
 import { textToCaptionPages, deriveTotalDurationMs, DEFAULT_SAMPLE_TEXT } from "./textToCaptions";
@@ -311,7 +311,13 @@ export function PreviewApp() {
   // Validates each field before entering state (WR-04 discipline).
   const applyConfigToState = useCallback((data: PipelineConfig) => {
     if (data.subtitle) {
-      setSubtitleConfig((prev) => ({ ...prev, ...data.subtitle }));
+      // Phase 28 SUB-04 (T-28-04): coerce a removed/unknown layout (e.g. a stored
+      // "karaoke" from before this phase) → "tiktok" before it enters state, so a
+      // legacy config/profile loads instead of rendering an invalid/blank layout.
+      setSubtitleConfig((prev) => {
+        const merged = { ...prev, ...data.subtitle };
+        return { ...merged, layout: normalizeSubtitleLayout(merged.layout) };
+      });
     }
     if (Array.isArray(data.titles)) {
       // WR-04: Validate shape before entering state — pipeline-config.json may have

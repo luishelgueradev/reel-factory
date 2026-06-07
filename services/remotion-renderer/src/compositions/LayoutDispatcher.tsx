@@ -4,7 +4,6 @@ import type { SubtitleConfig } from "../pipeline-config";
 import { TikTokLayout } from "./TikTokLayout";
 import { SentenceLayout } from "./SentenceLayout";
 import { BarLayout } from "./BarLayout";
-import { KaraokeLayout } from "./KaraokeLayout";
 
 // ─── Shared props for all layout components ──────────────────────────────────
 
@@ -37,10 +36,10 @@ export const SubtitleLayoutRenderer: React.FC<SubtitleLayoutProps> = ({
       return <SentenceLayout captionPages={captionPages} config={config} totalDurationMs={totalDurationMs} />;
     case "bar":
       return <BarLayout captionPages={captionPages} config={config} totalDurationMs={totalDurationMs} />;
-    case "karaoke":
-      return <KaraokeLayout captionPages={captionPages} config={config} totalDurationMs={totalDurationMs} />;
     default:
-      // Per D-05: unknown layout falls back to TikTok (safe default, T-06-04)
+      // Per D-05: unknown layout falls back to TikTok (safe default, T-06-04).
+      // Phase 28 SUB-04: this is also the render-time migration fallback for a
+      // stale layout:"karaoke" value that survived in a persisted config.
       return <TikTokLayout captionPages={captionPages} config={config} totalDurationMs={totalDurationMs} />;
   }
 };

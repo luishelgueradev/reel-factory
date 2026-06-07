@@ -64,12 +64,12 @@ function openAddForm(container: HTMLElement) {
 // ─── Suite 1: LayoutSelector inside StyleControls context ─────────────────────
 
 describe("Subtitle layout-mode preset cards (011-C) — LayoutSelector", () => {
-  it("renders all four layout mode cards in a radiogroup", () => {
+  it("renders all three layout mode cards in a radiogroup (SUB-04)", () => {
     const onChange = vi.fn();
     render(<LayoutSelector value="tiktok" onChange={onChange} />);
     expect(screen.getByRole("radiogroup")).toBeTruthy();
     const radios = screen.getAllByRole("radio");
-    expect(radios).toHaveLength(4);
+    expect(radios).toHaveLength(3);
   });
 
   it("renders layout mode cards alongside StyleControls subtitle form", () => {
@@ -80,11 +80,11 @@ describe("Subtitle layout-mode preset cards (011-C) — LayoutSelector", () => {
         <StyleControls config={BASE_SUBTITLE_CONFIG} onChange={onChange} />
       </>
     );
-    // Cards present
+    // Cards present (karaoke removed — SUB-04)
     expect(screen.getByText("TikTok")).toBeTruthy();
     expect(screen.getByText("Sentence")).toBeTruthy();
     expect(screen.getByText("Bar")).toBeTruthy();
-    expect(screen.getByText("Karaoke")).toBeTruthy();
+    expect(screen.queryByText("Karaoke")).toBeNull();
     // StyleControls form section headers still render (use getAllByText since there may be multiple)
     expect(screen.getAllByText(/posición/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/estilo/i).length).toBeGreaterThan(0);
@@ -125,7 +125,7 @@ describe("Subtitle layout-mode preset cards (011-C) — LayoutSelector", () => {
       <LayoutSelector value="tiktok" onChange={onChange} />
     );
     const inactiveCards = container.querySelectorAll('[data-selected="false"]');
-    expect(inactiveCards.length).toBe(3);
+    expect(inactiveCards.length).toBe(2);
     inactiveCards.forEach((card) => {
       const style = (card as HTMLElement).getAttribute("style") ?? "";
       expect(style).not.toMatch(/var\(--accent-strong/);

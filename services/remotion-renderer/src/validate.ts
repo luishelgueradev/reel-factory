@@ -530,11 +530,12 @@ export function validateLayoutModes(outputDir: string): string[] {
   // WR-05: Only check source files when explicitly enabled (CI/development), not in Docker production
   const validateSourceFiles = process.env.VALIDATE_SOURCE_FILES === "true";
 
-  // Check that LayoutDispatcher can render all 4 layout modes
-  // Verify composition files exist for each mode (source-file checks only when enabled)
+  // Check that LayoutDispatcher can render all layout modes (Phase 28 SUB-04:
+  // karaoke removed). Verify composition files exist for each mode (source-file
+  // checks only when enabled)
   if (validateSourceFiles) {
     const compositionsDir = `${outputDir}/../remotion-renderer/src/compositions`;
-    const requiredLayouts = ["TikTokLayout", "SentenceLayout", "BarLayout", "KaraokeLayout"];
+    const requiredLayouts = ["TikTokLayout", "SentenceLayout", "BarLayout"];
 
     const srcDir = fs.existsSync(compositionsDir)
       ? compositionsDir
@@ -564,7 +565,7 @@ export function validateLayoutModes(outputDir: string): string[] {
       const config = JSON.parse(raw) as Record<string, unknown>;
       const sub = config.subtitle as Record<string, unknown> | undefined;
       if (sub && typeof sub.layout === "string") {
-        const validModes = ["tiktok", "sentence", "bar", "karaoke"];
+        const validModes = ["tiktok", "sentence", "bar"];
         if (!validModes.includes(sub.layout)) {
           errors.push(`VISU-01: Invalid subtitle.layout mode "${sub.layout}", must be one of: ${validModes.join(", ")}`);
         }

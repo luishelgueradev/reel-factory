@@ -5,8 +5,8 @@
  *  1. The LayoutSelector renders as blue-active preset cards (sketch 011-C, Phase 26-02).
  *  2. The active state uses the --accent (blue) token and NOT the green #4CAF50
  *     that was the documented D-04 violation.
- *  3. All four layout mode cards render and selecting one calls onChange with
- *     the correct SubtitleLayoutMode value.
+ *  3. All three layout mode cards render and selecting one calls onChange with
+ *     the correct SubtitleLayoutMode value (Phase 28 SUB-04: karaoke removed).
  *  4. A11y: radiogroup container, each card is role="radio" with aria-checked.
  *
  * Color law: D-04 / 26-UI-SPEC.md
@@ -29,22 +29,22 @@ describe("LayoutSelector — preset cards 011-C + color-law regression (26-02, D
     expect(container.firstChild).toBeTruthy();
   });
 
-  it("renders all four layout mode card labels", () => {
+  it("renders all three layout mode card labels (no Karaoke — SUB-04)", () => {
     const onChange = vi.fn();
     render(<LayoutSelector value="tiktok" onChange={onChange} />);
     expect(screen.getByText("TikTok")).toBeTruthy();
     expect(screen.getByText("Sentence")).toBeTruthy();
     expect(screen.getByText("Bar")).toBeTruthy();
-    expect(screen.getByText("Karaoke")).toBeTruthy();
+    expect(screen.queryByText("Karaoke")).toBeNull();
   });
 
-  it("renders a radiogroup with four radio cards", () => {
+  it("renders a radiogroup with three radio cards", () => {
     const onChange = vi.fn();
     render(<LayoutSelector value="tiktok" onChange={onChange} />);
     const group = screen.getByRole("radiogroup");
     expect(group).toBeTruthy();
     const radios = screen.getAllByRole("radio");
-    expect(radios).toHaveLength(4);
+    expect(radios).toHaveLength(3);
   });
 
   it("the selected card has data-selected=true and others have data-selected=false", () => {
@@ -59,7 +59,7 @@ describe("LayoutSelector — preset cards 011-C + color-law regression (26-02, D
       container.querySelectorAll("[data-selected='false']")
     );
     expect(selectedCards).toHaveLength(1);
-    expect(unselectedCards).toHaveLength(3);
+    expect(unselectedCards).toHaveLength(2);
   });
 
   it("the selected card has aria-checked=true", () => {
@@ -108,7 +108,7 @@ describe("LayoutSelector — preset cards 011-C + color-law regression (26-02, D
   it("the selected card label uses --accent color, NOT #a5d6a7 green-tint", () => {
     const onChange = vi.fn();
     const { container } = render(
-      <LayoutSelector value="karaoke" onChange={onChange} />
+      <LayoutSelector value="bar" onChange={onChange} />
     );
     const selected = container.querySelector('[data-selected="true"]');
     expect(selected).toBeTruthy();
@@ -148,10 +148,12 @@ describe("LayoutSelector — preset cards 011-C + color-law regression (26-02, D
     const { container } = render(
       <LayoutSelector value="tiktok" onChange={onChange} />
     );
-    const modes = ["tiktok", "sentence", "bar", "karaoke"];
+    const modes = ["tiktok", "sentence", "bar"];
     modes.forEach((mode) => {
       const card = container.querySelector(`[data-mode="${mode}"]`);
       expect(card).toBeTruthy();
     });
+    // SUB-04: the removed karaoke card must not exist
+    expect(container.querySelector('[data-mode="karaoke"]')).toBeNull();
   });
 });

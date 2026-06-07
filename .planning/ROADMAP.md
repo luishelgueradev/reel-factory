@@ -61,7 +61,7 @@ Mature the Studio's editing controls to a pro level over the v1.3/v1.4 base: a u
 
 - [x] **Phase 27: Overlays pro — guía de zonas seguras + edición** - User-provided safe-zone guide overlay (preview-only, excluded from render, anchored/identified) plus overlay name editing shown as the edit title. Requirements: OVERLAY-01..05. **(UI hint: yes · renderer sync: OVERLAY-02)**
 - [x] **Phase 28: Subtítulos pro — bar background por palabra** - Per-word rectangular "bar" highlight background for the tiktok style (configurable color/opacity/border-radius/padding), identical in preview and render; karaoke style removed. Requirements: SUB-01..04. **(UI hint: yes · renderer sync: SUB-01..03)**
-- [ ] **Phase 29: UX de fuentes + Metadata multi-red** - Sample-text and browse-fonts collapsed by default; metadata generated for all networks in one action with networks presented as tabs (not a dropdown). Requirements: FONT-01, FONT-02, META-05, META-06. **(UI hint: yes)**
+- [x] **Phase 29: UX de fuentes + Metadata multi-red** - Sample-text and browse-fonts collapsed by default; metadata generated for all networks in one action with networks presented as tabs (not a dropdown). Requirements: FONT-01, FONT-02, META-05, META-06. **(UI hint: yes)**
 
 ## Phase Details
 

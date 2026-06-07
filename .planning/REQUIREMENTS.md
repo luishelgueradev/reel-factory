@@ -24,13 +24,13 @@
 
 ### UX de fuentes (FONT)
 
-- [ ] **FONT-01**: La sección "sample text" aparece colapsada por default.
-- [ ] **FONT-02**: La sección "browse fonts" aparece colapsada por default.
+- [x] **FONT-01**: La sección "sample text" aparece colapsada por default.
+- [x] **FONT-02**: La sección "browse fonts" aparece colapsada por default.
 
 ### Metadata multi-red (META)
 
-- [ ] **META-05**: El usuario genera la metadata para todas las redes en una sola acción (no por red individual).
-- [ ] **META-06**: Las redes se presentan en tabs (no en una lista desplegable).
+- [x] **META-05**: El usuario genera la metadata para todas las redes en una sola acción (no por red individual).
+- [x] **META-06**: Las redes se presentan en tabs (no en una lista desplegable).
 
 ## Future Requirements (deferred)
 
@@ -58,7 +58,7 @@
 | SUB-02 | Phase 28 | Done |
 | SUB-03 | Phase 28 | Done |
 | SUB-04 | Phase 28 | Done |
-| FONT-01 | Phase 29 | Pending |
-| FONT-02 | Phase 29 | Pending |
-| META-05 | Phase 29 | Pending |
-| META-06 | Phase 29 | Pending |
+| FONT-01 | Phase 29 | Done |
+| FONT-02 | Phase 29 | Done |
+| META-05 | Phase 29 | Done |
+| META-06 | Phase 29 | Done |

@@ -7,10 +7,10 @@ last_updated: "2026-06-07T04:30:00.000Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 0
   completed_plans: 0
-  percent: 67
+  percent: 100
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 29 — UX fuentes + Metadata multi-red (next); Phases 27-28 ✅ complete
+Phase: ALL v1.5 phases (27-29) ✅ complete — milestone awaiting audit/complete (not run, user asleep)
 Plan: —
-Status: In progress — Phases 27-28 complete. Next: Phase 29.
-Last activity: 2026-06-07 — Phase 28 complete (subtítulos pro: per-word wordBackground bar w/ preview↔render parity; karaoke removed + migration fallback); studio 506 + renderer 349 green. Live UAT pending.
+Status: All 3 phases done & code-merged. NEXT (user): live Docker UAT, then /gsd-audit-milestone → /gsd-complete-milestone v1.5.
+Last activity: 2026-06-07 — Phase 29 complete (fonts collapsibles + metadata multi-red tabs); studio 518 green. ALL v1.5 phases done; milestone lifecycle deferred to user.
 
 ### Milestone v1.5 Phase Summary
 
@@ -35,7 +35,7 @@ Last activity: 2026-06-07 — Phase 28 complete (subtítulos pro: per-word wordB
 |-------|------|--------------|--------|
 | 27 — Overlays pro (guía + edición) | Safe-zone guide overlay (preview-only, excluded from render, anchored/identified) + overlay name editing shown while editing | OVERLAY-01..05 | ✅ Complete (studio 477 + renderer 332 green; live UAT pending) |
 | 28 — Subtítulos pro (bar bg por palabra) | Per-word bar background for tiktok (color/opacity/radius/padding), preview↔render parity; karaoke removed | SUB-01..04 | ✅ Complete (studio 506 + renderer 349 green; live UAT pending) |
-| 29 — UX fuentes + Metadata multi-red | Sample-text + browse-fonts collapsed by default; metadata for all networks in one action, networks in tabs | FONT-01, FONT-02, META-05, META-06 | Not started |
+| 29 — UX fuentes + Metadata multi-red | Sample-text + browse-fonts collapsed by default; metadata for all networks in one action, networks in tabs | FONT-01, FONT-02, META-05, META-06 | ✅ Complete (studio 518 green; live UAT pending) |
 
 > Renderer sync mandatory for Phase 27 (OVERLAY-02) and Phase 28 (SUB-01..03): mirror studio `compositions/*` + shared `src/*` to remotion-renderer and re-run renderer vitest (clobber hazard). Studio runs as a Docker container baking dist at build time — live UAT needs `docker compose build/up remotion-studio` (manual checkpoint, not an executor blocker). UI tooling non-negotiable on every phase: `impeccable` + `frontend-design` + `sketch-findings-reel-factory` + green-discipline.
 

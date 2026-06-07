@@ -5,8 +5,12 @@
 
 // ─── Subtitle Layout Modes (D-04, D-05) ──────────────────────────────────
 
-/** Union type for the four subtitle layout modes */
-export type SubtitleLayoutMode = "tiktok" | "sentence" | "bar" | "karaoke";
+/**
+ * Union type for the three subtitle layout modes.
+ * Phase 28 SUB-04: "karaoke" was removed (off-brand). Stored configs that still
+ * carry layout:"karaoke" are coerced to "tiktok" via normalizeSubtitleLayout.
+ */
+export type SubtitleLayoutMode = "tiktok" | "sentence" | "bar";
 
 /** Union type for the three position presets (D-09) */
 export type SubtitlePosition = "bottom-center" | "top-center" | "center-screen";
@@ -275,7 +279,20 @@ export const DEFAULT_VISUAL_EFFECTS: Required<VisualEffectsConfig> = {
 
 // ─── Validation ────────────────────────────────────────────────────────────
 
-const VALID_LAYOUT_MODES: SubtitleLayoutMode[] = ["tiktok", "sentence", "bar", "karaoke"];
+const VALID_LAYOUT_MODES: SubtitleLayoutMode[] = ["tiktok", "sentence", "bar"];
+
+/**
+ * Migration fallback (Phase 28 SUB-04, T-28-04). Coerce a stored/unknown subtitle
+ * layout value to a valid SubtitleLayoutMode. A removed mode (e.g. the deleted
+ * "karaoke") or any garbage/undefined value falls back to "tiktok", the safe
+ * default, so no persisted config/profile becomes unloadable. This is the single
+ * source of migration truth, shared by both services after the AGENTS.md cp sync.
+ */
+export function normalizeSubtitleLayout(layout: unknown): SubtitleLayoutMode {
+  return typeof layout === "string" && VALID_LAYOUT_MODES.includes(layout as SubtitleLayoutMode)
+    ? (layout as SubtitleLayoutMode)
+    : "tiktok";
+}
 const VALID_POSITIONS: SubtitlePosition[] = ["bottom-center", "top-center", "center-screen"];
 const VALID_ENTRANCE_ANIMATIONS: TitleEntranceAnimation[] = ["slide-up", "slide-down", "fade-in", "none"];
 const VALID_TRANSITION_TYPES: TransitionType[] = ["zoom", "crop-shift", "none"];
@@ -286,7 +303,7 @@ const VALID_HIGHLIGHT_TRANSITIONS: string[] = ["fade", "instant"];
  *
  * Per T-06-01: Returns { valid: boolean; errors: string[] } with specific
  * error messages including field names. Validates:
- * - subtitle.layout is one of the 4 valid modes
+ * - subtitle.layout is one of the valid modes (tiktok/sentence/bar)
  * - subtitle.position (if present) is one of 3 valid presets
  * - title entries: text non-empty, startTimeMs >= 0, durationMs > 0
  * - title style entranceAnimation (if present) is valid

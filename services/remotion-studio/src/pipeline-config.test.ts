@@ -3,6 +3,7 @@ import {
   validatePipelineConfig,
   splitOverlaysByLayer,
   partitionGuideOverlays,
+  normalizeSubtitleLayout,
 } from "./pipeline-config";
 
 // ─── Phase 27 mirror-parity gate ─────────────────────────────────────────────
@@ -193,5 +194,46 @@ describe("validatePipelineConfig — wordBackground (SUB-01/02)", () => {
     const result = validatePipelineConfig(config);
     expect(result.valid).toBe(false);
     expect(result.errors).toContain("subtitle.wordBackground.padding must be a non-negative number");
+  });
+});
+
+// ─── Phase 28 SUB-04: karaoke layout removal + migration safety ───────────────
+// Karaoke is fully removed (not legacy-hidden). The union/validator accept only
+// tiktok/sentence/bar. A stored layout:"karaoke" must NOT validate, but must be
+// coerced to "tiktok" on load (normalizeSubtitleLayout) so no profile is unloadable.
+
+describe("SubtitleLayoutMode — karaoke removed (SUB-04)", () => {
+  it("accepts the 3 remaining layout modes: tiktok, sentence, bar", () => {
+    for (const layout of ["tiktok", "sentence", "bar"]) {
+      const result = validatePipelineConfig({ subtitle: { layout } });
+      expect(result.valid, `layout "${layout}" should be valid`).toBe(true);
+    }
+  });
+
+  it("rejects layout:'karaoke' as no longer a valid mode", () => {
+    const result = validatePipelineConfig({ subtitle: { layout: "karaoke" } });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("tiktok") && e.includes("sentence") && e.includes("bar"))).toBe(true);
+    // The error message must NOT advertise karaoke as a valid option.
+    expect(result.errors.some((e) => /must be one of:[^,]*karaoke/i.test(e))).toBe(false);
+  });
+});
+
+describe("normalizeSubtitleLayout — migration fallback (SUB-04, T-28-04)", () => {
+  it("coerces a removed 'karaoke' value to 'tiktok'", () => {
+    expect(normalizeSubtitleLayout("karaoke")).toBe("tiktok");
+  });
+
+  it("passes through valid modes unchanged", () => {
+    expect(normalizeSubtitleLayout("sentence")).toBe("sentence");
+    expect(normalizeSubtitleLayout("bar")).toBe("bar");
+    expect(normalizeSubtitleLayout("tiktok")).toBe("tiktok");
+  });
+
+  it("coerces garbage / undefined to 'tiktok'", () => {
+    expect(normalizeSubtitleLayout("garbage")).toBe("tiktok");
+    expect(normalizeSubtitleLayout(undefined)).toBe("tiktok");
+    expect(normalizeSubtitleLayout(null)).toBe("tiktok");
+    expect(normalizeSubtitleLayout(123)).toBe("tiktok");
   });
 });

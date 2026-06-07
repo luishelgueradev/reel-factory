@@ -241,7 +241,11 @@ export const DEFAULT_SUBTITLE_CONFIG: Required<
   bottomOffset: 250,
   pastWordOpacity: 0.4,
   highlightColor: "#FFFFFF",
-  highlightDurationMs: 200,
+  // Item 5 (260607-uzv-03): flash OFF by default so the active word shows its
+  // activeColor immediately (no white flash). With duration 0, showHighlight is
+  // false → wordColor = color (= activeColor). Capability preserved: a config
+  // with highlightDurationMs > 0 still flashes.
+  highlightDurationMs: 0,
   highlightTransition: "fade",
   subtitleWidth: 0,
   fontFamily: "PlusJakartaSans",

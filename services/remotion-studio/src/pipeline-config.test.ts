@@ -4,7 +4,18 @@ import {
   splitOverlaysByLayer,
   partitionGuideOverlays,
   normalizeSubtitleLayout,
+  DEFAULT_SUBTITLE_CONFIG,
 } from "./pipeline-config";
+
+// ─── Item 5: flash off by default (260607-uzv-03) ────────────────────────────
+// The active-word highlight flash is disabled by default so the active word
+// shows its activeColor immediately. The capability (duration>0 flashes) is
+// preserved — only the default changes.
+describe("DEFAULT_SUBTITLE_CONFIG — highlight flash off by default (item 5)", () => {
+  it("defaults highlightDurationMs to 0 (no flash)", () => {
+    expect(DEFAULT_SUBTITLE_CONFIG.highlightDurationMs).toBe(0);
+  });
+});
 
 // ─── Phase 27 mirror-parity gate ─────────────────────────────────────────────
 // pipeline-config.ts is a HAND-MAINTAINED mirror between studio and renderer

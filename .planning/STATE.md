@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 Phase: ALL v1.5 phases (27-29) ✅ complete — milestone awaiting audit/complete (not run, user asleep)
 Plan: —
 Status: All 3 phases done & code-merged. NEXT (user): live Docker UAT, then /gsd-audit-milestone → /gsd-complete-milestone v1.5.
-Last activity: 2026-06-07 — Phase 29 complete (fonts collapsibles + metadata multi-red tabs); studio 518 green. ALL v1.5 phases done; milestone lifecycle deferred to user.
+Last activity: 2026-06-07 — Quick 260607-uzv: 6 correcciones de edición del Studio (preview replace/download, título ancho-caja+gradiente, subtítulos per-word bg + flash-off + dedup sample-text). studio 538 + renderer 355 green.
 
 ### Milestone v1.5 Phase Summary
 
@@ -43,6 +43,7 @@ Last activity: 2026-06-07 — Phase 29 complete (fonts collapsibles + metadata m
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260607-uzv | 6 correcciones de edición del Studio: (preview) reemplazar/descargar video cargado; (títulos) ancho de caja configurable + gradiente lineal vertical; (subtítulos) fondo resaltado per-word en tiktok (saca full-frase), flash off por default → palabra activa toma color Activa, y dedup del título "Sample text" | 2026-06-07 | (pending) | [260607-uzv-studio-edit-correcciones](./quick/260607-uzv-studio-edit-correcciones/) |
 | 260606-2ek | Al cambiar de perfil no cambiaban los títulos — los 2 perfiles tenían títulos idénticos porque actualizar un perfil era poco confiable (había que re-tipear el nombre). Fix UX: botón "Actualizar «{perfil}»" en un clic que re-guarda el perfil activo (títulos incluidos) | 2026-06-06 | ab06116 | [260606-2ek-perfiles-titulos-actualizar](./quick/260606-2ek-perfiles-titulos-actualizar/) |
 | 260606-278 | Overlay resize "Ancho px" slider max too small — quadrupled 540→2160 so PNG overlays scale much larger | 2026-06-06 | f185c23 | [260606-278-overlay-resize-width-max-too-small-quadr](./quick/260606-278-overlay-resize-width-max-too-small-quadr/) |
 | 260605-pa2 | Exportar/importar JSON de perfil — descargar un perfil a archivo (.json) y reimportarlo, para una versión portable de los datos del perfil (backup/compartir) | 2026-06-05 | ecb83d5 | [260605-pa2-exportar-e-importar-un-json-de-configura](./quick/260605-pa2-exportar-e-importar-un-json-de-configura/) |

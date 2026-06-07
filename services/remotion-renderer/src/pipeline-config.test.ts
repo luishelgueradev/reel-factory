@@ -143,6 +143,32 @@ describe("validatePipelineConfig", () => {
       const result = validatePipelineConfig(config);
       expect(result.valid).toBe(true);
     });
+
+    // TITLE-WIDTH-01 / TITLE-GRADIENT-01 — hand-maintained mirror of the studio cases
+    it("accepts backgroundWidth within 0–100 and at the bounds (TITLE-WIDTH-01)", () => {
+      for (const backgroundWidth of [0, 60, 100]) {
+        const config = {
+          subtitle: { layout: "tiktok" },
+          titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { backgroundWidth } }],
+        };
+        expect(validatePipelineConfig(config).valid, `backgroundWidth ${backgroundWidth}`).toBe(true);
+      }
+    });
+
+    it("accepts a valid backgroundGradient (TITLE-GRADIENT-01)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [
+          {
+            text: "Hi",
+            startTimeMs: 0,
+            durationMs: 1000,
+            style: { backgroundGradient: { enabled: true, fromColor: "#112233", toColor: "#445566" } },
+          },
+        ],
+      };
+      expect(validatePipelineConfig(config).valid).toBe(true);
+    });
   });
 
   describe("invalid configs", () => {
@@ -257,6 +283,46 @@ describe("validatePipelineConfig", () => {
       const result = validatePipelineConfig(config);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes(".style.borderRadius"))).toBe(true);
+    });
+
+    // TITLE-WIDTH-01 / TITLE-GRADIENT-01 reject paths — mirror of the studio cases
+    it("rejects a non-number / out-of-range backgroundWidth (TITLE-WIDTH-01)", () => {
+      for (const backgroundWidth of ["80", -1, 101]) {
+        const config = {
+          subtitle: { layout: "tiktok" },
+          titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { backgroundWidth } }],
+        };
+        const result = validatePipelineConfig(config);
+        expect(result.valid, `backgroundWidth ${backgroundWidth}`).toBe(false);
+        expect(result.errors.some((e) => e.includes(".style.backgroundWidth"))).toBe(true);
+      }
+    });
+
+    it("rejects a non-object backgroundGradient (TITLE-GRADIENT-01)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { backgroundGradient: "nope" } }],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes(".style.backgroundGradient must be an object"))).toBe(true);
+    });
+
+    it("rejects a backgroundGradient with non-boolean enabled or non-hex colors (TITLE-GRADIENT-01)", () => {
+      const cases = [
+        { enabled: "yes", fromColor: "#112233", toColor: "#445566" },
+        { enabled: true, fromColor: "red", toColor: "#445566" },
+        { enabled: true, fromColor: "#112233", toColor: "#fff" },
+      ];
+      for (const backgroundGradient of cases) {
+        const config = {
+          subtitle: { layout: "tiktok" },
+          titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style: { backgroundGradient } }],
+        };
+        const result = validatePipelineConfig(config);
+        expect(result.valid, JSON.stringify(backgroundGradient)).toBe(false);
+        expect(result.errors.some((e) => e.includes(".style.backgroundGradient."))).toBe(true);
+      }
     });
   });
 

@@ -128,6 +128,8 @@ const DEFAULT_TITLE_STYLE = {
   borderRadius: 12,
   lineHeight: 1.2,
   padding: 40,
+  backgroundWidth: 80, // TITLE-WIDTH-01: matches the previous hardcoded 80% box width
+  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000" }, // TITLE-GRADIENT-01: disabled → flat backgroundColor
 };
 
 // ─── Shared style helpers ──────────────────────────────────────────────────
@@ -468,6 +470,8 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
         fontWeight: title.style.fontWeight,
         fontStyle: title.style.fontStyle,
         outerGlow: title.style.outerGlow,
+        backgroundWidth: title.style.backgroundWidth,
+        backgroundGradient: title.style.backgroundGradient,
       } : { ...DEFAULT_TITLE_STYLE },
     });
     setEditingIndex(index);
@@ -814,6 +818,45 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
                     value={newTitle.style?.borderRadius ?? 12}
                     onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, borderRadius: v } }))}
                   />
+
+                  {/* Ancho caja — TITLE-WIDTH-01 (configurable box width, default 80%) */}
+                  <RangeRow label="Ancho caja"
+                    min={0} max={100}
+                    value={newTitle.style?.backgroundWidth ?? 80}
+                    onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundWidth: v } }))}
+                    format={(v) => `${v}%`}
+                  />
+
+                  {/* Degradado — TITLE-GRADIENT-01 (optional vertical top→bottom gradient; FxBlock + 2 swatches) */}
+                  {(() => {
+                    const gradient = newTitle.style?.backgroundGradient ?? { enabled: false, fromColor: "#000000", toColor: "#000000" };
+                    return (
+                      <>
+                        <Row label="Degradado">
+                          <div style={{ display: "flex", gap: "var(--s-4, 8px)" }}>
+                            <button type="button"
+                              onClick={() => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, enabled: false } } }))}
+                              style={segBtnStyle(!gradient.enabled)}>Off</button>
+                            <button type="button"
+                              onClick={() => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, enabled: true } } }))}
+                              style={segBtnStyle(gradient.enabled)}>On</button>
+                          </div>
+                        </Row>
+                        {gradient.enabled && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-5, 10px) var(--s-6, 12px)" }}>
+                            <ColorSwatch label="Desde (arriba)"
+                              value={gradient.fromColor}
+                              onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, fromColor: v } } }))}
+                            />
+                            <ColorSwatch label="Hasta (abajo)"
+                              value={gradient.toColor}
+                              onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, toColor: v } } }))}
+                            />
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

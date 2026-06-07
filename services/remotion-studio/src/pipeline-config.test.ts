@@ -136,6 +136,84 @@ describe("splitOverlaysByLayer — guide exclusion (OVERLAY-03)", () => {
 
 const VALID_WORD_BG = { enabled: true, color: "#000000", opacity: 0.6, borderRadius: 8, padding: 6 };
 
+// ─── Title box backgroundWidth + backgroundGradient (TITLE-WIDTH-01 / TITLE-GRADIENT-01) ──
+// Both fields are OPTIONAL and additive: a title style without them stays valid so
+// existing titles render identically (default 80% flat backgroundColor). Mirrors the
+// renderer cases (hand-maintained mirror, AGENTS.md cp sync — both files assert the same contract).
+
+const titleWith = (style: Record<string, unknown>) => ({
+  subtitle: { layout: "tiktok" },
+  titles: [{ text: "Hi", startTimeMs: 0, durationMs: 1000, style }],
+});
+
+describe("validatePipelineConfig — title backgroundWidth (TITLE-WIDTH-01)", () => {
+  it("accepts backgroundWidth: 60 (number within 0–100)", () => {
+    expect(validatePipelineConfig(titleWith({ backgroundWidth: 60 })).valid).toBe(true);
+  });
+
+  it("accepts backgroundWidth at the 0 and 100 bounds", () => {
+    expect(validatePipelineConfig(titleWith({ backgroundWidth: 0 })).valid).toBe(true);
+    expect(validatePipelineConfig(titleWith({ backgroundWidth: 100 })).valid).toBe(true);
+  });
+
+  it("is valid when backgroundWidth is absent (back-compat, defaults to 80)", () => {
+    expect(validatePipelineConfig(titleWith({})).valid).toBe(true);
+  });
+
+  it("rejects a non-number backgroundWidth", () => {
+    const result = validatePipelineConfig(titleWith({ backgroundWidth: "80" }));
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("style.backgroundWidth"))).toBe(true);
+  });
+
+  it("rejects backgroundWidth out of the 0–100 range", () => {
+    expect(validatePipelineConfig(titleWith({ backgroundWidth: -1 })).valid).toBe(false);
+    expect(validatePipelineConfig(titleWith({ backgroundWidth: 101 })).valid).toBe(false);
+  });
+});
+
+describe("validatePipelineConfig — title backgroundGradient (TITLE-GRADIENT-01)", () => {
+  const VALID_GRADIENT = { enabled: true, fromColor: "#112233", toColor: "#445566" };
+
+  it("accepts a valid backgroundGradient", () => {
+    expect(validatePipelineConfig(titleWith({ backgroundGradient: VALID_GRADIENT })).valid).toBe(true);
+  });
+
+  it("is valid when backgroundGradient is absent (back-compat, flat color)", () => {
+    expect(validatePipelineConfig(titleWith({})).valid).toBe(true);
+  });
+
+  it("rejects a non-object backgroundGradient", () => {
+    const result = validatePipelineConfig(titleWith({ backgroundGradient: "nope" }));
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("style.backgroundGradient must be an object"))).toBe(true);
+  });
+
+  it("rejects a non-boolean enabled", () => {
+    const result = validatePipelineConfig(
+      titleWith({ backgroundGradient: { ...VALID_GRADIENT, enabled: "yes" } })
+    );
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("backgroundGradient.enabled must be a boolean"))).toBe(true);
+  });
+
+  it("rejects a non-hex fromColor", () => {
+    const result = validatePipelineConfig(
+      titleWith({ backgroundGradient: { ...VALID_GRADIENT, fromColor: "red" } })
+    );
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("backgroundGradient.fromColor"))).toBe(true);
+  });
+
+  it("rejects a non-hex toColor", () => {
+    const result = validatePipelineConfig(
+      titleWith({ backgroundGradient: { ...VALID_GRADIENT, toColor: "#fff" } })
+    );
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("backgroundGradient.toColor"))).toBe(true);
+  });
+});
+
 describe("validatePipelineConfig — wordBackground (SUB-01/02)", () => {
   it("accepts a valid wordBackground", () => {
     const config = { subtitle: { layout: "tiktok", wordBackground: VALID_WORD_BG } };

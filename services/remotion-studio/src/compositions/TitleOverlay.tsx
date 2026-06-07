@@ -47,6 +47,8 @@ const DEFAULT_TITLE_STYLE: Required<TitleStyleProps> = {
   fontWeight: true,
   fontStyle: false,
   outerGlow: { enabled: false, color: "#ffffff", intensity: 0.8, softness: 20 },
+  backgroundWidth: 80, // TITLE-WIDTH-01: preserves the previous hardcoded 80% box width
+  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000" }, // TITLE-GRADIENT-01: disabled by default → flat backgroundColor
 };
 
 export const TitleOverlay: React.FC<TitleOverlayProps> = ({
@@ -66,6 +68,14 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
   const titleFontFamily = style?.titleFontFamily ?? fontFamily ?? DEFAULT_TITLE_STYLE.titleFontFamily;
   const lineHeight = style?.lineHeight ?? DEFAULT_TITLE_STYLE.lineHeight;
   const padding = style?.padding ?? DEFAULT_TITLE_STYLE.padding;
+  // TITLE-WIDTH-01: configurable box width (% of frame); TITLE-GRADIENT-01: optional vertical gradient
+  const backgroundWidth = style?.backgroundWidth ?? DEFAULT_TITLE_STYLE.backgroundWidth;
+  const backgroundGradient = style?.backgroundGradient ?? DEFAULT_TITLE_STYLE.backgroundGradient;
+  // When the gradient is enabled, paint a vertical (top→bottom) linear-gradient on the box;
+  // otherwise keep the flat backgroundColor (default behavior unchanged).
+  const boxBackground = backgroundGradient.enabled
+    ? `linear-gradient(to bottom, ${backgroundGradient.fromColor}, ${backgroundGradient.toColor})`
+    : backgroundColor;
 
   // Resolve module names to actual CSS fontFamily names
   // E.g., "DancingScript" → "Dancing Script"
@@ -213,8 +223,8 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
           left: `${(x / 1080) * 100}%`,
           top: `${(y / 1920) * 100}%`,
           transform: `translateY(${translateY}px)`,
-          backgroundColor,
-          width: "80%",
+          background: boxBackground,
+          width: `${backgroundWidth}%`,
           padding: `${padding}px 24px`,
           borderRadius: `${borderRadius}px`,
           display: "flex",

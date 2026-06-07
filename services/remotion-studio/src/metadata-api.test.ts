@@ -261,6 +261,131 @@ describe("POST /api/metadata", () => {
   });
 });
 
+describe("POST /api/metadata/all", () => {
+  const ALL_UUID = "44444444-4444-4444-4444-444444444444";
+
+  it("all-ok: returns 200 with results for all 3 platforms, each a valid Metadata", async () => {
+    seedTranscript(ALL_UUID);
+    // One router call per platform (3 platforms) → 3 sequential successful responses
+    mockFetch
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON))
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON))
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON));
+
+    const res = await request(app)
+      .post("/api/metadata/all")
+      .send({ jobId: ALL_UUID, tone: "cercano" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.results).toBeDefined();
+    expect(res.body.results.tiktok).toBeDefined();
+    expect(res.body.results.instagram).toBeDefined();
+    expect(res.body.results.youtube_shorts).toBeDefined();
+    for (const key of ["tiktok", "instagram", "youtube_shorts"]) {
+      const m = res.body.results[key];
+      expect(typeof m.title).toBe("string");
+      expect(m.title.length).toBeGreaterThan(0);
+      expect(typeof m.description).toBe("string");
+      expect(Array.isArray(m.hashtags)).toBe(true);
+    }
+    expect(res.body._meta).toBeDefined();
+    expect(res.body._meta.model).toBe("big-cloud");
+    // No errors key when all succeed (or empty)
+    expect(res.body.errors === undefined || Object.keys(res.body.errors).length === 0).toBe(true);
+  });
+
+  it("all-ok: persists per-platform metadata files that survive a reload", async () => {
+    const jobId = "55555555-5555-5555-5555-555555555555";
+    seedTranscript(jobId);
+    mockFetch
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON))
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON))
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON));
+
+    await request(app)
+      .post("/api/metadata/all")
+      .send({ jobId, tone: "cercano" });
+
+    for (const platform of ["tiktok", "instagram", "youtube_shorts"]) {
+      const p = path.join(TEST_PIPELINE_DIR, jobId, `metadata-${platform}.json`);
+      expect(fs.existsSync(p)).toBe(true);
+      const saved = JSON.parse(fs.readFileSync(p, "utf-8")) as { title: string };
+      expect(saved.title).toBe("Dobla tu productividad con 3 consejos simples");
+    }
+  });
+
+  it("partial-failure: one platform fails (invalid JSON twice) → 200 with survivors in results + failed in errors", async () => {
+    const jobId = "66666666-6666-6666-6666-666666666666";
+    seedTranscript(jobId);
+
+    // Platform order is Object.keys(PLATFORMS): tiktok, instagram, youtube_shorts.
+    // tiktok → ok (1 call), instagram → invalid JSON twice (2 calls: first + corrective retry),
+    // youtube_shorts → ok (1 call).
+    const badContent = "not json at all";
+    mockFetch
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON)) // tiktok ok
+      .mockResolvedValueOnce(makeRouterResponse(badContent))          // instagram attempt 1
+      .mockResolvedValueOnce(makeRouterResponse(badContent))          // instagram corrective retry
+      .mockResolvedValueOnce(makeRouterResponse(VALID_METADATA_JSON)); // youtube_shorts ok
+
+    const res = await request(app)
+      .post("/api/metadata/all")
+      .send({ jobId, tone: "profesional" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.results.tiktok).toBeDefined();
+    expect(res.body.results.youtube_shorts).toBeDefined();
+    expect(res.body.results.instagram).toBeUndefined();
+    expect(res.body.errors).toBeDefined();
+    expect(res.body.errors.instagram).toBeDefined();
+    expect(typeof res.body.errors.instagram).toBe("string");
+  });
+
+  it("returns 400 for invalid jobId", async () => {
+    const res = await request(app)
+      .post("/api/metadata/all")
+      .send({ jobId: "not-a-uuid", tone: "cercano" });
+
+    expect(res.status).toBe(400);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for unknown tone", async () => {
+    const res = await request(app)
+      .post("/api/metadata/all")
+      .send({ jobId: ALL_UUID, tone: "random-tone" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/tone/i);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when transcript.json does not exist for the jobId", async () => {
+    const missingJobId = "88888888-8888-8888-8888-888888888888";
+    const res = await request(app)
+      .post("/api/metadata/all")
+      .send({ jobId: missingJobId, tone: "cercano" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/transcript/i);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("all-failed: router not configured → 503 (mirrors single-endpoint mapping)", async () => {
+    const origKey = process.env.METADATA_API_KEY;
+    process.env.METADATA_API_KEY = "";
+
+    const res = await request(app)
+      .post("/api/metadata/all")
+      .send({ jobId: ALL_UUID, tone: "cercano" });
+
+    process.env.METADATA_API_KEY = origKey;
+
+    expect(res.status).toBe(503);
+    expect(res.body.error).toMatch(/router no configurado/i);
+  });
+});
+
 describe("GET /api/metadata/:jobId", () => {
   it("returns 200 with persisted metadata after a successful POST", async () => {
     // Seed a second UUID and do a full POST first

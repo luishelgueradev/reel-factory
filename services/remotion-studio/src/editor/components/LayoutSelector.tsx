@@ -1,12 +1,13 @@
 // ─── LayoutSelector: Subtitle layout mode preset cards (26-02, sketch 011-C) ──
-// Per D-04: Four layout modes — TikTok, Sentence, Bar, Karaoke
+// Per D-04 (Phase 28 SUB-04): three layout modes — TikTok, Sentence, Bar.
+//   "Karaoke" was removed (off-brand) — see normalizeSubtitleLayout migration.
 // Per D-05: Layout mode stored in pipeline-config.json as SubtitleLayoutMode
 // Per sketch 011-C: Each mode is a preset card with a small static glyph/specimen
 //   + mode label. Blue selected ring (--accent). Cards lead the form (TabLead).
 //
 // Phase 26-01 convergence pass (color-law + token sweep):
 //   Active state: --accent (blue) border + --accent-tint bg (was #4CAF50 green — D-04 violation)
-// Phase 26-02: Refactored from radio rows → 4-card grid per sketch 011-C.
+// Phase 26-02: Refactored from radio rows → card grid per sketch 011-C.
 //   Static cards only (no live animation — D-03 deferred).
 //   A11y: role="radiogroup" container, each card is role="radio" with aria-checked.
 //   Color law (LOCKED): active = --accent (blue). NO green on active states.
@@ -55,15 +56,6 @@ function BarVis(): React.ReactElement {
   );
 }
 
-function KaraokeVis(): React.ReactElement {
-  return (
-    <div style={{ display: "flex", gap: 2, alignItems: "baseline", justifyContent: "center" }}>
-      <span style={{ fontSize: 9, fontWeight: 800, color: "#ffea00" }}>kara</span>
-      <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.65)" }}>oke</span>
-    </div>
-  );
-}
-
 interface ModeCardOption {
   id: SubtitleLayoutMode;
   label: string;
@@ -74,7 +66,6 @@ const LAYOUT_OPTIONS: ModeCardOption[] = [
   { id: "tiktok",   label: "TikTok",   Vis: TikTokVis },
   { id: "sentence", label: "Sentence", Vis: SentenceVis },
   { id: "bar",      label: "Bar",      Vis: BarVis },
-  { id: "karaoke",  label: "Karaoke",  Vis: KaraokeVis },
 ];
 
 // Section header — matches the always-open titled section pattern used across
@@ -111,11 +102,11 @@ export function LayoutSelector({ value, onChange }: LayoutSelectorProps) {
     >
       <SectionHeader title="Modo de subtítulo" />
 
-      {/* 4-card grid — sketch 011-C .modecards pattern */}
+      {/* 3-card grid — sketch 011-C .modecards pattern (karaoke removed, SUB-04) */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(3, 1fr)",
           gap: "var(--s-4, 8px)",
         }}
       >

@@ -21,6 +21,21 @@ export interface BackgroundHighlight {
   borderRadius: number;
 }
 
+/**
+ * Per-word "fondo por palabra" bar background (Phase 28, SUB-01/02).
+ * A rounded rectangle fill drawn behind the active/highlighted WORD in the
+ * tiktok layout. NOTE: this is NOT the "bar" LAYOUT mode (BarLayout) — that is a
+ * full-width caption-bar layout. Defaults to disabled so existing renders are
+ * unchanged. Unlike BackgroundHighlight, this supports opacity (color → rgba).
+ */
+export interface WordBackground {
+  enabled: boolean;
+  color: string;
+  opacity: number;      // 0–1, applied as the rgba alpha of color
+  borderRadius: number; // px
+  padding: number;      // px
+}
+
 /** Text shadow parameters */
 export interface TextShadow {
   enabled: boolean;
@@ -48,6 +63,7 @@ export interface SubtitleConfig {
   outlineColor?: string;
   outlineWidth?: number;
   backgroundHighlight?: BackgroundHighlight;
+  wordBackground?: WordBackground; // per-word bar bg on active tiktok word (Phase 28, SUB-01/02)
   textShadow?: TextShadow;
   letterSpacing?: number;
   position?: SubtitlePosition;
@@ -340,6 +356,30 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
       }
       if (typeof bh.borderRadius !== "number" || bh.borderRadius < 0) {
         errors.push("subtitle.backgroundHighlight.borderRadius must be a non-negative number");
+      }
+    }
+  }
+
+  // Validate subtitle.wordBackground (optional, Phase 28 SUB-01/02 — T-28-01 mitigation)
+  if (sub.wordBackground !== undefined) {
+    const wb = sub.wordBackground as Record<string, unknown>;
+    if (typeof wb !== "object" || wb === null || Array.isArray(wb)) {
+      errors.push("subtitle.wordBackground must be an object");
+    } else {
+      if (typeof wb.enabled !== "boolean") {
+        errors.push("subtitle.wordBackground.enabled must be a boolean");
+      }
+      if (typeof wb.color !== "string") {
+        errors.push("subtitle.wordBackground.color must be a string");
+      }
+      if (typeof wb.opacity !== "number" || wb.opacity < 0 || wb.opacity > 1) {
+        errors.push("subtitle.wordBackground.opacity must be a number between 0 and 1");
+      }
+      if (typeof wb.borderRadius !== "number" || wb.borderRadius < 0) {
+        errors.push("subtitle.wordBackground.borderRadius must be a non-negative number");
+      }
+      if (typeof wb.padding !== "number" || wb.padding < 0) {
+        errors.push("subtitle.wordBackground.padding must be a non-negative number");
       }
     }
   }

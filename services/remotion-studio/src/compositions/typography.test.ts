@@ -183,6 +183,56 @@ describe("getOuterGlowStyle (TYPO-04)", () => {
   });
 });
 
+// ─── Phase 28: getWordBackgroundStyle (SUB-01/02) ────────────────────────────
+// Per-word "fondo por palabra" bar drawn behind the active/highlighted tiktok
+// word only. Returns {} unless the feature is enabled AND the word is active.
+
+import { getWordBackgroundStyle } from "./shared-styles";
+
+describe("getWordBackgroundStyle (SUB-01/02)", () => {
+  const WB = { enabled: true, color: "#000000", opacity: 0.5, borderRadius: 8, padding: 6 };
+
+  it("returns {} when wordBackground is undefined", () => {
+    expect(getWordBackgroundStyle(undefined, true)).toEqual({});
+  });
+
+  it("returns {} when wordBackground.enabled is false", () => {
+    expect(getWordBackgroundStyle({ ...WB, enabled: false }, true)).toEqual({});
+  });
+
+  it("returns {} when the word is not active (only paints on the active word)", () => {
+    expect(getWordBackgroundStyle(WB, false)).toEqual({});
+  });
+
+  it("returns rgba backgroundColor + borderRadius + padding for an enabled active word", () => {
+    expect(getWordBackgroundStyle(WB, true)).toEqual({
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      borderRadius: "8px",
+      padding: "6px",
+    });
+  });
+
+  it("parses non-black hex colors into rgba", () => {
+    expect(
+      getWordBackgroundStyle({ enabled: true, color: "#ff0000", opacity: 0.8, borderRadius: 4, padding: 2 }, true)
+    ).toEqual({
+      backgroundColor: "rgba(255, 0, 0, 0.8)",
+      borderRadius: "4px",
+      padding: "2px",
+    });
+  });
+
+  it("expands 3-char shorthand hex", () => {
+    expect(
+      getWordBackgroundStyle({ enabled: true, color: "#fff", opacity: 1, borderRadius: 0, padding: 0 }, true)
+    ).toEqual({
+      backgroundColor: "rgba(255, 255, 255, 1)",
+      borderRadius: "0px",
+      padding: "0px",
+    });
+  });
+});
+
 // ─── TYPO-02: font size range extended to 200 ────────────────────────────────
 
 describe("font size range (TYPO-02)", () => {

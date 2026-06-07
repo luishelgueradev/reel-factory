@@ -75,6 +75,42 @@ export function getBackgroundHighlightStyle(
   };
 }
 
+// ─── Per-word bar background (Phase 28, SUB-01/02) ──────────────────────────
+
+/**
+ * Compute the "fondo por palabra" bar style for a single tiktok word.
+ *
+ * Returns {} unless the feature is enabled AND the word is the active one — the
+ * rounded rectangle fill paints behind the highlighted word only. When enabled,
+ * the configured hex color + opacity are converted to an rgba() string (reusing
+ * the getOuterGlowStyle hex→rgb idiom: strip "#", expand 3-char shorthand,
+ * parseInt the three channel slices) so the bar honors transparency. Never
+ * throws — malformed hex falls back via parseInt's NaN handling at the caller
+ * boundary; validation (validatePipelineConfig) rejects bad config upstream.
+ *
+ * NOTE: `wordBackground` is the per-WORD feature; do NOT confuse with the "bar"
+ * subtitle LAYOUT mode (BarLayout).
+ */
+export function getWordBackgroundStyle(
+  wordBackground: SubtitleConfig["wordBackground"],
+  isActive: boolean
+): React.CSSProperties {
+  if (!wordBackground || !wordBackground.enabled || !isActive) {
+    return {};
+  }
+  let hex = wordBackground.color.replace("#", "");
+  // Expand 3-char shorthand (#fff → #ffffff) to prevent NaN channel values
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return {
+    backgroundColor: `rgba(${r}, ${g}, ${b}, ${wordBackground.opacity})`,
+    borderRadius: `${wordBackground.borderRadius}px`,
+    padding: `${wordBackground.padding}px`,
+  };
+}
+
 // ─── Outer glow (TYPO-04) ────────────────────────────────────────────────────
 
 export function getOuterGlowStyle(

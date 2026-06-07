@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: — Studio como producto usable
-status: milestone_complete
-last_updated: 2026-06-04T23:17:44.157Z
-last_activity: 2026-06-04 -- Phase 26 execution started
+milestone: v1.5
+milestone_name: Controles de edición pro del Studio
+status: planning
+last_updated: "2026-06-07T03:43:21.522Z"
+last_activity: 2026-06-07
 progress:
-  total_phases: 24
-  completed_phases: 23
-  total_plans: 90
-  completed_plans: 98
-  percent: 96
-stopped_at: Milestone complete (Phase 26 was final phase)
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +20,14 @@ stopped_at: Milestone complete (Phase 26 was final phase)
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** Between milestones — v1.4 archived 2026-06-06 (audit PASSED, tag v1.4). Next: /gsd-new-milestone for v1.5.
+**Current focus:** v1.5 — Controles de edición pro del Studio (started 2026-06-07): overlay-guía de zonas seguras (no renderizado) + edición de nombre de overlay, subtítulos pro (bar bg por palabra + sacar karaoke), sample text/browse fonts colapsados, metadata multi-red con tabs. Defining requirements.
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-06-06 - Completed quick task 260606-2ek: perfiles títulos — actualizar perfil activo en un clic
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-07 — Milestone v1.5 started
 
 ### Milestone v1.4 Phase Summary
 

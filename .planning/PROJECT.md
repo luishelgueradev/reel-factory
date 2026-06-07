@@ -20,9 +20,18 @@ Transformar un video crudo de una persona hablando en un video dinámico para re
 
 **v1.1 outcomes (notable):** scale:1 production default (Spike 001 mostró que el supersampling no aporta a captions de alto contraste a 1080); orchestrator threadea `PIPELINE_CONFIG_PATH` (los renders honran el config del studio); fix determinista del sync de highlights vía marcador `transcript.timeline` (heurística como fallback); quality-finalizer container ships pero queda como no-op con scale:1.
 
-## Current State: Between milestones — v1.4 shipped 2026-06-06
+## Current Milestone: v1.5 — Controles de edición pro del Studio
 
-v1.4 (Studio como producto usable) is complete and archived ([roadmap](milestones/v1.4-ROADMAP.md) · [requirements](milestones/v1.4-REQUIREMENTS.md) · [audit](v1.4-MILESTONE-AUDIT.md), PASSED). Next: define v1.5 with `/gsd-new-milestone`. Deferred backlog candidates: north-star shell (rail/header consolidation), dynamic Google Font add/remove, `tsc --noEmit` cleanup, batch-queue UI.
+**Goal:** Madurar los controles de edición del Studio a nivel pro: guías de encuadre seguras para celular, resaltado de subtítulos tipo "bar" por palabra, panel de fuentes más ordenado, y metadata de redes generada para todas las plataformas a la vez.
+
+**Target features (continúan numeración desde Phase 26):**
+- **Overlay-guía de zonas seguras (no renderizado)** — un overlay especial, distinto a los PNG normales: marca las zonas seguras del celular (barra derecha, inferior, áreas fuera del campo de visión ideal) y niveles de referencia para título, subtítulo y línea de ojos. Lo provee el usuario; se comporta como guía fija (primero/anclado) y queda EXCLUIDO del render final (solo visible en el preview del Studio).
+- **Edición de overlays** — poder editar el nombre del overlay, y mostrar ese nombre como título de lo que se está editando (hoy no se permite editar el nombre ni se muestra durante la edición).
+- **Subtítulos pro** — en el highlight del estilo tiktok, background "bar" opcional por palabra (fondo rectangular por palabra con color, transparencia, redondez de bordes y padding configurables); y **eliminar el estilo karaoke** (off-brand).
+- **UX de fuentes** — "sample text" y la sección "browse fonts" colapsados por default.
+- **Metadata multi-red** — generar la metadata para TODAS las redes de una sola vez (no por red individual), con las redes separadas en **tabs** en lugar de una lista desplegable.
+
+**Key context:** Refinamiento de superficies existentes del Studio (overlays, subtítulos, fuentes, metadata) sobre la base de v1.3/v1.4. UI tooling no-negociable: `impeccable` + `frontend-design`. El asset del overlay-guía lo aporta el usuario (no se calcula geometría de safe-area).
 
 ### v1.4 — Studio como producto usable (Shipped: 2026-06-06)
 
@@ -133,4 +142,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 — Milestone v1.4 started (Studio como producto usable): render execution+progress, named profiles, AI social metadata, impeccable UI convergence.*
+*Last updated: 2026-06-07 — Milestone v1.5 started (Controles de edición pro del Studio): overlay-guía de zonas seguras (no renderizado) + edición de nombre de overlay, subtítulos pro (bar bg por palabra + sacar karaoke), sample text/browse fonts colapsados, metadata multi-red con tabs.*

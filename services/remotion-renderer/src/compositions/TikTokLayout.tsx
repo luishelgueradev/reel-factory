@@ -15,7 +15,6 @@ import {
   PAGE_OVERLAP_GUARD_MS,
   HIGHLIGHT_FADE_MS,
   getPositionStyles,
-  getBackgroundHighlightStyle,
   getPastWordOpacity,
   getOuterGlowStyle,
   getWordBackgroundStyle,
@@ -202,7 +201,10 @@ const CaptionPage: React.FC<{
   const subtitleWidth = config.subtitleWidth ?? DEFAULT_SUBTITLE_CONFIG.subtitleWidth;
   const positionStyles = getPositionStyles(position, bottomOffset, subtitleWidth);
   const maxWidthStyle = subtitleWidth > 0 ? { maxWidth: subtitleWidth, margin: "0 auto" as const } : {};
-  const bgHighlightStyles = getBackgroundHighlightStyle(config.backgroundHighlight);
+  // Item 4 (260607-uzv-03): tiktok NEVER paints the full-phrase backgroundHighlight
+  // on the parent div — even when config.backgroundHighlight.enabled is true. The
+  // highlighted background for tiktok is the PER-WORD wordBackground (below). The
+  // backgroundHighlight field + its validation remain (SentenceLayout/BarLayout use it).
   const outerGlowStyle = getOuterGlowStyle(config.outerGlow);
 
   return (
@@ -214,7 +216,6 @@ const CaptionPage: React.FC<{
         wordBreak: "break-word",
         opacity,
         fontFamily: fontFamily || undefined,
-        ...bgHighlightStyles,
       }}
     >
       {tokens.map((token, i) => {

@@ -34,6 +34,7 @@ import { loadFont, AVAILABLE_FONTS, getFontFamilyCSS } from "../fonts";
 import { stepLabel, causeLine, isLongStep, parseStatusError } from "./render-status";
 import { ProfilesMenu } from "./ProfilesMenu.js";
 import { MetadataPanel } from "./MetadataPanel.js";
+import { CollapsibleSection } from "./CollapsibleSection.js";
 import { Z } from "./z-layers.js";
 
 const INITIAL_SUBTITLE_CONFIG: SubtitleConfig = {
@@ -197,36 +198,25 @@ function FontGrid({
   selectedFont: string | undefined;
   onSelect: (font: string) => void;
 }) {
+  // The "Browse Fonts" header is now owned by the wrapping CollapsibleSection
+  // in PreviewApp (Phase 29 FONT-02) — FontGrid renders only the grid itself.
   return (
-    <>
-      <div
-        style={{
-          fontSize: "var(--t-sm, 12.5px)" as React.CSSProperties["fontSize"],
-          fontWeight: 600,
-          color: "var(--accent, #90caf9)",
-          marginBottom: "var(--s-4, 8px)",
-          marginTop: "var(--s-8, 16px)",
-        }}
-      >
-        Browse Fonts
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          gap: 12,
-        }}
-      >
-        {(AVAILABLE_FONTS as readonly string[]).filter((f) => f !== "monospace").map((fontName) => (
-          <FontCard
-            key={fontName}
-            fontName={fontName}
-            isSelected={selectedFont === fontName}
-            onSelect={onSelect}
-          />
-        ))}
-      </div>
-    </>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+        gap: 12,
+      }}
+    >
+      {(AVAILABLE_FONTS as readonly string[]).filter((f) => f !== "monospace").map((fontName) => (
+        <FontCard
+          key={fontName}
+          fontName={fontName}
+          isSelected={selectedFont === fontName}
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -869,10 +859,12 @@ export function PreviewApp() {
               />
             </div>
 
-            {/* Subtítulos tab — TextareaInput at TOP (D-10), drives captionPages→PreviewPlayer */}
+            {/* Subtítulos tab — sample-text CollapsibleSection at TOP (D-10, FONT-01),
+                collapsed by default; sampleText → captionPages (useMemo) → PreviewPlayer
+                stays intact (state + memo live in PreviewApp, not the collapsed subtree). */}
             <div style={{ display: activeTab === "subtitles" ? "block" : "none" }}>
-              {/* Sample text textarea — MUST stay at top; sampleText → captionPages (L224 useMemo) → PreviewPlayer */}
-              <div style={{ marginBottom: "var(--s-10, 20px)" }}>
+              {/* Sample text — MUST stay at top; collapse ≠ move. Collapsed by default (FONT-01). */}
+              <CollapsibleSection title="Sample text">
                 <TextareaInput
                   value={sampleText}
                   onChange={setSampleText}
@@ -890,16 +882,19 @@ export function PreviewApp() {
                   <span style={{ color: "var(--accent, #90caf9)", fontSize: "0.7em" }}>●</span>
                   Alimenta los subtítulos · no se exporta
                 </div>
-              </div>
+              </CollapsibleSection>
               <LayoutSelector
                 value={subtitleConfig.layout}
                 onChange={(layout) => updateSubtitle({ layout })}
               />
               <StyleControls config={subtitleConfig} onChange={updateSubtitle} />
-              <FontGrid
-                selectedFont={subtitleConfig.fontFamily}
-                onSelect={(font) => updateSubtitle({ fontFamily: font })}
-              />
+              {/* Browse Fonts — collapsed by default (FONT-02); CollapsibleSection owns the title. */}
+              <CollapsibleSection title="Browse Fonts">
+                <FontGrid
+                  selectedFont={subtitleConfig.fontFamily}
+                  onSelect={(font) => updateSubtitle({ fontFamily: font })}
+                />
+              </CollapsibleSection>
             </div>
           </div>
         </div>

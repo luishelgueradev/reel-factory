@@ -49,16 +49,16 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OVERLAY-01 | — | Pending |
-| OVERLAY-02 | — | Pending |
-| OVERLAY-03 | — | Pending |
-| OVERLAY-04 | — | Pending |
-| OVERLAY-05 | — | Pending |
-| SUB-01 | — | Pending |
-| SUB-02 | — | Pending |
-| SUB-03 | — | Pending |
-| SUB-04 | — | Pending |
-| FONT-01 | — | Pending |
-| FONT-02 | — | Pending |
-| META-05 | — | Pending |
-| META-06 | — | Pending |
+| OVERLAY-01 | Phase 27 | Pending |
+| OVERLAY-02 | Phase 27 | Pending |
+| OVERLAY-03 | Phase 27 | Pending |
+| OVERLAY-04 | Phase 27 | Pending |
+| OVERLAY-05 | Phase 27 | Pending |
+| SUB-01 | Phase 28 | Pending |
+| SUB-02 | Phase 28 | Pending |
+| SUB-03 | Phase 28 | Pending |
+| SUB-04 | Phase 28 | Pending |
+| FONT-01 | Phase 29 | Pending |
+| FONT-02 | Phase 29 | Pending |
+| META-05 | Phase 29 | Pending |
+| META-06 | Phase 29 | Pending |

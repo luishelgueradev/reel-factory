@@ -55,6 +55,14 @@ Unify the studio into a single 2-column interface and expand render visual/typog
 
 Closed at 4 phases / 14 plans / 15 requirements complete (audit PASSED). Render-from-button with live progress + font resilience (Phase 23); named config profiles with Docker-rebuild persistence (Phase 24, extended post-milestone with JSON export/import + active-profile pointer); AI social metadata from the transcript via the local-llms router (Phase 25); north-star UI convergence integrating all new surfaces (Phase 26). Full archive: [.planning/milestones/v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) · requirements: [.planning/milestones/v1.4-REQUIREMENTS.md](milestones/v1.4-REQUIREMENTS.md) · audit: [.planning/v1.4-MILESTONE-AUDIT.md](v1.4-MILESTONE-AUDIT.md)
 
+### Milestone v1.5 — Controles de edición pro del Studio — 🚧 IN PROGRESS
+
+Mature the Studio's editing controls to a pro level over the v1.3/v1.4 base: a user-provided safe-zone guide overlay that shows only in the Studio preview (excluded from render) and is anchored/identified, overlay name editing surfaced during edit, per-word "bar" highlight backgrounds for the tiktok subtitle style (configurable color/opacity/border-radius/padding, identical in preview and render) with karaoke removed, font panel polish (sample-text + browse-fonts collapsed by default), and multi-network metadata generated all at once with networks in tabs. **Frontend tooling non-negotiable:** every Studio-facing phase invokes `impeccable` + `frontend-design` at plan/execute start and honors `sketch-findings-reel-factory` + the green-discipline color law (`--action` green = Render CTA only). **Renderer sync mandatory** for OVERLAY-02 + SUB-01..03 (mirror studio `compositions/*` + shared `src/*` to remotion-renderer and re-run renderer vitest — clobber hazard: re-run after every sync).
+
+- [ ] **Phase 27: Overlays pro — guía de zonas seguras + edición** - User-provided safe-zone guide overlay (preview-only, excluded from render, anchored/identified) plus overlay name editing shown as the edit title. Requirements: OVERLAY-01..05. **(UI hint: yes · renderer sync: OVERLAY-02)**
+- [ ] **Phase 28: Subtítulos pro — bar background por palabra** - Per-word rectangular "bar" highlight background for the tiktok style (configurable color/opacity/border-radius/padding), identical in preview and render; karaoke style removed. Requirements: SUB-01..04. **(UI hint: yes · renderer sync: SUB-01..03)**
+- [ ] **Phase 29: UX de fuentes + Metadata multi-red** - Sample-text and browse-fonts collapsed by default; metadata generated for all networks in one action with networks presented as tabs (not a dropdown). Requirements: FONT-01, FONT-02, META-05, META-06. **(UI hint: yes)**
+
 ## Phase Details
 
 ### Phase 1: Pipeline Infrastructure
@@ -624,10 +632,64 @@ Plans:
 
 ---
 
+### Phase 27: Overlays pro — guía de zonas seguras + edición
+
+**Goal**: Users can load a safe-zone guide overlay that helps them frame titles/subtitles/eyeline for phones — it shows only in the Studio preview, is excluded from the final render, stays anchored as a fixed guide, and overlays can be named with that name shown while editing
+**Depends on**: Phase 26 (north-star Studio shell + overlay layering model from Phase 22/v1.4)
+**Requirements**: OVERLAY-01, OVERLAY-02, OVERLAY-03, OVERLAY-04, OVERLAY-05
+**UI hint**: yes — invoke `impeccable` + `frontend-design` at plan/execute start (non-negotiable per AGENTS.md); honor `sketch-findings-reel-factory` overlay-acquisition idiom (039-B drop-onto-canvas, checkerboard transparency) + green-discipline (Render is the only green)
+**Renderer sync**: yes — OVERLAY-02 (render exclusion) changes the render path; mirror studio `compositions/*` + shared `src/*` to remotion-renderer and re-run renderer vitest (clobber hazard: re-run after every sync)
+**Success Criteria** (what must be TRUE):
+
+  1. The user can load a safe-zone guide overlay (a PNG they provide) and it appears in the Studio's 9:16 preview as a framing aid
+  2. The guide overlay never appears in the rendered MP4 — a real render of a clip with a guide loaded produces output with no trace of the guide
+  3. The guide overlay is visually distinguished from normal PNG overlays in the UI (marked as a non-rendered guide) and stays anchored/fixed — it does not participate in the back/front overlay reordering
+  4. The user can edit the name of any overlay and the new name persists
+  5. While editing an overlay, its name is shown as the title of what is being edited (no longer blank/anonymous)
+
+**Plans**: TBD
+
+---
+
+### Phase 28: Subtítulos pro — bar background por palabra
+
+**Goal**: In the tiktok subtitle style, the user can give each highlighted word a configurable rectangular "bar" background (color, transparency, border-radius, padding) that looks identical in the Studio preview and the final render, and the off-brand karaoke style is removed from the options
+**Depends on**: Phase 27 (renderer-sync discipline re-exercised; subtitle layouts unchanged by Phase 27 so no hard code dependency, but kept sequential to serialize renderer-path work)
+**Requirements**: SUB-01, SUB-02, SUB-03, SUB-04
+**UI hint**: yes — invoke `impeccable` + `frontend-design` at plan/execute start (non-negotiable per AGENTS.md); honor `sketch-findings-reel-factory` subtitle-styling density (collapsible Fondo effect-row, 2×2 color-role matrix) + the animated caption preview (025-C) + green-discipline
+**Renderer sync**: yes — SUB-01..03 change the render path; the bar must paint identically in studio `SubtitledVideo`/TikTok layout and the renderer; mirror `compositions/*` + shared `src/*` to remotion-renderer and re-run renderer vitest (clobber hazard: re-run after every sync)
+**Success Criteria** (what must be TRUE):
+
+  1. In the tiktok style, the user can toggle a per-word "bar" background on the highlighted word (a rectangular fill behind each highlighted word)
+  2. The user can configure the bar's color, transparency, border-radius, and padding, and the changes show in the live preview
+  3. A real render produces a video whose per-word bar matches the Studio preview exactly (same color/opacity/radius/padding/position) — studio↔renderer parity verified
+  4. The karaoke style is no longer offered anywhere in the subtitle options (removed, not hidden as legacy)
+
+**Plans**: TBD
+
+---
+
+### Phase 29: UX de fuentes + Metadata multi-red
+
+**Goal**: The font panel is tidier (sample-text and browse-fonts collapsed by default so the user sees controls, not a wall) and social metadata is generated for every network in a single action with the networks presented as tabs instead of a dropdown
+**Depends on**: Phase 25 (AI social metadata foundation — transcript-driven generation via the local-llms router), Phase 26 (north-star shell), Phase 28 (sequential Studio work)
+**Requirements**: FONT-01, FONT-02, META-05, META-06
+**UI hint**: yes — invoke `impeccable` + `frontend-design` at plan/execute start (non-negotiable per AGENTS.md); honor `sketch-findings-reel-factory` metadata-AI-column (026-C per-platform tabs, char-limit counters) + font-picker slide-over idiom + green-discipline (Generar/copiar = accent blue, never action-green)
+**Success Criteria** (what must be TRUE):
+
+  1. The "sample text" section appears collapsed by default and expands on demand
+  2. The "browse fonts" section appears collapsed by default and expands on demand
+  3. The user generates metadata for all networks in one action (one click, not one-per-network) — every network's metadata is produced from a single generate
+  4. The networks are presented as tabs (not a dropdown list); switching tabs shows each network's metadata
+
+**Plans**: TBD
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -657,3 +719,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 24. Named config profiles | 3/3 | Complete    | 2026-06-04 |
 | 25. AI social metadata | 3/3 | Complete    | 2026-06-04 |
 | 26. UI convergence (impeccable) | 3/3 | Complete    | 2026-06-04 |
+| 27. Overlays pro — guía de zonas seguras + edición | 0/TBD | Not started | - |
+| 28. Subtítulos pro — bar background por palabra | 0/TBD | Not started | - |
+| 29. UX de fuentes + Metadata multi-red | 0/TBD | Not started | - |

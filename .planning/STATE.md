@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Controles de edición pro del Studio
-status: planning
-last_updated: "2026-06-07T03:43:21.522Z"
+status: roadmapped
+last_updated: "2026-06-07T04:30:00.000Z"
 last_activity: 2026-06-07
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,23 +20,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Transformar un video crudo de una persona hablando en un video dinamico para redes sociales con un solo comando API, eliminando silencios y agregando subtítulos automaticamente.
-**Current focus:** v1.5 — Controles de edición pro del Studio (started 2026-06-07): overlay-guía de zonas seguras (no renderizado) + edición de nombre de overlay, subtítulos pro (bar bg por palabra + sacar karaoke), sample text/browse fonts colapsados, metadata multi-red con tabs. Defining requirements.
+**Current focus:** v1.5 — Controles de edición pro del Studio (started 2026-06-07): overlay-guía de zonas seguras (no renderizado) + edición de nombre de overlay, subtítulos pro (bar bg por palabra + sacar karaoke), sample text/browse fonts colapsados, metadata multi-red con tabs. Roadmap created (3 phases, 27-29). Ready to plan Phase 27.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (roadmap created — 3 phases, 27-29)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-07 — Milestone v1.5 started
+Status: Roadmapped — ready to plan Phase 27
+Last activity: 2026-06-07 — v1.5 roadmap created (Phases 27-29, 13/13 requirements mapped)
 
-### Milestone v1.4 Phase Summary
+### Milestone v1.5 Phase Summary
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 23 — Render execution + progress | Clicking "Render Video" starts a real job with live progress | RENDER-01..05 | Not started |
-| 24 — Named config profiles | Save/load/rename/delete named style profiles | PROFILE-01..04 | Not started |
-| 25 — AI social metadata | Claude API generates title/description/hashtags from transcript | META-01..04 | Not started |
-| 26 — UI convergence (impeccable) | Holistic north-star visual pass integrating all new surfaces | UICONV-01..02 | Not started |
+| 27 — Overlays pro (guía + edición) | Safe-zone guide overlay (preview-only, excluded from render, anchored/identified) + overlay name editing shown while editing | OVERLAY-01..05 | Not started |
+| 28 — Subtítulos pro (bar bg por palabra) | Per-word bar background for tiktok (color/opacity/radius/padding), preview↔render parity; karaoke removed | SUB-01..04 | Not started |
+| 29 — UX fuentes + Metadata multi-red | Sample-text + browse-fonts collapsed by default; metadata for all networks in one action, networks in tabs | FONT-01, FONT-02, META-05, META-06 | Not started |
+
+> Renderer sync mandatory for Phase 27 (OVERLAY-02) and Phase 28 (SUB-01..03): mirror studio `compositions/*` + shared `src/*` to remotion-renderer and re-run renderer vitest (clobber hazard). Studio runs as a Docker container baking dist at build time — live UAT needs `docker compose build/up remotion-studio` (manual checkpoint, not an executor blocker). UI tooling non-negotiable on every phase: `impeccable` + `frontend-design` + `sketch-findings-reel-factory` + green-discipline.
 
 ### Quick Tasks Completed
 
@@ -95,5 +96,6 @@ Last activity: 2026-06-07 — Milestone v1.5 started
 
 ## Operator Next Steps
 
-- Plan Phase 23: `/gsd:plan-phase 23`
-- Phase 25 requires AI-SPEC first: run `/gsd-ai-integration-phase` before planning Phase 25
+- Plan Phase 27: `/gsd:plan-phase 27`
+- Phase 27 (OVERLAY-02) and Phase 28 (SUB-01..03) touch the render path → renderer sync + renderer vitest required during execution
+- Every v1.5 phase is UI-facing → invoke `impeccable` + `frontend-design` at plan/execute start (non-negotiable)

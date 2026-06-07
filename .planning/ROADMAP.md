@@ -647,7 +647,18 @@ Plans:
   4. The user can edit the name of any overlay and the new name persists
   5. While editing an overlay, its name is shown as the title of what is being edited (no longer blank/anonymous)
 
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
+
+Plans:
+
+**Wave 1**
+
+- [ ] 27-01-PLAN.md — Data model: PngOverlayConfig `name` + `isGuide` fields + validation (studio + renderer mirror), partitionGuideOverlays helper, guide-aware splitOverlaysByLayer + tests (OVERLAY-01, OVERLAY-02, OVERLAY-03, OVERLAY-04)
+
+**Wave 2** *(parallel — disjoint files; both depend on 27-01)*
+
+- [ ] 27-02-PLAN.md — Render exclusion: render.ts drops guides before PNG decode + Root.tsx guide-safe banding + renderer vitest gate (OVERLAY-02, OVERLAY-03)
+- [ ] 27-03-PLAN.md — Studio UI + preview: guide preview layer, OverlayEditor name/guide-chip/name-as-title/anchored cards, PreviewApp wiring, build:editor (OVERLAY-01, OVERLAY-03, OVERLAY-04, OVERLAY-05)
 
 ---
 
@@ -719,6 +730,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 24. Named config profiles | 3/3 | Complete    | 2026-06-04 |
 | 25. AI social metadata | 3/3 | Complete    | 2026-06-04 |
 | 26. UI convergence (impeccable) | 3/3 | Complete    | 2026-06-04 |
-| 27. Overlays pro — guía de zonas seguras + edición | 0/TBD | Not started | - |
+| 27. Overlays pro — guía de zonas seguras + edición | 0/3 | Planned | - |
 | 28. Subtítulos pro — bar background por palabra | 0/TBD | Not started | - |
 | 29. UX de fuentes + Metadata multi-red | 0/TBD | Not started | - |

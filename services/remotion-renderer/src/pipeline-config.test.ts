@@ -837,3 +837,71 @@ describe("partitionGuideOverlays", () => {
     expect(result.renderable).toHaveLength(0);
   });
 });
+
+// ─── Phase 28: wordBackground (SUB-01/02/03) validation ─────────────────────
+// Renderer side of the wordBackground validation contract. pipeline-config.ts is
+// a hand-maintained mirror between studio and renderer (AGENTS.md) — these cases
+// mirror the studio cases so the two cannot silently drift (SUB-03 parity).
+
+const VALID_WORD_BG = { enabled: true, color: "#000000", opacity: 0.6, borderRadius: 8, padding: 6 };
+
+describe("validatePipelineConfig — wordBackground (SUB-01/02)", () => {
+  it("accepts a valid wordBackground", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: VALID_WORD_BG } };
+    expect(validatePipelineConfig(config).valid).toBe(true);
+  });
+
+  it("is valid when wordBackground is absent (optional, default disabled)", () => {
+    const config = { subtitle: { layout: "tiktok" } };
+    expect(validatePipelineConfig(config).valid).toBe(true);
+  });
+
+  it("rejects non-object wordBackground", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: "nope" } };
+    const result = validatePipelineConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("subtitle.wordBackground must be an object");
+  });
+
+  it("rejects non-boolean enabled", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: { ...VALID_WORD_BG, enabled: "yes" } } };
+    const result = validatePipelineConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes("wordBackground.enabled must be a boolean"))).toBe(true);
+  });
+
+  it("rejects non-string color", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: { ...VALID_WORD_BG, color: 123 } } };
+    const result = validatePipelineConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes("wordBackground.color must be a string"))).toBe(true);
+  });
+
+  it("rejects opacity above 1", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: { ...VALID_WORD_BG, opacity: 1.5 } } };
+    const result = validatePipelineConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("subtitle.wordBackground.opacity must be a number between 0 and 1");
+  });
+
+  it("rejects opacity below 0", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: { ...VALID_WORD_BG, opacity: -0.1 } } };
+    const result = validatePipelineConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("subtitle.wordBackground.opacity must be a number between 0 and 1");
+  });
+
+  it("rejects negative borderRadius", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: { ...VALID_WORD_BG, borderRadius: -1 } } };
+    const result = validatePipelineConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("subtitle.wordBackground.borderRadius must be a non-negative number");
+  });
+
+  it("rejects negative padding", () => {
+    const config = { subtitle: { layout: "tiktok", wordBackground: { ...VALID_WORD_BG, padding: -1 } } };
+    const result = validatePipelineConfig(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain("subtitle.wordBackground.padding must be a non-negative number");
+  });
+});

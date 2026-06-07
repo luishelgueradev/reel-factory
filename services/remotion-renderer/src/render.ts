@@ -4,7 +4,7 @@ import { transcriptToCaptionPages, shouldSkipSilenceRemap } from "./captions";
 import type { SilenceCutList, FinalizerInfo } from "./captions";
 import type { TikTokPage } from "@remotion/captions";
 import type { RemotionProps } from "./Root";
-import { validatePipelineConfig, DEFAULT_SUBTITLE_CONFIG, DEFAULT_VISUAL_EFFECTS } from "./pipeline-config";
+import { validatePipelineConfig, partitionGuideOverlays, DEFAULT_SUBTITLE_CONFIG, DEFAULT_VISUAL_EFFECTS } from "./pipeline-config";
 import type { PipelineConfig, SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig, VisualEffectsConfig, PngOverlayConfig } from "./pipeline-config";
 import { detectZoomEvents } from "./zoom-detection";
 import type { ZoomEvent } from "./zoom-detection";
@@ -261,8 +261,15 @@ async function main() {
 
     // Phase 21: Decode base64 PNG overlays to public/ BEFORE bundle() (Pitfall 1)
     // T-21-04: Validate imageData prefix; T-21-05: filename uses integer index only
-    const rawOverlays: PngOverlayConfig[] = pipelineConfig?.overlays ?? [];
-    const resolvedOverlays: PngOverlayConfig[] = rawOverlays.map((overlay, i) => {
+    // Phase 27 OVERLAY-02 (authoritative cut): drop guide overlays (isGuide:true)
+    // BEFORE any base64 decode / fs.writeFileSync, so no guide PNG ever enters the
+    // bundle. partitionGuideOverlays is the single render-side cut point; Root.tsx
+    // banding (splitOverlaysByLayer) is defense-in-depth behind this.
+    const { guides, renderable } = partitionGuideOverlays(pipelineConfig?.overlays ?? []);
+    if (guides.length > 0) {
+      console.log(`  Excluded ${guides.length} guide overlay(s) from render (OVERLAY-02)`);
+    }
+    const resolvedOverlays: PngOverlayConfig[] = renderable.map((overlay, i) => {
       if (!overlay.imageData) {
         console.warn(`[overlay-${i}] imageData is empty — skipping PNG decode`);
         return overlay;

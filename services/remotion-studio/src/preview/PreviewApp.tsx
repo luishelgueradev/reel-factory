@@ -809,6 +809,118 @@ export function PreviewApp() {
             </div>
           )}
 
+          {/* ── Pre-render video controls (quick 260607-uzv) ───────────────────
+              Shown ONLY when a video is loaded and no render is in flight
+              (renderState === "idle"), so they never collide with the
+              progress / success / failure overlays below (which mount only
+              in non-idle states). Green-discipline: --action green is the
+              Render CTA ONLY — these use --accent / neutral surfaces. */}
+          {uploadedFile && renderState === "idle" && (
+            <div
+              style={{
+                position: "absolute",
+                top: "var(--s-8, 16px)",
+                right: "var(--s-8, 16px)",
+                zIndex: 20,
+                display: "flex",
+                gap: "var(--s-4, 8px)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setUploadedFile(null)}
+                title="Quitar el video cargado y volver a la zona de carga"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "var(--s-2, 4px)",
+                  padding: "var(--s-3, 6px) var(--s-6, 12px)",
+                  fontSize: "var(--t-sm, 13px)",
+                  fontWeight: 500,
+                  lineHeight: 1,
+                  color: "var(--text, #e6e6ea)",
+                  background: "var(--surface-2, #252535)",
+                  border: "1px solid var(--border, #333)",
+                  borderRadius: "var(--r-sm, 6px)",
+                  cursor: "pointer",
+                  transition:
+                    "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
+                  e.currentTarget.style.color = "var(--accent, #90caf9)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border, #333)";
+                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
+                  e.currentTarget.style.color = "var(--accent, #90caf9)";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border, #333)";
+                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
+                }}
+              >
+                Reemplazar / Quitar video
+              </button>
+              <a
+                href={objectUrl ?? undefined}
+                download={uploadedFile.name}
+                aria-disabled={objectUrl ? undefined : true}
+                title={
+                  objectUrl
+                    ? `Descargar ${uploadedFile.name}`
+                    : "Preparando el video…"
+                }
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "var(--s-2, 4px)",
+                  padding: "var(--s-3, 6px) var(--s-6, 12px)",
+                  fontSize: "var(--t-sm, 13px)",
+                  fontWeight: 500,
+                  lineHeight: 1,
+                  textDecoration: "none",
+                  color: objectUrl
+                    ? "var(--text, #e6e6ea)"
+                    : "var(--text-muted, #8a8a99)",
+                  background: "var(--surface-2, #252535)",
+                  border: "1px solid var(--border, #333)",
+                  borderRadius: "var(--r-sm, 6px)",
+                  cursor: objectUrl ? "pointer" : "not-allowed",
+                  opacity: objectUrl ? 1 : 0.55,
+                  pointerEvents: objectUrl ? "auto" : "none",
+                  transition:
+                    "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!objectUrl) return;
+                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
+                  e.currentTarget.style.color = "var(--accent, #90caf9)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!objectUrl) return;
+                  e.currentTarget.style.borderColor = "var(--border, #333)";
+                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
+                }}
+                onFocus={(e) => {
+                  if (!objectUrl) return;
+                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
+                  e.currentTarget.style.color = "var(--accent, #90caf9)";
+                }}
+                onBlur={(e) => {
+                  if (!objectUrl) return;
+                  e.currentTarget.style.borderColor = "var(--border, #333)";
+                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
+                }}
+              >
+                Descargar video
+              </a>
+            </div>
+          )}
+
           {/* ── Inline render surfaces (§2/§3/§4 UI-SPEC) — overlay the stage ── */}
           {(renderState === "submitting" || renderState === "running") && (
             <RenderProgressOverlay

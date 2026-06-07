@@ -707,7 +707,9 @@ Plans:
   3. The user generates metadata for all networks in one action (one click, not one-per-network) — every network's metadata is produced from a single generate
   4. The networks are presented as tabs (not a dropdown list); switching tabs shows each network's metadata
 
-**Plans**: TBD
+**Plans**: 2 plans (1 wave, parallel)
+- [ ] 29-01-PLAN.md — FONT-01/02: sample-text + browse-fonts collapsed by default (reusable CollapsibleSection)
+- [ ] 29-02-PLAN.md — META-05/06: generate-all batch endpoint + per-platform tab strip in MetadataPanel
 
 ---
 

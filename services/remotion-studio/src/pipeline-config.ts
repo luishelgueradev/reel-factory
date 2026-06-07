@@ -102,6 +102,8 @@ export interface PngOverlayConfig {
   displayWidth: number;    // CSS display width in pixels (triggers downscale)
   opacity?: number;        // 0–1, default 1
   layer?: "back" | "front"; // D-03: default "back" — decorators behind text
+  name?: string;           // Phase 27 OVERLAY-04 — user-editable overlay label, persisted
+  isGuide?: boolean;       // Phase 27 OVERLAY-01/02/03 — preview-only safe-zone guide; excluded from render + not reordered. Default undefined = normal renderable overlay
   _resolvedFile?: string;  // runtime-only, set by render.ts, NOT persisted
 }
 
@@ -503,6 +505,20 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
         if (ov.layer !== undefined) {
           if (ov.layer !== "back" && ov.layer !== "front") {
             errors.push(`overlays[${index}].layer must be "back" or "front"`);
+          }
+        }
+
+        // name: optional, must be a string if present (Phase 27 OVERLAY-04)
+        if (ov.name !== undefined) {
+          if (typeof ov.name !== "string") {
+            errors.push(`overlays[${index}].name must be a string`);
+          }
+        }
+
+        // isGuide: optional, must be a boolean if present (Phase 27 OVERLAY-01/02/03)
+        if (ov.isGuide !== undefined) {
+          if (typeof ov.isGuide !== "boolean") {
+            errors.push(`overlays[${index}].isGuide must be a boolean`);
           }
         }
 

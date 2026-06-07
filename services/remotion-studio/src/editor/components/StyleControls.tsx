@@ -188,6 +188,11 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
   const wb: WordBackground = config.wordBackground ?? {
     enabled: false, color: "#000000", opacity: 0.6, borderRadius: 8, padding: 6,
   };
+  // Item 4 (260607-uzv-03): in tiktok the highlighted background is PER-WORD only.
+  // Show ONLY the per-word control (labeled "Fondo resaltado") and hide the
+  // full-phrase backgroundHighlight control — tiktok no longer paints it. For
+  // sentence/bar, keep the existing full-phrase "Fondo resaltado" control.
+  const isTiktok = config.layout === "tiktok";
 
   return (
     // data-ctrl-2col: test hook for 2-column grid assertion
@@ -328,7 +333,10 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
             </div>
           </FxBlock>
 
-          {/* Background highlight collapsible */}
+          {/* Full-phrase background highlight — hidden for tiktok (item 4):
+              tiktok uses the per-word control below labeled "Fondo resaltado".
+              sentence/bar keep this control unchanged. */}
+          {!isTiktok && (
           <FxBlock title="Fondo resaltado" enabled={bh.enabled}
             onToggle={() => onChange({ backgroundHighlight: { ...bh, enabled: !bh.enabled } })}
           >
@@ -350,9 +358,13 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
               />
             </div>
           </FxBlock>
+          )}
 
-          {/* Word background collapsible — Phase 28 SUB-01/02 (per-word bar, tiktok) */}
-          <FxBlock title="Fondo por palabra" enabled={wb.enabled}
+          {/* Word background collapsible — Phase 28 SUB-01/02 (per-word bar, tiktok).
+              Item 4 (260607-uzv-03): for tiktok this IS the highlighted-background
+              control, labeled "Fondo resaltado" (the name the user uses). For
+              sentence/bar it keeps the "Fondo por palabra" label as before. */}
+          <FxBlock title={isTiktok ? "Fondo resaltado" : "Fondo por palabra"} enabled={wb.enabled}
             onToggle={() => onChange({ wordBackground: { ...wb, enabled: !wb.enabled } })}
           >
             <div style={{ marginTop: "var(--s-5, 10px)" }}>

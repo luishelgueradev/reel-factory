@@ -104,6 +104,8 @@ export interface TitleStyleProps {
   fontWeight?: boolean;  // false = 400 (regular), true = 700 (bold). Default: true
   fontStyle?: boolean;   // false = normal, true = italic. Default: false
   outerGlow?: OuterGlow; // outer glow effect (TYPO-04)
+  backgroundWidth?: number; // box width as a percentage 0–100 (TITLE-WIDTH-01). Default: 80 (current behavior)
+  backgroundGradient?: { enabled: boolean; fromColor: string; toColor: string }; // optional vertical (top→bottom) linear gradient on the box (TITLE-GRADIENT-01). Default: disabled (flat backgroundColor)
 }
 
 /** Title overlay configuration (D-12) */
@@ -551,6 +553,30 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
                   errors.push(`titles[${index}].style.outerGlow.intensity must be between 0 and 1`);
                 if (typeof og.softness !== "number" || og.softness < 0)
                   errors.push(`titles[${index}].style.outerGlow.softness must be >= 0`);
+              }
+            }
+            // Validate title style backgroundWidth (optional, percentage 0–100 — TITLE-WIDTH-01)
+            if (
+              s.backgroundWidth !== undefined &&
+              (typeof s.backgroundWidth !== "number" ||
+                !Number.isFinite(s.backgroundWidth) ||
+                s.backgroundWidth < 0 ||
+                s.backgroundWidth > 100)
+            ) {
+              errors.push(`titles[${index}].style.backgroundWidth must be a number between 0 and 100`);
+            }
+            // Validate title style backgroundGradient (optional — TITLE-GRADIENT-01, mirrors outerGlow shape)
+            if (s.backgroundGradient !== undefined) {
+              const bg = s.backgroundGradient as Record<string, unknown>;
+              if (typeof bg !== "object" || bg === null || Array.isArray(bg)) {
+                errors.push(`titles[${index}].style.backgroundGradient must be an object`);
+              } else {
+                if (typeof bg.enabled !== "boolean")
+                  errors.push(`titles[${index}].style.backgroundGradient.enabled must be a boolean`);
+                if (typeof bg.fromColor !== "string" || !/^#[0-9a-fA-F]{6}$/.test(bg.fromColor as string))
+                  errors.push(`titles[${index}].style.backgroundGradient.fromColor must be a 6-digit hex color`);
+                if (typeof bg.toColor !== "string" || !/^#[0-9a-fA-F]{6}$/.test(bg.toColor as string))
+                  errors.push(`titles[${index}].style.backgroundGradient.toColor must be a 6-digit hex color`);
               }
             }
           }

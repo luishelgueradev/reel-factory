@@ -18,6 +18,7 @@ import {
   getBackgroundHighlightStyle,
   getPastWordOpacity,
   getOuterGlowStyle,
+  getWordBackgroundStyle,
 } from "./shared-styles";
 
 // Interpolate between two hex colors (#RRGGBB). Falls back to `to` for non-hex inputs.
@@ -38,7 +39,7 @@ function lerpColor(from: string, to: string, t: number): string {
 
 // ─── CaptionWord ────────────────────────────────────────────────────────────
 
-const CaptionWord: React.FC<{
+export const CaptionWord: React.FC<{
   text: string;
   isActive: boolean;
   wasActive: boolean;
@@ -59,6 +60,7 @@ const CaptionWord: React.FC<{
   fontWeight?: boolean;
   fontStyle?: boolean;
   outerGlowStyle?: React.CSSProperties;
+  wordBackgroundStyle?: React.CSSProperties;
 }> = ({
   text,
   isActive,
@@ -80,6 +82,7 @@ const CaptionWord: React.FC<{
   fontWeight,
   fontStyle,
   outerGlowStyle,
+  wordBackgroundStyle,
 }) => {
   const fadeFrames = Math.max(1, Math.round(HIGHLIGHT_FADE_MS * (fps / 1000)));
   const wordOpacity = isActive
@@ -124,6 +127,10 @@ const CaptionWord: React.FC<{
         padding: "0 2px",
         whiteSpace: "pre-wrap",
         ...outerGlowStyle,
+        // Per-word bar bg (SUB-01/02): spread last so the active word's
+        // backgroundColor/borderRadius/padding take effect. Empty ({}) for
+        // inactive/disabled, leaving the "0 2px" default padding untouched.
+        ...wordBackgroundStyle,
       }}
     >
       {text}
@@ -217,6 +224,9 @@ const CaptionPage: React.FC<{
         const toFrame = Math.round(token.toMs * (fps / 1000)) - pageFromFrame;
         const framesSinceActive = wasActive ? Math.max(0, frame - toFrame) : 0;
         const framesSinceActivated = isActive ? Math.max(0, frame - tokenFromFrame) : 0;
+        // Per-word bar bg (SUB-01/02): returns {} for non-active tokens, so the
+        // bar paints behind the highlighted word only.
+        const wordBackgroundStyle = getWordBackgroundStyle(config.wordBackground, isActive);
 
           return (
             <CaptionWord
@@ -241,6 +251,7 @@ const CaptionPage: React.FC<{
               fontWeight={config.fontWeight}
               fontStyle={config.fontStyle}
               outerGlowStyle={outerGlowStyle}
+              wordBackgroundStyle={wordBackgroundStyle}
             />
           );
       })}

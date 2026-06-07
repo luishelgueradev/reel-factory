@@ -53,8 +53,8 @@ describe("TikTokLayout per-word bar background (SUB-01/02)", () => {
     );
     const span = container.querySelector("span")!;
     expect(span.style.backgroundColor).toBe("");
-    // pre-feature default padding intact
-    expect(span.style.padding).toBe("0 2px");
+    // pre-feature default padding intact (jsdom serializes "0 2px" → "0px 2px")
+    expect(span.style.padding).toBe("0px 2px");
   });
 
   it("never paints the bar on an inactive word (getWordBackgroundStyle returns {} for isActive=false)", () => {

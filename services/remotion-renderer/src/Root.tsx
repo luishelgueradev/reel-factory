@@ -7,7 +7,7 @@ import { ZoomContainer } from "./compositions/ZoomContainer";
 import type { TransitionEvent } from "./compositions/JumpCutTransition";
 import type { TikTokPage } from "@remotion/captions";
 import type { SubtitleLayoutMode, SubtitlePosition, SubtitleConfig, TitleConfig, PngOverlayConfig } from "./pipeline-config";
-import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
+import { DEFAULT_SUBTITLE_CONFIG, splitOverlaysByLayer } from "./pipeline-config";
 import type { ZoomEvent } from "./zoom-detection";
 import { loadFont, getFontFamilyCSS } from "./fonts";
 
@@ -92,8 +92,10 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
   // D-03/D-04: Split overlays into back band (default, under subtitles) and front band (over titles).
   // Overlays with no layer field default to "back".
   // NOTE: No preview dim here — the dim is studio Player path ONLY; renderer paints at full opacity.
-  const backOverlays = overlays.filter(o => (o.layer ?? "back") === "back");
-  const frontOverlays = overlays.filter(o => o.layer === "front");
+  // Phase 27 OVERLAY-02/03 (defense in depth): banding goes through the guide-aware
+  // splitOverlaysByLayer, so a guide overlay (isGuide:true) reaching inputProps is painted
+  // in NEITHER band — even though render.ts already drops guides before decode (authoritative cut).
+  const { back: backOverlays, front: frontOverlays } = splitOverlaysByLayer(overlays);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>

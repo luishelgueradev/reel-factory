@@ -102,7 +102,49 @@ export interface PngOverlayConfig {
   displayWidth: number;    // CSS display width in pixels (triggers downscale)
   opacity?: number;        // 0–1, default 1
   layer?: "back" | "front"; // D-03: default "back" — decorators behind text
+  name?: string;           // Phase 27 OVERLAY-04 — user-editable overlay label, persisted
+  isGuide?: boolean;       // Phase 27 OVERLAY-01/02/03 — preview-only safe-zone guide; excluded from render + not reordered. Default undefined = normal renderable overlay
   _resolvedFile?: string;  // runtime-only, set by render.ts, NOT persisted
+}
+
+// ─── Overlay layer banding helper (D-03/D-04) ────────────────────────────────
+
+/**
+ * Split an overlays array into back-band and front-band.
+ * Overlays with no layer field default to "back".
+ * Paint order: back → subtitles → titles → front.
+ * Phase 27 OVERLAY-03: guide overlays (isGuide === true) are NEVER banded — they
+ * are excluded from both bands so they cannot participate in layer reordering
+ * (the preview paints them as a fixed top guide layer instead).
+ * Exported for unit testing; mirrors the inline filter logic in both
+ * SubtitledVideo (studio) and SubtitledVideo (renderer).
+ */
+export function splitOverlaysByLayer(overlays: PngOverlayConfig[]): {
+  back: PngOverlayConfig[];
+  front: PngOverlayConfig[];
+} {
+  const renderable = overlays.filter(o => o.isGuide !== true);
+  return {
+    back:  renderable.filter(o => (o.layer ?? "back") === "back"),
+    front: renderable.filter(o => o.layer === "front"),
+  };
+}
+
+/**
+ * Partition overlays into preview-only guides and renderable overlays.
+ * Phase 27 OVERLAY-02: the render path calls this to DROP guides before decode,
+ * so a guide PNG never leaks into the final MP4.
+ * OVERLAY-03: `renderable` is guide-free, so guides cannot be reordered/banded.
+ * An overlay is a guide iff `isGuide === true`; undefined/false = renderable.
+ */
+export function partitionGuideOverlays(overlays: PngOverlayConfig[]): {
+  guides: PngOverlayConfig[];
+  renderable: PngOverlayConfig[];
+} {
+  return {
+    guides:     overlays.filter(o => o.isGuide === true),
+    renderable: overlays.filter(o => o.isGuide !== true),
+  };
 }
 
 // ─── Visual Effects (D-11, D-12) ────────────────────────────────────────────
@@ -503,6 +545,20 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
         if (ov.layer !== undefined) {
           if (ov.layer !== "back" && ov.layer !== "front") {
             errors.push(`overlays[${index}].layer must be "back" or "front"`);
+          }
+        }
+
+        // name: optional, must be a string if present (Phase 27 OVERLAY-04)
+        if (ov.name !== undefined) {
+          if (typeof ov.name !== "string") {
+            errors.push(`overlays[${index}].name must be a string`);
+          }
+        }
+
+        // isGuide: optional, must be a boolean if present (Phase 27 OVERLAY-01/02/03)
+        if (ov.isGuide !== undefined) {
+          if (typeof ov.isGuide !== "boolean") {
+            errors.push(`overlays[${index}].isGuide must be a boolean`);
           }
         }
 

@@ -9,11 +9,11 @@
 
 ### Overlays — guía + edición (OVERLAY)
 
-- [ ] **OVERLAY-01**: El usuario puede cargar un overlay-guía de zonas seguras (provisto por él) que se ve en el preview del Studio.
-- [ ] **OVERLAY-02**: El overlay-guía queda excluido del render final (solo es ayuda visual de edición; no aparece en el MP4 generado).
-- [ ] **OVERLAY-03**: El overlay-guía se distingue de los PNG normales: queda anclado/fijo (no se reordena en el layering) y marcado en la UI como guía no-renderizada.
-- [ ] **OVERLAY-04**: El usuario puede editar el nombre de un overlay.
-- [ ] **OVERLAY-05**: Mientras edita un overlay, su nombre se muestra como título de lo que se está editando.
+- [x] **OVERLAY-01**: El usuario puede cargar un overlay-guía de zonas seguras (provisto por él) que se ve en el preview del Studio.
+- [x] **OVERLAY-02**: El overlay-guía queda excluido del render final (solo es ayuda visual de edición; no aparece en el MP4 generado).
+- [x] **OVERLAY-03**: El overlay-guía se distingue de los PNG normales: queda anclado/fijo (no se reordena en el layering) y marcado en la UI como guía no-renderizada.
+- [x] **OVERLAY-04**: El usuario puede editar el nombre de un overlay.
+- [x] **OVERLAY-05**: Mientras edita un overlay, su nombre se muestra como título de lo que se está editando.
 
 ### Subtítulos pro (SUB)
 
@@ -49,11 +49,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OVERLAY-01 | Phase 27 | Pending |
-| OVERLAY-02 | Phase 27 | Pending |
-| OVERLAY-03 | Phase 27 | Pending |
-| OVERLAY-04 | Phase 27 | Pending |
-| OVERLAY-05 | Phase 27 | Pending |
+| OVERLAY-01 | Phase 27 | Done |
+| OVERLAY-02 | Phase 27 | Done |
+| OVERLAY-03 | Phase 27 | Done |
+| OVERLAY-04 | Phase 27 | Done |
+| OVERLAY-05 | Phase 27 | Done |
 | SUB-01 | Phase 28 | Pending |
 | SUB-02 | Phase 28 | Pending |
 | SUB-03 | Phase 28 | Pending |

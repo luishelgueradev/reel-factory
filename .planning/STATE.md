@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Controles de edición pro del Studio
-status: roadmapped
+status: in_progress
 last_updated: "2026-06-07T04:30:00.000Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 0
   completed_plans: 0
-  percent: 0
+  percent: 33
 ---
 
 # Project State
@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: Not started (roadmap created — 3 phases, 27-29)
+Phase: 28 — Subtítulos pro (next); Phase 27 ✅ complete
 Plan: —
-Status: Roadmapped — ready to plan Phase 27
-Last activity: 2026-06-07 — v1.5 roadmap created (Phases 27-29, 13/13 requirements mapped)
+Status: In progress — Phase 27 complete (overlays pro). Next: Phase 28.
+Last activity: 2026-06-07 — Phase 27 complete (overlays pro: safe-zone guide excluded from render + overlay naming); studio 477 + renderer 332 tests green. Live UAT pending.
 
 ### Milestone v1.5 Phase Summary
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 27 — Overlays pro (guía + edición) | Safe-zone guide overlay (preview-only, excluded from render, anchored/identified) + overlay name editing shown while editing | OVERLAY-01..05 | Not started |
+| 27 — Overlays pro (guía + edición) | Safe-zone guide overlay (preview-only, excluded from render, anchored/identified) + overlay name editing shown while editing | OVERLAY-01..05 | ✅ Complete (studio 477 + renderer 332 green; live UAT pending) |
 | 28 — Subtítulos pro (bar bg por palabra) | Per-word bar background for tiktok (color/opacity/radius/padding), preview↔render parity; karaoke removed | SUB-01..04 | Not started |
 | 29 — UX fuentes + Metadata multi-red | Sample-text + browse-fonts collapsed by default; metadata for all networks in one action, networks in tabs | FONT-01, FONT-02, META-05, META-06 | Not started |
 

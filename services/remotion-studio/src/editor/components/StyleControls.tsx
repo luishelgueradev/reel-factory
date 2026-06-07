@@ -12,7 +12,7 @@
 //              data-ctrl-2col attribute on the grid container for test assertions.
 
 import React from "react";
-import type { SubtitleConfig, SubtitlePosition, BackgroundHighlight, OuterGlow } from "../../pipeline-config.js";
+import type { SubtitleConfig, SubtitlePosition, BackgroundHighlight, OuterGlow, WordBackground } from "../../pipeline-config.js";
 import { AVAILABLE_FONTS } from "../../fonts.js";
 import { PositionPresets } from "./PositionPresets.js";
 
@@ -183,6 +183,11 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
   const glow: OuterGlow = config.outerGlow ?? {
     enabled: false, color: "#ffffff", intensity: 0.8, softness: 20,
   };
+  // Phase 28 SUB-01/02 — per-word bar bg (tiktok). Defaults match the schema
+  // default (disabled), so existing renders are unchanged until toggled on.
+  const wb: WordBackground = config.wordBackground ?? {
+    enabled: false, color: "#000000", opacity: 0.6, borderRadius: 8, padding: 6,
+  };
 
   return (
     // data-ctrl-2col: test hook for 2-column grid assertion
@@ -342,6 +347,34 @@ export function StyleControls({ config, onChange }: StyleControlsProps) {
               <RangeRow label="Radio" min={0} max={24}
                 value={bh.borderRadius}
                 onChange={(v) => onChange({ backgroundHighlight: { ...bh, borderRadius: v } })}
+              />
+            </div>
+          </FxBlock>
+
+          {/* Word background collapsible — Phase 28 SUB-01/02 (per-word bar, tiktok) */}
+          <FxBlock title="Fondo por palabra" enabled={wb.enabled}
+            onToggle={() => onChange({ wordBackground: { ...wb, enabled: !wb.enabled } })}
+          >
+            <div style={{ marginTop: "var(--s-5, 10px)" }}>
+              <Row label="Color">
+                <div style={{ position: "relative", width: 26, height: 26, flexShrink: 0, borderRadius: "var(--r-sm, 6px)", border: "1px solid var(--border-strong, #444)", overflow: "hidden", cursor: "pointer" }}>
+                  <input type="color" value={wb.color}
+                    onChange={(e) => onChange({ wordBackground: { ...wb, color: e.target.value } })}
+                    style={{ position: "absolute", inset: -4, width: "calc(100% + 8px)", height: "calc(100% + 8px)", border: "none", padding: 0, background: "none", cursor: "pointer" }} />
+                </div>
+              </Row>
+              <RangeRow label="Transparencia" min={0} max={1} step={0.05}
+                value={wb.opacity}
+                onChange={(v) => onChange({ wordBackground: { ...wb, opacity: v } })}
+                format={(v) => v.toFixed(2)}
+              />
+              <RangeRow label="Radio" min={0} max={40}
+                value={wb.borderRadius}
+                onChange={(v) => onChange({ wordBackground: { ...wb, borderRadius: v } })}
+              />
+              <RangeRow label="Relleno" min={0} max={40}
+                value={wb.padding}
+                onChange={(v) => onChange({ wordBackground: { ...wb, padding: v } })}
               />
             </div>
           </FxBlock>

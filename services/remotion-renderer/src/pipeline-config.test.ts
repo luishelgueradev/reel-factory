@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   validatePipelineConfig,
   splitOverlaysByLayer,
+  partitionGuideOverlays,
   DEFAULT_ZOOM_CONFIG,
   DEFAULT_TRANSITION_CONFIG,
   DEFAULT_VISUAL_EFFECTS,
@@ -782,5 +783,57 @@ describe("splitOverlaysByLayer", () => {
     ];
     const { back, front } = splitOverlaysByLayer(overlays);
     expect(back.length + front.length).toBe(overlays.length);
+  });
+
+  // Phase 27 OVERLAY-03: guides are NEVER banded (excluded from reordering)
+  it("excludes isGuide overlays from both bands (OVERLAY-03)", () => {
+    const guide = { ...BASE, isGuide: true, x: 99 };
+    const back = { ...BASE, layer: "back" as const, x: 1 };
+    const front = { ...BASE, layer: "front" as const, x: 2 };
+    const result = splitOverlaysByLayer([guide, back, front]);
+    expect(result.back.some((o) => o.isGuide === true)).toBe(false);
+    expect(result.front.some((o) => o.isGuide === true)).toBe(false);
+    expect(result.back).toHaveLength(1);
+    expect(result.front).toHaveLength(1);
+  });
+
+  it("excludes a guide even when it has layer: front (isGuide wins over layer)", () => {
+    const guideFront = { ...BASE, isGuide: true, layer: "front" as const };
+    const result = splitOverlaysByLayer([guideFront]);
+    expect(result.back).toHaveLength(0);
+    expect(result.front).toHaveLength(0);
+  });
+});
+
+// ─── partitionGuideOverlays — guide vs renderable split (Phase 27 OVERLAY-02) ──
+describe("partitionGuideOverlays", () => {
+  const BASE = { imageData: "data:image/png;base64,abc", x: 0, y: 0, displayWidth: 200 };
+
+  it("separates guide overlays from renderable overlays", () => {
+    const guide = { ...BASE, isGuide: true, x: 1 };
+    const renderable = { ...BASE, x: 2 };
+    const result = partitionGuideOverlays([guide, renderable]);
+    expect(result.guides).toHaveLength(1);
+    expect(result.guides[0].x).toBe(1);
+    expect(result.renderable).toHaveLength(1);
+    expect(result.renderable[0].x).toBe(2);
+  });
+
+  it("treats undefined isGuide as renderable", () => {
+    const result = partitionGuideOverlays([{ ...BASE }]);
+    expect(result.guides).toHaveLength(0);
+    expect(result.renderable).toHaveLength(1);
+  });
+
+  it("treats isGuide: false as renderable", () => {
+    const result = partitionGuideOverlays([{ ...BASE, isGuide: false }]);
+    expect(result.guides).toHaveLength(0);
+    expect(result.renderable).toHaveLength(1);
+  });
+
+  it("empty input yields two empty arrays", () => {
+    const result = partitionGuideOverlays([]);
+    expect(result.guides).toHaveLength(0);
+    expect(result.renderable).toHaveLength(0);
   });
 });

@@ -17,10 +17,10 @@
 
 ### Subtítulos pro (SUB)
 
-- [ ] **SUB-01**: En el estilo tiktok, el usuario puede activar un background "bar" por palabra en el highlight (fondo rectangular por palabra resaltada).
-- [ ] **SUB-02**: El usuario puede configurar color, transparencia, redondez de bordes y padding del bar por palabra.
-- [ ] **SUB-03**: El bar por palabra se aplica de forma idéntica en el preview del Studio y en el render final (sync studio↔renderer).
-- [ ] **SUB-04**: El estilo karaoke se elimina de las opciones de subtítulos.
+- [x] **SUB-01**: En el estilo tiktok, el usuario puede activar un background "bar" por palabra en el highlight (fondo rectangular por palabra resaltada).
+- [x] **SUB-02**: El usuario puede configurar color, transparencia, redondez de bordes y padding del bar por palabra.
+- [x] **SUB-03**: El bar por palabra se aplica de forma idéntica en el preview del Studio y en el render final (sync studio↔renderer).
+- [x] **SUB-04**: El estilo karaoke se elimina de las opciones de subtítulos.
 
 ### UX de fuentes (FONT)
 
@@ -54,10 +54,10 @@
 | OVERLAY-03 | Phase 27 | Done |
 | OVERLAY-04 | Phase 27 | Done |
 | OVERLAY-05 | Phase 27 | Done |
-| SUB-01 | Phase 28 | Pending |
-| SUB-02 | Phase 28 | Pending |
-| SUB-03 | Phase 28 | Pending |
-| SUB-04 | Phase 28 | Pending |
+| SUB-01 | Phase 28 | Done |
+| SUB-02 | Phase 28 | Done |
+| SUB-03 | Phase 28 | Done |
+| SUB-04 | Phase 28 | Done |
 | FONT-01 | Phase 29 | Pending |
 | FONT-02 | Phase 29 | Pending |
 | META-05 | Phase 29 | Pending |

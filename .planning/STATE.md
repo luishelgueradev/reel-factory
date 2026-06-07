@@ -7,10 +7,10 @@ last_updated: "2026-06-07T04:30:00.000Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 0
   completed_plans: 0
-  percent: 33
+  percent: 67
 ---
 
 # Project State
@@ -24,17 +24,17 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 28 — Subtítulos pro (next); Phase 27 ✅ complete
+Phase: 29 — UX fuentes + Metadata multi-red (next); Phases 27-28 ✅ complete
 Plan: —
-Status: In progress — Phase 27 complete (overlays pro). Next: Phase 28.
-Last activity: 2026-06-07 — Phase 27 complete (overlays pro: safe-zone guide excluded from render + overlay naming); studio 477 + renderer 332 tests green. Live UAT pending.
+Status: In progress — Phases 27-28 complete. Next: Phase 29.
+Last activity: 2026-06-07 — Phase 28 complete (subtítulos pro: per-word wordBackground bar w/ preview↔render parity; karaoke removed + migration fallback); studio 506 + renderer 349 green. Live UAT pending.
 
 ### Milestone v1.5 Phase Summary
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | 27 — Overlays pro (guía + edición) | Safe-zone guide overlay (preview-only, excluded from render, anchored/identified) + overlay name editing shown while editing | OVERLAY-01..05 | ✅ Complete (studio 477 + renderer 332 green; live UAT pending) |
-| 28 — Subtítulos pro (bar bg por palabra) | Per-word bar background for tiktok (color/opacity/radius/padding), preview↔render parity; karaoke removed | SUB-01..04 | Not started |
+| 28 — Subtítulos pro (bar bg por palabra) | Per-word bar background for tiktok (color/opacity/radius/padding), preview↔render parity; karaoke removed | SUB-01..04 | ✅ Complete (studio 506 + renderer 349 green; live UAT pending) |
 | 29 — UX fuentes + Metadata multi-red | Sample-text + browse-fonts collapsed by default; metadata for all networks in one action, networks in tabs | FONT-01, FONT-02, META-05, META-06 | Not started |
 
 > Renderer sync mandatory for Phase 27 (OVERLAY-02) and Phase 28 (SUB-01..03): mirror studio `compositions/*` + shared `src/*` to remotion-renderer and re-run renderer vitest (clobber hazard). Studio runs as a Docker container baking dist at build time — live UAT needs `docker compose build/up remotion-studio` (manual checkpoint, not an executor blocker). UI tooling non-negotiable on every phase: `impeccable` + `frontend-design` + `sketch-findings-reel-factory` + green-discipline.

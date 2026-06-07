@@ -37,6 +37,12 @@ const enabledConfig: SubtitleConfig = {
   wordBackground: { enabled: true, color: "#000000", opacity: 0.6, borderRadius: 8, padding: 6 },
 };
 
+// Item 4 (260607-uzv-03): in tiktok the per-word block is the single
+// highlighted-background control, labeled "Fondo resaltado" (the full-phrase
+// control is hidden). For sentence/bar it keeps the "Fondo por palabra" label.
+const PER_WORD_TITLE_TIKTOK = "Fondo resaltado";
+const sentenceConfig: SubtitleConfig = { ...baseConfig, layout: "sentence" };
+
 function fxHeadFor(container: HTMLElement, title: string): HTMLElement {
   const titleSpans = Array.from(container.querySelectorAll("span")).filter(
     (el) => el.textContent?.trim() === title
@@ -49,18 +55,32 @@ function fxHeadFor(container: HTMLElement, title: string): HTMLElement {
 }
 
 describe("StyleControls — Fondo por palabra (Phase 28-03 SUB-01/02)", () => {
-  it("renders the 'Fondo por palabra' FxBlock, off by default", () => {
+  it("renders the per-word FxBlock (tiktok label 'Fondo resaltado'), off by default", () => {
     const { container } = render(<StyleControls config={baseConfig} onChange={vi.fn()} />);
-    expect(container.textContent).toMatch(/Fondo por palabra/);
+    expect(container.textContent).toMatch(/Fondo resaltado/);
     // off-by-default: the block's collapsed hint reads "apagado" (FxBlock disabled)
-    const head = fxHeadFor(container, "Fondo por palabra");
+    const head = fxHeadFor(container, PER_WORD_TITLE_TIKTOK);
     expect(head.textContent).toMatch(/apagado/);
   });
 
-  it("toggling the block calls onChange with wordBackground.enabled=true", () => {
+  it("for tiktok, the full-phrase 'Fondo por palabra' label is NOT shown (single per-word control)", () => {
+    const { container } = render(<StyleControls config={baseConfig} onChange={vi.fn()} />);
+    // tiktok shows ONE highlighted-bg control (per-word, "Fondo resaltado"); the
+    // "Fondo por palabra" label is reserved for non-tiktok layouts.
+    expect(container.textContent).not.toMatch(/Fondo por palabra/);
+  });
+
+  it("for sentence/bar, the per-word block keeps the 'Fondo por palabra' label", () => {
+    const { container } = render(<StyleControls config={sentenceConfig} onChange={vi.fn()} />);
+    expect(container.textContent).toMatch(/Fondo por palabra/);
+    // and the full-phrase "Fondo resaltado" control is still present for sentence/bar
+    expect(container.textContent).toMatch(/Fondo resaltado/);
+  });
+
+  it("toggling the per-word block calls onChange with wordBackground.enabled=true", () => {
     const onChange = vi.fn();
     const { container } = render(<StyleControls config={baseConfig} onChange={onChange} />);
-    fireEvent.click(fxHeadFor(container, "Fondo por palabra"));
+    fireEvent.click(fxHeadFor(container, PER_WORD_TITLE_TIKTOK));
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({
         wordBackground: expect.objectContaining({ enabled: true }),

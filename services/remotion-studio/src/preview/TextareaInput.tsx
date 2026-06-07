@@ -20,9 +20,9 @@ export function TextareaInput({ value, onChange, placeholder }: TextareaInputPro
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <label style={{ fontSize: 14, fontWeight: 600, color: "#90caf9" }}>
-        Sample Text
-      </label>
+      {/* Item 6 (260607-uzv-03): inner sample-text label removed — the wrapping
+          CollapsibleSection (PreviewApp) owns the heading, so the inner label was
+          a duplicate. Helper text below is kept. */}
       <p style={{ fontSize: 12, color: "#888", margin: 0 }}>
         Edit the text below. Words will cycle through subtitles in the preview.
       </p>

@@ -4,6 +4,7 @@ import {
   normalizeSubtitleLayout,
   splitOverlaysByLayer,
   partitionGuideOverlays,
+  DEFAULT_SUBTITLE_CONFIG,
   DEFAULT_ZOOM_CONFIG,
   DEFAULT_TRANSITION_CONFIG,
   DEFAULT_VISUAL_EFFECTS,
@@ -983,5 +984,15 @@ describe("validatePipelineConfig — wordBackground (SUB-01/02)", () => {
     const result = validatePipelineConfig(config);
     expect(result.valid).toBe(false);
     expect(result.errors).toContain("subtitle.wordBackground.padding must be a non-negative number");
+  });
+});
+
+// ─── Item 5: flash off by default (260607-uzv-03) — renderer parity ──────────
+// Mirrors the studio assertion. The default lives in the synced pipeline-config,
+// so the renderer must agree: the active-word highlight flash is off by default
+// (active word shows activeColor immediately). Capability (duration>0) preserved.
+describe("DEFAULT_SUBTITLE_CONFIG — highlight flash off by default (item 5)", () => {
+  it("defaults highlightDurationMs to 0 (no flash)", () => {
+    expect(DEFAULT_SUBTITLE_CONFIG.highlightDurationMs).toBe(0);
   });
 });

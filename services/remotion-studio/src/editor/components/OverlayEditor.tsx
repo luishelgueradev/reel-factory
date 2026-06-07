@@ -29,8 +29,10 @@ const MAX_OVERLAYS = 3;
 // Client-side upload gate: 5 MB (D-09 / T-21-09).
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 // DEFAULT_OVERLAY — layer defaults to "back" (D-03: decorators behind text).
+// Phase 27: name defaults empty (OVERLAY-04), isGuide defaults false (OVERLAY-01/03).
 const DEFAULT_OVERLAY: PngOverlayConfig = {
   imageData: "", x: 40, y: 40, displayWidth: 200, opacity: 1, layer: "back",
+  name: "", isGuide: false,
 };
 
 // ─── Shared style helpers ──────────────────────────────────────────────────
@@ -132,6 +134,26 @@ function LayerBadge({ layer }: { layer: "back" | "front" | undefined }) {
   );
 }
 
+// ─── Guide chip (Phase 27 OVERLAY-03) ───────────────────────────────────────
+// A calm, non-alarm chip marking a preview-only safe-zone guide. Same visual
+// weight as LayerBadge but neutral tokens (never green, never danger): the guide
+// is a normal, expected state — it just never reaches the rendered MP4.
+function GuideChip() {
+  return (
+    <span style={{
+      fontSize: "var(--t-2xs, 10.5px)" as React.CSSProperties["fontSize"],
+      fontWeight: 600, letterSpacing: "0.05em",
+      padding: "2px 6px", borderRadius: "var(--r-full, 999px)",
+      background: "var(--surface-2, #252535)",
+      color: "var(--text-muted, #777)",
+      border: "1px solid var(--border, #333)",
+      whiteSpace: "nowrap",
+    }}>
+      guía · no se renderiza
+    </span>
+  );
+}
+
 export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEditorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [addingNew, setAddingNew] = useState(false);
@@ -210,6 +232,9 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
       imageData: ov.imageData, x: ov.x, y: ov.y,
       displayWidth: ov.displayWidth, opacity: ov.opacity ?? 1,
       layer: ov.layer ?? "back",
+      // Phase 27: preserve name (OVERLAY-04) + isGuide (OVERLAY-01/03) across an edit.
+      name: ov.name ?? "",
+      isGuide: ov.isGuide ?? false,
       ...(ov._resolvedFile ? { _resolvedFile: ov._resolvedFile } : {}),
     });
     setFileName(null); setFileError(null);
@@ -255,8 +280,10 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
           }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--s-4, 8px)", marginBottom: "var(--s-1, 2px)" }}>
-                <div style={{ fontWeight: 600, fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"], color: "var(--text, #e6e6ea)" }}>Overlay {i + 1}</div>
-                <LayerBadge layer={ov.layer} />
+                {/* OVERLAY-04: card label = the overlay name when set, else the generic ordinal */}
+                <div style={{ fontWeight: 600, fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"], color: "var(--text, #e6e6ea)" }}>{ov.name?.trim() || `Overlay ${i + 1}`}</div>
+                {/* OVERLAY-03: guides show the calm guide chip and never a back/front badge */}
+                {ov.isGuide ? <GuideChip /> : <LayerBadge layer={ov.layer} />}
               </div>
               <div style={{ fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-muted, #777)" }}>
                 x: {ov.x}, y: {ov.y}, ancho: {ov.displayWidth}px
@@ -294,7 +321,11 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
           border: "1px solid var(--accent-strong, #6ba8e0)",
         }}>
           <h3 style={{ fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"], fontWeight: 600, color: "var(--text, #e6e6ea)", marginBottom: "var(--s-6, 12px)" }}>
-            {editingIndex !== null ? "Editar overlay" : "Agregar overlay"}
+            {/* OVERLAY-05: when editing a named overlay, the name IS the title; */}
+            {/* unnamed overlays fall back to the generic heading. */}
+            {editingIndex !== null
+              ? (draft.name?.trim() ? `Editar: «${draft.name.trim()}»` : "Editar overlay")
+              : "Agregar overlay"}
           </h3>
 
           {/* data-ctrl-2col: test hook for 2-column grid assertion */}
@@ -342,6 +373,36 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
             {/* ── RIGHT: Estilo — PNG upload, width, opacity, capa ──────── */}
             <div data-colwrap="right" style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <SectionHeader n={2} title="Estilo" />
+
+              {/* Nombre (OVERLAY-04) — user label, persists; shows as the edit title (OVERLAY-05) */}
+              <Row label="Nombre">
+                <input type="text" value={draft.name ?? ""} placeholder="Sin nombre"
+                  aria-label="Nombre del overlay"
+                  onChange={(e) => { const v = e.target.value; handleDraftChange((prev) => ({ ...prev, name: v })); }}
+                  onFocus={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = "var(--accent-strong, #6ba8e0)"; }}
+                  onBlur={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = "var(--border, #333)"; }}
+                  style={{
+                    width: "100%", minWidth: 0, padding: "6px 8px",
+                    background: "var(--surface-2, #252535)",
+                    border: "1px solid var(--border, #333)",
+                    borderRadius: "var(--r-sm, 6px)",
+                    color: "var(--text, #e6e6ea)",
+                    fontSize: "var(--t-md, 13.5px)" as React.CSSProperties["fontSize"],
+                    transition: "border-color var(--dur,170ms) var(--ease)",
+                  }} />
+              </Row>
+
+              {/* Tipo (OVERLAY-01/03) — overlay normal vs preview-only safe-zone guide */}
+              <Row label="Tipo">
+                <div style={{ display: "flex", gap: "var(--s-4, 8px)" }}>
+                  <button type="button"
+                    onClick={() => handleDraftChange((prev) => ({ ...prev, isGuide: false }))}
+                    style={segBtnStyle(!draft.isGuide)}>Overlay normal</button>
+                  <button type="button"
+                    onClick={() => handleDraftChange((prev) => ({ ...prev, isGuide: true }))}
+                    style={segBtnStyle(!!draft.isGuide)}>Guía de zonas</button>
+                </div>
+              </Row>
 
               {/* PNG upload zone */}
               <div style={{ marginBottom: "var(--s-5, 10px)" }}>
@@ -401,17 +462,25 @@ export function OverlayEditor({ overlays, onChange, onPreviewChange }: OverlayEd
                 format={(v) => v.toFixed(2)}
               />
 
-              {/* Capa */}
-              <Row label="Capa">
-                <div style={{ display: "flex", gap: "var(--s-4, 8px)" }}>
-                  <button type="button"
-                    onClick={() => handleDraftChange((prev) => ({ ...prev, layer: "back" }))}
-                    style={segBtnStyle((draft.layer ?? "back") === "back")}>Detrás</button>
-                  <button type="button"
-                    onClick={() => handleDraftChange((prev) => ({ ...prev, layer: "front" }))}
-                    style={segBtnStyle(draft.layer === "front")}>Delante</button>
-                </div>
-              </Row>
+              {/* Capa — OVERLAY-03: hidden for guides (a guide is never banded/reordered). */}
+              {!draft.isGuide ? (
+                <Row label="Capa">
+                  <div style={{ display: "flex", gap: "var(--s-4, 8px)" }}>
+                    <button type="button"
+                      onClick={() => handleDraftChange((prev) => ({ ...prev, layer: "back" }))}
+                      style={segBtnStyle((draft.layer ?? "back") === "back")}>Detrás</button>
+                    <button type="button"
+                      onClick={() => handleDraftChange((prev) => ({ ...prev, layer: "front" }))}
+                      style={segBtnStyle(draft.layer === "front")}>Delante</button>
+                  </div>
+                </Row>
+              ) : (
+                <Row label="Capa">
+                  <p style={{ margin: 0, fontSize: "var(--t-xs, 11.5px)" as React.CSSProperties["fontSize"], color: "var(--text-muted, #777)" }}>
+                    Las guías no se renderizan y quedan fijas sobre la vista previa.
+                  </p>
+                </Row>
+              )}
             </div>
           </div>
 

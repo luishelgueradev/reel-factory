@@ -11,7 +11,7 @@ import { ZoomContainer } from "./compositions/ZoomContainer";
 import type { TransitionEvent } from "./compositions/JumpCutTransition";
 import type { TikTokPage } from "@remotion/captions";
 import type { SubtitleConfig, TitleConfig, SubtitleLayoutMode, SubtitlePosition, PngOverlayConfig } from "./pipeline-config";
-import { DEFAULT_SUBTITLE_CONFIG } from "./pipeline-config";
+import { DEFAULT_SUBTITLE_CONFIG, partitionGuideOverlays } from "./pipeline-config";
 import type { ZoomEvent } from "./zoom-detection";
 import { loadFont, getFontFamilyCSS } from "./fonts";
 
@@ -82,10 +82,16 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
   // Build config with resolved CSS fontFamily for layout components
   const resolvedConfig: SubtitleConfig = { ...config, fontFamily: fontFamilyCSS };
 
-  // D-03/D-04: Split overlays into back band (default, under subtitles) and front band (over titles).
-  // Overlays with no layer field default to "back".
-  const backOverlays = overlays.filter(o => (o.layer ?? "back") === "back");
-  const frontOverlays = overlays.filter(o => o.layer === "front");
+  // Phase 27 OVERLAY-01/03: split preview-only guides from renderable overlays FIRST.
+  // Guides (isGuide === true) are NEVER banded — they paint as a fixed top layer below
+  // (OVERLAY-03: not reordered by the Capa control). `renderable` is guide-free, so the
+  // existing back/front banding only sees non-guide overlays.
+  const { guides, renderable } = partitionGuideOverlays(overlays);
+
+  // D-03/D-04: Split renderable overlays into back band (default, under subtitles) and
+  // front band (over titles). Overlays with no layer field default to "back".
+  const backOverlays = renderable.filter(o => (o.layer ?? "back") === "back");
+  const frontOverlays = renderable.filter(o => o.layer === "front");
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -125,6 +131,14 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
       {/* rawImageSrc = ov.imageData (data URL) for Player/browser preview context (D-11) */}
       {frontOverlays.map((ov, i) => (
         <PngOverlay key={`overlay-front-${i}`} overlay={ov} rawImageSrc={ov.imageData} />
+      ))}
+      {/* Phase 27 OVERLAY-01: safe-zone guides show in the Studio preview. */}
+      {/* OVERLAY-03: painted LAST so they sit as a fixed top guide layer above every */}
+      {/* band and title — never reordered, never dimmed (a guide must read clearly). */}
+      {/* Preview-only by construction: this component drives the studio @remotion/player; */}
+      {/* the renderer's SubtitledVideo (Root.tsx) excludes guides per Plan 02. */}
+      {guides.map((ov, i) => (
+        <PngOverlay key={`overlay-guide-${i}`} overlay={ov} rawImageSrc={ov.imageData} />
       ))}
     </AbsoluteFill>
   );

@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 Phase: ALL v1.5 phases (27-29) ✅ complete — milestone awaiting audit/complete (not run, user asleep)
 Plan: —
 Status: All 3 phases done & code-merged. NEXT (user): live Docker UAT, then /gsd-audit-milestone → /gsd-complete-milestone v1.5.
-Last activity: 2026-06-07 — Quick 260607-uzv: 6 correcciones de edición del Studio (preview replace/download, título ancho-caja+gradiente, subtítulos per-word bg + flash-off + dedup sample-text). studio 538 + renderer 355 green.
+Last activity: 2026-06-07 — Quick 260607-uzv UAT fixes (playwright-verified): replace/download buttons relocated below player (impeccable), title box centered resize, gradient on text+box, and FIXED real bug — wordBackground missing from SubtitledVideo/Root whitelist (per-word bg now renders). studio 549 + renderer 359 green.
 
 ### Milestone v1.5 Phase Summary
 

@@ -108,6 +108,16 @@ export const CaptionWord: React.FC<{
     }
   }
 
+  // Per-word bar bg (SUB-01/02): the caption tokens carry the inter-word
+  // whitespace baked into their text (e.g. " palabra"). Keep that whitespace
+  // OUTSIDE the background so the bar hugs the word with symmetric padding on
+  // both sides (#palabra#) instead of swallowing the leading space (#·palabra).
+  const hasWordBg = !!wordBackgroundStyle && Object.keys(wordBackgroundStyle).length > 0;
+  const lead = text.slice(0, text.length - text.trimStart().length);
+  const trail = text.slice(text.trimEnd().length);
+  const core = text.slice(lead.length, text.length - trail.length);
+  const showWordBg = hasWordBg && core.length > 0;
+
   return (
     <span
       style={{
@@ -126,13 +136,30 @@ export const CaptionWord: React.FC<{
         padding: "0 2px",
         whiteSpace: "pre-wrap",
         ...outerGlowStyle,
-        // Per-word bar bg (SUB-01/02): spread last so the active word's
-        // backgroundColor/borderRadius/padding take effect. Empty ({}) for
-        // inactive/disabled, leaving the "0 2px" default padding untouched.
-        ...wordBackgroundStyle,
       }}
     >
-      {text}
+      {showWordBg ? (
+        <>
+          {lead}
+          <span
+            style={{
+              display: "inline-block",
+              // Re-apply the non-inherited text stroke so the word keeps its
+              // outline inside the background wrapper.
+              WebkitTextStroke: outlineWidth,
+              WebkitTextStrokeColor: outlineColor,
+              paintOrder: "stroke fill",
+              // backgroundColor + borderRadius + symmetric padding hug the word.
+              ...wordBackgroundStyle,
+            }}
+          >
+            {core}
+          </span>
+          {trail}
+        </>
+      ) : (
+        text
+      )}
     </span>
   );
 };

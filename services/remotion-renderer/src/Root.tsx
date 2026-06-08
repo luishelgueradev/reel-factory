@@ -58,6 +58,9 @@ export const SubtitledVideo: React.FC<RemotionProps> = ({
     outlineColor: subtitleConfig?.outlineColor ?? DEFAULT_SUBTITLE_CONFIG.outlineColor,
     outlineWidth: subtitleConfig?.outlineWidth ?? DEFAULT_SUBTITLE_CONFIG.outlineWidth,
     backgroundHighlight: subtitleConfig?.backgroundHighlight,
+    // quick 260607-uzv item 4: wordBackground was stripped here before reaching
+    // TikTokLayout, so the per-word background never rendered in the real render.
+    wordBackground: subtitleConfig?.wordBackground,
     textShadow: subtitleConfig?.textShadow,
     letterSpacing: subtitleConfig?.letterSpacing,
     position: subtitleConfig?.position ?? DEFAULT_SUBTITLE_CONFIG.position,

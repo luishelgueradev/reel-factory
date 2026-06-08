@@ -28,3 +28,22 @@ describe("Root config build — wordBackground survives the whitelist (item 4)",
     expect(src).toMatch(/wordBackground:\s*subtitleConfig\?\.wordBackground/);
   });
 });
+
+/**
+ * render.ts is the TRUE render-path whitelist: it builds inputProps.subtitleConfig
+ * from the job's pipeline-config.json and hands it to renderMedia(). Root.tsx's
+ * rebuild runs AFTER this — so a field dropped in render.ts never reaches Root.tsx
+ * at all. The item-4 guard above only checked Root.tsx, which is why wordBackground
+ * still failed to render in the output video (260608-ka1 follow-up). These guard the
+ * fields that were silently dropped here: wordBackground, fontWeight, fontStyle,
+ * outerGlow.
+ */
+describe("render.ts inputProps — subtitle style fields survive the render whitelist", () => {
+  const src = readFileSync(join(__dirname, "render.ts"), "utf8");
+
+  for (const field of ["wordBackground", "fontWeight", "fontStyle", "outerGlow"]) {
+    it(`forwards ${field} from pipelineConfig into inputProps.subtitleConfig`, () => {
+      expect(src).toMatch(new RegExp(`${field}:\\s*pipelineConfig\\?\\.subtitle\\?\\.${field}`));
+    });
+  }
+});

@@ -331,6 +331,12 @@ async function main() {
         outlineColor: pipelineConfig?.subtitle?.outlineColor,
         outlineWidth: pipelineConfig?.subtitle?.outlineWidth,
         backgroundHighlight: pipelineConfig?.subtitle?.backgroundHighlight,
+        // Per-word tiktok bar bg (Phase 28). This is the REAL render-path whitelist
+        // (inputProps → renderMedia); it is separate from Root.tsx's SubtitledVideo
+        // rebuild. wordBackground was missing here, so the bar rendered in preview
+        // but NOT in the output video (260608-ka1 follow-up). Keep in sync with the
+        // SubtitleConfig fields the studio preview forwards.
+        wordBackground: pipelineConfig?.subtitle?.wordBackground,
         textShadow: pipelineConfig?.subtitle?.textShadow,
         letterSpacing: pipelineConfig?.subtitle?.letterSpacing,
         position: pipelineConfig?.subtitle?.position || "bottom-center",
@@ -341,6 +347,11 @@ async function main() {
         highlightDurationMs: pipelineConfig?.subtitle?.highlightDurationMs,
         highlightTransition: pipelineConfig?.subtitle?.highlightTransition,
         subtitleWidth: pipelineConfig?.subtitle?.subtitleWidth,
+        // Same whitelist trap: these were also dropped here, so bold/italic/glow
+        // set on subtitles never reached the render (only the studio preview).
+        fontWeight: pipelineConfig?.subtitle?.fontWeight,
+        fontStyle: pipelineConfig?.subtitle?.fontStyle,
+        outerGlow: pipelineConfig?.subtitle?.outerGlow,
       } satisfies SubtitleConfig,
       titles: pipelineConfig?.titles || [],
       // Phase 7: Visual effects (D-08, D-10)

@@ -149,7 +149,9 @@ export const CaptionWord: React.FC<{
               WebkitTextStroke: outlineWidth,
               WebkitTextStrokeColor: outlineColor,
               paintOrder: "stroke fill",
-              // backgroundColor + borderRadius + symmetric padding hug the word.
+              // backgroundColor fills the word; the box-shadow spread ring
+              // (wordBackgroundStyle) adds the symmetric L/R/T/B color band
+              // without shifting or pulling neighbors.
               ...wordBackgroundStyle,
             }}
           >

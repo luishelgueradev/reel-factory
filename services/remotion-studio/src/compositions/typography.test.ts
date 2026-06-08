@@ -204,13 +204,12 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
     expect(getWordBackgroundStyle(WB, false)).toEqual({});
   });
 
-  it("returns rgba backgroundColor + borderRadius + padding for an enabled active word", () => {
+  it("returns rgba backgroundColor + borderRadius + box-shadow spread ring for an enabled active word", () => {
     expect(getWordBackgroundStyle(WB, true)).toEqual({
       backgroundColor: "rgba(0, 0, 0, 0.5)",
       borderRadius: "8px",
-      padding: "6px",
-      // negative horizontal margin cancels the padding's inline width → no lateral shift
-      margin: "0 -6px",
+      // box-shadow spread ring: zero-layout, symmetric L/R/T/B band, no neighbor shift/pull
+      boxShadow: "0 0 0 6px rgba(0, 0, 0, 0.5)",
     });
   });
 
@@ -220,8 +219,7 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
     ).toEqual({
       backgroundColor: "rgba(255, 0, 0, 0.8)",
       borderRadius: "4px",
-      padding: "2px",
-      margin: "0 -2px",
+      boxShadow: "0 0 0 2px rgba(255, 0, 0, 0.8)",
     });
   });
 
@@ -231,8 +229,7 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
     ).toEqual({
       backgroundColor: "rgba(255, 255, 255, 1)",
       borderRadius: "0px",
-      padding: "0px",
-      margin: "0 -0px",
+      boxShadow: "0 0 0 0px rgba(255, 255, 255, 1)",
     });
   });
 });

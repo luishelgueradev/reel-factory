@@ -48,8 +48,10 @@ describe("TikTokLayout per-word bar background (SUB-01/02)", () => {
     expect(barSpan).toBeTruthy();
     expect(barSpan.style.backgroundColor).toBe("rgba(0, 0, 0, 0.5)");
     expect(barSpan.style.borderRadius).toBe("8px");
-    // symmetric padding hugs the word on all sides
-    expect(barSpan.style.padding).toBe("6px");
+    // box-shadow spread ring hugs the word symmetrically (no padding/negative-margin)
+    expect(barSpan.style.boxShadow).toBe("0 0 0 6px rgba(0, 0, 0, 0.5)");
+    expect(barSpan.style.padding).toBe("");
+    expect(barSpan.style.margin).toBe("");
   });
 
   it("keeps leading/trailing whitespace OUTSIDE the bar so it hugs the word symmetrically", () => {

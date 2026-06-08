@@ -42,11 +42,32 @@ describe("TikTokLayout per-word bar background (SUB-01/02)", () => {
     const { container } = render(
       <CaptionWord {...baseProps} wordBackgroundStyle={wordBg} />
     );
-    const span = container.querySelector("span")!;
-    expect(span.style.backgroundColor).toBe("rgba(0, 0, 0, 0.5)");
-    expect(span.style.borderRadius).toBe("8px");
-    // bar padding overrides the default "0 2px" on the active word (intended)
-    expect(span.style.padding).toBe("6px");
+    // The bar lives on an inner span that hugs the word; find the span carrying it.
+    const spans = [...container.querySelectorAll("span")];
+    const barSpan = spans.find((s) => s.style.backgroundColor !== "")!;
+    expect(barSpan).toBeTruthy();
+    expect(barSpan.style.backgroundColor).toBe("rgba(0, 0, 0, 0.5)");
+    expect(barSpan.style.borderRadius).toBe("8px");
+    // box-shadow spread ring hugs the word symmetrically (no padding/negative-margin)
+    expect(barSpan.style.boxShadow).toBe("0 0 0 6px rgba(0, 0, 0, 0.5)");
+    expect(barSpan.style.padding).toBe("");
+    expect(barSpan.style.margin).toBe("");
+  });
+
+  it("keeps leading/trailing whitespace OUTSIDE the bar so it hugs the word symmetrically", () => {
+    const wordBg = getWordBackgroundStyle(
+      { enabled: true, color: "#000000", opacity: 0.5, borderRadius: 8, padding: 6 },
+      true
+    );
+    const { container } = render(
+      <CaptionWord {...baseProps} text=" hola " wordBackgroundStyle={wordBg} />
+    );
+    const spans = [...container.querySelectorAll("span")];
+    const barSpan = spans.find((s) => s.style.backgroundColor !== "")!;
+    // the bar wraps ONLY the trimmed word — no swallowed leading/trailing space
+    expect(barSpan.textContent).toBe("hola");
+    // the inter-word spacing is preserved overall (rendered outside the bar)
+    expect(container.textContent).toBe(" hola ");
   });
 
   it("does not introduce a backgroundColor when wordBackgroundStyle is empty/absent (baseline unchanged)", () => {

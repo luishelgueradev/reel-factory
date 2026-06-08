@@ -104,17 +104,28 @@ export function getWordBackgroundStyle(
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
-  // Symmetric padding hugs the word on all sides. The negative HORIZONTAL margin
-  // cancels the horizontal padding's contribution to inline layout, so the bar
-  // extends `padding`px to BOTH the left and right of the word WITHOUT shifting
-  // the lateral words when it appears (the box's inline advance stays = word
-  // width). Vertical padding still grows the box height (no horizontal effect).
+  // The bar is a box-shadow SPREAD ring, NOT padding+negative-margin.
+  //
+  // Why not padding+`margin: 0 -p`: the negative margin cancels the padding's
+  // inline advance by pulling all *following* content left by `p`px. That is
+  // asymmetric — the next word is dragged flush against (or, for larger `p`,
+  // *over*) the bar's right edge, while the previous word keeps full spacing.
+  // Result: the bar looks "pegado" to the following word with no clean,
+  // symmetric L/R color margin (proven via DOM measurement: 13px gap left /
+  // 1px right at p=3; an 8px overlap on the right at p=12).
+  //
+  // A box-shadow with `spread = p` and zero blur paints a solid `p`px band on
+  // all four sides that (a) contributes nothing to layout, so neighbors never
+  // shift when the bar appears AND are never pulled toward it (the band reaches
+  // symmetrically into the inter-word whitespace on both sides), and (b) is
+  // clipped to OUTSIDE the border box, so it tiles seamlessly with the inner
+  // backgroundColor fill — uniform alpha even at opacity < 1 (no overlap seam).
   const p = wordBackground.padding;
+  const rgba = `rgba(${r}, ${g}, ${b}, ${wordBackground.opacity})`;
   return {
-    backgroundColor: `rgba(${r}, ${g}, ${b}, ${wordBackground.opacity})`,
+    backgroundColor: rgba,
     borderRadius: `${wordBackground.borderRadius}px`,
-    padding: `${p}px`,
-    margin: `0 -${p}px`,
+    boxShadow: `0 0 0 ${p}px ${rgba}`,
   };
 }
 

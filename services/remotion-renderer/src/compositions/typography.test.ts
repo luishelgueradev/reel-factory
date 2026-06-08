@@ -187,7 +187,7 @@ describe("getOuterGlowStyle (TYPO-04)", () => {
 // Per-word "fondo por palabra" bar drawn behind the active/highlighted tiktok
 // word only. Returns {} unless the feature is enabled AND the word is active.
 
-import { getWordBackgroundStyle } from "./shared-styles";
+import { getWordBackgroundStyle, WORD_BG_LINE_HEIGHT } from "./shared-styles";
 
 describe("getWordBackgroundStyle (SUB-01/02)", () => {
   const WB = { enabled: true, color: "#000000", opacity: 0.5, borderRadius: 8, padding: 6 };
@@ -204,12 +204,14 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
     expect(getWordBackgroundStyle(WB, false)).toEqual({});
   });
 
-  it("returns rgba backgroundColor + borderRadius + box-shadow spread ring for an enabled active word", () => {
+  it("returns rgba backgroundColor + borderRadius + box-shadow spread ring + hug line-height for an enabled active word", () => {
     expect(getWordBackgroundStyle(WB, true)).toEqual({
       backgroundColor: "rgba(0, 0, 0, 0.5)",
       borderRadius: "8px",
       // box-shadow spread ring: zero-layout, symmetric L/R/T/B band, no neighbor shift/pull
       boxShadow: "0 0 0 6px rgba(0, 0, 0, 0.5)",
+      // tight line-height hugs the glyph vertically so T/B padding ≈ L/R (260608-ka1)
+      lineHeight: WORD_BG_LINE_HEIGHT,
     });
   });
 
@@ -220,6 +222,7 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
       backgroundColor: "rgba(255, 0, 0, 0.8)",
       borderRadius: "4px",
       boxShadow: "0 0 0 2px rgba(255, 0, 0, 0.8)",
+      lineHeight: WORD_BG_LINE_HEIGHT,
     });
   });
 
@@ -230,6 +233,7 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
       backgroundColor: "rgba(255, 255, 255, 1)",
       borderRadius: "0px",
       boxShadow: "0 0 0 0px rgba(255, 255, 255, 1)",
+      lineHeight: WORD_BG_LINE_HEIGHT,
     });
   });
 });

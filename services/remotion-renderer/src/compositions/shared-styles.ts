@@ -77,6 +77,11 @@ export function getBackgroundHighlightStyle(
 
 // ─── Per-word bar background (Phase 28, SUB-01/02) ──────────────────────────
 
+// Line-height the active-word bar box uses to hug the glyph vertically (260608-ka1).
+// Kept ≥ the tallest words' ink/em ratio so the fill never clips, even at padding 0.
+export const WORD_BG_LINE_HEIGHT = 0.95;
+
+
 /**
  * Compute the "fondo por palabra" bar style for a single tiktok word.
  *
@@ -126,6 +131,16 @@ export function getWordBackgroundStyle(
     backgroundColor: rgba,
     borderRadius: `${wordBackground.borderRadius}px`,
     boxShadow: `0 0 0 ${p}px ${rgba}`,
+    // Hug the glyph vertically. The bg span is inline-block, so its box height =
+    // line-height; inheriting the caption's spacing (config Interlínea, e.g. 1.3)
+    // inflated the box to ~1.3em while its width hugs the glyph — so the bar's
+    // top/bottom padding was ~6x its left/right padding (DOM-measured 19px vs 3px).
+    // WORD_BG_LINE_HEIGHT shrinks the box to ≈ the glyph so the box-shadow's uniform
+    // spread reads as even padding on all sides. 0.95 (not lower) keeps the box ≥
+    // the tallest words' ink so nothing clips, even when padding is dialed to 0.
+    // (Residual: short x-height words keep the font's baseline descent space —
+    // only text-box-trim removes that, and it isn't safe across preview/render Chrome.)
+    lineHeight: WORD_BG_LINE_HEIGHT,
   };
 }
 

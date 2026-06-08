@@ -17,7 +17,7 @@ import { join } from "path";
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { CaptionWord } from "./TikTokLayout";
-import { getWordBackgroundStyle } from "./shared-styles";
+import { getWordBackgroundStyle, WORD_BG_LINE_HEIGHT } from "./shared-styles";
 
 const baseProps = {
   text: "hola",
@@ -52,6 +52,8 @@ describe("TikTokLayout per-word bar background (SUB-01/02)", () => {
     expect(barSpan.style.boxShadow).toBe("0 0 0 6px rgba(0, 0, 0, 0.5)");
     expect(barSpan.style.padding).toBe("");
     expect(barSpan.style.margin).toBe("");
+    // tight line-height hugs the glyph vertically so T/B padding ≈ L/R (260608-ka1)
+    expect(barSpan.style.lineHeight).toBe(String(WORD_BG_LINE_HEIGHT));
   });
 
   it("keeps leading/trailing whitespace OUTSIDE the bar so it hugs the word symmetrically", () => {

@@ -105,7 +105,10 @@ export interface TitleStyleProps {
   fontStyle?: boolean;   // false = normal, true = italic. Default: false
   outerGlow?: OuterGlow; // outer glow effect (TYPO-04)
   backgroundWidth?: number; // box width as a percentage 0–100 (TITLE-WIDTH-01). Default: 80 (current behavior)
-  backgroundGradient?: { enabled: boolean; fromColor: string; toColor: string }; // optional vertical (top→bottom) linear gradient on the box (TITLE-GRADIENT-01). Default: disabled (flat backgroundColor)
+  // Optional vertical (top→bottom) linear gradient (TITLE-GRADIENT-01). Default: disabled (flat backgroundColor).
+  // `target` (quick 260607-uzv item 3) selects what the gradient paints — "box" (default, current behavior),
+  // "text" (clip the gradient to the title glyphs), or "both". Omitted target ⇒ "box" for back-compat.
+  backgroundGradient?: { enabled: boolean; fromColor: string; toColor: string; target?: "box" | "text" | "both" };
 }
 
 /** Title overlay configuration (D-12) */
@@ -581,6 +584,9 @@ export function validatePipelineConfig(config: unknown): { valid: boolean; error
                   errors.push(`titles[${index}].style.backgroundGradient.fromColor must be a 6-digit hex color`);
                 if (typeof bg.toColor !== "string" || !/^#[0-9a-fA-F]{6}$/.test(bg.toColor as string))
                   errors.push(`titles[${index}].style.backgroundGradient.toColor must be a 6-digit hex color`);
+                // quick 260607-uzv item 3: optional target selector — "box" | "text" | "both" (omitted ⇒ "box")
+                if (bg.target !== undefined && bg.target !== "box" && bg.target !== "text" && bg.target !== "both")
+                  errors.push(`titles[${index}].style.backgroundGradient.target must be one of "box", "text", "both"`);
               }
             }
           }

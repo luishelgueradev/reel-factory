@@ -154,7 +154,7 @@ const DEFAULT_TITLE_STYLE = {
   lineHeight: 1.2,
   padding: 40,
   backgroundWidth: 80, // TITLE-WIDTH-01: matches the previous hardcoded 80% box width
-  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000" }, // TITLE-GRADIENT-01: disabled → flat backgroundColor
+  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000", target: "box" as const }, // TITLE-GRADIENT-01: disabled → flat backgroundColor; target (quick 260607-uzv item 3): box|text|both
 };
 
 // ─── Shared style helpers ──────────────────────────────────────────────────
@@ -859,9 +859,11 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
                     format={(v) => `${v}%`}
                   />
 
-                  {/* Degradado — TITLE-GRADIENT-01 (optional vertical top→bottom gradient; FxBlock + 2 swatches) */}
+                  {/* Degradado — TITLE-GRADIENT-01 (optional vertical top→bottom gradient; FxBlock + 2 swatches).
+                      quick 260607-uzv item 3: "Aplicar a" selects box / text / both. Omitted target ⇒ "box". */}
                   {(() => {
-                    const gradient = newTitle.style?.backgroundGradient ?? { enabled: false, fromColor: "#000000", toColor: "#000000" };
+                    const gradient = newTitle.style?.backgroundGradient ?? { enabled: false, fromColor: "#000000", toColor: "#000000", target: "box" as const };
+                    const target = gradient.target ?? "box";
                     return (
                       <>
                         <Row label="Degradado">
@@ -875,16 +877,34 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
                           </div>
                         </Row>
                         {gradient.enabled && (
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-5, 10px) var(--s-6, 12px)" }}>
-                            <ColorSwatch label="Desde (arriba)"
-                              value={gradient.fromColor}
-                              onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, fromColor: v } } }))}
-                            />
-                            <ColorSwatch label="Hasta (abajo)"
-                              value={gradient.toColor}
-                              onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, toColor: v } } }))}
-                            />
-                          </div>
+                          <>
+                            <Row label="Aplicar a">
+                              <div style={{ display: "flex", gap: "var(--s-3, 6px)" }}>
+                                {([
+                                  { id: "box", label: "Caja" },
+                                  { id: "text", label: "Texto" },
+                                  { id: "both", label: "Ambos" },
+                                ] as const).map((opt) => (
+                                  <button key={opt.id} type="button"
+                                    onClick={() => handleDraftChange((prev) => {
+                                      const g = prev.style?.backgroundGradient ?? gradient;
+                                      return { ...prev, style: { ...prev.style!, backgroundGradient: { ...g, target: opt.id } } };
+                                    })}
+                                    style={segBtnStyle(target === opt.id)}>{opt.label}</button>
+                                ))}
+                              </div>
+                            </Row>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-5, 10px) var(--s-6, 12px)" }}>
+                              <ColorSwatch label="Desde (arriba)"
+                                value={gradient.fromColor}
+                                onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, fromColor: v } } }))}
+                              />
+                              <ColorSwatch label="Hasta (abajo)"
+                                value={gradient.toColor}
+                                onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, toColor: v } } }))}
+                              />
+                            </div>
+                          </>
                         )}
                       </>
                     );

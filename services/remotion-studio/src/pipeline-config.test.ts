@@ -223,6 +223,25 @@ describe("validatePipelineConfig — title backgroundGradient (TITLE-GRADIENT-01
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.includes("backgroundGradient.toColor"))).toBe(true);
   });
+
+  // quick 260607-uzv item 3: gradient target selector (box | text | both)
+  it("accepts target box / text / both", () => {
+    for (const target of ["box", "text", "both"] as const) {
+      expect(validatePipelineConfig(titleWith({ backgroundGradient: { ...VALID_GRADIENT, target } })).valid).toBe(true);
+    }
+  });
+
+  it("is valid when target is absent (back-compat, defaults to box)", () => {
+    expect(validatePipelineConfig(titleWith({ backgroundGradient: VALID_GRADIENT })).valid).toBe(true);
+  });
+
+  it("rejects an unknown target", () => {
+    const result = validatePipelineConfig(
+      titleWith({ backgroundGradient: { ...VALID_GRADIENT, target: "glyph" } })
+    );
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("backgroundGradient.target"))).toBe(true);
+  });
 });
 
 describe("validatePipelineConfig — wordBackground (SUB-01/02)", () => {

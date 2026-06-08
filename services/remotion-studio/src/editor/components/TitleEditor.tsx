@@ -98,6 +98,31 @@ function measureTitleBox(opts: MeasureTitleOpts): { width: number; height: numbe
   return { width, height };
 }
 
+// ─── computeCenteredXForWidth (quick 260607-uzv item 2) ─────────────────────────
+// TitleOverlay renders the box at left:(x/1080)*100% with width:backgroundWidth%,
+// so growing the width extends only to the RIGHT (the left edge stays pinned at x).
+// To make "Ancho caja" resize SYMMETRICALLY around the box's horizontal center,
+// adjust x by half of the pixel-width delta when the width% changes:
+//   Δpx = (newWidthPct - oldWidthPct)/100 * 1080
+//   newX = clamp(oldX - Δpx/2, 0, 1080 - newWidthPx)
+// The clamp keeps the box on-frame: never negative-left, never overflowing the
+// right edge. Pure + side-effect-free for unit testing.
+
+const FRAME_WIDTH_PX = 1080;
+
+export function computeCenteredXForWidth(
+  oldX: number,
+  oldWidthPct: number,
+  newWidthPct: number,
+  frameWidthPx: number = FRAME_WIDTH_PX
+): number {
+  const deltaPx = ((newWidthPct - oldWidthPct) / 100) * frameWidthPx;
+  const newWidthPx = (newWidthPct / 100) * frameWidthPx;
+  const maxX = Math.max(0, frameWidthPx - newWidthPx);
+  const proposed = oldX - deltaPx / 2;
+  return Math.max(0, Math.min(proposed, maxX));
+}
+
 interface TitleEditorProps {
   titles: TitleConfig[];
   onChange: (titles: TitleConfig[]) => void;
@@ -819,11 +844,18 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
                     onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, borderRadius: v } }))}
                   />
 
-                  {/* Ancho caja — TITLE-WIDTH-01 (configurable box width, default 80%) */}
+                  {/* Ancho caja — TITLE-WIDTH-01 (configurable box width, default 80%).
+                      quick 260607-uzv item 2: also re-center x so the box grows/shrinks
+                      SYMMETRICALLY around its horizontal center (not only rightward). */}
                   <RangeRow label="Ancho caja"
                     min={0} max={100}
                     value={newTitle.style?.backgroundWidth ?? 80}
-                    onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundWidth: v } }))}
+                    onChange={(v) => handleDraftChange((prev) => {
+                      const oldWidth = prev.style?.backgroundWidth ?? DEFAULT_TITLE_STYLE.backgroundWidth;
+                      const oldX = prev.style?.x ?? DEFAULT_TITLE_STYLE.x;
+                      const newX = computeCenteredXForWidth(oldX, oldWidth, v);
+                      return { ...prev, style: { ...prev.style!, backgroundWidth: v, x: newX } };
+                    })}
                     format={(v) => `${v}%`}
                   />
 

@@ -48,7 +48,7 @@ const DEFAULT_TITLE_STYLE: Required<TitleStyleProps> = {
   fontStyle: false,
   outerGlow: { enabled: false, color: "#ffffff", intensity: 0.8, softness: 20 },
   backgroundWidth: 80, // TITLE-WIDTH-01: preserves the previous hardcoded 80% box width
-  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000" }, // TITLE-GRADIENT-01: disabled by default → flat backgroundColor
+  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000", target: "box" as const }, // TITLE-GRADIENT-01: disabled by default → flat backgroundColor. target (quick 260607-uzv item 3): box (default) | text | both
 };
 
 export const TitleOverlay: React.FC<TitleOverlayProps> = ({
@@ -71,11 +71,26 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
   // TITLE-WIDTH-01: configurable box width (% of frame); TITLE-GRADIENT-01: optional vertical gradient
   const backgroundWidth = style?.backgroundWidth ?? DEFAULT_TITLE_STYLE.backgroundWidth;
   const backgroundGradient = style?.backgroundGradient ?? DEFAULT_TITLE_STYLE.backgroundGradient;
-  // When the gradient is enabled, paint a vertical (top→bottom) linear-gradient on the box;
+  // quick 260607-uzv item 3: the gradient can target the box, the text, or both.
+  // Omitted target ⇒ "box" (back-compat with configs written before this field existed).
+  const gradientTarget = backgroundGradient.target ?? "box";
+  const gradientCss = `linear-gradient(to bottom, ${backgroundGradient.fromColor}, ${backgroundGradient.toColor})`;
+  const gradientOnBox = backgroundGradient.enabled && (gradientTarget === "box" || gradientTarget === "both");
+  const gradientOnText = backgroundGradient.enabled && (gradientTarget === "text" || gradientTarget === "both");
+  // When the gradient targets the box, paint a vertical (top→bottom) linear-gradient on the box;
   // otherwise keep the flat backgroundColor (default behavior unchanged).
-  const boxBackground = backgroundGradient.enabled
-    ? `linear-gradient(to bottom, ${backgroundGradient.fromColor}, ${backgroundGradient.toColor})`
-    : backgroundColor;
+  const boxBackground = gradientOnBox ? gradientCss : backgroundColor;
+  // When the gradient targets the TEXT, clip the same vertical gradient to the glyphs
+  // (user-requested for video titles — see SUMMARY for the deliberate impeccable override).
+  const textGradientStyle: React.CSSProperties = gradientOnText
+    ? {
+        backgroundImage: gradientCss,
+        WebkitBackgroundClip: "text",
+        backgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        color: "transparent",
+      }
+    : {};
 
   // Resolve module names to actual CSS fontFamily names
   // E.g., "DancingScript" → "Dancing Script"
@@ -248,6 +263,9 @@ export const TitleOverlay: React.FC<TitleOverlayProps> = ({
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
             ...getOuterGlowStyle(style?.outerGlow),
+            // quick 260607-uzv item 3: text-gradient (clip gradient to glyphs) wins over
+            // the flat titleColor when target is "text"/"both". Spread last so it overrides color.
+            ...textGradientStyle,
           }}
         >
           {text}

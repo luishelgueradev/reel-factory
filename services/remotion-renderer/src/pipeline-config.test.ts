@@ -170,6 +170,24 @@ describe("validatePipelineConfig", () => {
       };
       expect(validatePipelineConfig(config).valid).toBe(true);
     });
+
+    // quick 260607-uzv item 3: gradient target selector (box | text | both)
+    it("accepts a backgroundGradient target box / text / both (TITLE-GRADIENT-01)", () => {
+      for (const target of ["box", "text", "both"] as const) {
+        const config = {
+          subtitle: { layout: "tiktok" },
+          titles: [
+            {
+              text: "Hi",
+              startTimeMs: 0,
+              durationMs: 1000,
+              style: { backgroundGradient: { enabled: true, fromColor: "#112233", toColor: "#445566", target } },
+            },
+          ],
+        };
+        expect(validatePipelineConfig(config).valid, target).toBe(true);
+      }
+    });
   });
 
   describe("invalid configs", () => {
@@ -324,6 +342,24 @@ describe("validatePipelineConfig", () => {
         expect(result.valid, JSON.stringify(backgroundGradient)).toBe(false);
         expect(result.errors.some((e) => e.includes(".style.backgroundGradient."))).toBe(true);
       }
+    });
+
+    // quick 260607-uzv item 3: unknown gradient target rejected
+    it("rejects an unknown backgroundGradient target (TITLE-GRADIENT-01)", () => {
+      const config = {
+        subtitle: { layout: "tiktok" },
+        titles: [
+          {
+            text: "Hi",
+            startTimeMs: 0,
+            durationMs: 1000,
+            style: { backgroundGradient: { enabled: true, fromColor: "#112233", toColor: "#445566", target: "glyph" } },
+          },
+        ],
+      };
+      const result = validatePipelineConfig(config);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes(".style.backgroundGradient.target"))).toBe(true);
     });
   });
 

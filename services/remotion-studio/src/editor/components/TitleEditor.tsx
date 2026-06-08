@@ -98,6 +98,31 @@ function measureTitleBox(opts: MeasureTitleOpts): { width: number; height: numbe
   return { width, height };
 }
 
+// ─── computeCenteredXForWidth (quick 260607-uzv item 2) ─────────────────────────
+// TitleOverlay renders the box at left:(x/1080)*100% with width:backgroundWidth%,
+// so growing the width extends only to the RIGHT (the left edge stays pinned at x).
+// To make "Ancho caja" resize SYMMETRICALLY around the box's horizontal center,
+// adjust x by half of the pixel-width delta when the width% changes:
+//   Δpx = (newWidthPct - oldWidthPct)/100 * 1080
+//   newX = clamp(oldX - Δpx/2, 0, 1080 - newWidthPx)
+// The clamp keeps the box on-frame: never negative-left, never overflowing the
+// right edge. Pure + side-effect-free for unit testing.
+
+const FRAME_WIDTH_PX = 1080;
+
+export function computeCenteredXForWidth(
+  oldX: number,
+  oldWidthPct: number,
+  newWidthPct: number,
+  frameWidthPx: number = FRAME_WIDTH_PX
+): number {
+  const deltaPx = ((newWidthPct - oldWidthPct) / 100) * frameWidthPx;
+  const newWidthPx = (newWidthPct / 100) * frameWidthPx;
+  const maxX = Math.max(0, frameWidthPx - newWidthPx);
+  const proposed = oldX - deltaPx / 2;
+  return Math.max(0, Math.min(proposed, maxX));
+}
+
 interface TitleEditorProps {
   titles: TitleConfig[];
   onChange: (titles: TitleConfig[]) => void;
@@ -129,7 +154,7 @@ const DEFAULT_TITLE_STYLE = {
   lineHeight: 1.2,
   padding: 40,
   backgroundWidth: 80, // TITLE-WIDTH-01: matches the previous hardcoded 80% box width
-  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000" }, // TITLE-GRADIENT-01: disabled → flat backgroundColor
+  backgroundGradient: { enabled: false, fromColor: "#000000", toColor: "#000000", target: "box" as const }, // TITLE-GRADIENT-01: disabled → flat backgroundColor; target (quick 260607-uzv item 3): box|text|both
 };
 
 // ─── Shared style helpers ──────────────────────────────────────────────────
@@ -819,17 +844,26 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
                     onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, borderRadius: v } }))}
                   />
 
-                  {/* Ancho caja — TITLE-WIDTH-01 (configurable box width, default 80%) */}
+                  {/* Ancho caja — TITLE-WIDTH-01 (configurable box width, default 80%).
+                      quick 260607-uzv item 2: also re-center x so the box grows/shrinks
+                      SYMMETRICALLY around its horizontal center (not only rightward). */}
                   <RangeRow label="Ancho caja"
                     min={0} max={100}
                     value={newTitle.style?.backgroundWidth ?? 80}
-                    onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundWidth: v } }))}
+                    onChange={(v) => handleDraftChange((prev) => {
+                      const oldWidth = prev.style?.backgroundWidth ?? DEFAULT_TITLE_STYLE.backgroundWidth;
+                      const oldX = prev.style?.x ?? DEFAULT_TITLE_STYLE.x;
+                      const newX = computeCenteredXForWidth(oldX, oldWidth, v);
+                      return { ...prev, style: { ...prev.style!, backgroundWidth: v, x: newX } };
+                    })}
                     format={(v) => `${v}%`}
                   />
 
-                  {/* Degradado — TITLE-GRADIENT-01 (optional vertical top→bottom gradient; FxBlock + 2 swatches) */}
+                  {/* Degradado — TITLE-GRADIENT-01 (optional vertical top→bottom gradient; FxBlock + 2 swatches).
+                      quick 260607-uzv item 3: "Aplicar a" selects box / text / both. Omitted target ⇒ "box". */}
                   {(() => {
-                    const gradient = newTitle.style?.backgroundGradient ?? { enabled: false, fromColor: "#000000", toColor: "#000000" };
+                    const gradient = newTitle.style?.backgroundGradient ?? { enabled: false, fromColor: "#000000", toColor: "#000000", target: "box" as const };
+                    const target = gradient.target ?? "box";
                     return (
                       <>
                         <Row label="Degradado">
@@ -843,16 +877,34 @@ export function TitleEditor({ titles, onChange, onPreviewChange }: TitleEditorPr
                           </div>
                         </Row>
                         {gradient.enabled && (
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-5, 10px) var(--s-6, 12px)" }}>
-                            <ColorSwatch label="Desde (arriba)"
-                              value={gradient.fromColor}
-                              onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, fromColor: v } } }))}
-                            />
-                            <ColorSwatch label="Hasta (abajo)"
-                              value={gradient.toColor}
-                              onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, toColor: v } } }))}
-                            />
-                          </div>
+                          <>
+                            <Row label="Aplicar a">
+                              <div style={{ display: "flex", gap: "var(--s-3, 6px)" }}>
+                                {([
+                                  { id: "box", label: "Caja" },
+                                  { id: "text", label: "Texto" },
+                                  { id: "both", label: "Ambos" },
+                                ] as const).map((opt) => (
+                                  <button key={opt.id} type="button"
+                                    onClick={() => handleDraftChange((prev) => {
+                                      const g = prev.style?.backgroundGradient ?? gradient;
+                                      return { ...prev, style: { ...prev.style!, backgroundGradient: { ...g, target: opt.id } } };
+                                    })}
+                                    style={segBtnStyle(target === opt.id)}>{opt.label}</button>
+                                ))}
+                              </div>
+                            </Row>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--s-5, 10px) var(--s-6, 12px)" }}>
+                              <ColorSwatch label="Desde (arriba)"
+                                value={gradient.fromColor}
+                                onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, fromColor: v } } }))}
+                              />
+                              <ColorSwatch label="Hasta (abajo)"
+                                value={gradient.toColor}
+                                onChange={(v) => handleDraftChange((prev) => ({ ...prev, style: { ...prev.style!, backgroundGradient: { ...gradient, toColor: v } } }))}
+                              />
+                            </div>
+                          </>
                         )}
                       </>
                     );

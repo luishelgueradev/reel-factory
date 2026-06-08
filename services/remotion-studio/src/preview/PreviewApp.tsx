@@ -220,6 +220,109 @@ function FontGrid({
   );
 }
 
+// ─── StageActionButton — compact ghost action (quick 260607-uzv item 1) ───────
+// A small, right-aligned ghost button/link for the stage action row beneath the
+// preview player. Green-discipline: uses --accent on hover/focus only — never
+// --action green (that is reserved for the Render CTA). Renders as <button> or
+// <a download> depending on `as`, with a leading glyph.
+
+function StageActionButton({
+  as,
+  glyph,
+  label,
+  title,
+  onClick,
+  href,
+  download,
+  disabled = false,
+}: {
+  as: "button" | "a";
+  glyph: string;
+  label: string;
+  title?: string;
+  onClick?: () => void;
+  href?: string;
+  download?: string;
+  disabled?: boolean;
+}) {
+  const baseStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "var(--s-2, 4px)",
+    padding: "var(--s-3, 6px) var(--s-6, 12px)",
+    fontSize: "var(--t-sm, 13px)" as React.CSSProperties["fontSize"],
+    fontWeight: 500,
+    lineHeight: 1,
+    textDecoration: "none",
+    color: disabled ? "var(--text-muted, #8a8a99)" : "var(--text, #e6e6ea)",
+    background: "transparent",
+    border: "1px solid var(--border, #333)",
+    borderRadius: "var(--r-sm, 6px)",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.55 : 1,
+    pointerEvents: disabled ? "none" : "auto",
+    transition:
+      "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease), background var(--dur, 170ms) var(--ease)",
+  };
+
+  const enter = (e: React.SyntheticEvent<HTMLElement>) => {
+    if (disabled) return;
+    const el = e.currentTarget as HTMLElement;
+    el.style.borderColor = "var(--accent, #90caf9)";
+    el.style.color = "var(--accent, #90caf9)";
+    el.style.background = "var(--accent-tint-2, rgba(144,202,249,0.06))";
+  };
+  const leave = (e: React.SyntheticEvent<HTMLElement>) => {
+    if (disabled) return;
+    const el = e.currentTarget as HTMLElement;
+    el.style.borderColor = "var(--border, #333)";
+    el.style.color = "var(--text, #e6e6ea)";
+    el.style.background = "transparent";
+  };
+
+  const content = (
+    <>
+      <span aria-hidden="true" style={{ fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"] }}>
+        {glyph}
+      </span>
+      {label}
+    </>
+  );
+
+  if (as === "a") {
+    return (
+      <a
+        href={href}
+        download={download}
+        aria-disabled={disabled ? true : undefined}
+        title={title}
+        style={baseStyle}
+        onMouseEnter={enter}
+        onMouseLeave={leave}
+        onFocus={enter}
+        onBlur={leave}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      style={baseStyle}
+      onMouseEnter={enter}
+      onMouseLeave={leave}
+      onFocus={enter}
+      onBlur={leave}
+    >
+      {content}
+    </button>
+  );
+}
+
 // ─── PreviewApp: Unified StudioApp ────────────────────────────────────────────
 
 export function PreviewApp() {
@@ -750,14 +853,16 @@ export function PreviewApp() {
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
         {/* ── Col 1: 9:16 Preview Stage — flex:0 1 470px ──────────────────── */}
-        {/* Stage dims during non-idle render states (UI-SPEC §2) */}
+        {/* Stage dims during non-idle render states (UI-SPEC §2).
+            quick 260607-uzv item 1: the stage is a vertical column — the player
+            area (flex:1, centered) sits above a deliberate, non-overlapping
+            action row (Reemplazar / Descargar). */}
         <div
           style={{
             flex: "0 1 470px",
             minWidth: 280,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            flexDirection: "column",
             padding: "var(--s-8, 16px)",
             background: "var(--stage, #111)",
             borderRight: "1px solid var(--border, #333)",
@@ -765,6 +870,18 @@ export function PreviewApp() {
             overflow: "hidden",
           }}
         >
+          {/* Player area — centers the 9:16 player/dropzone and hosts the
+              render-state overlays. flex:1 so the action row below never overlaps. */}
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+            }}
+          >
           {/* Stage dim layer — covers the player when render is not idle */}
           {(renderState === "running" || renderState === "submitting") && (
             <div
@@ -809,118 +926,6 @@ export function PreviewApp() {
             </div>
           )}
 
-          {/* ── Pre-render video controls (quick 260607-uzv) ───────────────────
-              Shown ONLY when a video is loaded and no render is in flight
-              (renderState === "idle"), so they never collide with the
-              progress / success / failure overlays below (which mount only
-              in non-idle states). Green-discipline: --action green is the
-              Render CTA ONLY — these use --accent / neutral surfaces. */}
-          {uploadedFile && renderState === "idle" && (
-            <div
-              style={{
-                position: "absolute",
-                top: "var(--s-8, 16px)",
-                right: "var(--s-8, 16px)",
-                zIndex: 20,
-                display: "flex",
-                gap: "var(--s-4, 8px)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setUploadedFile(null)}
-                title="Quitar el video cargado y volver a la zona de carga"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "var(--s-2, 4px)",
-                  padding: "var(--s-3, 6px) var(--s-6, 12px)",
-                  fontSize: "var(--t-sm, 13px)",
-                  fontWeight: 500,
-                  lineHeight: 1,
-                  color: "var(--text, #e6e6ea)",
-                  background: "var(--surface-2, #252535)",
-                  border: "1px solid var(--border, #333)",
-                  borderRadius: "var(--r-sm, 6px)",
-                  cursor: "pointer",
-                  transition:
-                    "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
-                  e.currentTarget.style.color = "var(--accent, #90caf9)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "var(--border, #333)";
-                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
-                  e.currentTarget.style.color = "var(--accent, #90caf9)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "var(--border, #333)";
-                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
-                }}
-              >
-                Reemplazar / Quitar video
-              </button>
-              <a
-                href={objectUrl ?? undefined}
-                download={uploadedFile.name}
-                aria-disabled={objectUrl ? undefined : true}
-                title={
-                  objectUrl
-                    ? `Descargar ${uploadedFile.name}`
-                    : "Preparando el video…"
-                }
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "var(--s-2, 4px)",
-                  padding: "var(--s-3, 6px) var(--s-6, 12px)",
-                  fontSize: "var(--t-sm, 13px)",
-                  fontWeight: 500,
-                  lineHeight: 1,
-                  textDecoration: "none",
-                  color: objectUrl
-                    ? "var(--text, #e6e6ea)"
-                    : "var(--text-muted, #8a8a99)",
-                  background: "var(--surface-2, #252535)",
-                  border: "1px solid var(--border, #333)",
-                  borderRadius: "var(--r-sm, 6px)",
-                  cursor: objectUrl ? "pointer" : "not-allowed",
-                  opacity: objectUrl ? 1 : 0.55,
-                  pointerEvents: objectUrl ? "auto" : "none",
-                  transition:
-                    "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!objectUrl) return;
-                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
-                  e.currentTarget.style.color = "var(--accent, #90caf9)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!objectUrl) return;
-                  e.currentTarget.style.borderColor = "var(--border, #333)";
-                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
-                }}
-                onFocus={(e) => {
-                  if (!objectUrl) return;
-                  e.currentTarget.style.borderColor = "var(--accent, #90caf9)";
-                  e.currentTarget.style.color = "var(--accent, #90caf9)";
-                }}
-                onBlur={(e) => {
-                  if (!objectUrl) return;
-                  e.currentTarget.style.borderColor = "var(--border, #333)";
-                  e.currentTarget.style.color = "var(--text, #e6e6ea)";
-                }}
-              >
-                Descargar video
-              </a>
-            </div>
-          )}
-
           {/* ── Inline render surfaces (§2/§3/§4 UI-SPEC) — overlay the stage ── */}
           {(renderState === "submitting" || renderState === "running") && (
             <RenderProgressOverlay
@@ -940,6 +945,46 @@ export function PreviewApp() {
               causeLine={renderCauseLine}
               onRetry={handleRenderReset}
             />
+          )}
+          </div>
+          {/* end player area */}
+
+          {/* ── Stage action row (quick 260607-uzv item 1) ─────────────────────
+              A deliberate, right-aligned row BELOW the player — never overlaps
+              the video frame. Compact ghost buttons on --accent (green is the
+              Render CTA ONLY). Shown when a video is loaded and idle. */}
+          {uploadedFile && renderState === "idle" && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                alignItems: "center",
+                gap: "var(--s-3, 6px)",
+                marginTop: "var(--s-6, 12px)",
+                flexShrink: 0,
+              }}
+            >
+              <StageActionButton
+                as="button"
+                glyph="↻"
+                label="Reemplazar"
+                title="Quitar el video cargado y volver a la zona de carga"
+                onClick={() => setUploadedFile(null)}
+              />
+              <StageActionButton
+                as="a"
+                glyph="⤓"
+                label="Descargar"
+                disabled={!objectUrl}
+                href={objectUrl ?? undefined}
+                download={uploadedFile.name}
+                title={
+                  objectUrl
+                    ? `Descargar ${uploadedFile.name}`
+                    : "Preparando el video…"
+                }
+              />
+            </div>
           )}
         </div>
 

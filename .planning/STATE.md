@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 Phase: ALL v1.5 phases (27-29) ✅ complete — milestone awaiting audit/complete (not run, user asleep)
 Plan: —
 Status: All 3 phases done & code-merged. NEXT (user): live Docker UAT, then /gsd-audit-milestone → /gsd-complete-milestone v1.5.
-Last activity: 2026-06-08 — Quick 260608-ka1: evened the per-word highlight padding (top/bottom was ~6x left/right) by hugging the glyph with line-height 0.95 on the bar; playwright DOM-verified (tall words 1.17×, no clip, no baseline jump), images rebuilt. studio 550 + renderer 359 green.
+Last activity: 2026-06-08 — Quick 260608-nkh: per-word highlight rendered in preview but NOT in the exported video — render.ts (the real inputProps→renderMedia whitelist) omitted wordBackground (+ bold/italic/glow); the prior be565ca fix only guarded Root.tsx which runs after. Fixed + test now guards render.ts; verified with a real render (pill present in output). renderer 363 green.
 
 ### Milestone v1.5 Phase Summary
 
@@ -43,6 +43,7 @@ Last activity: 2026-06-08 — Quick 260608-ka1: evened the per-word highlight pa
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260608-nkh | Fondo resaltado per-word salía en el preview pero NO en el video exportado. Causa: render.ts (que arma inputProps.subtitleConfig → renderMedia, la fuente real del render) omitía wordBackground (y fontWeight/fontStyle/outerGlow). El fix previo (be565ca) tocó Root.tsx pero render.ts corre antes. Fix + test que guarda render.ts; verificado con render real (el pill aparece en el output) | 2026-06-08 | 4503f41 | [260608-nkh-fix-render-word-background-bold-italic-g](./quick/260608-nkh-fix-render-word-background-bold-italic-g/) |
 | 260608-ka1 | Fondo resaltado per-word: el padding superior/inferior era ~6x el lateral (el span inline-block heredaba el line-height 1.3 de la caja). Fix: line-height 0.95 en la barra para abrazar el glifo → padding parejo (palabras altas 1.17×), sin clipping ni salto de baseline | 2026-06-08 | d6efc47 | [260608-ka1-fix-word-background-highlight-vertical-t](./quick/260608-ka1-fix-word-background-highlight-vertical-t/) |
 | 260607-uzv | 6 correcciones de edición del Studio: (preview) reemplazar/descargar video cargado; (títulos) ancho de caja configurable + gradiente lineal vertical; (subtítulos) fondo resaltado per-word en tiktok (saca full-frase), flash off por default → palabra activa toma color Activa, y dedup del título "Sample text" | 2026-06-07 | (pending) | [260607-uzv-studio-edit-correcciones](./quick/260607-uzv-studio-edit-correcciones/) |
 | 260606-2ek | Al cambiar de perfil no cambiaban los títulos — los 2 perfiles tenían títulos idénticos porque actualizar un perfil era poco confiable (había que re-tipear el nombre). Fix UX: botón "Actualizar «{perfil}»" en un clic que re-guarda el perfil activo (títulos incluidos) | 2026-06-06 | ab06116 | [260606-2ek-perfiles-titulos-actualizar](./quick/260606-2ek-perfiles-titulos-actualizar/) |

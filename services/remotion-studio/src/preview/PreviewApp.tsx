@@ -220,105 +220,56 @@ function FontGrid({
   );
 }
 
-// ─── StageActionButton — compact ghost action (quick 260607-uzv item 1) ───────
-// A small, right-aligned ghost button/link for the stage action row beneath the
-// preview player. Green-discipline: uses --accent on hover/focus only — never
-// --action green (that is reserved for the Render CTA). Renders as <button> or
-// <a download> depending on `as`, with a leading glyph.
+// ─── ReplaceVideoButton — single centered "replace" pill (quick 260607-uzv item 1) ─
+// A calm, centered pill above the preview stage, shown only when a video is
+// loaded. Default reads as a quiet secondary control (muted text, faint surface,
+// hairline border, pill radius); hover/focus lifts it to --accent. Green-
+// discipline: never --action green (that is the Render CTA only).
 
-function StageActionButton({
-  as,
-  glyph,
-  label,
-  title,
-  onClick,
-  href,
-  download,
-  disabled = false,
-}: {
-  as: "button" | "a";
-  glyph: string;
-  label: string;
-  title?: string;
-  onClick?: () => void;
-  href?: string;
-  download?: string;
-  disabled?: boolean;
-}) {
-  const baseStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "var(--s-2, 4px)",
-    padding: "var(--s-3, 6px) var(--s-6, 12px)",
-    fontSize: "var(--t-sm, 13px)" as React.CSSProperties["fontSize"],
-    fontWeight: 500,
-    lineHeight: 1,
-    textDecoration: "none",
-    color: disabled ? "var(--text-muted, #8a8a99)" : "var(--text, #e6e6ea)",
-    background: "transparent",
-    border: "1px solid var(--border, #333)",
-    borderRadius: "var(--r-sm, 6px)",
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.55 : 1,
-    pointerEvents: disabled ? "none" : "auto",
-    transition:
-      "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease), background var(--dur, 170ms) var(--ease)",
-  };
-
+function ReplaceVideoButton({ onClick }: { onClick: () => void }) {
   const enter = (e: React.SyntheticEvent<HTMLElement>) => {
-    if (disabled) return;
     const el = e.currentTarget as HTMLElement;
     el.style.borderColor = "var(--accent, #90caf9)";
     el.style.color = "var(--accent, #90caf9)";
-    el.style.background = "var(--accent-tint-2, rgba(144,202,249,0.06))";
+    el.style.background = "var(--accent-tint-2, rgba(144,202,249,0.08))";
   };
   const leave = (e: React.SyntheticEvent<HTMLElement>) => {
-    if (disabled) return;
     const el = e.currentTarget as HTMLElement;
     el.style.borderColor = "var(--border, #333)";
-    el.style.color = "var(--text, #e6e6ea)";
-    el.style.background = "transparent";
+    el.style.color = "var(--text-2, #b6b6c2)";
+    el.style.background = "var(--surface-2, rgba(255,255,255,0.03))";
   };
-
-  const content = (
-    <>
-      <span aria-hidden="true" style={{ fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"] }}>
-        {glyph}
-      </span>
-      {label}
-    </>
-  );
-
-  if (as === "a") {
-    return (
-      <a
-        href={href}
-        download={download}
-        aria-disabled={disabled ? true : undefined}
-        title={title}
-        style={baseStyle}
-        onMouseEnter={enter}
-        onMouseLeave={leave}
-        onFocus={enter}
-        onBlur={leave}
-      >
-        {content}
-      </a>
-    );
-  }
-
   return (
     <button
       type="button"
       onClick={onClick}
-      title={title}
-      style={baseStyle}
+      title="Quitar el video cargado y volver a la zona de carga"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "var(--s-3, 6px)",
+        padding: "var(--s-3, 6px) var(--s-7, 14px)",
+        fontSize: "var(--t-sm, 13px)" as React.CSSProperties["fontSize"],
+        fontWeight: 500,
+        lineHeight: 1,
+        letterSpacing: "0.01em",
+        color: "var(--text-2, #b6b6c2)",
+        background: "var(--surface-2, rgba(255,255,255,0.03))",
+        border: "1px solid var(--border, #333)",
+        borderRadius: "var(--r-full, 999px)",
+        cursor: "pointer",
+        transition:
+          "border-color var(--dur, 170ms) var(--ease), color var(--dur, 170ms) var(--ease), background var(--dur, 170ms) var(--ease)",
+      }}
       onMouseEnter={enter}
       onMouseLeave={leave}
       onFocus={enter}
       onBlur={leave}
     >
-      {content}
+      <span aria-hidden="true" style={{ fontSize: "var(--t-base, 14px)" as React.CSSProperties["fontSize"] }}>
+        ↻
+      </span>
+      Reemplazar video
     </button>
   );
 }
@@ -870,8 +821,24 @@ export function PreviewApp() {
             overflow: "hidden",
           }}
         >
+          {/* Replace-video control (quick 260607-uzv item 1): a single, centered
+              pill at the TOP of the stage when a video is loaded & idle. Centered
+              horizontally; --accent on hover (never --action green). */}
+          {uploadedFile && renderState === "idle" && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginBottom: "var(--s-6, 12px)",
+                flexShrink: 0,
+              }}
+            >
+              <ReplaceVideoButton onClick={() => setUploadedFile(null)} />
+            </div>
+          )}
+
           {/* Player area — centers the 9:16 player/dropzone and hosts the
-              render-state overlays. flex:1 so the action row below never overlaps. */}
+              render-state overlays. flex:1 so it owns the remaining height. */}
           <div
             style={{
               flex: 1,
@@ -949,43 +916,6 @@ export function PreviewApp() {
           </div>
           {/* end player area */}
 
-          {/* ── Stage action row (quick 260607-uzv item 1) ─────────────────────
-              A deliberate, right-aligned row BELOW the player — never overlaps
-              the video frame. Compact ghost buttons on --accent (green is the
-              Render CTA ONLY). Shown when a video is loaded and idle. */}
-          {uploadedFile && renderState === "idle" && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                gap: "var(--s-3, 6px)",
-                marginTop: "var(--s-6, 12px)",
-                flexShrink: 0,
-              }}
-            >
-              <StageActionButton
-                as="button"
-                glyph="↻"
-                label="Reemplazar"
-                title="Quitar el video cargado y volver a la zona de carga"
-                onClick={() => setUploadedFile(null)}
-              />
-              <StageActionButton
-                as="a"
-                glyph="⤓"
-                label="Descargar"
-                disabled={!objectUrl}
-                href={objectUrl ?? undefined}
-                download={uploadedFile.name}
-                title={
-                  objectUrl
-                    ? `Descargar ${uploadedFile.name}`
-                    : "Preparando el video…"
-                }
-              />
-            </div>
-          )}
         </div>
 
         {/* ── Col 2: Controls — TabBar + tab content panels ─────────────────── */}

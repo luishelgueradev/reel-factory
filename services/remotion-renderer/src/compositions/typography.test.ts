@@ -209,6 +209,8 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
       backgroundColor: "rgba(0, 0, 0, 0.5)",
       borderRadius: "8px",
       padding: "6px",
+      // negative horizontal margin cancels the padding's inline width → no lateral shift
+      margin: "0 -6px",
     });
   });
 
@@ -219,6 +221,7 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
       backgroundColor: "rgba(255, 0, 0, 0.8)",
       borderRadius: "4px",
       padding: "2px",
+      margin: "0 -2px",
     });
   });
 
@@ -229,6 +232,7 @@ describe("getWordBackgroundStyle (SUB-01/02)", () => {
       backgroundColor: "rgba(255, 255, 255, 1)",
       borderRadius: "0px",
       padding: "0px",
+      margin: "0 -0px",
     });
   });
 });

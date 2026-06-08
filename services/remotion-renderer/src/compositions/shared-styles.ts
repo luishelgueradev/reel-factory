@@ -104,10 +104,17 @@ export function getWordBackgroundStyle(
   const r = parseInt(hex.slice(0, 2), 16);
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
+  // Symmetric padding hugs the word on all sides. The negative HORIZONTAL margin
+  // cancels the horizontal padding's contribution to inline layout, so the bar
+  // extends `padding`px to BOTH the left and right of the word WITHOUT shifting
+  // the lateral words when it appears (the box's inline advance stays = word
+  // width). Vertical padding still grows the box height (no horizontal effect).
+  const p = wordBackground.padding;
   return {
     backgroundColor: `rgba(${r}, ${g}, ${b}, ${wordBackground.opacity})`,
     borderRadius: `${wordBackground.borderRadius}px`,
-    padding: `${wordBackground.padding}px`,
+    padding: `${p}px`,
+    margin: `0 -${p}px`,
   };
 }
 

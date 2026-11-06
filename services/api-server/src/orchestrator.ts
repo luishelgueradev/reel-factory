@@ -271,6 +271,10 @@ export async function runPipeline(
       HostConfig: {
         Binds: [`${hostPipelineDir}:/data/pipeline`],
         NetworkMode: options.pipelineNetwork || PIPELINE_NETWORK,
+        // Docker Desktop resolves host.docker.internal natively; Docker Engine on
+        // Linux only does so with this mapping. Steps are spawned via the API, so
+        // the compose extra_hosts of the whisper service do not apply to them.
+        ExtraHosts: ["host.docker.internal:host-gateway"],
         AutoRemove: false,
         ...(step.shmSizeBytes ? { ShmSize: step.shmSizeBytes } : {}),
       },

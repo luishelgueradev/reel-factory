@@ -244,6 +244,8 @@ services:
         condition: service_healthy
     group_add:
       - "1001"
+    # Override del anchor pipeline-common: preserva pipeline-net + suma docker-network (postgres compartido).
+    networks: [pipeline-net, docker-network]
     ports:
       - "${API_PORT:-3000}:3000"
     volumes:
@@ -350,3 +352,5 @@ volumes:
 networks:
   pipeline-net:
     driver: bridge
+  docker-network:
+    external: true   # red compartida; el postgres compartido vive acá

@@ -174,7 +174,17 @@ ask() {
 }
 
 # -- Docker ------------------------------------------------------------------
-dc() { (cd "$INSTALL_DIR" && "${DOCKER[@]}" compose "$@"); }
+# sudo descarta PWD, y docker-compose.yml lo referencia.
+dc() {
+  (
+    cd "$INSTALL_DIR"
+    if [ "${DOCKER[0]}" = "docker" ]; then
+      docker compose "$@"
+    else
+      "${DOCKER[0]}" env PWD="$INSTALL_DIR" docker compose "$@"
+    fi
+  )
+}
 
 version_ge() { [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
 

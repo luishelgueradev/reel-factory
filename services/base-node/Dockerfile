@@ -13,8 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sL "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" -o /tmp/ffmpeg.tar.xz \
-    && tar -xf /tmp/ffmpeg.tar.xz -C /tmp \
+RUN curl -fsSL --retry 5 --retry-delay 5 --retry-connrefused \
+        "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n${FFMPEG_VERSION}.tar.gz" -o /tmp/ffmpeg.tar.gz \
+    && mkdir -p /tmp/ffmpeg-${FFMPEG_VERSION} \
+    && tar -xf /tmp/ffmpeg.tar.gz -C /tmp/ffmpeg-${FFMPEG_VERSION} --strip-components=1 \
     && cd /tmp/ffmpeg-${FFMPEG_VERSION} \
     && ./configure \
         --prefix=/usr/local \

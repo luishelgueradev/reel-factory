@@ -177,6 +177,8 @@ services:
     ports:
       - "${STUDIO_PORT:-3123}:3123"
     environment:
+      # This list replaces the anchor's, and npx needs a writable HOME when UID is not 1000.
+      - HOME=/data/pipeline/.cache
       - INPUT_PATH=/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/output.mp4
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID}
       - PIPELINE_CONFIG_PATH=/data/pipeline/${PIPELINE_JOB_ID}/remotion-renderer/pipeline-config.json
@@ -252,6 +254,8 @@ services:
       - ./pipeline:/data/pipeline
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      # This list replaces the anchor's, and npx needs a writable HOME when UID is not 1000.
+      - HOME=/data/pipeline/.cache
       - PIPELINE_JOB_ID=${PIPELINE_JOB_ID:-}
       - ACTIVE_PIPELINE_CONFIG_PATH=/data/pipeline/pipeline-config.json
       - PROCESS_TIMEOUT_MS=${PROCESS_TIMEOUT_MS:-10800000}  # 3h — Phase 14 D-03, matches render.ts timeoutInMilliseconds ceiling

@@ -26,7 +26,7 @@ cleanup() {
         rm -rf "$PIPELINE_DIR/$JOB_ID"
         echo "  Removed $PIPELINE_DIR/$JOB_ID"
     fi
-    docker compose -f "$PROJECT_DIR/docker-compose.yml" down --remove-orphans 2>/dev/null || true
+    docker compose -f "$PROJECT_DIR/docker-compose.yml" --profile pipeline down --remove-orphans 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -138,7 +138,7 @@ check_pipe_04() {
     fi
 
     # Verify the compose file is valid
-    if docker compose -f "$compose_file" config --services 2>/dev/null | grep -q "smoke-test"; then
+    if docker compose -f "$compose_file" --profile pipeline config --services 2>/dev/null | grep -q "smoke-test"; then
         pass "smoke-test service validated by docker compose config"
     else
         fail "smoke-test service NOT validated by docker compose config"

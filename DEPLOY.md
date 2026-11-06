@@ -140,7 +140,7 @@ curl http://127.0.0.1:3000/health
 grep '^STUDIO_BASIC_AUTH' .env
 ```
 
-Levantá siempre los servicios por nombre. Un `docker compose up` sin argumentos tambien intenta ejecutar los steps.
+Un `docker compose up` sin argumentos no ejecuta los steps, porque pertenecen al perfil `pipeline`. Sí levanta `cloudflared`, que necesita token: si no usás el túnel, levantá los servicios por nombre.
 
 ## Actualizacion
 

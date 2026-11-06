@@ -53,7 +53,7 @@ docker network create docker-network
 # 4. Construir primero las imágenes base, de las que dependen todos los steps
 docker compose build base-python base-node
 
-# 5. Construir el resto. El perfil incluye quality-finalizer, que el orquestador necesita
+# 5. Construir el resto. El perfil incluye los steps, que el orquestador necesita
 docker compose --profile pipeline build
 
 # 6. Levantar los servicios permanentes
@@ -266,7 +266,7 @@ Cliente HTTP ─ /process, /batch ─► api-server :3000 ◄─► Redis (cola 
 | `quality-finalizer` | Reduce la resolución si el render la superó; si no, copia sin recodificar | `quality-finalizer/output.mp4` |
 | `srt-exporter` | Genera los subtítulos como archivos separados | `srt-exporter/output.srt`, `output.vtt` |
 
-Cada step recibe `INPUT_PATH`, `OUTPUT_PATH` y `PIPELINE_JOB_ID`, y escribe un `manifest.json` junto a su salida. Para agregar uno, seguí el [contrato de steps](docs/step-contract.md), definí el servicio en `docker-compose.yml` y sumalo al arreglo `STEPS` de `services/api-server/src/orchestrator.ts`. No hace falta modificar los steps existentes.
+Cada step recibe `INPUT_PATH`, `OUTPUT_PATH` y `PIPELINE_JOB_ID`, y escribe un `manifest.json` junto a su salida. Para agregar uno, seguí el [contrato de steps](docs/step-contract.md), definí el servicio en `docker-compose.yml` con el perfil `pipeline` y sumalo al arreglo `STEPS` de `services/api-server/src/orchestrator.ts`. No hace falta modificar los steps existentes.
 
 ## API / Endpoints
 
@@ -368,12 +368,12 @@ Las rutas de metadata requieren un `jobId` con formato UUID, por lo que no funci
 | `smoke-test` | Por trabajo | Ninguno | Step de prueba de la infraestructura |
 | `base-python`, `base-node` | Solo build | Ninguno | Imágenes base |
 
-Levantá los servicios por nombre: un `docker compose up` sin argumentos también intentaría ejecutar los steps y `cloudflared`.
+Los steps pertenecen al perfil `pipeline`, así que un `docker compose up` sin argumentos no los ejecuta. Sí levanta `cloudflared`, que necesita token: si no usás el túnel, levantá los servicios por nombre.
 
 ### Imágenes
 
 - `base-python` usa `python:3.12-slim` y `base-node` usa `node:22-bookworm-slim`. Ambas compilan FFmpeg 7.1.1 en una etapa de build separada; la versión se fija con `FFMPEG_VERSION` en sus Dockerfiles.
-- `quality-finalizer` pertenece al perfil `pipeline`, por lo que `docker compose build` no lo incluye si no se indica `--profile pipeline`.
+- `docker compose build` no incluye los steps si no se indica `--profile pipeline`. Con el nombre del step, como en `docker compose build remotion-renderer`, no hace falta.
 - `remotion-renderer` corre con 2 GB de memoria compartida (`shm`), con concurrencia de render 2 y escala 1.
 - `remotion-studio` compila la interfaz durante el build, así que los cambios en el editor requieren reconstruir la imagen.
 

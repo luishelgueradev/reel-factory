@@ -20,6 +20,7 @@ services:
 
   smoke-test:
     <<: *pipeline-common
+    profiles: ["pipeline"]
     build:
       context: ./services/smoke-test
     depends_on:
@@ -33,6 +34,10 @@ services:
   # ═════════════════════════════════════════════════════
   # Pipeline Step Services
   # Each step uses the x-pipeline-common extension for shared volume/network config.
+  # Steps carry the "pipeline" profile so a bare `docker compose up` starts only the
+  # long-running services: a step needs a job and exits 1 without one. The API spawns
+  # them itself, and naming a step (`docker compose run whisper`) activates its profile.
+  # Build them all with `docker compose --profile pipeline build`.
   # Steps are chained with depends_on + healthcheck (D-08, D-09).
   # To add a new step: insert a service in the chain with depends_on the previous step.
   # Existing step configurations do NOT need modification (PIPE-04).
@@ -46,6 +51,7 @@ services:
   # host (D-3/D-4). The external service owns the GPU, so no deploy.devices stanza.
   whisper:
     <<: *pipeline-common
+    profiles: ["pipeline"]
     # Pinned so the build output matches the name the api-server orchestrator
     # uses (reel-factory-*), independent of the compose project / directory name
     # (a git worktree checkout has a different dir name).
@@ -77,6 +83,7 @@ services:
   # TRANSCRIPT_PATH is optional — if not set, uses FFmpeg-only mode.
   silence-cutter:
     <<: *pipeline-common
+    profiles: ["pipeline"]
     image: reel-factory-silence-cutter:latest
     build:
       context: ./services/silence-cutter
@@ -100,6 +107,7 @@ services:
   # Remotion Renderer: adds TikTok-style animated subtitles to video
   remotion-renderer:
     <<: *pipeline-common
+    profiles: ["pipeline"]
     image: reel-factory-remotion-renderer:latest
     build:
       context: ./services/remotion-renderer
@@ -282,6 +290,7 @@ services:
   # Per D-12: Runs in parallel with remotion-renderer (both consume transcript + silence-cuts)
   srt-exporter:
     <<: *pipeline-common
+    profiles: ["pipeline"]
     image: reel-factory-srt-exporter:latest
     build:
       context: ./services/srt-exporter
@@ -308,6 +317,7 @@ services:
   # FFmpeg Finalizer: converts to 9:16 vertical (1080x1920) with center-crop
   ffmpeg-finalizer:
     <<: *pipeline-common
+    profiles: ["pipeline"]
     image: reel-factory-ffmpeg-finalizer:latest
     build:
       context: ./services/ffmpeg-finalizer
